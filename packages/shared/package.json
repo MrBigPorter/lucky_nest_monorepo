@@ -1,0 +1,19 @@
+{
+  "name": "@lucky/shared",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc -w -p tsconfig.json",
+    "build": "rimraf dist && tsc -p tsconfig.json",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.0"
+  }
+}
