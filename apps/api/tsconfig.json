@@ -1,5 +1,21 @@
 {
-  "extends": "../../packages/config/tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist" },
-  "include": ["src"]
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2021",
+    "lib": ["ES2021"],
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "moduleResolution": "node",
+    "strict": true,
+    "sourceMap": true,
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "esModuleInterop": true,
+    "useDefineForClassFields": false,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
 }

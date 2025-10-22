@@ -29,7 +29,7 @@ async function bootstrap() {
 
     // 全局前缀、版本号 global prefix and versioning
     app.setGlobalPrefix('api');
-    app.enableVersioning({ type: VersioningType.URI });
+    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
     // 安全中间件、Cookie、中间件 security middleware, cookie parser, middleware
     app.use(helmet());

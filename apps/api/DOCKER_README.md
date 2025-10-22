@@ -305,5 +305,80 @@ docker compose up -d --no-deps --build api
        ```
     3. 或者将 `@lucky/shared` 预编译为 JS 并发布到私有 npm，然后在 `apps/api/package.json` 直接依赖它的版本号。
 
+
+# 1. 看容器
+docker ps                 # 正在跑
+docker ps -a              # 包括停掉的
+
+# 2. 看镜像
+docker images
+
+# 3. 运行一次试试（-p 映射端口，--name 起名字）
+docker run -d --name web -p 8080:80 nginx
+
+# 4. 进容器里（交互）
+docker exec — it web sh
+
+# 5. 看日志（-f 持续输出）
+docker logs -f web
+
+# 6. 停/删容器（-f 强制）
+docker stop web && docker rm web
+
+# 7. 构建镜像（-t 打标签）
+docker build -t myapp:dev .
+
+# 8. Compose 起/停（-d 后台；down -v 还会把匿名卷删掉）
+# 先校验 YAML 是否正确
+docker compose config
+# 重建并启动所有
+docker compose up -d --build
+
+# 只重建 api，再启动它
+docker compose build api
+docker compose up -d api
+
+# 强制不走缓存
+docker compose build --no-cache api
+
+# 重新创建容器（即使镜像/配置没变）
+docker compose up -d --force-recreate api
+
+# 看镜像/容器/卷/构建缓存的总体占用
+docker system df
+
+# 专看构建缓存（BuildKit）
+docker builder du
+
+# 删掉“悬空镜像层”（没有标签的旧层）
+docker image prune -f
+
+# 清理构建缓存（保留最近常用的，默认会询问，加 -f 直接执行）
+docker builder prune -f
+
+# 极限清：包含没在用的卷（例如历史 DB 数据卷也会删）
+docker system prune -af --volumes
+
+# 端口占用
+# 找出谁占了 5432
+docker ps --format '{{.ID}}\t{{.Names}}\t{{.Ports}}' | grep '5432->'
+
+# 停掉并删掉它（把 <ID> 换成上一步输出的容器 ID）
+docker stop <ID> && docker rm <ID>
+# 看到了 ID：bd8e67926dd2
+docker stop bd8e67926dd2
+docker rm bd8e67926dd2   # 只是删容器，不删数据卷
+# 再起我们的栈
+docker compose up -d
+
+# 装 → 产 → 跑；先依赖，后源码；先生成，再剪裁；脚本先迁移，再开服。
+1.	两段式：builder“装+编译”，runner“精简跑”。
+2.	先依赖后源码：提升缓存命中。
+3.	focus：只装 @lucky/api 需要的依赖（要有 workspace-tools 插件）。
+4.	build + prisma generate：先产出 dist/ 和 Prisma Client。
+5.	production 剪裁：workspaces focus --production 产出最小运行依赖。
+6.	entrypoint：先迁移再启动服务。
+7. 口诀再来一遍：装 → 产 → 跑；先依赖，后源码；先生成，再剪裁；脚本先迁移，再开服。
+   Dockerfile 六件套：FROM / WORKDIR / COPY / RUN / ENV / CMD(或ENTRYPOINT)
 ---
 

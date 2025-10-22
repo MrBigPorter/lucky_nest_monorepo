@@ -1,6 +1,9 @@
-node_modules
-dist
-.git
-Dockerfile
-docker
-.env*
+# 根 .dockerignore
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+**/coverage
+.DS_Store
+.env
+apps/**/.env*
