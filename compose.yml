@@ -4,9 +4,9 @@ services:
     restart: unless-stopped             # 容器异常退出会重启
     container_name: lucky_db            # 可选：容器名字，便于调试
     environment:                        # 初始化账号/库名（容器首次启动时生效）
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev
-      POSTGRES_DB: app
+      POSTGRES_USER: dev                # 数据库账号（容器首次启动时创建）
+      POSTGRES_PASSWORD: dev            # 数据库密码
+      POSTGRES_DB: app                  # 初始数据库名
     ports:
       - "5432:5432"                     # 宿主:容器 → 让你在本机用 localhost:5432 也能连
     volumes:
@@ -21,16 +21,16 @@ services:
     build:                              # 从源码构建镜像（也可以直接 image: myapp:latest）
       context: .                        # 构建上下文：仓库根目录
       dockerfile: apps/api/Dockerfile   # 指定 Dockerfile 位置
-    restart: unless-stopped
+    restart: unless-stopped             #容器退出后，要不要自动重启，总是拉起，除非你手动 stop（开发/线上服务常用）
     container_name: lucky_api
     env_file:
       - apps/api/.env.docker            # 把环境变量从文件注入（DATABASE_URL 等）
-    depends_on:                         # 依赖 db；等待健康通过再启动
+    depends_on:                         # 依赖 db；等待健康通过再启动，等数据库先跑起来
       db:
         condition: service_healthy
     ports:
       - "4000:4000"                     # 让外界访问 API（http://localhost:4000）
-    healthcheck:                        # API 自身健康检查（必须有 /api/health 路由返回 200）
+    healthcheck:                        # API 自身健康检查（必须有 /api/health 路由返回 200） 教容器“如何判断我是否健康”
       test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 3s
@@ -41,8 +41,8 @@ services:
     restart: unless-stopped
     container_name: lucky_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: admin@example.com  # 登录 pgAdmin 的账号
+      PGADMIN_DEFAULT_PASSWORD: admin123        # 登录 pgAdmin 的密码
     ports:
       - "5050:80"                       # 浏览器打开 http://localhost:5050
     depends_on:
