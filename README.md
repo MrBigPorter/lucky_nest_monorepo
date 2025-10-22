@@ -2,6 +2,9 @@
 
 This Turborepo starter is maintained by the Turborepo core team.
 
+> 中文用户请查看本仓库的“标准流程化指引（稳定版）”：[PROCESS_CN.md](./PROCESS_CN.md)
+> 架构总览（架构师级）：[ARCHITECTURE_CN.md](./ARCHITECTURE_CN.md)
+
 ## Using this example
 
 Run the following command:
