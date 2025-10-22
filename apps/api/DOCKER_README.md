@@ -338,7 +338,7 @@ docker compose up -d --build
 docker compose build api
 docker compose up -d api
 
-# 强制不走缓存
+# 重新打镜像（避免旧缓存）
 docker compose build --no-cache api
 
 # 重新创建容器（即使镜像/配置没变）

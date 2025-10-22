@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "→ Prisma generate (runtime)"
+echo "→ Prisma generate"
 npx prisma generate
 
 echo "→ Prisma migrate deploy"

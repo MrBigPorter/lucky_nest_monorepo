@@ -1,3 +1,4 @@
+// apps/api/src/auth/auth.controller.ts
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -12,14 +13,16 @@ export class AuthController {
 
     @Post('register')
     async register(@Body() dto: RegisterDto) {
-        const user = await this.auth.register(dto.email, dto.password);
+        // ✅ 改为 phone
+        const user = await this.auth.register(dto.phone, dto.password, dto.nickname);
         return user; // 不返回 hash
     }
 
     @Post('login')
     async login(@Body() dto: LoginDto) {
-        const user = await this.auth.validate(dto.email, dto.password);
-        return this.auth.issueToken(user);
+        // ✅ 改为 phone
+        const user = await this.auth.validate(dto.phone, dto.password);
+        return this.auth.issueToken({ id: user.id, phone: user.phone });
     }
 
     @ApiBearerAuth()

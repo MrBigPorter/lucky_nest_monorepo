@@ -12,7 +12,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data  # 把数据目录挂到“命名卷”db_data，持久化
     healthcheck:                        # 健康检查：库准备好（ready）才算健康
-      test: ["CMD-SHELL", "pg_isready -U dev"]
+      test: ["CMD-SHELL", "pg_isready -U dev -d app"]
       interval: 5s
       timeout: 3s
       retries: 10

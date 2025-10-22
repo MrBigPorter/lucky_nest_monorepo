@@ -53,4 +53,5 @@ async function bootstrap() {
     await app.listen(port, host);
     console.log(`API → http://${host}:${port}  Docs → /docs  Health → /api/health`);
 }
+// NOSONAR
 bootstrap();
