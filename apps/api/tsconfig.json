@@ -5,6 +5,10 @@
     "lib": ["ES2021"],
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "@api/*": ["src/*"],
+      "@common/*": ["../common/src/*"]
+    },
     "moduleResolution": "node",
     "strict": true,
     "sourceMap": true,

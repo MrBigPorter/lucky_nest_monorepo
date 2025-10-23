@@ -1,105 +1,99 @@
-import {BadRequestException, HttpException, HttpStatus, Injectable, UnauthorizedException} from "@nestjs/common";
 import {PrismaService} from "../prisma/prisma.service";
 import {JwtService} from "@nestjs/jwt";
-import {createHash,randomInt} from "node:crypto";
-import {OtpRequestDto} from "./dto/otp-request.dto";
-import { addMinutes, isBefore } from 'date-fns';
-import {OtpVerifyDto} from "./dto/otp-verify.dto";
-import {gen6Code, md5, sha256} from "../common/crypto.util";
+import { md5} from "../common/crypto.util";
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 
-const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS) || 300;
-const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS) || 5;
 const OTP_INTERVAL_SECONDS = Number(process.env.OTP_INTERVAL_SECONDS) || 60;
-const OTP_PEPPER = process.env.OTP_PEPPER || '';
 
 @Injectable()
 export class AuthService {
     constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService) {
     }
 
-    // 1) 申请验证码（限流 + 仅存哈希）
-    async requestOtp({phone,countryCode}:OtpRequestDto){
-        const isProd = process.env.NODE_ENV === 'production'
 
-
+    // 手机号登陆
+    async loginWithOtp(phone: string, meta?: {ip?: string, ua?: string, countryCode?: number}){
         const p = phone.trim();
         const phoneMd5 = md5(p);
 
-        // 简单频率限制：同手机号最近 OTP_INTERVAL_SECONDS 内只能申请一次
-        // gte = 大于等于：只看“在过去 OTP_INTERVAL_SECONDS 秒内”产生的记录
-        const  recent = await this.prisma.otpRequest.findFirst({
-            where: { phoneMd5, purpose: 'LOGIN', createdAt: { gte: new Date(Date.now() - OTP_INTERVAL_SECONDS * 1000)} },
-            orderBy: {createdAt: 'desc'},
-            select: {id:true}
+        const  now = new Date();
+        const  graceStart = new Date(now.getTime() - OTP_INTERVAL_SECONDS);
+
+        // // 取“最近一条已验证、且未消费”的登录 OTP
+        const opt = await this.prisma.otpRequest.findFirst({
+            where: {
+                phoneMd5,
+                purpose: 'LOGIN',
+                verifiedAt: { not: null, gte: graceStart },
+                consumedAt: null,
+            },
+            orderBy: { createdAt: 'desc'},
         })
 
-        if(recent) throw new HttpException('Try again later', HttpStatus.TOO_MANY_REQUESTS);
+        if (!opt){
+            throw  new UnauthorizedException('OTP not verified or already used');
+        }
 
-        //开发环境固定验证码
-        const fixedDevOtp = process.env.OTP_DEV_CODE || '999999';
-
-        const  code = isProd ? gen6Code() : fixedDevOtp;
-        const otpHash = sha256(`${p}:${code}${OTP_PEPPER}`);
-        const expiresAt = addMinutes(new Date(), OTP_TTL_SECONDS);
-
-        await this.prisma.otpRequest.create({
-            data: {
-                purpose:'LOGIN',
-                phone: p,
+        // 找或注册用户，登陆即注册（没有注册就注册，有注册就登陆）
+        const user = await this.prisma.user.upsert({
+            //用 唯一键 phone 查用户。这里要求 User 模型里 phone 是 @unique 或 @id。
+            where: { phone: p },
+            //如果没查到，就新建：
+            create: {
+                phone:p,
                 phoneMd5,
-                otpHash,
-                expiresAt: expiresAt,
-                attempts:0,
-                tid: null,
-                channel:'console'
+                nickname: `pl_${Math.random().toString().slice(2, 10)}`,
+                countryCode: meta?.countryCode,
+            },
+            update:{},
+            //只返回这几个字段
+            select: {
+                id: true,
+                phone: true,
+                nickname: true,
+                avatarUrl: true,
+                phoneMd5: true,
+                username: true,
+                countryCode: true,
             }
         })
 
-        // 发送短信：先用 console 模拟
-        // 生产可接短信厂商，这里为了联调返回 code（仅开发环境）
-        // 开发环境把验证码直接返回，方便调试；生产环境一定不要返回
-        const devCode = isProd ? undefined : code;
-        return { ok: true, devCode,  phone: p, countryCode: countryCode ?? null, };
-    }
+        //发JWT token
+        const  accessToken = await this.jwt.signAsync({sub: user.id});
 
-    // 2) 校验验证码 → 登录即注册 → 签发 JWT → 记录 LoginEvent
-    async verifyOtp({phone,code}: OtpVerifyDto){
-
-        const p = phone.trim();
-        const phoneMd5 = md5(p);
-
-        const req = await this.prisma.otpRequest.findFirst({
-            where: { phoneMd5, purpose: 'LOGIN'},
-            orderBy: { createdAt: 'desc'}
-        });
-
-        if (!req) throw new BadRequestException('Otp not found');
-        if (isBefore(req.expiresAt, new Date())) throw new BadRequestException('Otp expired');
-        if (req.attempts >= OTP_MAX_ATTEMPTS) throw new UnauthorizedException('Too many attempts');
-
-
-        const expectOtpHash = req.otpHash;
-        const actualOtpHash = sha256(`${p}:${code}${OTP_PEPPER}`);
-        const  isMatch = expectOtpHash === actualOtpHash;
-
-
-        //标记 OTP 已使用：验证成功后把本条记录 verifiedAt 更新，避免重复使用
-        if (!isMatch) {
-            // 记录尝试次数
-            await this.prisma.otpRequest.update({
-                where: {id: req.id},
-                data: { attempts: req.attempts + 1},
+        //记录登陆成功
+        await this.prisma.$transaction([
+            this.prisma.loginEvent.create({
+                data: {
+                    userId: user.id,
+                    method: 'OTP',
+                    success: true,
+                    tid: opt.id ?? undefined,
+                    ip: meta?.ip ?? null,
+                    userAgent: meta?.ua ?? null,
+                    countryCode: meta?.countryCode ?? null,
+                }
+            }),
+            this.prisma.otpRequest.update({
+                where: {id: opt.id},
+                data: { consumedAt: now }
+            }),
+            this.prisma.user.update({
+                where: {id: user.id},
+                data: { lastLoginAt: now }
             })
-            throw new UnauthorizedException('Invalid code');
-        }
+        ]);
 
-        // 成功：只标记通过时间（避免重复使用）
-        await this.prisma.otpRequest.update({
-            where: {id: req.id},
-            data: { verifiedAt: new Date()}
-        })
-
-        return '9999';
+        return {
+            token: accessToken,
+            id: user.id,
+            phone: user.phone,
+            phoneMd5: user.phoneMd5,
+            nickname: user.nickname,
+            userName: user.nickname,
+            avatar: user.avatarUrl,
+            countryCode: user.countryCode,
+        };
     }
 
     // 获取用户信息

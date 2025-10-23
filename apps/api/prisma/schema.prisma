@@ -1,7 +1,7 @@
 // apps/api/prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // native = 在当前环境生成；另外显式包含 Mac 和 Alpine
   binaryTargets = ["native", "darwin-arm64", "linux-musl-arm64-openssl-3.0.x"]
 }
@@ -67,6 +67,7 @@ model OtpRequest {
   otpHash    String
   expiresAt  DateTime
   verifiedAt DateTime?
+  consumedAt DateTime?
   attempts   Int        @default(0)
   channel    String?
 
@@ -78,7 +79,7 @@ model OtpRequest {
   // 你现在两个索引都可以；若要合并成复合索引，用下一行替换：
   // @@index([phoneMd5, purpose, expiresAt])
   @@index([phoneMd5])
-  @@index([phone, purpose, expiresAt])
+  @@index([phone, purpose, expiresAt, consumedAt])
 }
 
 enum OtpPurpose {
