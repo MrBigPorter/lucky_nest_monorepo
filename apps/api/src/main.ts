@@ -41,7 +41,11 @@ async function bootstrap() {
     app.enableCors({ origin: corsOrigin, credentials: true });
 
     // 全局管道 global pipes 全局管道，校验与类型转换。
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+    }));
 
     // 例子：GET /api/v1/auth/otp/request 200 12.3 ms - 22
     if (!isProd) {
@@ -55,7 +59,7 @@ async function bootstrap() {
 
     // Swagger 生成 UI 与 OpenAPI 规范
     const swaggerCfg = new DocumentBuilder()
-        .setTitle('My API')
+        .setTitle('Lucky API')
         .setDescription('REST API for web/mobile')
         .setVersion('1.0')
         .addBearerAuth()
