@@ -334,9 +334,10 @@ docker compose config
 # 重建并启动所有
 docker compose up -d --build
 
-# 只重建 api，再启动它
-docker compose build api
-docker compose up -d api
+# 只重新打包 API
+docker compose up -d --build api
+# 看日志
+docker compose logs -f api
 
 # 重新打镜像（避免旧缓存）
 docker compose build --no-cache api
@@ -358,6 +359,8 @@ docker builder prune -f
 
 # 极限清：包含没在用的卷（例如历史 DB 数据卷也会删）
 docker system prune -af --volumes
+
+
 
 # 端口占用
 # 找出谁占了 5432
