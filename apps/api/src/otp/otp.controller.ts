@@ -3,7 +3,6 @@ import {Throttle} from '@nestjs/throttler';
 import {ApiBody, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {OtpRequestDto, OtpVerifyDto} from './otp.dto';
 import {OtpService} from './otp.service';
-import {ok} from "../common/api-response";
 
 @ApiTags('otp')
 @Controller('otp')
