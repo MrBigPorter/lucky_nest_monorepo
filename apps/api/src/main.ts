@@ -1,4 +1,4 @@
-import { NestFactory } from '@nestjs/core';
+import {HttpAdapterHost, NestFactory} from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
@@ -7,6 +7,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import {PrismaService} from "./prisma/prisma.service";
 import morganBody from "morgan-body";
+import {requestId} from "@api/common/middleware/request-id";
+import {AllExceptionsFilter} from "@api/common/filters/all-exceptions.filter";
+import {ResponseWrapInterceptor} from "@api/common/interceptors/response-wrap.interceptor";
 
 //启动入口（第1步）
 async function bootstrap() {
@@ -34,6 +37,9 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
+    // 1) 请求ID
+    app.use(requestId());
+
     // 安全中间件、Cookie、中间件 security middleware, cookie parser, middleware
     app.use(helmet());
     app.use(cookieParser());
@@ -44,8 +50,18 @@ async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         transform: true,
+        forbidNonWhitelisted: true,
         transformOptions: { enableImplicitConversion: true },
     }));
+
+    app.useGlobalInterceptors(
+        //统一把返回包成 {code,message,tid,data}
+        new ResponseWrapInterceptor()
+    )
+
+    // 4) 异常过滤器
+    const adapterHost = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new AllExceptionsFilter(adapterHost));
 
     // 例子：GET /api/v1/auth/otp/request 200 12.3 ms - 22
     if (!isProd) {

@@ -1,14 +1,22 @@
-import {randomUUID} from "node:crypto";
 
-export type ApiOk<T> = {
-    code: number; message: string; tid: string; data: T;
+export interface ApiBae {
+    code: number;
+    message: string;
+    tid: string;
 }
 
-
-export function ok<T>(data: T, message = 'success'): ApiOk<T> {
-    return { code: 10000, message, tid: randomUUID().replaceAll('-', ''), data };
+export interface ApiSuccess<T> extends ApiBae {
+    data: T;
 }
 
-export function fail(code: 10001, message: string){
-    return { code, message, tid: randomUUID().replaceAll('-', ''), data: null };
+export interface ApiError extends ApiBae {
+    data?: never;
+}
+
+export function ok<T>(data: T, message = 'success', tid?:string): ApiSuccess<T> {
+    return { code: 10000, message, tid:tid ?? '', data };
+}
+
+export function fail(code: number, message: string, tid?: string ){
+    return { code, message, tid: tid ?? null, data: null };
 }

@@ -7,3 +7,8 @@ export class LoginDto {
     @IsString() @MinLength(6)
     password!: string;
 }
+
+export  class LoginOtpDto {
+    @IsString() @IsNotEmpty()
+    phone!: string;
+}
