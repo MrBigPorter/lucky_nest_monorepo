@@ -6,9 +6,12 @@ import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import {PrismaService} from "./prisma/prisma.service";
+import morganBody from "morgan-body";
 
 //启动入口（第1步）
 async function bootstrap() {
+    const isProd = process.env.NODE_ENV === 'production';
+
     // NestFactory.create(AppModule) 创建应用实例
     const app = await NestFactory.create(AppModule);
 
@@ -39,6 +42,16 @@ async function bootstrap() {
 
     // 全局管道 global pipes 全局管道，校验与类型转换。
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+    // 例子：GET /api/v1/auth/otp/request 200 12.3 ms - 22
+    if (!isProd) {
+        const expressApp: import('express').Application = app.getHttpAdapter().getInstance();
+
+        morganBody(expressApp, {
+            logResponseBody: true,      // ✅ 打印“返回结果”
+            maxBodyLength: 1000,        // 避免超长刷屏
+        });
+    }
 
     // Swagger 生成 UI 与 OpenAPI 规范
     const swaggerCfg = new DocumentBuilder()
