@@ -334,8 +334,12 @@ docker compose config
 # 重建并启动所有
 docker compose up -d --build
 
-# 只重新打包 API
-docker compose up -d --build api
+# 开发（db + api-dev + pgadmin）
+docker compose --profile dev up -d
+
+# 生产（db + api）
+docker compose --profile prod up -d --build
+
 # 看日志
 docker compose logs -f api
 
