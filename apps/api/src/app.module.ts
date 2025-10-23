@@ -4,7 +4,9 @@ import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import {PrismaModule} from "./prisma/prisma.module";
 import {AppController} from "./app.controller";
-import {AppService} from "./app.service"; // 如果你 tsconfig 没开 esModuleInterop，用这种写法最稳
+import {AppService} from "./app.service";
+import {ThrottlerGuard, ThrottlerModule} from "@nestjs/throttler";
+import {AuthModule} from "./auth/auth.module"; // 如果你 tsconfig 没开 esModuleInterop，用这种写法最稳
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -21,11 +23,19 @@ import {AppService} from "./app.service"; // 如果你 tsconfig 没开 esModuleI
             }),
             validationOptions: { abortEarly: false, allowUnknown: true, convert: true },
         }),
+        //全局默认 // 60秒内最多60次
+        ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60}]),
         //根模块，把业务模块“挂进来”。Nest 会读这些元数据，生成依赖图。
         PrismaModule,
+        AuthModule
+
         // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
     ],
     controllers: [AppController],
-    providers: [AppService],
+    providers: [
+        AppService,
+        //让限流生效：把 ThrottlerGuard 设为全局守卫，否则 @Throttle 不会拦截。
+        {provide: 'APP_GUARD', useClass: ThrottlerGuard}
+    ],
 })
 export class AppModule {}

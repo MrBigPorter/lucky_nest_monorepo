@@ -13,12 +13,11 @@ export class AppController {
     }
 
     @Get('dbcheck')
+    // src/app.controller.ts
     async dbcheck() {
         const users = await this.prisma.user.count();
-        // 也能做一次简单探活
-        const [{ now }] = await this.prisma.$queryRawUnsafe<{ now: string }[]>(
-            'select now()'
-        );
-        return { users, dbTime: now };
+        const rows = await this.prisma.$queryRaw<{ now: string }[]>`select now() as now`;
+        const first = rows.length ? rows[0] : undefined;
+        return { users, dbTime: first?.now ?? null };
     }
 }
