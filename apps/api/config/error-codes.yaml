@@ -1,0 +1,883 @@
+- code: 10000
+  message: Success
+  category: 系统/通用
+- code: 10001
+  message: System Error
+  category: 系统/通用
+- code: 10002
+  message: Parameter Error
+  category: 系统/通用
+- code: 10003
+  message: Missing Parameter
+  category: 系统/通用
+- code: 10004
+  message: Method Error
+  category: 系统/通用
+- code: 10005
+  message: Token Error
+  category: 系统/通用
+- code: 10006
+  message: Token is Empty
+  category: 系统/通用
+- code: 10007
+  message: Incorrect account or password. Please try again.
+  category: 系统/通用
+- code: 10008
+  message: Registration Error
+  category: 系统/通用
+- code: 10009
+  message: Operation Password Error
+  category: 系统/通用
+- code: 10010
+  message: Password Error
+  category: 系统/通用
+- code: 10011
+  message: Transaction Error
+  category: 充值/提现/渠道/金额限制/交易
+- code: 10012
+  message: Account Already Exists
+  category: 系统/通用
+- code: 10013
+  message: ID is Empty
+  category: 系统/通用
+- code: 10014
+  message: Record Not Found
+  category: 系统/通用
+- code: 10015
+  message: RPC Address Not Configured
+  category: 系统/通用
+- code: 10016
+  message: Database Error
+  category: 系统/通用
+- code: 10044
+  message: Withdrawal Password Error
+  category: 充值/提现/渠道/金额限制/交易
+- code: 10045
+  message: User Mobile Number Mismatch
+  category: 用户/注册/资料
+- code: 14000
+  message: Login Failed
+  category: 登录/账号状态
+- code: 14004
+  message: Your Account Has Been Disabled. Unable to Log In. Please Contact Customer
+    Service.
+  category: 登录/账号状态
+- code: 14005
+  message: User Self-Restriction
+  category: 登录/账号状态
+- code: 14040
+  message: User Account Frozen
+  category: 登录/账号状态
+- code: 15001
+  message: Marked as Read
+  category: 消息/模板/Excel
+- code: 15002
+  message: Template ID Not Found
+  category: 消息/模板/Excel
+- code: 15003
+  message: Excel Error
+  category: 消息/模板/Excel
+- code: 16001
+  message: Too Many Withdrawal Accounts
+  category: 充值/提现/渠道/金额限制/交易
+- code: 17001
+  message: Locking Error
+  category: 锁/安全
+- code: 17002
+  message: Verification Code Error
+  category: 验证/二步/KYC
+- code: 18000
+  message: KYC Verified
+  category: 验证/二步/KYC
+- code: 18001
+  message: Google Authenticator Parameter Error
+  category: 验证/二步/KYC
+- code: 18002
+  message: Google Authenticator Status Error
+  category: 验证/二步/KYC
+- code: 18003
+  message: Google Authenticator Code Error
+  category: 验证/二步/KYC
+- code: 18004
+  message: Google Authentication Error
+  category: 验证/二步/KYC
+- code: 18005
+  message: Password Format Error
+  category: 验证/二步/KYC
+- code: 19000
+  message: Player Login Error
+  category: 登录/账号状态
+- code: 19001
+  message: Record Not Found
+  category: 记录/变更
+- code: 19010
+  message: No Updates Available
+  category: 记录/变更
+- code: 19011
+  message: Cannot Delete Verified Record
+  category: 记录/变更
+- code: 20002
+  message: Server Key Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20010
+  message: Current Time is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20011
+  message: Current Time Value Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20020
+  message: Signature Nonce is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20030
+  message: Channel Code is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20031
+  message: Channel Code Not Found
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20040
+  message: Merchant Code is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20041
+  message: Invalid Merchant
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20042
+  message: Invalid Merchant Code Format
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20050
+  message: Signature is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20051
+  message: Signature Expired
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20052
+  message: Signature Expired
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20060
+  message: JWT Token is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20061
+  message: JWT Token Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20062
+  message: Invalid JWT Token
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20063
+  message: JWT Token Expired
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20064
+  message: Invalid JWT Token Format
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20065
+  message: JWT Token Expiration Handling Failed
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20074
+  message: Domain is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20170
+  message: Invalid Domain
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20171
+  message: Domain Not Found
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20172
+  message: Invalid IP
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20173
+  message: IP is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20174
+  message: IP Whitelist is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20175
+  message: Invalid IP Format
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20180
+  message: Invalid URL
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20190
+  message: Key Not Found
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20200
+  message: Context Not Found
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20201
+  message: Platform is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20202
+  message: playing Code is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20203
+  message: playing Status Disabled
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20204
+  message: playing Under Maintenance
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20205
+  message: Client Maintenance Not Configured
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20206
+  message: Environment Configuration Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20207
+  message: User Kicked Out
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20208
+  message: Business Processing Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20209
+  message: playingLaunchFailed
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20210
+  message: Client Status Maintenance
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20211
+  message: Client Type is Empty
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20212
+  message: Lobby Under Maintenance
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20213
+  message: Lobby Disabled
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20214
+  message: Cleanup Configuration Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20215
+  message: Database Insert Error
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20216
+  message: Invalid Data
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 20217
+  message: Invalid Request
+  category: 网关/签名/JWT/域名/IP/环境
+- code: 30002
+  message: User Account is Empty
+  category: 用户/注册/资料
+- code: 30003
+  message: User Password is Empty
+  category: 用户/注册/资料
+- code: 30004
+  message: User Not Registered
+  category: 用户/注册/资料
+- code: 30005
+  message: UserLock User Account Locked
+  category: 用户/注册/资料
+- code: 30006
+  message: User Password Incorrect
+  category: 用户/注册/资料
+- code: 30007
+  message: User ID Error
+  category: 用户/注册/资料
+- code: 30009
+  message: Google Verification Code Error
+  category: 验证/二步/KYC
+- code: 30010
+  message: Google Verification Code is Empty
+  category: 验证/二步/KYC
+- code: 30011
+  message: Google Authentication Not Bound
+  category: 验证/二步/KYC
+- code: 30012
+  message: Verification Code Expired
+  category: 验证/二步/KYC
+- code: 30013
+  message: Verification Code Error
+  category: 验证/二步/KYC
+- code: 30014
+  message: Associated Account is Empty
+  category: 用户/注册/资料
+- code: 30015
+  message: Old User Password is Empty
+  category: 用户/注册/资料
+- code: 30016
+  message: Mobile Number Already Exists
+  category: 用户/注册/资料
+- code: 30017
+  message: Submitted
+  category: 用户/注册/资料
+- code: 30018
+  message: IP Geolocation is Empty
+  category: 商户/网络策略/IP
+- code: 30019
+  message: Sort Number is Empty
+  category: 商户/网络策略/IP
+- code: 30020
+  message: IP and Range are Both Empty
+  category: 商户/网络策略/IP
+- code: 30021
+  message: Either IP or Range Must Be Provided
+  category: 商户/网络策略/IP
+- code: 30022
+  message: IP Range End Greater Than Start
+  category: 商户/网络策略/IP
+- code: 30023
+  message: Duplicate IP Error
+  category: 商户/网络策略/IP
+- code: 30024
+  message: Status is Empty
+  category: 用户/注册/资料
+- code: 30025
+  message: SMS Limit Reached
+  category: 短信/手机
+- code: 30026
+  message: SMS Send Interval Restriction
+  category: 短信/手机
+- code: 30027
+  message: User Account Frozen
+  category: 用户/注册/资料
+- code: 30032
+  message: Registration Page Timeout
+  category: 用户/注册/资料
+- code: 30033
+  message: Mobile Verification Error
+  category: 用户/注册/资料
+- code: 30034
+  message: Merchant Account Locked
+  category: 商户/网络策略/IP
+- code: 30035
+  message: Player Account Locked
+  category: 商户/网络策略/IP
+- code: 30036
+  message: Duplicate Bet
+  category: 订单/投注/抽奖/玩法
+- code: 30100
+  message: Mobile Numbers Cannot Be Identical
+  category: 用户/注册/资料
+- code: 31001
+  message: Invalid Full Name
+  category: 用户/注册/资料
+- code: 31002
+  message: Invalid Mobile Number
+  category: 用户/注册/资料
+- code: 31029
+  message: Duplicate User Registration
+  category: 用户/注册/资料
+- code: 40001
+  message: This Data Has Already Been Processed. Please Refresh and Retry.
+  category: 记录/变更
+- code: 40002
+  message: Username Error
+  category: 业务通用
+- code: 40003
+  message: Real Name Exception
+  category: 业务通用
+- code: 40004
+  message: Parameter ID Exception
+  category: 业务通用
+- code: 40005
+  message: Some Data Has Already Been Processed
+  category: 记录/变更
+- code: 40006
+  message: Channel Error
+  category: 业务通用
+- code: 40007
+  message: Deposit Amount Too Small
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40008
+  message: Deposit Amount Too Large
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40009
+  message: Insufficient Balance
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40010
+  message: Withdrawal Channel Closed
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40011
+  message: 'Withdrawal Channel Requires Parameter: method_id'
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40012
+  message: 'Withdrawal Channel Requires Parameter: method_id'
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40013
+  message: Update Failed
+  category: 业务通用
+- code: 40014
+  message: Delete Failed
+  category: 业务通用
+- code: 40015
+  message: Data Already Updated
+  category: 记录/变更
+- code: 40016
+  message: Parameter ID Exception
+  category: 业务通用
+- code: 40017
+  message: Amount Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40018
+  message: Invalid Upload Data
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40019
+  message: Channel ID is Empty
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40020
+  message: Method ID is Empty
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40021
+  message: Please Delete Sub-Channels First Before Deletion
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40022
+  message: Please Delete Sub-Channels First Before Deletion
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40023
+  message: Please Select a Bank
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40024
+  message: Please Refresh the Interface First
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40025
+  message: Already Under This Risk Control
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40026
+  message: Full Name Error
+  category: 业务通用
+- code: 40027
+  message: Search Time Cannot Exceed Three Months
+  category: 业务通用
+- code: 40028
+  message: Only Forced Timeout Allowed
+  category: 业务通用
+- code: 40029
+  message: Deposit Amount Too Small
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40030
+  message: Member Status Exception
+  category: 业务通用
+- code: 40031
+  message: Insufficient Turnover Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40032
+  message: This User Has No Withdrawal Account Bound
+  category: 业务通用
+- code: 40033
+  message: Member Has Not Passed KYC Verification
+  category: 验证/二步/KYC
+- code: 40034
+  message: Third-Party Name Error
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40035
+  message: Fee Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40036
+  message: Merchant Number Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40037
+  message: Private Key Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40038
+  message: Public Key Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40039
+  message: Gateway Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40040
+  message: Technical Parameter Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40041
+  message: Callback IP Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40042
+  message: Daily Limit Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40043
+  message: Maximum Deposit Amount Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40044
+  message: Minimum Deposit Amount Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40045
+  message: Maximum Withdrawal Amount by Method Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40046
+  message: Minimum Withdrawal Amount by Method Exception
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40047
+  message: Invalid Amount Range Input
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40048
+  message: Only Fixed Amounts Allowed
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40049
+  message: Withdrawal Type Has Been Closed
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40050
+  message: No Such Data
+  category: 记录/变更
+- code: 40051
+  message: Order Number Error
+  category: 订单/投注/抽奖/玩法
+- code: 40052
+  message: Data Already Processed
+  category: 记录/变更
+- code: 40053
+  message: Order Number or Third-Party Order Number Error
+  category: 订单/投注/抽奖/玩法
+- code: 40054
+  message: Callback Order Number Error
+  category: 订单/投注/抽奖/玩法
+- code: 40055
+  message: Name Already Exists
+  category: 业务通用
+- code: 40056
+  message: No Available Withdrawal Channel
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40057
+  message: Payment Success URL Error
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40058
+  message: Pending Withdrawal Orders Exist
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40059
+  message: Deposit Amount Exceeds Daily Limit
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40060
+  message: Withdrawal Account Already Bound
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40061
+  message: Insufficient Balance in Third-Party Merchant for Withdrawal
+  category: 充值/提现/渠道/金额限制/交易
+- code: 40062
+  message: Current Round Not Available for Betting
+  category: 订单/投注/抽奖/玩法
+- code: 40063
+  message: Incorrect Bet Amount
+  category: 订单/投注/抽奖/玩法
+- code: 40064
+  message: Second Bet Not Allowed at This Time
+  category: 订单/投注/抽奖/玩法
+- code: 40065
+  message: Second Bet Time Expired
+  category: 订单/投注/抽奖/玩法
+- code: 40066
+  message: playing Chip Limit Exceeded for This Round
+  category: 订单/投注/抽奖/玩法
+- code: 40067
+  message: playingInfo Data Error
+  category: 订单/投注/抽奖/玩法
+- code: 40068
+  message: Invalid playing Play Mode
+  category: 订单/投注/抽奖/玩法
+- code: 40069
+  message: Minimum Bet Amount Not Met for playing Betting Option
+  category: 订单/投注/抽奖/玩法
+- code: 40070
+  message: No Orders Available for Cancellation
+  category: 订单/投注/抽奖/玩法
+- code: 40071
+  message: Order Cancellation Time Exceeded 24 Hours
+  category: 订单/投注/抽奖/玩法
+- code: 40072
+  message: Draw Period Not Cancelled, Cannot Cancel Order
+  category: 订单/投注/抽奖/玩法
+- code: 40073
+  message: Next Draw Not Started, Cannot Cancel Order
+  category: 订单/投注/抽奖/玩法
+- code: 40074
+  message: Only One Cancellation Allowed per playing Round
+  category: 订单/投注/抽奖/玩法
+- code: 40075
+  message: Betting Limit Exceeded in This Round
+  category: 订单/投注/抽奖/玩法
+- code: 40076
+  message: Player is a Demo User
+  category: 订单/投注/抽奖/玩法
+- code: 40077
+  message: Single Wallet Operation Failed
+  category: 订单/投注/抽奖/玩法
+- code: 40078
+  message: Single Wallet Bet Failed
+  category: 订单/投注/抽奖/玩法
+- code: 40079
+  message: Single Wallet Bet Failed
+  category: 订单/投注/抽奖/玩法
+- code: 40080
+  message: Insufficient Inventory
+  category: 产品/库存/分组
+- code: 40081
+  message: Maximum Purchase Share Exceeded
+  category: 产品/库存/分组
+- code: 40082
+  message: Group Already Exists
+  category: 产品/库存/分组
+- code: 50000
+  message: Menu is Empty
+  category: RBAC/菜单/角色/权限
+- code: 50001
+  message: Menu ID is Empty
+  category: RBAC/菜单/角色/权限
+- code: 50002
+  message: No Permission
+  category: RBAC/菜单/角色/权限
+- code: 50003
+  message: Role Locked
+  category: RBAC/菜单/角色/权限
+- code: 50007
+  message: Role Not Found
+  category: RBAC/菜单/角色/权限
+- code: 50008
+  message: Role Not Configured
+  category: RBAC/菜单/角色/权限
+- code: 50009
+  message: Role is Empty
+  category: RBAC/菜单/角色/权限
+- code: 50010
+  message: Parent Role is Empty
+  category: RBAC/菜单/角色/权限
+- code: 50011
+  message: Role Name is Empty
+  category: RBAC/菜单/角色/权限
+- code: 50012
+  message: Role Permission Exceeded
+  category: RBAC/菜单/角色/权限
+- code: 50013
+  message: Cannot Modify Own Role
+  category: RBAC/菜单/角色/权限
+- code: 50014
+  message: Cannot Delete Own Role
+  category: RBAC/菜单/角色/权限
+- code: 50015
+  message: Cannot Unbind User from Role
+  category: RBAC/菜单/角色/权限
+- code: 50016
+  message: Super Administrator Cannot Modify Permissions
+  category: RBAC/菜单/角色/权限
+- code: 50017
+  message: Sub-role Menu Exceeds Parent Role Menu Permissions
+  category: RBAC/菜单/角色/权限
+- code: 50018
+  message: Roles Not in the Same Permission Tree
+  category: RBAC/菜单/角色/权限
+- code: 50019
+  message: Cannot Assign Permissions to Peer Role
+  category: RBAC/菜单/角色/权限
+- code: 60000
+  message: Third-Party RPC Payment Error
+  category: 充值/提现/渠道/金额限制/交易
+- code: 60001
+  message: Third-Party RPC Payment Error 2
+  category: 充值/提现/渠道/金额限制/交易
+- code: 61001
+  message: playing Round Error
+  category: 订单/投注/抽奖/玩法
+- code: 61002
+  message: playing Status Error
+  category: 订单/投注/抽奖/玩法
+- code: 61003
+  message: Event Error
+  category: 订单/投注/抽奖/玩法
+- code: 61004
+  message: Invalid Lottery Content
+  category: 订单/投注/抽奖/玩法
+- code: 61005
+  message: playing Code Error
+  category: 订单/投注/抽奖/玩法
+- code: 61006
+  message: Second Lottery Not Allowed in Current Round
+  category: 订单/投注/抽奖/玩法
+- code: 61007
+  message: Second Lottery Required in Current Round
+  category: 订单/投注/抽奖/玩法
+- code: 61008
+  message: Current Round Should Be SG
+  category: 订单/投注/抽奖/玩法
+- code: 61009
+  message: Lottery Result Error
+  category: 订单/投注/抽奖/玩法
+- code: 61010
+  message: Failed to Generate Next Round
+  category: 订单/投注/抽奖/玩法
+- code: 61011
+  message: Update Error
+  category: 订单/投注/抽奖/玩法
+- code: 61012
+  message: playing Status Updated
+  category: 订单/投注/抽奖/玩法
+- code: 70000
+  message: playing is Under Maintenance
+  category: 订单/投注/抽奖/玩法
+- code: 70001
+  message: playing Maintenance Parameter is Empty
+  category: 订单/投注/抽奖/玩法
+- code: 70002
+  message: Duplicate playing Lobby Addition
+  category: 订单/投注/抽奖/玩法
+- code: 70003
+  message: playing Lobby Name Mismatch
+  category: 订单/投注/抽奖/玩法
+- code: 70004
+  message: Cannot Operate While playing is Active
+  category: 订单/投注/抽奖/玩法
+- code: 70005
+  message: playing Type Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 70006
+  message: playing Name Already Exists
+  category: 订单/投注/抽奖/玩法
+- code: 70007
+  message: playing Closure During Maintenance Not Allowed
+  category: 订单/投注/抽奖/玩法
+- code: 70008
+  message: playing Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 70009
+  message: playing Round Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 70011
+  message: playing Authentication Failed
+  category: 订单/投注/抽奖/玩法
+- code: 70012
+  message: playing Room Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 70013
+  message: playing Room Host Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 81000
+  message: SMS Send Failed
+  category: 短信/手机
+- code: 81001
+  message: SMS Channel Disabled
+  category: 短信/手机
+- code: 81002
+  message: MS Per-Minute Limit Exceeded
+  category: 短信/手机
+- code: 81003
+  message: SMS Per-Hour Limit Exceeded
+  category: 短信/手机
+- code: 81004
+  message: SMS Daily Limit Exceeded
+  category: 短信/手机
+- code: 81005
+  message: Invalid Phone Number Format
+  category: 短信/手机
+- code: 90000
+  message: Betting Status Error
+  category: 订单/投注/抽奖/玩法
+- code: 90001
+  message: Current Status Does Not Allow Betting
+  category: 订单/投注/抽奖/玩法
+- code: 90002
+  message: Serial Number is Empty
+  category: 订单/投注/抽奖/玩法
+- code: 90003
+  message: Withdrawal Status Error
+  category: 订单/投注/抽奖/玩法
+- code: 90004
+  message: Order Already Settled
+  category: 订单/投注/抽奖/玩法
+- code: 90005
+  message: Serial Number Error
+  category: 订单/投注/抽奖/玩法
+- code: 90006
+  message: Invalid Betting Direction
+  category: 订单/投注/抽奖/玩法
+- code: 90007
+  message: Order Processing Error
+  category: 订单/投注/抽奖/玩法
+- code: 90008
+  message: Status Handling Error
+  category: 订单/投注/抽奖/玩法
+- code: 90009
+  message: Auto-Bet Time Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 90010
+  message: Auto-Bet Order Not Found
+  category: 订单/投注/抽奖/玩法
+- code: 90011
+  message: Betting Type Error
+  category: 订单/投注/抽奖/玩法
+- code: 90012
+  message: Auto-Bet Configuration Already Exists
+  category: 订单/投注/抽奖/玩法
+- code: 90013
+  message: Auto-Bet Processing Error
+  category: 订单/投注/抽奖/玩法
+- code: 90014
+  message: Auto-Bet Time is Empty
+  category: 订单/投注/抽奖/玩法
+- code: 90015
+  message: Cash Bet Odds are Empty
+  category: 订单/投注/抽奖/玩法
+- code: 90016
+  message: Cash Addition Successful
+  category: 订单/投注/抽奖/玩法
+- code: 90017
+  message: Cash Deduction Successful
+  category: 订单/投注/抽奖/玩法
+- code: 91000
+  message: Wallet Balance Not Found
+  category: 钱包/余额/兑换码
+- code: 91001
+  message: Wallet Currency Not Found
+  category: 钱包/余额/兑换码
+- code: 91002
+  message: Wallet Type Not Found
+  category: 钱包/余额/兑换码
+- code: 91003
+  message: Redemption Code Already Used
+  category: 钱包/余额/兑换码
+- code: 91004
+  message: Redemption Code Not Found
+  category: 钱包/余额/兑换码
+- code: 91005
+  message: Redemption Code Expired
+  category: 钱包/余额/兑换码
+- code: 91006
+  message: Redemption Code Not Activated
+  category: 钱包/余额/兑换码
+- code: 91007
+  message: Redemption Code Deleted
+  category: 钱包/余额/兑换码
+- code: 92000
+  message: User Not Found
+  category: 用户/注册/资料
+- code: 92001
+  message: Shipping Address Not Found
+  category: 用户/注册/资料
+- code: 92002
+  message: User Account is Disabled
+  category: 用户/注册/资料
+- code: 92003
+  message: Self Exclusion Enabled
+  category: 用户/注册/资料
+- code: 92004
+  message: Daily Password Change Limit Reached
+  category: 用户/注册/资料
+- code: 93000
+  message: KYC Information Already Exists
+  category: 验证/二步/KYC
+- code: 93001
+  message: KYC Status Not Submitted
+  category: 验证/二步/KYC
+- code: 93002
+  message: KYC Information Already Exists
+  category: 验证/二步/KYC
+- code: 93003
+  message: Parameter Empty
+  category: 验证/二步/KYC
+- code: 93004
+  message: Insufficient Balance
+  category: 验证/二步/KYC
+- code: 93005
+  message: Service Busy
+  category: 验证/二步/KYC
+- code: 93006
+  message: Parameter Error
+  category: 验证/二步/KYC
+- code: 93007
+  message: Over Query Limit
+  category: 验证/二步/KYC
+- code: 93008
+  message: Invalid Documents
+  category: 验证/二步/KYC
+- code: 93009
+  message: KYC Verification Failed
+  category: 验证/二步/KYC
+- code: 94000
+  message: Product Not Found
+  category: 产品/库存/分组
+- code: 95000
+  message: Treasure Status Already Listed
+  category: 产品/库存/分组
+- code: 10150000
+  message: Exceeded Maximum File Size
+  category: 系统/通用

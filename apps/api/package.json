@@ -10,7 +10,10 @@
     "pr:fmt": "prisma format",
     "pr:val": "prisma validate",
     "pr:dev": "prisma migrate dev",
-    "pr:deploy": "prisma migrate deploy"
+    "pr:deploy": "prisma migrate deploy",
+    "codes:gen": "node scripts/gen-error-codes.mjs",
+    "prebuild": "npm run codes:gen",
+    "postinstall": "npm run codes:gen"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.7",
@@ -54,6 +57,7 @@
     "prisma": "^6.18.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "yaml": "^2.8.1"
   }
 }
