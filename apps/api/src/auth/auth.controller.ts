@@ -1,4 +1,4 @@
-import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
+import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
 import {Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards} from "@nestjs/common";
 import {AuthService} from "./auth.service";
 import {JwtAuthGuard} from "./jwt.guard";
@@ -15,6 +15,7 @@ export class AuthController {
 
     // 使用手机号登陆
     @Post('login/otp')
+    @ApiOperation({ summary: 'login with OTP'})
     @Throttle({ otpRequest: { limit: 20, ttl: 60_000 } })
     @HttpCode(HttpStatus.OK)
     async loginWithOtp(@Body() dto: LoginOtpDto, @Req() req:any) {

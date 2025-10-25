@@ -5,7 +5,8 @@ import { Injectable } from '@nestjs/common';
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 
-const OTP_INTERVAL_SECONDS = Number(process.env.OTP_INTERVAL_SECONDS ?? 60);
+// login validity window: 3 minutes
+const OTP_LOGIN_WINDOW_SECONDS = Number(process.env.OTP_LOGIN_WINDOW_SECONDS ?? 300);
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
 
         const  now = new Date();
         // 毫秒
-        const  graceStart = new Date(now.getTime() - OTP_INTERVAL_SECONDS * 1000);
+        const  graceStart = new Date(now.getTime() - OTP_LOGIN_WINDOW_SECONDS * 1000);
 
         // // 取“最近一条已验证、且未消费”的登录 OTP
         const opt = await this.prisma.otpRequest.findFirst({
@@ -33,7 +34,6 @@ export class AuthService {
             orderBy: { createdAt: 'desc'},
         })
 
-        console.log('opt===>', opt);
 
         if (!opt){
             throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED)
@@ -95,9 +95,9 @@ export class AuthService {
             phone: user.phone,
             phoneMd5: user.phoneMd5,
             nickname: user.nickname,
-            userName: user.nickname,
+            username: user.nickname,
             avatar: user.avatarUrl,
-            countryCode: user.countryCode,
+            country_code: user.countryCode,
         };
     }
 
