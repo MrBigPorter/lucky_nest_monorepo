@@ -13,6 +13,23 @@ export class AuthService {
     constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService) {
     }
 
+    // sign access token
+    private async issueToken(user: { id: string;}){
+        const  payload = {sub: user.id};
+
+        const  accessToken = await this.jwt.signAsync(payload, {
+            expiresIn: '30m',
+        });
+
+        const  refreshToken = await this.jwt.signAsync(payload, {
+            expiresIn: '7d',
+        })
+
+        return {
+            accessToken,
+            refreshToken,
+        }
+    }
 
     // 手机号登陆
     async loginWithOtp(phone: string, meta?: {ip?: string, ua?: string, countryCode?: number}){
@@ -63,9 +80,6 @@ export class AuthService {
             }
         })
 
-        //发JWT token
-        const  accessToken = await this.jwt.signAsync({sub: user.id});
-
         //记录登陆成功
         await this.prisma.$transaction([
             this.prisma.loginEvent.create({
@@ -89,11 +103,13 @@ export class AuthService {
             })
         ]);
 
+        const tokens = await this.issueToken(user);
+
         return {
-            token: accessToken,
+            tokens: tokens,
             id: user.id,
             phone: user.phone,
-            phoneMd5: user.phoneMd5,
+            phone_md5: user.phoneMd5,
             nickname: user.nickname,
             username: user.nickname,
             avatar: user.avatarUrl,
@@ -103,6 +119,7 @@ export class AuthService {
 
     // 获取用户信息
     async profile(userId: string){
+        console.log('profile===>', userId)
         const  user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }});
         return {
             Id: user.id,

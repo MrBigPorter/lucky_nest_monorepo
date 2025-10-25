@@ -44,7 +44,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             status = exception.getStatus?.() ?? HttpStatus.BAD_REQUEST;
             code = exception.code;
             key = exception.key as CodeKey;
-            message = MESSAGE[key];
+            message = MESSAGE[key] ?? 'SYSTEM_ERROR';
             details = exception.extra;
         }
 
