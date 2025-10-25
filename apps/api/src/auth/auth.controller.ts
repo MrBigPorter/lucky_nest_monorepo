@@ -4,6 +4,7 @@ import {AuthService} from "./auth.service";
 import {JwtAuthGuard} from "./jwt.guard";
 import {LoginOtpDto} from "./dto/login.dto";
 import {Throttle} from '@nestjs/throttler';
+import {CurrentUserId} from "@api/auth/user.decorator";
 
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
@@ -27,12 +28,13 @@ export class AuthController {
     }
 
     // 获取用户信息
-    @ApiBearerAuth()
     //@ApiBearerAuth()：告诉 Swagger 这个接口需要 Bearer 鉴权，文档页会出现“Authorize”按钮
     //启用 JWT 守卫（自动从 Authorization: Bearer <token> 取 token、验签、验过期）。
+    @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get('profile')
-    async profile(@Req() req:any) {
-        return await this.auth.profile(req.user.userId)
+    async profile(@CurrentUserId() userId: string) {
+        console.log('userId',userId)
+        return  this.auth.profile(userId)
     }
 }
