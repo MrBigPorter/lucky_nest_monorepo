@@ -20,7 +20,7 @@ const toKey = (s) => {
     if (!s || typeof s !== 'string') return null;
     return s
         .normalize('NFKD')
-        .replace(/[^\w]+/g, '_')
+        .replace(/\W+/g, '_')
         .replace(/^_+|_+$/g, '')
         .toUpperCase();
 };
@@ -50,6 +50,8 @@ const ensureUniqueKey = (baseKey, code, explicit) => {
     return k;
 };
 
+// ✅ 修改前这里 push 的只包含 code 和 key
+// ✅ 现在我们额外保留 message 字段
 let items = [];
 for (let i = 0; i < list.length; i++) {
     const it = list[i] ?? {};
@@ -67,7 +69,8 @@ for (let i = 0; i < list.length; i++) {
 
     key = ensureUniqueKey(key, codeNum, explicitKey);
 
-    items.push({ code: codeNum, key });
+    // ✅ 这里新增 message
+    items.push({ code: codeNum, key, message: it.message || '' });
 }
 
 // 按 code 去重（若 YAML 里同一 code 多行，仅取首次）
@@ -75,15 +78,26 @@ const uniqByCode = new Map();
 for (const it of items) if (!uniqByCode.has(it.code)) uniqByCode.set(it.code, it);
 items = [...uniqByCode.values()];
 
+// ✅ 输出包含 CODE 与 MESSAGE 两个对象
 const out = [
     '// *** AUTO-GENERATED. DO NOT EDIT. ***',
     'export const CODE = {',
     ...items.map(({ key, code }) => `  ${key}: ${code},`),
     '} as const;',
     '',
+    'export const MESSAGE: Record<keyof typeof CODE, string> = {',
+    ...items.map(({ key, message }) => `  ${key}: ${JSON.stringify(message)},`),
+    '};',
+    '',
+    '// ✅ 所有错误 Key 汇总变量（用于引用与枚举）',
+    'export const ERROR_KEYS = {',
+    ...items.map(({ key }) => `  ${key}: "${key}",`),
+    '} as const;',
+    '',
     'export type CodeKey = keyof typeof CODE;',
     'export type CodeValue = (typeof CODE)[CodeKey];',
     'export const codeOf = (k: CodeKey): CodeValue => CODE[k];',
+    'export const messageOf = (k: CodeKey): string => MESSAGE[k];',
     'export const isCodeKey = (v: string): v is CodeKey => v in CODE;',
     '',
 ].join('\n');

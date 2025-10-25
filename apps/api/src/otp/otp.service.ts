@@ -1,8 +1,10 @@
-import {BadRequestException, Injectable, UnauthorizedException, HttpException, HttpStatus} from '@nestjs/common';
+import {BadRequestException, Injectable, UnauthorizedException} from '@nestjs/common';
 import {PrismaService} from '../prisma/prisma.service';
 import * as crypto from 'node:crypto';
 import {gen6Code, md5, sha256} from "../common/crypto.util";
 import {addSeconds, isBefore} from 'date-fns';
+import {throwBiz} from "@api/common/exceptions/biz.exception";
+import {ERROR_KEYS} from "@api/common/error-codes.gen";
 
 const OTP_PEPPER = process.env.OTP_PEPPER || '';
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS) || 300;
@@ -27,7 +29,7 @@ export class OtpService {
     async request({phone}: { phone: string }) {
         const p = phone.trim();
         const phoneMd5 = md5(p);
-        if (!p) throw new BadRequestException('phone required');
+        if (!p) throw new BadRequestException({'message': 'phone required'});
 
         // DB 限流：同手机号最近 OTP_INTERVAL_SECONDS 内只能申请一次
         const recent = await this.prisma.otpRequest.findFirst({
@@ -40,7 +42,8 @@ export class OtpService {
         })
 
         if (recent) {
-            throw new HttpException('Try again later', HttpStatus.TOO_MANY_REQUESTS);
+            throwBiz(ERROR_KEYS.TOO_MANY_REQUESTS)
+
         }
 
         //开发环境固定验证码
@@ -77,7 +80,7 @@ export class OtpService {
         const p = (phone || '').trim();
         const c = (code || '').trim();
         const phoneMd5 = md5(p);
-        if (!p || !c) throw new BadRequestException('phone/code required');
+        if (!p || !c) throw new BadRequestException('phone required');
 
 
         // 找“最新的一条 LOGIN OTP”
@@ -87,13 +90,14 @@ export class OtpService {
         });
 
         if (!req) throw new BadRequestException('Otp not found');
-        if (isBefore(req.expiresAt, new Date())) throw new BadRequestException('Otp expired');
-        if (req.attempts >= OTP_MAX_ATTEMPTS) throw new UnauthorizedException('Too many attempts');
+        if (isBefore(req.expiresAt, new Date())) throwBiz(ERROR_KEYS.OTP_EXPIRED);
+        if (req.attempts >= OTP_MAX_ATTEMPTS) throwBiz(ERROR_KEYS.TOO_MANY_OTP_ATTEMPTS);
 
 
         const expectOtpHash = req.otpHash;
         const actualOtpHash = sha256(`${p}:${code}${OTP_PEPPER}`);
         const isMatch = expectOtpHash === actualOtpHash;
+
 
         // 记录尝试次数
         await this.prisma.otpRequest.update({

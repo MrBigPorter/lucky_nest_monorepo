@@ -12,8 +12,7 @@
     "pr:dev": "prisma migrate dev",
     "pr:deploy": "prisma migrate deploy",
     "codes:gen": "node scripts/gen-error-codes.mjs",
-    "prebuild": "npm run codes:gen",
-    "postinstall": "npm run codes:gen"
+    "prebuild": "npm run codes:gen"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.7",
