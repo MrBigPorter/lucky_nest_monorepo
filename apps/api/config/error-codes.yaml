@@ -55,6 +55,30 @@
 - code: 10045
   message: User Mobile Number Mismatch
   category: 用户/注册/资料
+- code: 11001
+  message: OTP Not Found
+  category: 登录/OTP
+- code: 11002
+  message: OTP Expired
+  category: 登录/OTP
+- code: 11003
+  message: OTP Invalid
+  category: 登录/OTP
+- code: 11004
+  message: Too Many OTP Attempts
+  category: 登录/OTP
+- code: 11005
+  message: OTP Rate Limited
+  category: 登录/OTP
+- code: 11006
+  message: OTP Already Verified
+  category: 登录/OTP
+- code: 11007
+  message: OTP Request Conflict
+  category: 登录/OTP
+- code: 11008
+  message: OTP Not Verified Or Already Used
+  category: 登录/OTP
 - code: 14000
   message: Login Failed
   category: 登录/账号状态
@@ -599,6 +623,18 @@
 - code: 40082
   message: Group Already Exists
   category: 产品/库存/分组
+- code: 40100
+  message: Unauthorized
+  category: HTTP/通用
+- code: 40300
+  message: Forbidden
+  category: HTTP/通用
+- code: 40400
+  message: Not Found
+  category: HTTP/通用
+- code: 42900
+  message: Too Many Requests
+  category: HTTP/通用
 - code: 50000
   message: Menu is Empty
   category: RBAC/菜单/角色/权限

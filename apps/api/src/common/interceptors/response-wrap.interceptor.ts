@@ -18,6 +18,7 @@ export class ResponseWrapInterceptor implements NestInterceptor {
 
         return next.handle().pipe(
             map((data) => {
+                console.log('data===>', data);
                 // 已经是包壳就别重复包
                 if (data && typeof data === 'object' && 'code' in data && 'data' in data) {
                     return data;
@@ -25,7 +26,7 @@ export class ResponseWrapInterceptor implements NestInterceptor {
                 // 原样透传流/Buffer等场景可在这里判断后直接 return data（如需）
                 return {
                     code: 10000,
-                    message: 'success',
+                    message: 'SUCCESS',
                     tid: makeTid(),
                     data,
                 };

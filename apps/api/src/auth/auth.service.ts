@@ -1,9 +1,11 @@
 import {PrismaService} from "../prisma/prisma.service";
 import {JwtService} from "@nestjs/jwt";
 import { md5} from "../common/crypto.util";
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import {throwBiz} from "@api/common/exceptions/biz.exception";
+import {ERROR_KEYS} from "@api/common/error-codes.gen";
 
-const OTP_INTERVAL_SECONDS = Number(process.env.OTP_INTERVAL_SECONDS) || 60;
+const OTP_INTERVAL_SECONDS = Number(process.env.OTP_INTERVAL_SECONDS ?? 60);
 
 @Injectable()
 export class AuthService {
@@ -17,7 +19,8 @@ export class AuthService {
         const phoneMd5 = md5(p);
 
         const  now = new Date();
-        const  graceStart = new Date(now.getTime() - OTP_INTERVAL_SECONDS);
+        // 毫秒
+        const  graceStart = new Date(now.getTime() - OTP_INTERVAL_SECONDS * 1000);
 
         // // 取“最近一条已验证、且未消费”的登录 OTP
         const opt = await this.prisma.otpRequest.findFirst({
@@ -30,8 +33,10 @@ export class AuthService {
             orderBy: { createdAt: 'desc'},
         })
 
+        console.log('opt===>', opt);
+
         if (!opt){
-            throw  new UnauthorizedException('OTP not verified or already used');
+            throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED)
         }
 
         // 找或注册用户，登陆即注册（没有注册就注册，有注册就登陆）
@@ -68,14 +73,14 @@ export class AuthService {
                     userId: user.id,
                     method: 'OTP',
                     success: true,
-                    tid: opt.id ?? undefined,
+                    tid: opt?.id ?? undefined,
                     ip: meta?.ip ?? null,
                     userAgent: meta?.ua ?? null,
                     countryCode: meta?.countryCode ?? null,
                 }
             }),
             this.prisma.otpRequest.update({
-                where: {id: opt.id},
+                where: {id: opt?.id},
                 data: { consumedAt: now }
             }),
             this.prisma.user.update({

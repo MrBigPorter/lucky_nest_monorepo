@@ -1,11 +1,53 @@
-# 根 .dockerignore
-**/node_modules
-**/dist
-**/.turbo
-**/.next
-**/coverage
-.DS_Store
-.env
-apps/**/.env*
+# -----------------------------
+# 通用
+# -----------------------------
+.git
+.gitignore
+Dockerfile*
+docker-compose*.yml
+README.md
+LICENSE
+
+# -----------------------------
+# Node 通用
+# -----------------------------
+node_modules
+dist
+build
 coverage
-.tmp
+.cache
+.vscode
+.idea
+
+# -----------------------------
+# 环境变量
+# -----------------------------
+../../.env
+.env.*
+!.env.example
+
+# -----------------------------
+# 日志与临时文件
+# -----------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# 前端特定
+# -----------------------------
+frontend/dist
+frontend/.cache
+
+# -----------------------------
+# 后端特定
+# -----------------------------
+backend/dist
+backend/.cache
+
+.yarn
+.pnp.*

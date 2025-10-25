@@ -25,7 +25,7 @@ async function bootstrap() {
     // ✅ 从容器里拿配置 get config from container
     const config = app.get(ConfigService);
     // port 和 host 都从 env 里取
-    const port = config.get<number>('PORT', 4000);
+    const port = config.get<number>('PORT', 3000);
     const host = config.get<string>('HOST', '0.0.0.0');
     // ✅ 支持逗号分隔多个域 support multiple domains separated by comma
     const corsOrigin = (config.get<string>('CORS_ORIGIN', 'http://localhost:3000')
