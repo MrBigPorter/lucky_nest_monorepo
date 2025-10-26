@@ -119,13 +119,12 @@ export class AuthService {
 
     // 获取用户信息
     async profile(userId: string){
-        console.log('profile===>', userId)
         const  user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }});
         return {
             Id: user.id,
             nickname: user.nickname ?? `pl_${user.id}`,
             avatar: user.avatarUrl,
-            phoneMd5: user.phoneMd5,
+            phone_md5: user.phoneMd5,
             phone: user.phone,
             invite_code: user.inviteCode ?? null,
             vip_level: user.vipLevel,
