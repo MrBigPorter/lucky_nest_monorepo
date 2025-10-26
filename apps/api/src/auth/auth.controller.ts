@@ -10,7 +10,7 @@ import {CurrentUserId} from "@api/auth/user.decorator";
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
 //@Controller('auth')：这组接口的前缀是 /auth/*。
 @ApiTags('auth')
-@Controller({path: 'auth', version: '1'})
+@Controller('auth')
 export class AuthController {
     constructor(private readonly auth: AuthService) {}
 
