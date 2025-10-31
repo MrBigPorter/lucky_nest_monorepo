@@ -4,6 +4,7 @@ import { md5} from "../common/crypto.util";
 import { Injectable } from '@nestjs/common';
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
+import {CODE_TYPE, VERIFY_STATUS} from "@lucky/shared";
 
 // login validity window: 3 minutes
 const OTP_LOGIN_WINDOW_SECONDS = Number(process.env.OTP_LOGIN_WINDOW_SECONDS ?? 300);
@@ -44,9 +45,9 @@ export class AuthService {
         const opt = await this.prisma.smsVerificationCode.findFirst({
             where: {
                 phone:p,
-                codeType: 2, // 2 登录
+                codeType: CODE_TYPE.LOGIN, // 2 登录
                 verifiedAt: { not: null, gte: graceStart },
-                verifyStatus: 1, // 1 已验证
+                verifyStatus: VERIFY_STATUS.VERIFIED, // 1 已验证
             },
             orderBy: { createdAt: 'desc'},
         })
