@@ -22,9 +22,8 @@ services:
       - .:/app
      # 避免宿主机空目录覆盖容器依赖
       - /app/node_modules
+      - /app/apps/api/node_modules
     environment:
-      NODE_ENV: ${NODE_ENV}
-      DATABASE_URL: ${DATABASE_URL}
       # macOS/WSL 下文件监听更稳
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
@@ -32,10 +31,8 @@ services:
         condition: service_healthy
     command: >
       sh -lc "yarn workspace @lucky/api prisma generate &&
-             yarn workspace @lucky/api start:dev
-           "
-    networks:
-      - app
+              yarn workspace @lucky/api start:dev"
+    networks: [app]
 
   db:
     image: postgres:16
@@ -49,7 +46,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U dev -d app" ]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 10

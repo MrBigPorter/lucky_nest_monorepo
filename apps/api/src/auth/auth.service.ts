@@ -31,7 +31,7 @@ export class AuthService {
         }
     }
 
-    // 手机号登陆
+    // 手机号登陆(登录即注册)
     async loginWithOtp(phone: string, meta?: {ip?: string, ua?: string, countryCode?: number}){
         const p = phone.trim();
         const phoneMd5 = md5(p);
@@ -41,12 +41,12 @@ export class AuthService {
         const  graceStart = new Date(now.getTime() - OTP_LOGIN_WINDOW_SECONDS * 1000);
 
         // // 取“最近一条已验证、且未消费”的登录 OTP
-        const opt = await this.prisma.otpRequest.findFirst({
+        const opt = await this.prisma.smsVerificationCode.findFirst({
             where: {
-                phoneMd5,
-                purpose: 'LOGIN',
+                phone:p,
+                codeType: 2, // 2 登录
                 verifiedAt: { not: null, gte: graceStart },
-                consumedAt: null,
+                verifyStatus: 1, // 1 已验证
             },
             orderBy: { createdAt: 'desc'},
         })
@@ -56,7 +56,7 @@ export class AuthService {
             throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED)
         }
 
-        // 找或注册用户，登陆即注册（没有注册就注册，有注册就登陆）
+        // 登陆即注册（没有注册就注册，有注册就登陆）
         const user = await this.prisma.user.upsert({
             //用 唯一键 phone 查用户。这里要求 User 模型里 phone 是 @unique 或 @id。
             where: { phone: p },
@@ -65,7 +65,6 @@ export class AuthService {
                 phone:p,
                 phoneMd5,
                 nickname: `pl_${Math.random().toString().slice(2, 10)}`,
-                countryCode: meta?.countryCode,
             },
             update:{},
             //只返回这几个字段
@@ -73,30 +72,41 @@ export class AuthService {
                 id: true,
                 phone: true,
                 nickname: true,
-                avatarUrl: true,
+                avatar: true,
                 phoneMd5: true,
-                username: true,
-                countryCode: true,
+                inviteCode: true,
+                vipLevel: true,
+                lastLoginAt: true,
+                kycStatus: true,
+                selfExclusionExpireAt: true,
             }
         })
 
-        //记录登陆成功
+        // 事务：日志、标记验证码已使用、更新最后登录时间
         await this.prisma.$transaction([
-            this.prisma.loginEvent.create({
+            this.prisma.userLoginLog.create({
                 data: {
                     userId: user.id,
-                    method: 'OTP',
-                    success: true,
-                    tid: opt?.id ?? undefined,
-                    ip: meta?.ip ?? null,
+                    loginType: 2,
+                    loginMethod:'OTP',
+                    loginStatus:1,
+                    tokenIssued: 1,
+                    loginTime: Date.now().toString(),
+                    loginIp: meta?.ip ?? null,
                     userAgent: meta?.ua ?? null,
-                    countryCode: meta?.countryCode ?? null,
+                    countryCode: meta?.countryCode ? String(meta.countryCode) : null,
+
                 }
             }),
-            this.prisma.otpRequest.update({
+
+            // 标记验证码已使用 1-> 2
+            this.prisma.smsVerificationCode.update({
                 where: {id: opt?.id},
-                data: { consumedAt: now }
+                data: {
+                    verifyStatus: 2
+                }
             }),
+            //更新用户最后登录时间
             this.prisma.user.update({
                 where: {id: user.id},
                 data: { lastLoginAt: now }
@@ -112,18 +122,32 @@ export class AuthService {
             phone_md5: user.phoneMd5,
             nickname: user.nickname,
             username: user.nickname,
-            avatar: user.avatarUrl,
-            country_code: user.countryCode,
+            avatar: user.avatar,
+            country_code: meta?.countryCode ?? null,
         };
     }
 
     // 获取用户信息
     async profile(userId: string){
-        const  user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }});
+        const  user = await this.prisma.user.findUniqueOrThrow({
+            where: { id: userId },
+            select: {
+                id: true,
+                phone: true,
+                phoneMd5: true,
+                nickname: true,
+                avatar: true,
+                inviteCode: true,
+                vipLevel: true,
+                lastLoginAt: true,
+                kycStatus: true,
+                selfExclusionExpireAt: true,
+            }
+        });
         return {
             Id: user.id,
             nickname: user.nickname ?? `pl_${user.id}`,
-            avatar: user.avatarUrl,
+            avatar: user.avatar,
             phone_md5: user.phoneMd5,
             phone: user.phone,
             invite_code: user.inviteCode ?? null,
@@ -131,7 +155,7 @@ export class AuthService {
             last_login_at: user.lastLoginAt ? user.lastLoginAt.getTime() : null,
             kyc_status: mapKyc(user.kycStatus),
             delivery_address_id: 0,
-            self_exclusion_expire_at: user.selfExclusionExpiresAt ? user.selfExclusionExpiresAt.getTime() : 0,
+            self_exclusion_expire_at: user.selfExclusionExpireAt ? user.selfExclusionExpireAt.getTime() : 0,
         }
     }
 }
