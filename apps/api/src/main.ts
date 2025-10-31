@@ -14,9 +14,7 @@ import { ResponseWrapInterceptor } from '@api/common/interceptors/response-wrap.
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 优雅关停 Prisma
-  const prisma = app.get(PrismaService);
-  await prisma.enableShutdownHooks(app);
+  app.enableShutdownHooks();
 
   // 配置
   const config = app.get(ConfigService);

@@ -7,6 +7,7 @@
     "start": "node dist/main.js",
     "clean": "rimraf dist",
     "generate": "nest g",
+    "prestart:dev": "prisma generate && prisma db push",
     "pr:fmt": "prisma format",
     "pr:val": "prisma validate",
     "pr:dev": "prisma migrate dev",

@@ -10,6 +10,7 @@ import {AuthModule} from "./auth/auth.module"; // 如果你 tsconfig 没开 esMo
 import { APP_GUARD } from '@nestjs/core';
 import {OtpThrottlerGuard} from "./common/guards/otp-throttler.guard";
 import {OtpModule} from "./otp/otp.module";
+import {HealthController} from "@api/health/health.controller";
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -31,11 +32,12 @@ import {OtpModule} from "./otp/otp.module";
         //根模块，把业务模块“挂进来”。Nest 会读这些元数据，生成依赖图。
         PrismaModule,
         AuthModule,
-        OtpModule
+        OtpModule,
+
 
         // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
     ],
-    controllers: [AppController],
+    controllers: [AppController,HealthController],
     providers: [
         AppService,
         //让限流生效：把 ThrottlerGuard 设为全局守卫，否则 @Throttle 不会拦截。
