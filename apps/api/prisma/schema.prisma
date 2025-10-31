@@ -43,6 +43,10 @@ model User {
   loginLogs     UserLoginLog[]
   /// 第三方账户
   oauthAccounts OauthAccount[]
+  /// 组团
+  treasureGroupMembers  TreasureGroupMember[]
+  /// 创建的组团
+  createdTreasureGroups TreasureGroup[]
 
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
@@ -127,7 +131,7 @@ model OauthAccount {
   @@map("oauth_accounts")
 }
 
-
+// ======== 短信验证码 sms verification code=========
 model SmsVerificationCode {
   id        String   @id @default(cuid()) @map("code_id") @db.VarChar(32)
   createdAt DateTime @default(now()) @map("created_at")
@@ -168,4 +172,190 @@ model SmsVerificationCode {
   @@index([expiresAt], map: "idx_sms_expires_at")
   @@index([createdAt], map: "idx_sms_created_at")
   @@map("sms_verification_codes")
+}
+
+/// ======= 抽奖产品列表=========
+/// 抽奖产品表
+model Treasure {
+  id               String   @id @default(cuid())                      @map("treasure_id")         @db.VarChar(32)
+  createdAt        DateTime @default(now())                           @map("created_at")
+  updatedAt        DateTime @updatedAt                                @map("updated_at")
+
+  ///产品序列号
+  treasureSeq      String?  @unique                                   @map("treasure_seq")        @db.VarChar(50)
+  ///产品名称
+  treasureName     String   @map("treasure_name")                     @db.VarChar(200)
+  ///实物产品名称
+  productName      String?  @map("product_name")                      @db.VarChar(200)
+  ///封面图URL
+  treasureCoverImg String?  @map("treasure_cover_img")                @db.VarChar(255)
+  ///主图列表（JSON数组）
+  mainImageList    Json?    @map("main_image_list")
+
+  ///产品成本（PHP）
+  costAmount       Decimal? @map("cost_amount")                       @db.Decimal(10, 2)
+  ///单价/每份（PHP）
+  unitAmount       Decimal  @default(1.00)                            @map("unit_amount")         @db.Decimal(10, 2)
+  ///现金奖励金额
+  cashAmount       Decimal? @map("cash_amount")                       @db.Decimal(10, 2)
+
+  ///总库存/总份数
+  seqShelvesQuantity Int?   @map("seq_shelves_quantity")
+  ///已购买数量
+  seqBuyQuantity      Int   @default(0)                               @map("seq_buy_quantity")
+  ///最小购买量（开奖所需份数）
+  minBuyQuantity      Int?  @map("min_buy_quantity")
+  ///单人最大购买量
+  maxPerBuyQuantity   Int?  @map("max_per_buy_quantity")
+  ///购买率百分比
+  buyQuantityRate     Decimal?                                        @map("buy_quantity_rate")   @db.Decimal(5, 2)
+
+  ///抽奖模式: 1-售罄模式 2-定时模式
+  lotteryMode       Int?     @map("lottery_mode")                     @db.SmallInt
+  ///开奖时间戳
+  lotteryTime       DateTime? @map("lottery_time")                    @db.Timestamp(3)
+  ///延迟开奖时间
+  lotteryDelayTime  DateTime? @map("lottery_delay_time")              @db.Timestamp(3)
+  ///'是否延迟: 0-否 1-是
+  lotteryDelayState Int      @default(0)                              @map("lottery_delay_state") @db.SmallInt  /// 0=否 1=是
+
+  ///图片样式类型
+  imgStyleType      Int      @default(0)                              @map("img_style_type")     @db.SmallInt
+  ///是否虚拟产品: 1-虚拟 2-实物
+  virtual           Int      @default(2)                              @map("virtual")            @db.SmallInt  /// 1=虚拟 2=实物
+
+  ///组团最大人数
+  groupMaxNum       Int      @default(9999)                           @map("group_max_num")
+
+  ///单份最大使用金币数
+  maxUnitCoins      Decimal? @map("max_unit_coins")                   @db.Decimal(10, 4)
+  ///最大折扣金额
+  maxUnitAmount     Decimal? @map("max_unit_amount")                  @db.Decimal(10, 2)
+
+  /// 慈善金额
+  charityAmount     Decimal? @map("charity_amount")                   @db.Decimal(10, 2)
+  /// 现金状态
+  cashState         Int?     @map("cash_state")                       @db.SmallInt
+  ///规则说明（HTML）
+  ruleContent       String?  @map("rule_content")                     @db.Text
+  ///产品描述（HTML）
+  desc              String?  @map("desc")                             @db.Text
+  ///状态: 0-下架 1-上架
+  state             Int      @default(1)                              @map("state")              @db.SmallInt  /// 0=下架 1=上架
+
+  // 关系
+  categories        TreasureCategory[]
+  groups            TreasureGroup[]
+
+  @@index([lotteryMode])
+  @@index([lotteryTime])
+  @@index([state])
+  @@index([buyQuantityRate])
+  @@map("treasures")
+}
+
+/// 产品分类表
+model ProductCategory {
+  id         Int      @id @default(autoincrement())                   @map("products_category_id")
+  createdAt  DateTime @default(now())                                 @map("created_at")
+  updatedAt  DateTime @updatedAt                                      @map("updated_at")
+
+  ///分类名称
+  name       String   @db.VarChar(100)
+  ///分类英文名
+  nameEn     String?  @map("name_en")                                 @db.VarChar(100)
+  ///分类图标URL
+  icon       String?  @db.VarChar(255)
+  ///排序值（越小越靠前）
+  sortOrder  Int      @default(0)                                     @map("sort_order")
+   ///状态: 0-禁用 1-启用
+  state      Int      @default(1)                                     @db.SmallInt
+
+  treasures  TreasureCategory[]
+
+  @@index([state],     map: "idx_state")
+  @@index([sortOrder], map: "idx_sort")
+  @@map("product_categories")
+}
+
+/// 产品-分类 多对多
+model TreasureCategory {
+  id          String   @id @default(cuid())                           @map("id")                 @db.VarChar(32)
+  createdAt   DateTime @default(now())                                @map("created_at")
+
+  ///产品ID
+  treasureId  String   @map("treasure_id")                            @db.VarChar(32)
+  ///分类ID
+  categoryId  Int      @map("category_id")
+
+  treasure    Treasure        @relation(fields: [treasureId], references: [id], onDelete: Cascade)
+  category    ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([treasureId, categoryId], map: "uk_treasure_category")
+  @@index([treasureId], map: "idx_treasure_id")
+  @@index([categoryId], map: "idx_category_id")
+  @@map("treasure_categories")
+}
+
+/// 组团表
+model TreasureGroup {
+  id                 String   @id @default(cuid())                     @map("group_id")            @db.VarChar(32)
+  createdAt          DateTime @default(now())                          @map("created_at")
+  updatedAt          DateTime @updatedAt                               @map("updated_at")
+
+  ///产品ID
+  treasureId         String   @map("treasure_id")                      @db.VarChar(32)
+   ///创建人用户ID（团长）
+  creatorId          String   @map("creator_id")                       @db.VarChar(32)
+
+  ///组团名称
+  groupName          String?  @map("group_name")                       @db.VarChar(100)
+  ///最大成员数
+  maxMembers         Int      @default(9999)                           @map("max_members")
+  ///当前成员数
+  currentMembers     Int      @default(1)                              @map("current_members")
+ ///组内中奖次数
+  luckyWinnersCount  Int      @default(0)                              @map("lucky_winners_count")
+ ///总中奖次数
+  totalWinningTimes  Int      @default(0)                              @map("total_winning_times")
+  ///状态: 1-进行中 2-已结束
+  groupStatus        Int      @default(1)                              @map("group_status")        @db.SmallInt /// 1=进行中 2=已结束
+
+  treasure           Treasure @relation(fields: [treasureId], references: [id], onDelete: Cascade)
+  creator            User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  members            TreasureGroupMember[]
+
+  @@index([treasureId],  map: "idx_treasure")
+  @@index([creatorId],   map: "idx_creator")
+  @@index([groupStatus], map: "idx_status")
+  @@map("treasure_groups")
+}
+
+/// 组团成员
+model TreasureGroupMember {
+  ///成员记录ID
+  id          String   @id @default(cuid()) @map("id") @db.VarChar(32)
+  createdAt   DateTime @default(now())      @map("created_at")
+
+  ///组团ID
+  groupId     String   @map("group_id")     @db.VarChar(32)
+  userId      String   @map("user_id")      @db.VarChar(32)
+  orderId     String?  @map("order_id")     @db.VarChar(32)
+
+  ///是否团长: 0-否 1-是
+  isOwner     Int      @default(0)          @map("is_owner")       @db.SmallInt
+  ///分享获得金额
+  shareCoin   Decimal  @default(0)          @map("share_coin")     @db.Decimal(10, 2)
+  ///分享获得金额
+  shareAmount Decimal  @default(0)          @map("share_amount")   @db.Decimal(10, 2)
+  joinedAt    DateTime?                     @map("joined_at")      @db.Timestamp(3)
+
+  group       TreasureGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId],  references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId], map: "uk_group_user")
+  @@index([groupId], map: "idx_group")
+  @@index([userId],  map: "idx_user")
+  @@index([orderId], map: "idx_order")
+  @@map("treasure_group_members")
 }
