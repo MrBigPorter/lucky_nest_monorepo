@@ -5,6 +5,7 @@ import {addSeconds, isBefore} from 'date-fns';
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 import {otpHash, verifyOtpHash} from "@api/common/otp.util";
+import {CODE_TYPE, VERIFY_STATUS} from "@lucky/shared";
 
 const OTP_PEPPER = process.env.OTP_PEPPER || '';
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS) || 300;
@@ -34,7 +35,7 @@ export class OtpService {
         const recent = await this.prisma.smsVerificationCode.findFirst({
             where: {
                 phone:p,
-                codeType:2,
+                codeType:CODE_TYPE.LOGIN,
                 createdAt: {gte: new Date(Date.now() - OTP_INTERVAL_SECONDS * 1000)},
             },
             select: {id: true}
@@ -54,10 +55,10 @@ export class OtpService {
         await this.prisma.smsVerificationCode.create({
             data: {
                 phone:p,
-                codeType: 2,
+                codeType: CODE_TYPE.LOGIN,
                 codeHash:codeHash,
                 sendStatus: 2,
-                verifyStatus:0,
+                verifyStatus:VERIFY_STATUS.PENDING,
                 verifyTimes:0,
                 maxVerifyTimes: OTP_MAX_ATTEMPTS,
                 expiresAt,
@@ -84,7 +85,7 @@ export class OtpService {
 
         // 找“最新的一条 LOGIN OTP”
         const req = await this.prisma.smsVerificationCode.findFirst({
-            where: {phone, codeType: 2, verifyStatus: 0},
+            where: {phone, codeType: CODE_TYPE.LOGIN, verifyStatus: VERIFY_STATUS.PENDING},
             orderBy: {createdAt: 'desc'},
         });
 
@@ -93,7 +94,7 @@ export class OtpService {
         if (isBefore(req.expiresAt, new Date())) {
             await this.prisma.smsVerificationCode.update({
                 where: {id: req.id},
-                data: { verifyStatus: 2} // 2=已过期
+                data: { verifyStatus: VERIFY_STATUS.EXPIRED}
             })
             throwBiz(ERROR_KEYS.OTP_EXPIRED);
         }
