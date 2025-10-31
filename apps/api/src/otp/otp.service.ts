@@ -5,7 +5,7 @@ import {addSeconds, isBefore} from 'date-fns';
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 import {otpHash, verifyOtpHash} from "@api/common/otp.util";
-import {CODE_TYPE, VERIFY_STATUS} from "@lucky/shared";
+import {CODE_TYPE, SEND_STATUS, VERIFY_STATUS} from "@lucky/shared";
 
 const OTP_PEPPER = process.env.OTP_PEPPER || '';
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS) || 300;
@@ -34,8 +34,8 @@ export class OtpService {
         // DB 限流：同手机号最近 OTP_INTERVAL_SECONDS 内只能申请一次
         const recent = await this.prisma.smsVerificationCode.findFirst({
             where: {
-                phone:p,
-                codeType:CODE_TYPE.LOGIN,
+                phone: p,
+                codeType: CODE_TYPE.LOGIN,
                 createdAt: {gte: new Date(Date.now() - OTP_INTERVAL_SECONDS * 1000)},
             },
             select: {id: true}
@@ -54,12 +54,12 @@ export class OtpService {
         // 入库（purpose=LOGIN）
         await this.prisma.smsVerificationCode.create({
             data: {
-                phone:p,
+                phone: p,
                 codeType: CODE_TYPE.LOGIN,
-                codeHash:codeHash,
-                sendStatus: 2,
-                verifyStatus:VERIFY_STATUS.PENDING,
-                verifyTimes:0,
+                codeHash: codeHash,
+                sendStatus: SEND_STATUS.SENT,
+                verifyStatus: VERIFY_STATUS.PENDING,
+                verifyTimes: 0,
                 maxVerifyTimes: OTP_MAX_ATTEMPTS,
                 expiresAt,
                 requestIp: null
@@ -69,7 +69,7 @@ export class OtpService {
         console.log(`[OTP]==> to ${p}: code=${code}`);
         if (!isProd) {
             await this.sendSmsDev(p, code);
-            return { devCode: code};
+            return {devCode: code};
         }
 
         // TODO: 生产环境在这里调用供应商 SDK 发送短信
@@ -83,7 +83,7 @@ export class OtpService {
         if (!p || !c) throw new BadRequestException('phone required');
 
 
-        // 找“最新的一条 LOGIN OTP”
+        // 找最近一条待验证的登录验证码
         const req = await this.prisma.smsVerificationCode.findFirst({
             where: {phone, codeType: CODE_TYPE.LOGIN, verifyStatus: VERIFY_STATUS.PENDING},
             orderBy: {createdAt: 'desc'},
@@ -94,26 +94,64 @@ export class OtpService {
         if (isBefore(req.expiresAt, new Date())) {
             await this.prisma.smsVerificationCode.update({
                 where: {id: req.id},
-                data: { verifyStatus: VERIFY_STATUS.EXPIRED}
+                data: {verifyStatus: VERIFY_STATUS.EXPIRED}
             })
             throwBiz(ERROR_KEYS.OTP_EXPIRED);
         }
-        if (req.verifyTimes >= OTP_MAX_ATTEMPTS) throwBiz(ERROR_KEYS.TOO_MANY_OTP_ATTEMPTS);
-
-
-        // 比较code
-       const isMatch = verifyOtpHash(p,c,req.codeHash, OTP_PEPPER)
-
-            // 记录尝试次数
+        if (req.verifyTimes >= OTP_MAX_ATTEMPTS) {
             await this.prisma.smsVerificationCode.update({
-                where: {id: req.id},
-                data: {
-                    verifiedAt: isMatch ? new Date() : req.verifiedAt,
-                    verifyTimes: {increment: 1},// 计一次尝试（成功/失败都+1）
-                },
+                where: {id: req.id, verifyStatus: VERIFY_STATUS.PENDING},
+                data: {verifyStatus: VERIFY_STATUS.LOCKED}
             })
+            throwBiz(ERROR_KEYS.TOO_MANY_OTP_ATTEMPTS);
+        }
 
-        if (!isMatch){
+
+        //比对验证码
+        const isMatch = verifyOtpHash(p, c, req.codeHash, OTP_PEPPER)
+
+        // 原子更新：仍为 PENDING 且未达上限才+1；成功则置 VERIFIED 并写 verifiedAt
+        const updated = await this.prisma.smsVerificationCode.updateMany({
+            where: {
+                id: req.id,
+                verifyStatus: VERIFY_STATUS.PENDING,
+                verifyTimes: {lt: req.maxVerifyTimes}
+            },
+            data: isMatch ? {
+                verifyStatus: VERIFY_STATUS.VERIFIED,
+                verifiedAt: new Date(),
+                verifyTimes: {increment: 1}
+            } : {
+                verifyTimes: {increment: 1}
+            }
+        })
+
+        // 并发下可能被别的请求先处理，这里兜底
+        if (updated.count !== 1 ) {
+            throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED);
+        }
+
+        // 记录尝试次数
+        await this.prisma.smsVerificationCode.update({
+            where: {id: req.id},
+            data: {
+                verifiedAt: isMatch ? new Date() : req.verifiedAt,
+                verifyTimes: {increment: 1},// 计一次尝试（成功/失败都+1）
+            },
+        })
+
+        if (!isMatch) {
+            if (req.verifyTimes + 1 >= OTP_MAX_ATTEMPTS) {
+                await this.prisma.smsVerificationCode.updateMany({
+                    where: {
+                        id: req.id,
+                        verifyStatus: VERIFY_STATUS.PENDING
+                    },
+                    data: {
+                        verifyStatus: VERIFY_STATUS.LOCKED
+                    }
+                })
+            }
             throw new UnauthorizedException('Invalid code');
         }
 

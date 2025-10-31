@@ -5,6 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor() {
+        console.log('JwtStrategy init',process.env.JWT_SECRET);
         super({
             secretOrKey: process.env.JWT_SECRET!,  //验签用的密钥
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),  //从哪里找 token

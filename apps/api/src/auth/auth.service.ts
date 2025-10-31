@@ -4,7 +4,7 @@ import { md5} from "../common/crypto.util";
 import { Injectable } from '@nestjs/common';
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
-import {CODE_TYPE, VERIFY_STATUS} from "@lucky/shared";
+import {CODE_TYPE, LOGIN_METHOD, LOGIN_STATUS, LOGIN_TYPE, TOKEN_ISSUED, VERIFY_STATUS} from "@lucky/shared";
 
 // login validity window: 3 minutes
 const OTP_LOGIN_WINDOW_SECONDS = Number(process.env.OTP_LOGIN_WINDOW_SECONDS ?? 300);
@@ -49,7 +49,7 @@ export class AuthService {
                 verifiedAt: { not: null, gte: graceStart },
                 verifyStatus: VERIFY_STATUS.VERIFIED, // 1 已验证
             },
-            orderBy: { createdAt: 'desc'},
+            orderBy: { verifiedAt: 'desc'},
         })
 
 
@@ -57,62 +57,69 @@ export class AuthService {
             throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED)
         }
 
-        // 登陆即注册（没有注册就注册，有注册就登陆）
-        const user = await this.prisma.user.upsert({
-            //用 唯一键 phone 查用户。这里要求 User 模型里 phone 是 @unique 或 @id。
-            where: { phone: p },
-            //如果没查到，就新建：
-            create: {
-                phone:p,
-                phoneMd5,
-                nickname: `pl_${Math.random().toString().slice(2, 10)}`,
-            },
-            update:{},
-            //只返回这几个字段
-            select: {
-                id: true,
-                phone: true,
-                nickname: true,
-                avatar: true,
-                phoneMd5: true,
-                inviteCode: true,
-                vipLevel: true,
-                lastLoginAt: true,
-                kycStatus: true,
-                selfExclusionExpireAt: true,
-            }
-        })
+        // 交互式事务：原子消费 OTP + upsert 用户 + 日志 + 最后登录时间
+        const  user = await this.prisma.$transaction(async (ctx)=>{
+            // 1) 原子把 VERIFIED → CONSUMED，只允许成功一次
+            const  consumed = await ctx.smsVerificationCode.updateMany({
+                where:{id:opt?.id,verifyStatus:VERIFY_STATUS.VERIFIED},
+                data:{verifyStatus:VERIFY_STATUS.CONSUMED}
+            })
 
-        // 事务：日志、标记验证码已使用、更新最后登录时间
-        await this.prisma.$transaction([
+            if (consumed.count != 1){
+                throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED)
+            }
+
+            // 2) 登陆即注册
+            const u = await this.prisma.user.upsert({
+                //用 唯一键 phone 查用户。这里要求 User 模型里 phone 是 @unique 或 @id。
+                where: { phone: p },
+                //如果没查到，就新建：
+                create: {
+                    phone:p,
+                    phoneMd5,
+                    nickname: `pl_${Math.random().toString().slice(2, 10)}`,
+                },
+                update:{},
+                //只返回这几个字段
+                select: {
+                    id: true,
+                    phone: true,
+                    nickname: true,
+                    avatar: true,
+                    phoneMd5: true,
+                    inviteCode: true,
+                    vipLevel: true,
+                    lastLoginAt: true,
+                    kycStatus: true,
+                    selfExclusionExpireAt: true,
+                }
+            })
+           // 3) 登录日志
             this.prisma.userLoginLog.create({
                 data: {
-                    userId: user.id,
-                    loginType: 2,
-                    loginMethod:'OTP',
-                    loginStatus:1,
-                    tokenIssued: 1,
+                    userId: u.id,
+                    loginType: LOGIN_TYPE.OTP,
+                    loginMethod:LOGIN_METHOD.OTP,
+                    loginStatus:LOGIN_STATUS.SUCCESS,
+                    tokenIssued: TOKEN_ISSUED.YES,
                     loginTime: Date.now().toString(),
                     loginIp: meta?.ip ?? null,
                     userAgent: meta?.ua ?? null,
                     countryCode: meta?.countryCode ? String(meta.countryCode) : null,
 
                 }
-            }),
+            });
 
-            // 标记验证码已使用 1-> 2
-            this.prisma.smsVerificationCode.update({
-                where: {id: opt?.id},
-                data: {
-                    verifyStatus: 2
-                }
-            }),
-            //更新用户最后登录时间
-            this.prisma.user.update({
-                where: {id: user.id},
-                data: { lastLoginAt: now }
-            })
-        ]);
+              // 4) 更新最后登录时间
+                this.prisma.user.update({
+                    where: {id: u.id},
+                    data: { lastLoginAt: now }
+                })
+
+            return u;
+
+        })
+
 
         const tokens = await this.issueToken(user);
 
