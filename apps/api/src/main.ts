@@ -37,28 +37,28 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({ origin: corsOrigin, credentials: true });
 
-  // 全局校验
+  // global validation
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,
     forbidNonWhitelisted: true,
-    transformOptions: { enableImplicitConversion: true },
+    transformOptions: { enableImplicitConversion: false },// block type conversion
   }));
 
-  // 统一响应壳
+  // 统一响应壳 response wrap
   app.useGlobalInterceptors(new ResponseWrapInterceptor(app.get('Reflector')));
 
-  // 全局异常
+  // 全局异常 global exception filter
   const adapterHost = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(adapterHost));
 
-  // 请求/响应日志（非生产）
+  // 请求/响应日志（非生产） req/res body
   if (process.env.NODE_ENV !== 'production') {
     const expressApp: import('express').Application = app.getHttpAdapter().getInstance();
     morganBody(expressApp, { logResponseBody: true, maxBodyLength: 1000 });
   }
 
-  // Swagger（开发环境默认开；生产用 ENABLE_DOCS 控制）
+  // Swagger（开发环境默认开；生产用 ENABLE_DOCS 控制） just for dev
   const enableDocs =
     process.env.NODE_ENV !== 'production';
 
