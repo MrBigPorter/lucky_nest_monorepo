@@ -7,13 +7,14 @@
     "start": "node dist/main.js",
     "clean": "rimraf dist",
     "generate": "nest g",
-    "prestart:dev": "prisma generate && prisma db push",
+    "predev": "prisma generate --schema prisma/schema.prisma",
     "pr:fmt": "prisma format",
     "pr:val": "prisma validate",
     "pr:dev": "prisma migrate dev",
     "pr:deploy": "prisma migrate deploy",
     "codes:gen": "node scripts/gen-error-codes.mjs",
-    "prebuild": "npm run codes:gen"
+    "prebuild": "npm run codes:gen",
+    "seed:treasures": "tsx scripts/seed/seed-treasures.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.7",
@@ -57,6 +58,7 @@
     "prisma": "^6.18.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "yaml": "^2.8.1"
   }

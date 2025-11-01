@@ -1,4 +1,3 @@
-// apps/api/src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
@@ -11,6 +10,8 @@ import { APP_GUARD } from '@nestjs/core';
 import {OtpThrottlerGuard} from "./common/guards/otp-throttler.guard";
 import {OtpModule} from "./otp/otp.module";
 import {HealthController} from "@api/health/health.controller";
+import {TreasureModule} from "@api/treasure/treasure.module";
+import {CategoryModule} from "@api/category/category.module";
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -33,6 +34,8 @@ import {HealthController} from "@api/health/health.controller";
         PrismaModule,
         AuthModule,
         OtpModule,
+        TreasureModule,
+        CategoryModule
 
 
         // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
