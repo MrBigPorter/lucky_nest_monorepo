@@ -10,6 +10,7 @@ import morganBody from 'morgan-body';
 import { requestId } from '@api/common/middleware/request-id';
 import { AllExceptionsFilter } from '@api/common/filters/all-exceptions.filter';
 import { ResponseWrapInterceptor } from '@api/common/interceptors/response-wrap.interceptor';
+import {SnakeCaseInterceptor} from "@api/common/interceptors/snake-case.interceptor";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -46,7 +47,12 @@ async function bootstrap() {
   }));
 
   // 统一响应壳 response wrap
-  app.useGlobalInterceptors(new ResponseWrapInterceptor(app.get('Reflector')));
+  app.useGlobalInterceptors(
+      // 1.
+      new SnakeCaseInterceptor(),
+      // 2.
+      new ResponseWrapInterceptor(app.get('Reflector'))
+  );
 
   // 全局异常 global exception filter
   const adapterHost = app.get(HttpAdapterHost);
