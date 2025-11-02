@@ -433,8 +433,8 @@ model Advertisement {
   relatedId  String?   @map("related_id")                    @db.VarChar(32)
 
   // 时间窗
-  startTime  DateTime  @map("start_time")
-  endTime    DateTime  @map("end_time")
+  startTime  DateTime?  @map("start_time")
+  endTime    DateTime?  @map("end_time")
 
   // 状态
   status     Int       @default(1) @map("status")            @db.SmallInt /// 0=禁用 1=启用

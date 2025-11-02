@@ -24,6 +24,7 @@ export class BannersService {
 
         return this.prisma.banner.findMany({
             where,
+            orderBy:[{sortOrder:'asc'},{createdAt:'desc'}],
             take: query.limit ?? 10,
             select: {
                 id: true,
