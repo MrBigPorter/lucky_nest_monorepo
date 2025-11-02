@@ -68,14 +68,15 @@ export class TreasureService {
 
         const  mapped = items.map(it=>({
             ...it,
-            categories: it.categories.map(c=>c.category)
+            categories: it.categories.map(c=>c.category),
+            treasureId: it.id
         }))
 
         return {
             page,
             pageSize,
             total,
-            data: mapped
+            list: mapped
         }
     }
 

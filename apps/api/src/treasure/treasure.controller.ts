@@ -4,7 +4,7 @@ import {TreasureQueryDto} from "@api/treasure/dto/treasure-query.dto";
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 
-@Controller('api/treasure')
+@Controller('treasure')
 export class TreasureController {
     constructor(private readonly svc: TreasureService ) {}
 

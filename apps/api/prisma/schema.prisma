@@ -359,3 +359,94 @@ model TreasureGroupMember {
   @@index([orderId], map: "idx_order")
   @@map("treasure_group_members")
 }
+
+/// banner
+model Banner {
+  id              String   @id @default(cuid())                     @map("banner_id")         @db.VarChar(32)
+  createdAt       DateTime @default(now())                          @map("created_at")
+  updatedAt       DateTime @updatedAt                                @map("updated_at")
+
+  // 基本信息
+  title           String?                                           @db.VarChar(200)
+  bannerImgUrl    String?  @map("banner_img_url")                   @db.VarChar(255)
+  videoUrl        String?  @map("video_url")                        @db.VarChar(255)
+  fileType        Int      @default(1)  @map("file_type")           @db.SmallInt /// 1=图片 2=视频
+
+  // 分类与位置
+  bannerCate      Int      @map("banner_cate")                      @db.SmallInt /// 1=首页 2=活动页 3=产品页
+  position        Int      @default(0) @map("position")             @db.SmallInt /// 0=顶部 1=中部 2=底部
+  sortType        Int      @default(1) @map("sort_type")            @db.SmallInt
+  sortOrder       Int      @default(0) @map("sort_order")
+
+  // 跳转
+  jumpCate        Int?     @map("jump_cate")                        @db.SmallInt /// 1=无 2=APP内页 3=产品详情 5=外链
+  jumpUrl         String?  @map("jump_url")                         @db.VarChar(500)
+  relatedTitleId  String?  @map("related_title_id")                 @db.VarChar(32) /// 比如 treasure_id
+
+  // 显示
+  showType        Int      @default(1) @map("show_type")            @db.SmallInt /// 1=单图 2=轮播
+  imgStyleType    Int      @default(0) @map("img_style_type")       @db.SmallInt
+  gridId          String?  @map("grid_id")                          @db.VarChar(32)
+  bannerArray     Json?    @map("banner_array")                     /// 轮播图数组：[{img,url,...},...]
+
+  // 时间窗（生效期）
+  activityAtStart DateTime? @map("activity_at_start")
+  activityAtEnd   DateTime? @map("activity_at_end")
+
+  // 状态
+  state           Int      @default(1) @map("state")                @db.SmallInt /// 0=禁用 1=启用
+  validState      Int      @default(1) @map("valid_state")          @db.SmallInt /// 0=无效 1=有效
+
+  // 审计 & 扩展
+  createdBy       String?  @map("created_by")                       @db.VarChar(50)
+  updatedBy       String?  @map("updated_by")                       @db.VarChar(50)
+  extra           Json?                                                /// 兜底扩展
+
+  @@index([bannerCate], map: "idx_banner_cate")
+  @@index([position],   map: "idx_position_banner")
+  @@index([state],      map: "idx_state_banner")
+  @@index([sortOrder],  map: "idx_sort_order_banner")
+  @@index([activityAtStart, activityAtEnd], map: "idx_activity_time")
+  @@map("banners")
+}
+
+// advertisements
+
+model Advertisement {
+  id         String   @id @default(cuid())                   @map("ad_id")     @db.VarChar(32)
+  createdAt  DateTime @default(now())                        @map("created_at")
+  updatedAt  DateTime @updatedAt                             @map("updated_at")
+
+  // 基本
+  title      String?                                         @db.VarChar(200)
+  adImgUrl   String?   @map("ad_img_url")                    @db.VarChar(255)
+  videoUrl   String?   @map("video_url")                     @db.VarChar(255)
+  fileType   Int       @default(1) @map("file_type")         @db.SmallInt /// 1=图片 2=视频
+
+  // 位置
+  adPosition Int       @map("ad_position")                   @db.SmallInt /// 1-首页顶 2-首页中 3-分类页 4-详情页
+  sortOrder  Int       @default(0) @map("sort_order")
+
+  // 跳转
+  jumpCate   Int?      @map("jump_cate")                     @db.SmallInt
+  jumpUrl    String?   @map("jump_url")                      @db.VarChar(500)
+  relatedId  String?   @map("related_id")                    @db.VarChar(32)
+
+  // 时间窗
+  startTime  DateTime  @map("start_time")
+  endTime    DateTime  @map("end_time")
+
+  // 状态
+  status     Int       @default(1) @map("status")            @db.SmallInt /// 0=禁用 1=启用
+
+  // 统计（V1 可先不用）
+  viewCount  Int       @default(0) @map("view_count")
+  clickCount Int       @default(0) @map("click_count")
+
+  extra      Json?
+
+  @@index([adPosition], map: "idx_position_ad")
+  @@index([status],     map: "idx_status_ad")
+  @@index([startTime, endTime], map: "idx_time_ad")
+  @@map("advertisements")
+}
