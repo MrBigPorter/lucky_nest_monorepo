@@ -5,12 +5,13 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from './prisma/prisma.service';
 import morganBody from 'morgan-body';
 import { requestId } from '@api/common/middleware/request-id';
 import { AllExceptionsFilter } from '@api/common/filters/all-exceptions.filter';
 import { ResponseWrapInterceptor } from '@api/common/interceptors/response-wrap.interceptor';
 import {SnakeCaseInterceptor} from "@api/common/interceptors/snake-case.interceptor";
+
+const isProd = process.env.NODE_ENV === 'production';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,10 +22,11 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);
   const host = config.get<string>('HOST', '0.0.0.0');
-  const corsOrigin = (config.get<string>('CORS_ORIGIN', 'http://localhost:3000')
+  const corsOrigins = (config.get<string>('CORS_ORIGIN', 'http://localhost:3000')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean));
+
 
   // 前缀 + 版本
   app.setGlobalPrefix('api');
@@ -36,7 +38,27 @@ async function bootstrap() {
   // 安全 / cookie / CORS
   app.use(helmet());
   app.use(cookieParser());
-  app.enableCors({ origin: corsOrigin, credentials: true });
+  app.enableCors(
+     isProd ? {
+         origin: (origin: string, cb: (arg0: Error | null, arg1: boolean) => void) => {
+             if (!origin) return cb(null, true);
+             const ok = corsOrigins.includes(origin);
+             cb(ok ? null : new Error(`CORS blocked: ${origin}`), ok);
+         },
+         credentials: true,
+         methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+         allowedHeaders: ['*'], // 放行所有请求头 allow any header
+         exposedHeaders: ['Content-Disposition']
+     }: {
+         //  开发环境全开：回显任意来源（支持携带凭证）
+         origin: (origin: any, cb: (arg0: null, arg1: boolean) => any) => cb(null, true),
+         credentials: true,
+         methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+         allowedHeaders: ['*'],
+         exposedHeaders: ['Content-Disposition'],
+         optionsSuccessStatus: 204,
+     }
+  );
 
   // global validation
   app.useGlobalPipes(new ValidationPipe({
@@ -59,16 +81,13 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter(adapterHost));
 
   // 请求/响应日志（非生产） req/res body
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProd) {
     const expressApp: import('express').Application = app.getHttpAdapter().getInstance();
     morganBody(expressApp, { logResponseBody: true, maxBodyLength: 1000 });
   }
 
   // Swagger（开发环境默认开；生产用 ENABLE_DOCS 控制） just for dev
-  const enableDocs =
-    process.env.NODE_ENV !== 'production';
-
-  if (enableDocs) {
+  if (!isProd) {
     const swaggerCfg = new DocumentBuilder()
       .setTitle('Lucky API')
       .setDescription('REST API for web/mobile')

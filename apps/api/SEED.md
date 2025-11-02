@@ -12,3 +12,11 @@ docker exec -it lucky-backend-dev sh -lc \
 # 关联（商品-分类）
 docker exec -it lucky-backend-dev sh -lc \
 'cd apps/api && yarn dlx tsx scripts/seed/link-treasure-categories.ts'
+
+# 首页banner
+docker exec -it lucky-backend-dev sh -lc \
+'cd apps/api && yarn dlx tsx scripts/seed/seed-banners.ts'
+
+# 首页广告
+docker exec -it lucky-backend-dev sh -lc \
+'cd apps/api && yarn dlx tsx scripts/seed/seed-ads.ts'
