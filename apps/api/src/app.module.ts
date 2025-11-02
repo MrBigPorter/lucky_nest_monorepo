@@ -13,6 +13,7 @@ import {HealthController} from "@api/health/health.controller";
 import {TreasureModule} from "@api/treasure/treasure.module";
 import {CategoryModule} from "@api/category/category.module";
 import {BannersModule} from "@api/banners/banners.module";
+import {AdsModule} from "@api/ads/ads.module";
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -37,7 +38,8 @@ import {BannersModule} from "@api/banners/banners.module";
         OtpModule,
         TreasureModule,
         CategoryModule,
-        BannersModule
+        BannersModule,
+        AdsModule
 
 
         // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
