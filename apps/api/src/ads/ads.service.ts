@@ -18,7 +18,7 @@ export class AdsService {
         };
 
 
-        return this.prisma.advertisement.findMany({
+        const rows = await this.prisma.advertisement.findMany({
             where,
             orderBy:[{sortOrder:'asc'},{createdAt:'desc'}],
             take: query.limit ?? 10,
@@ -29,7 +29,6 @@ export class AdsService {
                 sortOrder: true,
                 status: true,
                 fileType: true,     // 1=图片 2=视频
-                adImgUrl: true,
                 videoUrl: true,
                 jumpCate: true,
                 jumpUrl: true,
@@ -38,7 +37,15 @@ export class AdsService {
                 endTime: true,
                 viewCount: true,
                 clickCount: true,
+                sortType: true,
+                imgStyleType: true,
+                bannerArray: true,
+                img: true,
             }
         })
+        return rows.map(r=>({
+            ...r,
+            relatedTitleId: r.relatedId,
+        }))
     }
 }
