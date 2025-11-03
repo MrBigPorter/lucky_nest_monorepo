@@ -29,10 +29,32 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     command: >
-      sh -lc "yarn workspace @lucky/api prisma generate &&
-              yarn workspace @lucky/api start:dev"
+      sh -lc "corepack enable &&
+                yarn install --immutable &&
+                yarn workspace @lucky/api prisma generate &&
+                yarn workspace @lucky/api start:dev"
     networks: [app]
+
+  redis:
+    image: redis:7
+    container_name: lucky-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app
 
   db:
     image: postgres:16
@@ -74,3 +96,4 @@ networks:
 
 volumes:
   db_data:
+  redis_data:
