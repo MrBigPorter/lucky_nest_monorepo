@@ -419,13 +419,19 @@ model Advertisement {
 
   // 基本
   title      String?                                         @db.VarChar(200)
-  adImgUrl   String?   @map("ad_img_url")                    @db.VarChar(255)
+  img        String?   @map("img")                    @db.VarChar(255)
   videoUrl   String?   @map("video_url")                     @db.VarChar(255)
   fileType   Int       @default(1) @map("file_type")         @db.SmallInt /// 1=图片 2=视频
 
+
+
   // 位置
   adPosition Int       @map("ad_position")                   @db.SmallInt /// 1-首页顶 2-首页中 3-分类页 4-详情页
+  sortType   Int       @default(1) @map("sort_type")         @db.SmallInt /// 1=单图 2=三图
   sortOrder  Int       @default(0) @map("sort_order")
+
+  imgStyleType Int     @default(0) @map("img_style_type")  @db.SmallInt
+  bannerArray  Json?   @map("banner_array")
 
   // 跳转
   jumpCate   Int?      @map("jump_cate")                     @db.SmallInt
