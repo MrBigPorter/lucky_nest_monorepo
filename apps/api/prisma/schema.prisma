@@ -242,10 +242,14 @@ model Treasure {
   desc          String?  @map("desc") @db.Text
   ///状态: 0-下架 1-上架
   state         Int      @default(1) @map("state") @db.SmallInt /// 0=下架 1=上架
+  hotScore3d           Float    @default(0)
+  hotScore7d           Float    @default(0)
+
 
   // 关系
   categories TreasureCategory[]
   groups     TreasureGroup[]
+  sectionItems ActSectionItem[]
 
   @@index([lotteryMode])
   @@index([lotteryTime])
@@ -456,3 +460,39 @@ model Advertisement {
   @@index([startTime, endTime], map: "idx_time_ad")
   @@map("advertisements")
 }
+
+
+model ActSection {
+  id            String   @id @default(cuid()) @db.VarChar(32)
+  key           String   @unique @db.VarChar(64)
+  title         String   @db.VarChar(128)
+  imgStyleType  Int
+  status        Int      @default(1) // 1 启用 0 关闭
+  startAt       DateTime?
+  endAt         DateTime?
+  sortOrder     Int      @default(0)
+  limit         Int      @default(10)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         ActSectionItem[]
+
+  @@map("act_sections")
+  @@index([imgStyleType, status, sortOrder], map: "idx_style_status_sort")
+}
+
+model ActSectionItem {
+  id         String  @id @default(cuid()) @db.VarChar(32)
+  sectionId  String  @db.VarChar(32)
+  treasureId String  @db.VarChar(32)
+  sortOrder  Int     @default(0)
+
+  section    ActSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  treasure   Treasure   @relation(fields: [treasureId], references: [id], onDelete: Cascade)
+
+  @@map("act_section_items")
+  @@index([sectionId, sortOrder], map: "idx_section_sort")
+  @@unique([sectionId, treasureId], map: "uk_section_treasure")
+}
+
+
