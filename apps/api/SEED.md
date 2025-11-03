@@ -20,3 +20,7 @@ docker exec -it lucky-backend-dev sh -lc \
 # 首页广告
 docker exec -it lucky-backend-dev sh -lc \
 'cd apps/api && yarn dlx tsx scripts/seed/seed-ads.ts'
+
+# actSections
+docker exec -it lucky-backend-dev sh -lc \
+'cd apps/api && yarn dlx tsx scripts/seed/seed-sections.ts'
