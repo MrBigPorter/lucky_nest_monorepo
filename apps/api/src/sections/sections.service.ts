@@ -19,14 +19,18 @@ export class SectionsService {
             let rows: any[] = [];
             const take = Number(s.limit ?? limit);
 
+            // 找出每个分类
             if (s.key === 'home_special') {
                 // 2) 专区：按绑定顺序取指定宝箱，严格保序
+                // 根据section id 去找到所有 含有section ID 的列表，然后得到所有的 treasure ID
                 const binds = await this.prisma.actSectionItem.findMany({
                     where: { sectionId: s.id },
                     orderBy: { sortOrder: 'asc' },
                 });
-                const ids = binds.map(b => String(b.treasureId)); // 确保是字符串以便 ::text 比较
+                //找到所有的treasure ID
+                const ids = binds.map(b => String(b.treasureId));
 
+                //通过id 去批量查找treasure
                 if (ids.length > 0) {
                     rows = await this.prisma.$queryRawUnsafe<any[]>(
                         `
