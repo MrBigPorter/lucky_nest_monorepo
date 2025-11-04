@@ -82,7 +82,7 @@ export class TreasureService {
 
     // 详情
     async detail(id: string){
-        return this.prisma.treasure.findUnique({
+        const result  =  await  this.prisma.treasure.findUnique({
             where: {id},
             select: {
                 id: true,
@@ -111,5 +111,9 @@ export class TreasureService {
                 maxPerBuyQuantity: true,
             }
         });
+        return {
+            ...result,
+            treasureId:result?.id
+        }
     }
 }
