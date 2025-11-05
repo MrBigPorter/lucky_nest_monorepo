@@ -1,14 +1,16 @@
-import {IsInt, IsOptional, IsString, Max, Min} from "class-validator";
+import {IsInt, IsNotEmpty, IsOptional, IsString, Max, Min} from "class-validator";
 import {ToNumber} from "@api/common/dto/transforms";
 import {ApiPropertyOptional} from "@nestjs/swagger";
 
 export class GroupCreateDto {
     @ApiPropertyOptional({ description: 'Treasure Id', example: '1', type: String})
     @IsString()
+    @IsNotEmpty()
     treasureId!: string;
 
     @ApiPropertyOptional({ description: 'Leader User Id', example: '1', type: String})
     @IsString()
+    @IsNotEmpty()
     leaderUserId!: string;
 
     @ApiPropertyOptional({ description: 'Group Name', example: 'Group Name', type: String})
@@ -27,5 +29,5 @@ export class GroupCreateDto {
     @ApiPropertyOptional({ description: 'Order Id', example: '1', type: String})
     @IsOptional()
     @IsString()
-    orderId?: string;
+    orderId!: string;
 }
