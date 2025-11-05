@@ -177,7 +177,7 @@ model SmsVerificationCode {
 /// ======= 抽奖产品列表=========
 /// 抽奖产品表
 model Treasure {
-  id        String   @id @default(cuid()) @map("treasure_id") @db.VarChar(32)
+  treasureId        String   @id @default(cuid()) @map("treasure_id") @db.VarChar(32)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -292,7 +292,7 @@ model TreasureCategory {
   ///分类ID
   categoryId Int    @map("category_id")
 
-  treasure Treasure        @relation(fields: [treasureId], references: [id], onDelete: Cascade)
+  treasure Treasure        @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
   category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@unique([treasureId, categoryId], map: "uk_treasure_category")
@@ -303,7 +303,7 @@ model TreasureCategory {
 
 /// 组团表
 model TreasureGroup {
-  id        String   @id @default(cuid()) @map("group_id") @db.VarChar(32)
+  groupId        String   @id @default(cuid()) @map("group_id") @db.VarChar(32)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -325,7 +325,7 @@ model TreasureGroup {
   ///状态: 1-进行中 2-已结束
   groupStatus       Int     @default(1) @map("group_status") @db.SmallInt /// 1=进行中 2=已结束
 
-  treasure Treasure              @relation(fields: [treasureId], references: [id], onDelete: Cascade)
+  treasure Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
   creator  User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   members  TreasureGroupMember[]
 
@@ -354,7 +354,7 @@ model TreasureGroupMember {
   shareAmount Decimal   @default(0) @map("share_amount") @db.Decimal(10, 2)
   joinedAt    DateTime? @map("joined_at") @db.Timestamp(3)
 
-  group TreasureGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group TreasureGroup @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId], map: "uk_group_user")
@@ -462,6 +462,7 @@ model Advertisement {
 }
 
 
+/// 活动专区表
 model ActSection {
   id            String   @id @default(cuid()) @db.VarChar(32)
   key           String   @unique @db.VarChar(64)
@@ -481,6 +482,7 @@ model ActSection {
   @@index([imgStyleType, status, sortOrder], map: "idx_style_status_sort")
 }
 
+/// 活动专区-产品关联表
 model ActSectionItem {
   id         String  @id @default(cuid()) @db.VarChar(32)
   sectionId  String  @db.VarChar(32)
@@ -488,7 +490,7 @@ model ActSectionItem {
   sortOrder  Int     @default(0)
 
   section    ActSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  treasure   Treasure   @relation(fields: [treasureId], references: [id], onDelete: Cascade)
+  treasure   Treasure   @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
 
   @@map("act_section_items")
   @@index([sectionId, sortOrder], map: "idx_section_sort")
