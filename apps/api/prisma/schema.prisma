@@ -349,10 +349,10 @@ model TreasureGroupMember {
   ///是否团长: 0-否 1-是
   isOwner     Int       @default(0) @map("is_owner") @db.SmallInt
   ///分享获得金额
-  shareCoin   Decimal   @default(0) @map("share_coin") @db.Decimal(10, 2)
+  shareCoin   Decimal   @default(0) @map("share_coin") @db.Decimal(18, 2)
   ///分享获得金额
-  shareAmount Decimal   @default(0) @map("share_amount") @db.Decimal(10, 2)
-  joinedAt    DateTime? @map("joined_at") @db.Timestamp(3)
+  shareAmount Decimal   @default(0) @map("share_amount") @db.Decimal(18, 2)
+  joinedAt    DateTime  @default(now()) @map("joined_at") @db.Timestamp(3)
 
   group TreasureGroup @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
