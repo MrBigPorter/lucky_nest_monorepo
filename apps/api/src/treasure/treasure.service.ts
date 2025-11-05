@@ -39,7 +39,7 @@ export class TreasureService {
                 skip:(page - 1) * pageSize,
                 take: pageSize,
                 select:{
-                    id: true,
+                    treasureId: true,
                     treasureSeq: true,
                     treasureName: true,
                     productName: true,
@@ -69,7 +69,6 @@ export class TreasureService {
         const  mapped = items.map(it=>({
             ...it,
             categories: it.categories.map(c=>c.category),
-            treasureId: it.id
         }))
 
         return {
@@ -83,9 +82,9 @@ export class TreasureService {
     // 详情
     async detail(id: string){
         const result  =  await  this.prisma.treasure.findUnique({
-            where: {id},
+            where: {treasureId:id},
             select: {
-                id: true,
+                treasureId: true,
                 treasureSeq: true,
                 treasureName: true,
                 productName: true,
@@ -112,8 +111,7 @@ export class TreasureService {
             }
         });
         return {
-            ...result,
-            treasureId:result?.id
+            ...result
         }
     }
 }

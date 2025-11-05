@@ -1,7 +1,7 @@
 import {IsString} from "class-validator";
 import {ApiPropertyOptional} from "@nestjs/swagger";
 
-export class GroupJoinDto {
+export class GroupLeaveDto {
     @ApiPropertyOptional({ description: 'Group Id', example: '1', type: String})
     @IsString()
     groupId!: string;
@@ -10,7 +10,4 @@ export class GroupJoinDto {
     @IsString()
     userId!: string;
 
-    @ApiPropertyOptional({ description: 'Order Id', example: '1', type: String})
-    @IsString()
-    orderId!: string;
 }
