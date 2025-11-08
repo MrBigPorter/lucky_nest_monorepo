@@ -40,7 +40,6 @@ async function ensureCategories(names: string[]): Promise<Map<string, number>> {
     const have = new Set(existing.map(x => x.name));
     const missing = names.filter(n => !have.has(n));
 
-
     if (missing.length) {
         await prisma.productCategory.createMany({
             data: missing.map(n => ({ name: n })),
@@ -117,9 +116,10 @@ function normalize(json: any): any[] {
 }
 
 // ============ 行映射（Raw -> Prisma.TreasureCreateInput） ============
+// 注意：主键使用 treasureId（不是 id）
 function mapOne(r: any, i: number): Prisma.TreasureCreateInput {
-    const rawId = coalesce<number | string>(r.treasure_id, r.id, r.seq) ?? `AUTO-${Date.now()}-${i}`;
-    const id = String(rawId);
+    const rawId = coalesce<number | string>(r.treasure_id, r.treasureId, r.id, r.seq) ?? `AUTO-${Date.now()}-${i}`;
+    const treasureId = String(rawId);
 
     const name = coalesce<string>(r.treasure_name, r.treasureName, r.product_name, r.productName);
     must(name, `Row#${i} 缺少 treasure_name/treasureName`);
@@ -127,8 +127,8 @@ function mapOne(r: any, i: number): Prisma.TreasureCreateInput {
     const buyRate = r.buy_quantity_rate != null ? Number(r.buy_quantity_rate) : undefined;
 
     return {
-        id,
-        treasureSeq: coalesce<string>(r.treasure_seq, r.treasureSeq) ?? `SEQ-${id}`,
+        treasureId, // ← 关键：用 treasureId 做主键
+        treasureSeq: coalesce<string>(r.treasure_seq, r.treasureSeq) ?? `SEQ-${treasureId}`,
         treasureName: name!,
         productName: coalesce<string>(r.product_name, r.productName) ?? null,
         treasureCoverImg: coalesce<string>(r.treasure_cover_img, r.cover, r.image) ?? null,
@@ -183,22 +183,22 @@ async function main() {
         const r = rows[i];
         try {
             const data = mapOne(r, i);
-            const { id: tid, ...updateData } = data; // update 不要改主键
+            const { treasureId: tid, ...updateData } = data; // update 不要改主键
             const catNames = pickCategoriesByName(data.treasureName);
             const catIds = catNames.map(n => catsMap.get(n)).filter(Boolean) as number[];
 
             if (DRY) {
-                console.log(`[dry] upsert treasure id=${tid}, name="${data.treasureName}", cats=${catNames.join(',')}`);
+                console.log(`[dry] upsert treasure treasureId=${tid}, name="${data.treasureName}", cats=${catNames.join(',')}`);
             } else {
                 await prisma.treasure.upsert({
-                    where: { id: tid },
+                    where: { treasureId: tid },   // ← 关键：用 treasureId 作为 where 唯一键
                     update: updateData,
                     create: data,
                 });
             }
 
-            // 记录 join
-            for (const cid of catIds) joinPairs.push({ treasureId: data.id!, categoryId: cid });
+            // 记录 join（按 treasureId）
+            for (const cid of catIds) joinPairs.push({ treasureId: data.treasureId!, categoryId: cid });
             ok++;
         } catch (e: any) {
             fail++;

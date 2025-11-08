@@ -2,8 +2,11 @@
   "name": "y",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:api": "turbo run dev --filter=@lucky/api",
+    "dev:admin": "turbo run dev --filter=@lucky/admin",
+    "build": "turbo run build",
+    "build:admin": "turbo run build --filter=@lucky/admin",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rimraf .turbo node_modules",
@@ -34,6 +37,9 @@
     "packages/*"
   ],
   "dependencies": {
-    "rimraf": "^6.0.1"
+    "@pinia/nuxt": "^0.11.3",
+    "pinia": "^3.0.4",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.1.1"
   }
 }
