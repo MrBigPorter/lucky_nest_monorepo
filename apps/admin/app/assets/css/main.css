@@ -44,6 +44,11 @@ body {
     background-color: var(--la-page-bg);
 }
 
+.la-card-no-border {
+    background-color: var(--la-surface-bg);
+    box-shadow: var(--la-shadow-soft);
+}
+
 .la-card {
     background-color: var(--la-surface-bg);
     box-shadow: var(--la-shadow-soft);

@@ -17,7 +17,7 @@ const toggleTheme = () => {
   <div class="min-h-screen flex la-page text-default transition-colors duration-200">
     <!-- Sidebar -->
     <aside
-        class="w-72 la-card flex flex-col gap-4 shadow-sm"
+        class="w-72 la-card-no-border flex flex-col gap-4 shadow-sm"
     >
       <!-- Logo -->
       <div class="px-6 pt-6 pb-3 flex items-center gap-3">
@@ -80,8 +80,7 @@ const toggleTheme = () => {
       <!-- Topbar -->
       <header
           class="h-16 flex items-center justify-between px-6
-               la-card
-               border-0 border-b border-[var(--la-border-subtle)]
+               la-card-no-border
                shadow-sm"
       >
         <div class="text-sm la-muted">
