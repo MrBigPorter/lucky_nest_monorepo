@@ -4,9 +4,9 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:api": "turbo run dev --filter=@lucky/api",
-    "dev:admin": "turbo run dev --filter=@lucky/admin",
+    "dev:admin": "turbo run dev --filter=admin",
     "build": "turbo run build",
-    "build:admin": "turbo run build --filter=@lucky/admin",
+    "build:admin": "turbo run build --filter=admin",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rimraf .turbo node_modules",
