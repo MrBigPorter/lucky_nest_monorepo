@@ -1,1 +1,6 @@
-{ "extends": "./packages/config/tsconfig.base.json" }
+{
+  "extends": "./packages/config/tsconfig.base.json",
+  "references": [
+    { "path": "./apps/admin" }
+  ]
+}
