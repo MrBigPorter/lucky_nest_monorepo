@@ -1,0 +1,38 @@
+# This is the base Dockerfile for a monorepo using Yarn 4 with Plug'n'Play (PnP).
+# It sets up the necessary environment and installs dependencies for all workspaces.
+# It can be used as a builder stage for other Dockerfiles.
+# before_script: docker build -f Dockerfile.base -t lucky-monorepo-base .
+# you should run this command to build the base image before building this Dockerfile.
+
+# Use the official Node.js 20 image as the base image. because it is the latest LTS version.
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y python3 make g++ openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable and prepare Corepack with Yarn 4.9.2, because Node 20 comes with Corepack disabled by default
+RUN corepack enable && corepack prepare yarn@4.9.2 --activate
+
+# copy from root
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+
+# copy from workspaces
+COPY apps/admin/package.json ./apps/admin/package.json
+COPY apps/api/package.json ./apps/api/package.json
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/docs/package.json ./apps/docs/package.json
+
+# copy from packages
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
+
+# copy config packages
+COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY packages/typescript-config/package.json ./packages/typescript-config/package.json
+
+# Install all dependencies for all workspaces
+RUN yarn install --immutable

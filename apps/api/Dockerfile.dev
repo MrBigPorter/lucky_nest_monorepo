@@ -1,41 +1,16 @@
-# ========= backend builder dev =========
-# use as builder for production Dockerfile only, not for dev image directly
-# mutli-stage build for smaller image size,can be used as builder for production image
-FROM node:20-alpine
+# Use the base image from the monorepo Dockerfile
+# # This Dockerfile is for the development environment of the API workspace.
+# # It uses the base image defined in Dockerfile.base as its starting point.
+# before_script: docker build -f Dockerfile.base -t lucky-monorepo-base .
+# you should run this command to build the base image before building this Dockerfile.
 
-# 可选：为 bcrypt/sharp/prisma 的构建工具准备依赖
-RUN apk add --no-cache python3 make g++ build-base openssl
+FROM lucky-monorepo-base
 
-# set working directory
 WORKDIR /app
 
-# enable yarn workspaces
-RUN corepack enable && corepack prepare yarn@4.9.2 --activate
+COPY . .
 
-# copy only package files & yarn config
-COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
+WORKDIR /app/apps/api
 
-# use node-modules linker for compatibility
-# RUN yarn config set nodeLinker node-modules
+CMD ["yarn", "workspace", "@lucky/api", "start:dev"]
 
-
-# only copy workspace  package.json, ensure dependencies are installed, max cache hitting
-COPY apps/api/package.json ./apps/api/package.json
-COPY apps/docs/package.json ./apps/docs/package.json
-COPY apps/web/package.json ./apps/web/package.json
-COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
-COPY packages/shared/package.json ./packages/shared/package.json
-COPY packages/typescript-config/package.json ./packages/typescript-config/package.json
-COPY packages/ui/package.json ./packages/ui/package.json
-
-# install dependencies
-RUN yarn install --immutable
-
-# only copy api source code,but can use volume mount in dev
-# COPY apps/api ./apps/api
-
-# use workspace start:dev script to run dev server with nodemon
-# if you want to use this Dockerfile.dev directly,uncomment below lines
-# define in compose file command to override
-#CMD ["yarn", "workspace","@lucky/api","start:dev"]

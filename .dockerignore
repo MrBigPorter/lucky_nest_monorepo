@@ -2,7 +2,7 @@
 # 通用
 # -----------------------------
 .git
-.gitignore
+apps/api/.gitignore
 Dockerfile*
 docker-compose*.yml
 README.md

@@ -1,6 +1,16 @@
 version: "3.9"
 
 services:
+  # base image, for api, admin service , they all use it for build
+  monorepo-base:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+      tags:
+        - lucky-monorepo-base:latest
+    # it's a dummy command, just to make sure the image is built
+    command: [ "true" ]
+  # backend service, it's a monorepo service'
   backend:
     #use dockerfile to build our image
     build:
@@ -20,7 +30,7 @@ services:
     volumes:
       # 挂载整个仓库，内部包源码可用
       - .:/app
-     # 避免宿主机空目录覆盖容器依赖
+      # 避免宿主机空目录覆盖容器依赖
       - /app/node_modules
       - /app/apps/api/node_modules
     environment:
@@ -36,12 +46,30 @@ services:
                 yarn install --immutable &&
                 yarn workspace @lucky/api prisma generate &&
                 yarn workspace @lucky/api start:dev"
-    networks: [app]
+    networks: [ app ]
 
+  # admin service, a management ui for backend
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile.dev
+    container_name: lucky-admin-dev
+    working_dir: /app/apps/admin
+    ports:
+      - "${ADMIN_PORT}:3000"
+    volumes:
+      - .:/app
+    env_file:
+      - apps/admin/.env.docker
+    depends_on:
+      - backend
+    networks: [ app ]
+
+  # redis service, for caching and session storage
   redis:
     image: redis:7
     container_name: lucky-redis
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    command: [ "redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}" ]
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
@@ -49,13 +77,13 @@ services:
     volumes:
       - /Volumes/MySSD/docker-data/redis:/data # write to SSD
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      test: [ "CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG" ]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
       - app
-
+  # postgres service, for database
   db:
     image: postgres:16
     container_name: lucky-db
@@ -68,13 +96,13 @@ services:
     volumes:
       - /Volumes/MySSD/docker-data/postgres:/var/lib/postgresql/data # write to SSD
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: [ "CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
       - app
-
+  # pgadmin service, for database management
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: lucky-pgadmin-dev
