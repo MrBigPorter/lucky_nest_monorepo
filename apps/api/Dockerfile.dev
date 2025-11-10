@@ -17,7 +17,8 @@ COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
 
 # use node-modules linker for compatibility
-RUN yarn config set nodeLinker node-modules
+# RUN yarn config set nodeLinker node-modules
+
 
 # only copy workspace  package.json, ensure dependencies are installed, max cache hitting
 COPY apps/api/package.json ./apps/api/package.json
