@@ -2256,6 +2256,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@lucky/admin@workspace:apps/admin":
+  version: 0.0.0-use.local
+  resolution: "@lucky/admin@workspace:apps/admin"
+  dependencies:
+    "@nuxt/ui": "npm:^4.1.0"
+    "@tailwindcss/postcss": "npm:^4.1.17"
+    nuxt: "npm:^4.2.1"
+    tailwindcss: "npm:^4.1.17"
+    typescript: "npm:^5.6.3"
+    vue-tsc: "npm:^2.1.10"
+  languageName: unknown
+  linkType: soft
+
 "@lucky/api@workspace:apps/api":
   version: 0.0.0-use.local
   resolution: "@lucky/api@workspace:apps/api"
@@ -6046,19 +6059,6 @@ __metadata:
   checksum: 10c0/dec73ff59b7d6628a01eebaece7f2bdb8bb62b9b5926dcad0f8931f2b8b79c2be21f6c68ac095592adb5adb15831a3635d9343e6a91d028bbe85d564875ec3ec
   languageName: node
   linkType: hard
-
-"admin@workspace:apps/admin":
-  version: 0.0.0-use.local
-  resolution: "admin@workspace:apps/admin"
-  dependencies:
-    "@nuxt/ui": "npm:^4.1.0"
-    "@tailwindcss/postcss": "npm:^4.1.17"
-    nuxt: "npm:^4.2.1"
-    tailwindcss: "npm:^4.1.17"
-    typescript: "npm:^5.6.3"
-    vue-tsc: "npm:^2.1.10"
-  languageName: unknown
-  linkType: soft
 
 "agent-base@npm:^7.1.0, agent-base@npm:^7.1.2":
   version: 7.1.4
