@@ -37,9 +37,11 @@ export class AuthService {
         const p = phone.trim();
         const phoneMd5 = md5(p);
 
+
         const  now = new Date();
         // 毫秒
         const  graceStart = new Date(now.getTime() - OTP_LOGIN_WINDOW_SECONDS * 1000);
+
 
         // // 取“最近一条已验证、且未消费”的登录 OTP
         const opt = await this.prisma.smsVerificationCode.findFirst({
@@ -53,12 +55,13 @@ export class AuthService {
         })
 
 
+
         if (!opt){
             throwBiz(ERROR_KEYS.OTP_NOT_VERIFIED_OR_ALREADY_USED)
         }
 
         // 交互式事务：原子消费 OTP + upsert 用户 + 日志 + 最后登录时间
-        const  user = await this.prisma.$transaction(async (ctx)=>{
+        const  user = await this.prisma.$transaction(async (ctx: { smsVerificationCode: { updateMany: (arg0: { where: { id: any; verifyStatus: 1; }; data: { verifyStatus: 2; }; }) => any; }; })=>{
             // 1) 原子把 VERIFIED → CONSUMED，只允许成功一次
             const  consumed = await ctx.smsVerificationCode.updateMany({
                 where:{id:opt?.id,verifyStatus:VERIFY_STATUS.VERIFIED},

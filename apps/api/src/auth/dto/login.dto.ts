@@ -1,4 +1,6 @@
-import { IsString, IsNotEmpty, MinLength } from 'class-validator';
+import {IsString, IsNotEmpty, MinLength, IsOptional, IsNumber} from 'class-validator';
+import {ApiAcceptedResponse, ApiProperty} from "@nestjs/swagger";
+import {ToNumber} from "@api/common/dto/transforms";
 
 export class LoginDto {
     @IsString() @IsNotEmpty()
@@ -9,6 +11,20 @@ export class LoginDto {
 }
 
 export  class LoginOtpDto {
-    @IsString() @IsNotEmpty()
+    @ApiProperty({ example: '9878129723', description: 'phone number' })
+    @IsString()
+    @IsNotEmpty()
     phone!: string;
+
+    @ApiProperty({ example: 1, description: 'country code', required: false })
+    @IsOptional()
+    @ToNumber()
+    @IsNumber()
+    countryCode?: number;
+
+    @ApiProperty({ example: 123456, description: 'invite code', required: false })
+    @IsOptional()
+    @ToNumber()
+    @IsNumber()
+    inviteCode?: number;
 }
