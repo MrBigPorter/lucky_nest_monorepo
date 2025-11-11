@@ -6,10 +6,14 @@
 
 FROM lucky-monorepo-base
 
+# set the working directory to the app folder
 WORKDIR /app
 
+# copy the entire monorepo into the container
 COPY . .
 
+# generate the Prisma client
+RUN yarn workspace @lucky/api prisma generate
 
 CMD ["yarn", "workspace", "@lucky/api", "start:dev"]
 

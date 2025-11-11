@@ -5,12 +5,12 @@
 # you should run this command to build the base image before building this Dockerfile.
 
 # Use the official Node.js 20 image as the base image. because it is the latest LTS version.
-FROM node:20-bookworm-slim
+FROM node:20-bullseye
 
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y python3 make g++ openssl \
+    && apt-get install -y python3 make g++ openssl procps\
     && rm -rf /var/lib/apt/lists/*
 
 # Enable and prepare Corepack with Yarn 4.9.2, because Node 20 comes with Corepack disabled by default
