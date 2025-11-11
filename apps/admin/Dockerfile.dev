@@ -10,7 +10,6 @@ WORKDIR /app
 
 COPY . .
 
-WORKDIR /app/apps/admin
 EXPOSE 3000
 
 CMD ["yarn", "workspace", "@lucky/admin", "dev", "-H", "0.0.0.0"]

@@ -10,7 +10,6 @@ WORKDIR /app
 
 COPY . .
 
-WORKDIR /app/apps/api
 
 CMD ["yarn", "workspace", "@lucky/api", "start:dev"]
 
