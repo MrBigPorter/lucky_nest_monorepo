@@ -34,7 +34,6 @@ export class AuthController {
     @UseGuards(JwtAuthGuard)
     @Get('profile')
     async profile(@CurrentUserId() userId: string) {
-        console.log('userId',userId)
         return  this.auth.profile(userId)
     }
 }

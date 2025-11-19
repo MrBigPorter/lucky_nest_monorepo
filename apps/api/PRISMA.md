@@ -73,3 +73,7 @@ yarn prisma migrate diff \
 --script > prisma/migrations/BASELINE/migration.sql && \
 yarn prisma migrate resolve --applied BASELINE --schema prisma/schema.prisma && \
 yarn prisma migrate status --schema prisma/schema.prisma"
+
+
+5）用 postgres 超级用户给 dev 开权限
+docker exec -it lucky-db psql -U postgres -d postgres -c "ALTER ROLE dev WITH CREATEDB;"

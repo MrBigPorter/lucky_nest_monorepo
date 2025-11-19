@@ -18,6 +18,7 @@ import {CacheModule} from "@nestjs/cache-manager";
 import {redisStore} from "cache-manager-redis-yet";
 import {SectionsModule} from "@api/sections/sections.module";
 import {GroupModule} from "@api/group/group.module";
+import {WalletModule} from "@api/wallet/wallet.module";
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -67,7 +68,8 @@ import {GroupModule} from "@api/group/group.module";
         BannersModule,
         AdsModule,
         SectionsModule,
-        GroupModule
+        GroupModule,
+        WalletModule
 
 
         // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等

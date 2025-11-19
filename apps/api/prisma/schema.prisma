@@ -47,6 +47,8 @@ model User {
   treasureGroupMembers  TreasureGroupMember[]
   /// 创建的组团
   createdTreasureGroups TreasureGroup[]
+  /// 用户钱包
+  wallet                UserWallet?
 
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
@@ -496,5 +498,54 @@ model ActSectionItem {
   @@index([sectionId, sortOrder], map: "idx_section_sort")
   @@unique([sectionId, treasureId], map: "uk_section_treasure")
 }
+
+// 钱包快照
+model UserWallet {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  realBalance        Decimal  @default(0)     @map("real_balance")         // 现金
+  coinBalance        Decimal  @default(0)     @map("coin_balance")         // 金币（先用 Decimal，之后可切 Int）
+  frozenBalance      Decimal  @default(0)     @map("frozen_balance")       // 冻结（先留着）
+  totalRecharge      Decimal  @default(0)     @map("total_recharge")
+  totalWithdraw      Decimal  @default(0)     @map("total_withdraw")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt      @map("updated_at")
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("user_wallets")
+  @@index([userId], map: "idx_user_id")
+}
+
+// 钱包流水
+model WalletTransaction {
+  id              String   @id @default(cuid())
+  transactionNo   String   @unique @map("transaction_no")
+  userId          String   @map("user_id")
+  walletId        String   @map("wallet_id")
+  // 1=充值 2=消费 3=退款 4=奖励 5=提现 6=金币兑换 7=邀请奖励
+  transactionType Int      @map("transaction_type")
+  // 1=现金 2=金币
+  balanceType     Int      @map("balance_type")
+  amount          Decimal  @map("amount")
+  relatedId       String?  @map("related_id")
+  relatedType     String?  @map("related_type")
+  description     String?  @map("description")
+  status          Int      @default(1) @map("status")   // 1 成功
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  wallet UserWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_transactions")
+  @@index([userId], map: "idx_user_id_txn")
+  @@index([transactionNo], map: "idx_transaction_no")
+  @@index([transactionType], map: "idx_type")
+  @@index([balanceType], map: "idx_balance_type")
+  @@index([createdAt], map: "idx_created_at")
+  @@index([userId, transactionType], map: "idx_user_type")
+}
+
+
 
 
