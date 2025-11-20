@@ -82,7 +82,7 @@ export class WalletService {
                     status: TRANSACTION_STATUS.SUCCESS
                 }
             });
-            return {balance: w.realBalance, transaction: txn.transactionNo};
+            return {realBalance: w.realBalance, transactionNo: txn.transactionNo};
         });
 
     }
@@ -134,7 +134,7 @@ export class WalletService {
                     status: TRANSACTION_STATUS.SUCCESS
                 }
             });
-            return {balance: w.realBalance, transaction: txn.transactionNo};
+            return {realBalance: w.realBalance, transactionNo: txn.transactionNo};
 
         });
     }

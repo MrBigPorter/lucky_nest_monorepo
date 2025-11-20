@@ -1,10 +1,13 @@
 import {Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards} from "@nestjs/common";
 import {WalletService} from "@api/wallet/wallet.service";
-import {ApiBearerAuth, ApiProperty} from "@nestjs/swagger";
+import {ApiBearerAuth, ApiOkResponse, ApiProperty} from "@nestjs/swagger";
 import {JwtAuthGuard} from "@api/auth/jwt.guard";
 import {CurrentUserId} from "@api/auth/user.decorator";
 import {CreditDto} from "@api/wallet/dto/credit.dto";
 import {Html} from "@lucky/admin/.nuxt/components";
+import {WalletBalanceResponseDto} from "@api/wallet/dto/wallet-balance.response.dto";
+import {WalletCreditResponseDto} from "@api/wallet/dto/wallet-credit.response.dto";
+import {WalletDebitResponseDto} from "@api/wallet/dto/wallet-debit.response.dto";
 
 @Controller('wallet')
 export class WalletController {
@@ -16,8 +19,18 @@ export class WalletController {
     @UseGuards(JwtAuthGuard)
     @Post('balance')
     @HttpCode(HttpStatus.OK)
-    async balance(@CurrentUserId() userId: string) {
-        return this.wallet.balance(userId);
+    @ApiOkResponse({type: WalletBalanceResponseDto})
+    async balance(@CurrentUserId() userId: string): Promise<WalletBalanceResponseDto> {
+        const res = await this.wallet.balance(userId);
+        return {
+            id: res.id,
+            userId: res.userId,
+            realBalance: res.realBalance.toString(),
+            totalRecharge: res.totalRecharge.toString(),
+            coinBalance: res.coinBalance.toString(),
+            frozenBalance: res.frozenBalance.toString(),
+            totalWithdraw: res.totalWithdraw.toString(),
+        }
     }
 
     // Credit cash to wallet
@@ -25,8 +38,9 @@ export class WalletController {
     @UseGuards(JwtAuthGuard)
     @Post('credit')
     @HttpCode(HttpStatus.OK)
-    async credit(@CurrentUserId() userId: string, @Body() dto: CreditDto) {
-        return this.wallet.creditCash({
+    @ApiOkResponse({type: WalletCreditResponseDto})
+    async credit(@CurrentUserId() userId: string, @Body() dto: CreditDto): Promise<WalletCreditResponseDto> {
+        const res = await this.wallet.creditCash({
             userId,
             amount: dto.amount,
             related: {
@@ -35,6 +49,11 @@ export class WalletController {
             },
             desc: dto.desc
         })
+
+        return {
+            transactionNo: res.transactionNo,
+            realBalance: res.realBalance.toString(),
+        }
     }
 
 
@@ -43,8 +62,9 @@ export class WalletController {
     @UseGuards(JwtAuthGuard)
     @Post('debit')
     @HttpCode(HttpStatus.OK)
-    async debit(@CurrentUserId() userId: string, @Body() dto: CreditDto) {
-        return this.wallet.debitCash({
+    @ApiProperty({ type: WalletDebitResponseDto })
+    async debit(@CurrentUserId() userId: string, @Body() dto: CreditDto): Promise<WalletDebitResponseDto> {
+        const res = this.wallet.debitCash({
             userId,
             amount: dto.amount,
             related: {
@@ -53,5 +73,9 @@ export class WalletController {
             },
             desc: dto.desc
         })
+        return {
+            transactionNo: (await res).transactionNo,
+            realBalance: (await res).realBalance.toString(),
+        }
     }
 }
