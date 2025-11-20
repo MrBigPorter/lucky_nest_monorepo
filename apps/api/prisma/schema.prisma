@@ -602,3 +602,9 @@ model Order {
   @@map("orders")
 }
 
+model SystemConfig {
+  key       String   @id @map("config_key") @db.VarChar(100)
+  value     String   @map("config_value") @db.VarChar(255)
+
+  @@map("system_configs")
+}
