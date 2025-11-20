@@ -53,7 +53,7 @@ export class WalletService {
 
         return this.prisma.$transaction(async (tx) => {
             //check wallet exists
-            const w0 = await this.prisma.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
+            const w0 = await tx.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
 
             // add balance + sum new balance
             const w = await tx.userWallet.update({
@@ -101,7 +101,7 @@ export class WalletService {
 
         return this.prisma.$transaction(async  (tx) => {
             //check wallet exists
-           const w0 = await this.prisma.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
+           const w0 = await tx.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
             // deduct balance + sum new balance
             const r = await tx.userWallet.updateMany({
                 where: {userId, realBalance: {gte: amt}},
