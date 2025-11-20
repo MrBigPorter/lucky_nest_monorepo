@@ -19,6 +19,7 @@ export class WalletService {
             create: {userId},
             update: {},
             select: {
+                id: true,
                 userId: true,
                 realBalance: true,
                 totalRecharge: true,
@@ -52,7 +53,7 @@ export class WalletService {
 
         return this.prisma.$transaction(async (tx) => {
             //check wallet exists
-            await this.prisma.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
+            const w0 = await this.prisma.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
 
             // add balance + sum new balance
             const w = await tx.userWallet.update({
@@ -73,6 +74,8 @@ export class WalletService {
                     transactionType: TRANSACTION_TYPE.RECHARGE,
                     balanceType: BALANCE_TYPE.CASH,
                     amount: amt,
+                    beforeBalance: w0.realBalance,
+                    afterBalance: w.realBalance,
                     relatedId: related?.id,
                     relatedType: related?.type,
                     description: desc,
@@ -98,7 +101,7 @@ export class WalletService {
 
         return this.prisma.$transaction(async  (tx) => {
             //check wallet exists
-            await this.prisma.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
+           const w0 = await this.prisma.userWallet.upsert({where: {userId}, create: {userId}, update: {}});
             // deduct balance + sum new balance
             const r = await tx.userWallet.updateMany({
                 where: {userId, realBalance: {gte: amt}},
@@ -123,6 +126,8 @@ export class WalletService {
                     transactionType: TRANSACTION_TYPE.WITHDRAWAL,
                     balanceType: BALANCE_TYPE.CASH,
                     amount: amt.neg(), // negative amount for debit
+                    beforeBalance: w0.realBalance,
+                    afterBalance: w.realBalance,
                     relatedId: related?.id,
                     relatedType: related?.type,
                     description: desc,

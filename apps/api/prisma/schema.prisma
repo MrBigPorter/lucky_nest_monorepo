@@ -49,6 +49,10 @@ model User {
   createdTreasureGroups TreasureGroup[]
   /// 用户钱包
   wallet                UserWallet?
+  /// 钱包流水
+  transactions          WalletTransaction[]
+  /// 订单
+  orders                Order[]
 
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
@@ -252,6 +256,7 @@ model Treasure {
   categories TreasureCategory[]
   groups     TreasureGroup[]
   sectionItems ActSectionItem[]
+  orders     Order[]
 
   @@index([lotteryMode])
   @@index([lotteryTime])
@@ -330,6 +335,7 @@ model TreasureGroup {
   treasure Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
   creator  User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   members  TreasureGroupMember[]
+  orders   Order[]
 
   @@index([treasureId], map: "idx_treasure")
   @@index([creatorId], map: "idx_creator")
@@ -520,22 +526,29 @@ model UserWallet {
 
 // 钱包流水
 model WalletTransaction {
-  id              String   @id @default(cuid())
-  transactionNo   String   @unique @map("transaction_no")
-  userId          String   @map("user_id")
-  walletId        String   @map("wallet_id")
+  id              String   @id @default(cuid()) @map("id") @db.VarChar(32)
+  transactionId   String?   @map("transaction_id_ext") @db.VarChar(32)
+  transactionNo   String   @unique @map("transaction_no")  @db.VarChar(50)
+  userId          String   @map("user_id") @db.VarChar(32)
+  walletId        String   @map("wallet_id") @db.VarChar(32)
+
+  beforeBalance  Decimal  @map("before_balance") @db.Decimal(10, 2)
+  afterBalance   Decimal  @map("after_balance")  @db.Decimal(10, 2)
+
   // 1=充值 2=消费 3=退款 4=奖励 5=提现 6=金币兑换 7=邀请奖励
-  transactionType Int      @map("transaction_type")
+  transactionType Int      @map("transaction_type")  @db.SmallInt
   // 1=现金 2=金币
-  balanceType     Int      @map("balance_type")
-  amount          Decimal  @map("amount")
-  relatedId       String?  @map("related_id")
-  relatedType     String?  @map("related_type")
-  description     String?  @map("description")
-  status          Int      @default(1) @map("status")   // 1 成功
+  balanceType     Int      @map("balance_type")  @db.SmallInt
+  amount          Decimal  @map("amount") @db.Decimal(10, 2)
+  relatedId       String?  @map("related_id") @db.VarChar(64)
+  relatedType     String?  @map("related_type")  @db.VarChar(50)
+  description     String?  @map("description")   @db.Text
+  remark          String?  @map("remark")        @db.VarChar(500)
+  status          Int      @default(1) @map("status")  @db.SmallInt
   createdAt       DateTime @default(now()) @map("created_at")
 
-  wallet UserWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet UserWallet? @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   @@map("wallet_transactions")
   @@index([userId], map: "idx_user_id_txn")
@@ -547,5 +560,45 @@ model WalletTransaction {
 }
 
 
+// order table
+model Order {
+  orderId      String   @id @default(cuid()) @map("order_id") @db.VarChar(32)
+  orderNo     String   @unique @map("order_no") @db.VarChar(50)
+  userId      String   @map("user_id") @db.VarChar(32)
+  treasureId  String   @map("treasure_id") @db.VarChar(32)
 
+  originalAmount Decimal  @map("original_amount") @db.Decimal(10, 2)
+  discountAmount Decimal  @map("discount_amount") @db.Decimal(10, 2)
+  coponAmount   Decimal  @map("coupon_amount") @db.Decimal(10, 2)
+  coinAmount    Decimal  @map("coin_amount") @db.Decimal(10, 2)
+  finalAmount   Decimal  @map("final_amount") @db.Decimal(10, 2)
+
+  buyQuantity  Int      @map("buy_quantity")
+  unitPrice    Decimal  @map("unit_price") @db.Decimal(10, 2)
+
+  /// // 1待支付 2已支付 3取消 4退款
+  orderStatus Int      @default(1) @map("order_status") @db.SmallInt
+  payStatus   Int      @default(0) @map("pay_status") @db.SmallInt
+  refundStatus Int      @default(0) @map("refund_status") @db.SmallInt
+
+  groupId     String?  @map("group_id") @db.VarChar(32)
+  isGroupOwner Int      @default(0) @map("is_group_owner") @db.SmallInt
+
+  couponId   String?  @map("coupon_id") @db.VarChar(32)
+  coinUsed    Decimal  @default(0) @map("coin_used") @db.Decimal(10, 2)
+
+  paidAt     BigInt? @map("paid_at") @db.BigInt
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user       User    @relation(fields: [userId],references: [id], onDelete: Cascade)
+  treasure   Treasure @relation(fields: [treasureId],references: [treasureId], onDelete: Restrict)
+  group      TreasureGroup? @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
+
+  @@index([userId], map: "idx_user_id_order")
+  @@index([treasureId], map: "idx_treasure_id_order")
+  @@index([orderStatus,payStatus], map: "idx_order_status")
+  @@index([groupId], map: "idx_group_id_order")
+  @@map("orders")
+}
 
