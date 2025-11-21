@@ -7,7 +7,7 @@ import {GroupService} from "@api/group/group.service";
     imports: [PrismaModule],
     controllers: [GroupController],
     providers: [GroupService],
-    exports: []
+    exports: [GroupService]
 })
 
 export class GroupModule {}

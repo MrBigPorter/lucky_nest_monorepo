@@ -1,4 +1,4 @@
-import {IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min} from "class-validator";
+import {IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min} from "class-validator";
 import {ApiProperty, ApiPropertyOptional} from "@nestjs/swagger";
 import {ToNumber} from "@api/common/dto/transforms";
 
@@ -14,6 +14,7 @@ export class CheckoutDto {
     @IsInt()
     @Min(1)
     entries!: number;
+
     @ApiPropertyOptional({description: 'Group ID if joining a group purchase', example: 'groupId123', type: String})
     @IsString()
     @IsOptional()
@@ -28,6 +29,7 @@ export class CheckoutDto {
     @IsNotEmpty()
     @ToNumber()
     @IsInt()
+    @IsIn([1, 2])
     paymentMethod!: number // 1 cash 2 points
 
     @ApiPropertyOptional({description: 'Shipping address ID', example: 'addressId123', type: String})

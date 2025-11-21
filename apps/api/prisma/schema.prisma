@@ -569,7 +569,7 @@ model Order {
 
   originalAmount Decimal  @map("original_amount") @db.Decimal(10, 2)
   discountAmount Decimal  @map("discount_amount") @db.Decimal(10, 2)
-  coponAmount   Decimal  @map("coupon_amount") @db.Decimal(10, 2)
+  couponAmount   Decimal  @map("coupon_amount") @db.Decimal(10, 2)
   coinAmount    Decimal  @map("coin_amount") @db.Decimal(10, 2)
   finalAmount   Decimal  @map("final_amount") @db.Decimal(10, 2)
 

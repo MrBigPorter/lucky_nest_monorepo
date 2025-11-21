@@ -16,7 +16,7 @@ export  const TREASURE_STATE = {
 export const TREASURE_VIRTUAL = {
     VIRTUAL:1,
     REAL:2,
-}
+} as const
 
 /**
  * TreasureLotteryMode
@@ -26,7 +26,7 @@ export const TREASURE_VIRTUAL = {
 export const LOTTERY_MODE = {
     SOLD_OUT:1,
     TIMED:2,
-}
+} as const
 
 /**
  * TreasureLotteryDelayState
@@ -36,7 +36,7 @@ export const LOTTERY_MODE = {
 export const LOTTERY_DELAY_STATE = {
     NO:0,
     YES:1,
-}
+} as const
 
 /**
  * TreasureGroupStatus
@@ -46,7 +46,7 @@ export const LOTTERY_DELAY_STATE = {
 export const GROUP_STATUS = {
     ACTIVE:1,
     INACTIVE:2,
-}
+} as const
 
 /**
  * IS_OWNER
@@ -56,5 +56,5 @@ export const GROUP_STATUS = {
 export const IS_OWNER = {
     YES:1,
     NO:0,
-}
+} as const
 
