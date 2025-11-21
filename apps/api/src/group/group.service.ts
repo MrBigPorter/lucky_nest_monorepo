@@ -9,10 +9,101 @@ import {Prisma} from "@prisma/client";
 import {GroupLeaveDto} from "@api/group/dto/group-leave.dto";
 import {GroupListForTreasureDto} from "@api/group/dto/group-list-for-treasure.dto";
 
+type Tx = Prisma.TransactionClient | PrismaService;
+
+
 @Injectable()
 export class GroupService {
-    constructor(private readonly prisma: PrismaService) {
+    constructor(private readonly prisma: PrismaService) {}
+
+    private orm(tx?: Tx) {
+        return (tx ?? this.prisma) as Tx;
     }
+
+
+    /**
+     * 组团逻辑：- create or join
+     * - 传了 groupId：尝试加团（满员/状态不对则报错） - join group if groupId provided (error if full/inactive)
+     * - 没传 groupId：自动开团 + 自己进成员表 - create group + add self as member if no groupId
+     *
+     * 注意：tx 一定是外面传进来的同一个事务 client - tx must be the same transaction client passed from outside
+     */
+
+    async joinOrCreateGroup(
+                            params: {
+                                userId: string;
+                                treasureId: string;
+                                groupId?: string | null;
+                                orderId: string;
+                            },
+                            tx?: Tx
+    ): Promise<{finalGroupId: string | null; isOwner: number}> {
+        const db = this.orm(tx);
+
+       const {userId, treasureId, groupId, orderId} = params;
+       let finalGroupId: string | null = null;
+       let isOwner:number = IS_OWNER.NO;
+
+         if (groupId) {
+                // join existing group, check membership first
+                const r = await db.$queryRawUnsafe<{ok: number}[]>(`
+                   UPDATE treasure_groups
+                     SET current_members = current_members + 1
+                     WHERE group_id = $1
+                     AND treasure_id = $2
+                     AND group_status = '${GROUP_STATUS.ACTIVE}
+                        AND current_members < max_members
+                        RETURNING 1 as ok
+                `,groupId,treasureId)
+
+             if (!r.length) throw new BadRequestException('Failed to join group: full or inactive');
+
+             await db.treasureGroupMember.create({
+                 data: {
+                        groupId,
+                        userId,
+                        isOwner: IS_OWNER.NO,
+                        orderId,
+                        joinedAt: new Date()
+                 }
+             })
+
+             finalGroupId = groupId;
+             isOwner = IS_OWNER.NO;
+         }else {
+             //auto create group
+                const g = await db.treasureGroup.create({
+                    data: {
+                        treasureId,
+                        creatorId: userId,
+                        groupName: '',
+                        currentMembers: 1,
+                        groupStatus: GROUP_STATUS.ACTIVE,
+                        maxMembers: 99999, // default max members
+                    },
+                    select: {
+                        groupId: true,
+                    }
+                })
+
+             await db.treasureGroupMember.create({
+                    data: {
+                        groupId: g.groupId,
+                        userId,
+                        isOwner: IS_OWNER.YES,
+                        orderId,
+                        joinedAt: new Date()
+                    }
+             })
+                finalGroupId = g.groupId;
+                isOwner = IS_OWNER.YES;
+         }
+        return { finalGroupId, isOwner};
+
+
+
+    }
+
 
     //创建团
     async createGroup(dto: GroupCreateDto) {
@@ -45,7 +136,7 @@ export class GroupService {
         }
 
 
-       const {groupId} =  await this.prisma.$transaction(async (ctx) => {
+        const {groupId} = await this.prisma.$transaction(async (ctx) => {
             // 开团
             const g = await ctx.treasureGroup.create({
                 data: {
@@ -64,14 +155,14 @@ export class GroupService {
             // 记录成员
             await ctx.treasureGroupMember.create({
                 data: {
-                    groupId:g.groupId,
+                    groupId: g.groupId,
                     userId: leaderUserId,
                     isOwner: IS_OWNER.YES,
                     orderId
                 }
             })
 
-           return g;
+            return g;
         })
         return {groupId}
     }

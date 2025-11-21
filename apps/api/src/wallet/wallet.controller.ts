@@ -20,7 +20,7 @@ export class WalletController {
     @Post('balance')
     @HttpCode(HttpStatus.OK)
     @ApiOkResponse({type: WalletBalanceResponseDto})
-    async balance(@CurrentUserId() userId: string): Promise<WalletBalanceResponseDto> {
+    async balance(@CurrentUserId() userId: string) {
         const res = await this.wallet.balance(userId);
         return {
             id: res.id,
@@ -51,7 +51,6 @@ export class WalletController {
         })
 
         return {
-            transactionNo: res.transactionNo,
             realBalance: res.realBalance.toString(),
         }
     }
@@ -64,7 +63,7 @@ export class WalletController {
     @HttpCode(HttpStatus.OK)
     @ApiProperty({ type: WalletDebitResponseDto })
     async debit(@CurrentUserId() userId: string, @Body() dto: CreditDto): Promise<WalletDebitResponseDto> {
-        const res = this.wallet.debitCash({
+        const res = await this.wallet.debitCash({
             userId,
             amount: dto.amount,
             related: {
@@ -74,8 +73,7 @@ export class WalletController {
             desc: dto.desc
         })
         return {
-            transactionNo: (await res).transactionNo,
-            realBalance: (await res).realBalance.toString(),
+            realBalance: res.realBalance.toString(),
         }
     }
 }
