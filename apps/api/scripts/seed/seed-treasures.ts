@@ -1,240 +1,303 @@
 // apps/api/scripts/seed/seed-treasures.ts
 import { PrismaClient, Prisma } from '@prisma/client';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 
-const prisma = new PrismaClient();
+const db = new PrismaClient();
+const D = (n: number | string) => new Prisma.Decimal(n);
 
-// ============ 小工具 ============
-const coalesce = <T>(...vals: Array<T | null | undefined>) =>
-    vals.find(v => v !== null && v !== undefined) as T | undefined;
-
-const must = <T>(val: T | undefined | null, msg: string): T => {
-    if (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
-        throw new Error(msg);
-    }
-    return val as T;
-};
-
-const toDate = (ms?: number | null) => (ms && Number(ms) > 0 ? new Date(Number(ms)) : null);
-const toNumber = (v: any) => (v == null ? undefined : Number(v));
-
-// ============ 分类规则（可按需改） ============
-const CATEGORY_RULES = [
-    { name: 'Cash', keywords: [/₱\s*\d/i, /\bphp\b/i, /\bcash\b/i, /\bmoney\b/i] },
-    { name: 'Tech', keywords: [/iphone|apple|airpods|ipad|mac|realme|samsung|xiaomi|laptop|watch/i] },
-    { name: 'Home', keywords: [/vacuum|cooker|blender|fryer|pan|kettle|lamp|fan|chair|sofa/i] },
-    { name: 'Hot',  keywords: [/hot/i] },
+// 用你现有 S3 里的一组图片当成“图片库”
+const COVER_POOL: string[] = [
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/202508191540333d2e6ad1-1fdf-4c96-b224-8342bc6a4688.jpg',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/202508191520533465a06b-2d8d-4bec-b261-fb86bd0880a1.jpg',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/202510011447103b881e77-d1c6-435b-b780-7bfe4ea5472c.png',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/2025081915120497e04c94-1603-4fbd-936d-fa0d77ab32aa.jpg',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250923142219a86201c1-85ea-4614-bae4-919221cf64a6.jpg',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250923142457926af44b-bca6-4e8f-a08b-a57934fc6399.png',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250819154218e96b22f3-8424-4bb7-ab74-7a30c130835e.jpg',
+    'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250829183122eaa903c8-15a0-45d0-91ac-06c4a6687ed1.jpg',
 ];
 
-async function ensureCategories(names: string[]): Promise<Map<string, number>> {
-    if (!names.length) return new Map<string, number>();
+/**
+ * 种子宝箱/抽奖产品
+ * - 包含：现金奖、手机、家电、数码、时尚、游戏点券、代金券
+ * - 并关联到 ProductCategory（通过短名字：Cash / Phone / Gadget / Home / Fashion / Game / Voucher）
+ */
+export async function seedTreasures() {
+    // 先清关联，再清主表，保证数据干净
+    await db.actSectionItem.deleteMany({});
+    await db.treasureCategory.deleteMany({});
+    await db.order.deleteMany({});
+    await db.treasureGroupMember.deleteMany({});
+    await db.treasureGroup.deleteMany({});
+    await db.treasure.deleteMany({});
 
-    type CatRow = { id: number; name: string };
-
-    const existing: CatRow[] = await prisma.productCategory.findMany({
-        where: { name: { in: names } },
-        select: { id: true, name: true },
-    });
-
-    const have = new Set(existing.map(x => x.name));
-    const missing = names.filter(n => !have.has(n));
-
-    if (missing.length) {
-        await prisma.productCategory.createMany({
-            data: missing.map(n => ({ name: n })),
-            skipDuplicates: true,
-        });
+    // 先查分类，方便按 name/nameEn 分配
+    const categories = await db.productCategory.findMany();
+    const catMap = new Map<string, number>();
+    for (const c of categories) {
+        catMap.set(c.nameEn ?? c.name, c.id);
     }
 
-    // 重新查一遍，返回完整映射
-    const rows = await prisma.productCategory.findMany({
-        where: { name: { in: names } },
-        select: { id: true, name: true },
-    });
-
-    const set = new Map<string, number>();
-    for (const row of rows) set.set(row.name, row.id);
-    return set;
-}
-
-function pickCategoriesByName(title: string): string[] {
-    const hit = new Set<string>();
-    for (const rule of CATEGORY_RULES) {
-        if (rule.keywords.some(re => re.test(title))) hit.add(rule.name);
-    }
-    // 最少加一个“Hot”兜底，便于前台有东西可展示
-    if (hit.size === 0) hit.add('Hot');
-    return [...hit];
-}
-
-// ============ JSON 扁平化读取 ============
-// 支持 3 种来源：TREASURES_INLINE(字符串) -> 文件 -> 报错
-async function loadRows(): Promise<any[]> {
-    const inline = process.env.TREASURES_INLINE;
-    if (inline && inline.trim()) {
-        const json = JSON.parse(inline);
-        return normalize(json);
-    }
-
-    const file =
-        process.env.TREASURES_FILE ??
-        path.resolve(process.cwd(), 'scripts/seed/data/treasuresList.json');
-
-    console.log('[seed] reading:', file);
-    const text = await fs.readFile(file, 'utf8');
-    const json = JSON.parse(text);
-    return normalize(json);
-}
-
-// 兼容：数组 / {data[]} / {data[].treasure_resp[]} / {list[]} / {treasures[]}
-function normalize(json: any): any[] {
-    if (Array.isArray(json)) return json;
-
-    if (Array.isArray(json?.treasure_resp)) return json.treasure_resp;
-
-    if (Array.isArray(json?.data)) {
-        const blocks = json.data;
-        if (blocks.length && Array.isArray(blocks[0]?.treasure_resp)) {
-            // 扁平化：把外层块的 act_id/img_style_type 挂到每个宝贝上
-            return blocks.flatMap((b: any) =>
-                (b.treasure_resp ?? []).map((t: any) => ({
-                    ...t,
-                    act_id: b.act_id,
-                    block_img_style_type: b.img_style_type,
-                })),
-            );
-        }
-        return blocks;
-    }
-
-    if (Array.isArray(json?.list)) return json.list;
-    if (Array.isArray(json?.treasures)) return json.treasures;
-
-    const keys = typeof json === 'object' ? Object.keys(json) : ['<non-object>'];
-    throw new Error(`[seed] JSON must be an array. Got keys: ${keys.join(', ')}`);
-}
-
-// ============ 行映射（Raw -> Prisma.TreasureCreateInput） ============
-// 注意：主键使用 treasureId（不是 id）
-function mapOne(r: any, i: number): Prisma.TreasureCreateInput {
-    const rawId = coalesce<number | string>(r.treasure_id, r.treasureId, r.id, r.seq) ?? `AUTO-${Date.now()}-${i}`;
-    const treasureId = String(rawId);
-
-    const name = coalesce<string>(r.treasure_name, r.treasureName, r.product_name, r.productName);
-    must(name, `Row#${i} 缺少 treasure_name/treasureName`);
-
-    const buyRate = r.buy_quantity_rate != null ? Number(r.buy_quantity_rate) : undefined;
-
-    return {
-        treasureId, // ← 关键：用 treasureId 做主键
-        treasureSeq: coalesce<string>(r.treasure_seq, r.treasureSeq) ?? `SEQ-${treasureId}`,
-        treasureName: name!,
-        productName: coalesce<string>(r.product_name, r.productName) ?? null,
-        treasureCoverImg: coalesce<string>(r.treasure_cover_img, r.cover, r.image) ?? null,
-        mainImageList: r.main_image_list ?? r.mainImageList ?? null,
-
-        costAmount: toNumber(r.cost_amount ?? r.costAmount) ?? null,
-        unitAmount: toNumber(r.unit_amount ?? r.unitAmount) ?? 1,
-        cashAmount: toNumber(r.cash_amount ?? r.cashAmount) ?? null,
-
-        seqShelvesQuantity: toNumber(r.seq_shelves_quantity ?? r.seqShelvesQuantity) ?? null,
-        seqBuyQuantity: toNumber(r.seq_buy_quantity ?? r.seqBuyQuantity) ?? 0,
-        minBuyQuantity: toNumber(r.min_buy_quantity ?? r.minBuyQuantity) ?? null,
-        maxPerBuyQuantity: toNumber(r.max_per_buy_quantity ?? r.maxPerBuyQuantity) ?? null,
-        buyQuantityRate: buyRate ?? null,
-
-        lotteryMode: toNumber(r.lottery_mode ?? r.lotteryMode) ?? null,     // 1=售罄 2=定时
-        lotteryTime: toDate(r.lottery_time ?? r.lotteryTime),
-        lotteryDelayTime: toDate(r.lottery_delay_time ?? r.lotteryDelayTime),
-        lotteryDelayState: toNumber(r.lottery_delay_state ?? r.lotteryDelayState) ?? 0,
-
-        imgStyleType: toNumber(r.img_style_type ?? r.imgStyleType) ?? 0,
-        virtual: toNumber(r.virtual) ?? 2,
-
-        groupMaxNum: toNumber(r.group_max_num ?? r.groupMaxNum) ?? 9999,
-
-        maxUnitCoins: toNumber(r.max_unit_coins ?? r.maxUnitCoins) ?? null,
-        maxUnitAmount: toNumber(r.max_unit_amount ?? r.maxUnitAmount) ?? null,
-
-        charityAmount: toNumber(r.charity_amount ?? r.charityAmount) ?? null,
-        cashState: toNumber(r.cash_state ?? r.cashState) ?? null,
-        ruleContent: r.rule_content ?? r.ruleContent ?? null,
-        desc: r.desc ?? r.description ?? null,
-        state: 1,
+    type SeedTreasure = {
+        treasureName: string;
+        productName: string;
+        costAmount: Prisma.Decimal;
+        unitAmount: Prisma.Decimal;
+        cashAmount: Prisma.Decimal | null;
+        totalSlots: number;
+        boughtSlots: number;
+        minBuyQuantity: number;
+        maxPerBuyQuantity: number;
+        category: 'Cash' | 'Phone' | 'Gadget' | 'Home' | 'Fashion' | 'Game' | 'Voucher';
+        imgStyleType: number;
+        virtual: 1 | 2;
     };
-}
 
-// ============ 主流程 ============
-async function main() {
-    const DRY = process.env.DRY_RUN === '1';
-    const rows = await loadRows();
-    console.log('[seed] total treasures:', rows.length);
+    const treasures: SeedTreasure[] = [
+        // 1) 现金类 Cash
+        {
+            treasureName: '₱3,000 Cash Prize',
+            productName: 'Cash Reward ₱3,000',
+            costAmount: D(2500),
+            unitAmount: D(10),
+            cashAmount: D(3000),
+            totalSlots: 800,
+            boughtSlots: 320,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 100,
+            category: 'Cash',
+            imgStyleType: 0,
+            virtual: 1,
+        },
+        {
+            treasureName: '₱10,000 Mega Cash',
+            productName: 'Mega Cash Reward ₱10,000',
+            costAmount: D(8000),
+            unitAmount: D(25),
+            cashAmount: D(10000),
+            totalSlots: 1000,
+            boughtSlots: 740,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 80,
+            category: 'Cash',
+            imgStyleType: 0,
+            virtual: 1,
+        },
+        {
+            treasureName: '₱50,000 Grand Cash',
+            productName: 'Grand Cash Reward ₱50,000',
+            costAmount: D(42000),
+            unitAmount: D(59),
+            cashAmount: D(50000),
+            totalSlots: 2000,
+            boughtSlots: 280,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 100,
+            category: 'Cash',
+            imgStyleType: 0,
+            virtual: 1,
+        },
 
-    // 1) 分类准备
-    const allCatNames = [...new Set(CATEGORY_RULES.map(r => r.name))];
-    const catsMap = await ensureCategories(allCatNames); // name -> id
+        // 2) 手机 Phone
+        {
+            treasureName: 'iPhone 16 (128GB)',
+            productName: 'Apple iPhone 16 128GB',
+            costAmount: D(55000),
+            unitAmount: D(49),
+            cashAmount: null,
+            totalSlots: 2000,
+            boughtSlots: 960,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 50,
+            category: 'Phone',
+            imgStyleType: 1,
+            virtual: 2,
+        },
+        {
+            treasureName: 'Samsung Galaxy S25',
+            productName: 'Samsung Galaxy S25 256GB',
+            costAmount: D(42000),
+            unitAmount: D(39),
+            cashAmount: null,
+            totalSlots: 2000,
+            boughtSlots: 300,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 50,
+            category: 'Phone',
+            imgStyleType: 1,
+            virtual: 2,
+        },
+        {
+            treasureName: 'Xiaomi Redmi Note 14',
+            productName: 'Redmi Note 14 256GB',
+            costAmount: D(16000),
+            unitAmount: D(19),
+            cashAmount: null,
+            totalSlots: 1500,
+            boughtSlots: 720,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 80,
+            category: 'Phone',
+            imgStyleType: 1,
+            virtual: 2,
+        },
 
-    // 2) 批处理
-    let ok = 0, fail = 0;
-    const joinPairs: Array<{ treasureId: string; categoryId: number }> = [];
+        // 3) Gadgets
+        {
+            treasureName: 'AirPods Pro (3rd Gen)',
+            productName: 'Apple AirPods Pro 3',
+            costAmount: D(14000),
+            unitAmount: D(19),
+            cashAmount: null,
+            totalSlots: 1000,
+            boughtSlots: 510,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 60,
+            category: 'Gadget',
+            imgStyleType: 1,
+            virtual: 2,
+        },
+        {
+            treasureName: 'iPad mini (Wifi 128GB)',
+            productName: 'Apple iPad mini Wifi 128GB',
+            costAmount: D(28000),
+            unitAmount: D(29),
+            cashAmount: null,
+            totalSlots: 1500,
+            boughtSlots: 220,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 50,
+            category: 'Gadget',
+            imgStyleType: 1,
+            virtual: 2,
+        },
 
-    for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        try {
-            const data = mapOne(r, i);
-            const { treasureId: tid, ...updateData } = data; // update 不要改主键
-            const catNames = pickCategoriesByName(data.treasureName);
-            const catIds = catNames.map(n => catsMap.get(n)).filter(Boolean) as number[];
+        // 4) 家居 Home
+        {
+            treasureName: 'Dyson Supersonic Hair Dryer',
+            productName: 'Dyson Supersonic',
+            costAmount: D(25000),
+            unitAmount: D(29),
+            cashAmount: null,
+            totalSlots: 1500,
+            boughtSlots: 880,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 50,
+            category: 'Home',
+            imgStyleType: 1,
+            virtual: 2,
+        },
+        {
+            treasureName: 'Smart Rice Cooker',
+            productName: 'Philips Smart Rice Cooker',
+            costAmount: D(6000),
+            unitAmount: D(9),
+            cashAmount: null,
+            totalSlots: 800,
+            boughtSlots: 260,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 80,
+            category: 'Home',
+            imgStyleType: 1,
+            virtual: 2,
+        },
 
-            if (DRY) {
-                console.log(`[dry] upsert treasure treasureId=${tid}, name="${data.treasureName}", cats=${catNames.join(',')}`);
-            } else {
-                await prisma.treasure.upsert({
-                    where: { treasureId: tid },   // ← 关键：用 treasureId 作为 where 唯一键
-                    update: updateData,
-                    create: data,
-                });
-            }
+        // 5) 游戏点券 Game
+        {
+            treasureName: '₱1,000 Game Credits',
+            productName: 'Game Top-up ₱1,000',
+            costAmount: D(800),
+            unitAmount: D(10),
+            cashAmount: null,
+            totalSlots: 800,
+            boughtSlots: 300,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 80,
+            category: 'Game',
+            imgStyleType: 0,
+            virtual: 1,
+        },
+        {
+            treasureName: '₱500 Steam Wallet Code',
+            productName: 'Steam Wallet ₱500',
+            costAmount: D(400),
+            unitAmount: D(5),
+            cashAmount: null,
+            totalSlots: 600,
+            boughtSlots: 150,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 80,
+            category: 'Game',
+            imgStyleType: 0,
+            virtual: 1,
+        },
 
-            // 记录 join（按 treasureId）
-            for (const cid of catIds) joinPairs.push({ treasureId: data.treasureId!, categoryId: cid });
-            ok++;
-        } catch (e: any) {
-            fail++;
-            const ctx = {
-                i,
-                sample: {
-                    treasure_id: rows[i]?.treasure_id,
-                    treasure_seq: rows[i]?.treasure_seq,
-                    treasure_name: rows[i]?.treasure_name,
-                },
-            };
-            console.error(`[seed] row#${i} failed: ${e?.message ?? e}`, ctx);
+        // 6) 代金券 Voucher
+        {
+            treasureName: '₱1,000 Shopping Voucher',
+            productName: 'Mall Shopping Voucher ₱1,000',
+            costAmount: D(800),
+            unitAmount: D(10),
+            cashAmount: null,
+            totalSlots: 900,
+            boughtSlots: 420,
+            minBuyQuantity: 1,
+            maxPerBuyQuantity: 90,
+            category: 'Voucher',
+            imgStyleType: 0,
+            virtual: 1,
+        },
+    ];
+
+    for (let i = 0; i < treasures.length; i++) {
+        const t = treasures[i];
+        const categoryId = catMap.get(t.category);
+        if (!categoryId) {
+            console.warn(
+                `⚠️ Category not found for treasure: ${t.treasureName} (category=${t.category})`,
+            );
+            continue;
         }
-    }
 
-    // 3) 写 join 表（去重 + 批量）
-    if (!DRY && joinPairs.length) {
-        // 去重
-        const uniq = new Map<string, { treasureId: string; categoryId: number }>();
-        for (const p of joinPairs) uniq.set(`${p.treasureId}::${p.categoryId}`, p);
-        const data = [...uniq.values()];
-        await prisma.treasureCategory.createMany({
-            data,
-            skipDuplicates: true,
+        const cover = COVER_POOL[i % COVER_POOL.length];
+        const cover2 = COVER_POOL[(i + 3) % COVER_POOL.length];
+
+        const treasure = await db.treasure.create({
+            data: {
+                treasureName: t.treasureName,
+                productName: t.productName,
+                treasureCoverImg: cover,
+                mainImageList: [
+                    cover,
+                    cover2,
+                ],
+                costAmount: t.costAmount,
+                unitAmount: t.unitAmount,
+                cashAmount: t.cashAmount ?? undefined,
+                seqShelvesQuantity: t.totalSlots,
+                seqBuyQuantity: t.boughtSlots,
+                minBuyQuantity: t.minBuyQuantity,
+                maxPerBuyQuantity: t.maxPerBuyQuantity,
+                lotteryMode: 1, // 先用售罄模式
+                lotteryDelayState: 0,
+                imgStyleType: t.imgStyleType,
+                virtual: t.virtual,
+                groupMaxNum: 9999,
+                maxUnitCoins: D(100), // 每份最多用多少 coins，先写一个合理值
+                maxUnitAmount: D(20), // 每份最多折多少 PHP
+                charityAmount: D(0),
+                ruleContent: '<p>Standard lucky draw rules apply.</p>',
+                desc: '<p>Join the treasure draw and win amazing rewards!</p>',
+                state: 1,
+            },
+        });
+
+        await db.treasureCategory.create({
+            data: {
+                treasureId: treasure.treasureId,
+                categoryId,
+            },
         });
     }
 
-    console.log(`seed done. ok=${ok}, fail=${fail}, joins=${joinPairs.length} ${DRY ? '(dry-run)' : ''}`);
+    console.log('✅ Treasures seeded');
 }
-
-// ============ 入口 ============
-main()
-    .catch((e) => {
-        console.error(e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });

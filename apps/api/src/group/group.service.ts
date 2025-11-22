@@ -14,12 +14,77 @@ type Tx = Prisma.TransactionClient | PrismaService;
 
 @Injectable()
 export class GroupService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) {
+    }
 
     private orm(tx?: Tx) {
         return (tx ?? this.prisma) as Tx;
     }
 
+
+    private async getOrCreateGroup(params: {
+        userId: string;
+        treasureId: string;
+    }, tx?: Tx) {
+        const db = this.orm(tx);
+        const {userId, treasureId} = params;
+        //check existing active group created by user for the treasure
+        let group = await db.treasureGroup.findFirst({
+            where: {
+                treasureId,
+                creatorId: userId,
+                groupStatus: GROUP_STATUS.ACTIVE,
+            },
+            select: {
+                groupId: true,
+                currentMembers: true,
+                maxMembers: true,
+            }
+        })
+
+        if (group) return group;
+
+        //create new group
+        try {
+            group = await db.treasureGroup.create({
+                data: {
+                    treasureId,
+                    creatorId: userId,
+                    groupName: '',
+                    currentMembers: 1,
+                    groupStatus: GROUP_STATUS.ACTIVE,
+                    maxMembers: 99999, // default max members
+                },
+                select: {
+                    groupId: true,
+                    currentMembers: true,
+                    maxMembers: true,
+                }
+            })
+
+            return group;
+
+        } catch (e) {
+            // 3) 并发下：另一条请求先创建成功了，这里会撞唯一键 -> 再查一次
+            const isP2002 = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+            if (isP2002){
+                const  again = await db.treasureGroup.findFirst({
+                    where: {
+                        treasureId,
+                        creatorId: userId,
+                        groupStatus: GROUP_STATUS.ACTIVE,
+                    },
+                    select: {
+                        groupId: true,
+                        currentMembers: true,
+                        maxMembers: true,
+                    }
+                });
+                if (again) return again;
+            }
+            throw e;
+        }
+    }
 
     /**
      * 组团逻辑：- create or join
@@ -30,76 +95,140 @@ export class GroupService {
      */
 
     async joinOrCreateGroup(
-                            params: {
-                                userId: string;
-                                treasureId: string;
-                                groupId?: string | null;
-                                orderId: string;
-                            },
-                            tx?: Tx
-    ): Promise<{finalGroupId: string | null; isOwner: number}> {
+        params: {
+            userId: string;
+            treasureId: string;
+            groupId?: string | null;
+            orderId: string;
+        },
+        tx?: Tx
+    ): Promise<{ finalGroupId: string | null; isOwner: number; alreadyInGroup: boolean }> {
         const db = this.orm(tx);
 
-       const {userId, treasureId, groupId, orderId} = params;
-       let finalGroupId: string | null = null;
-       let isOwner:number = IS_OWNER.NO;
+        const {userId, treasureId, groupId, orderId} = params;
+        let finalGroupId: string | null = null;
+        let isOwner: number = IS_OWNER.NO;
+        let alreadyInGroup = false;
 
-         if (groupId) {
-                // join existing group, check membership first
-                const r = await db.$queryRawUnsafe<{ok: number}[]>(`
-                   UPDATE treasure_groups
-                     SET current_members = current_members + 1
-                     WHERE group_id = $1
-                     AND treasure_id = $2
-                     AND group_status = '${GROUP_STATUS.ACTIVE}
-                        AND current_members < max_members
-                        RETURNING 1 as ok
-                `,groupId,treasureId)
+        if (groupId) {
+            // 加入指定团
+            const group = await db.treasureGroup.findUnique({
+                where: {groupId},
+                select: {
+                    treasureId: true,
+                    groupStatus: true,
+                    maxMembers: true,
+                    currentMembers: true,
+                }
+            })
 
-             if (!r.length) throw new BadRequestException('Failed to join group: full or inactive');
+            if (!group || group.treasureId !== treasureId) {
+                throw new NotFoundException('Group not found for this treasure');
+            }
 
-             await db.treasureGroupMember.create({
-                 data: {
+            if (group.groupStatus === GROUP_STATUS.INACTIVE) {
+                throw new BadRequestException('Group is inactive');
+            }
+
+            // 看看是不是有人在团里面了
+            const existingMember = await db.treasureGroupMember.findUnique({
+                where:{
+                    groupId_userId: {
                         groupId,
-                        userId,
-                        isOwner: IS_OWNER.NO,
-                        orderId,
-                        joinedAt: new Date()
-                 }
-             })
+                        userId
+                }},
+                select: {isOwner: true}
+            })
+            if (existingMember){
+                // already in group,just return group
+                return  {
+                    finalGroupId: groupId,
+                    isOwner: existingMember.isOwner,
+                    alreadyInGroup: true
+                }
+            }
 
-             finalGroupId = groupId;
-             isOwner = IS_OWNER.NO;
-         }else {
-             //auto create group
-                const g = await db.treasureGroup.create({
-                    data: {
+            // 并发安全占位（满员则 0 行受影响）
+            const  updated = await db.$queryRaw<{ok: number}[]>(Prisma.sql`
+                UPDATE treasure_groups
+                SET current_members = current_members + 1
+                WHERE group_id = ${groupId}
+                AND treasure_id = ${treasureId}
+                AND group_status = ${GROUP_STATUS.ACTIVE}
+                AND current_members < max_members RETURNING 1 AS ok
+            `)
+
+            if (updated.length === 0) {
+                throw  new  BadRequestException('Group is full');
+            }
+
+            await db.treasureGroupMember.create({
+                data: {
+                    groupId,
+                    userId,
+                    isOwner: IS_OWNER.NO,
+                    orderId,
+                    joinedAt: new Date()
+                }
+            })
+
+            finalGroupId = groupId;
+            isOwner = IS_OWNER.NO;
+            alreadyInGroup = false;
+
+        } else {
+           // 自动开团 + 自己进成员表
+            // 2.1 看看这个用户是不是已经在该宝箱的某个 ACTIVE 团里了
+            const existingMember = await db.treasureGroupMember.findFirst({
+                where: {
+                    userId,
+                    group: {
                         treasureId,
-                        creatorId: userId,
-                        groupName: '',
-                        currentMembers: 1,
                         groupStatus: GROUP_STATUS.ACTIVE,
-                        maxMembers: 99999, // default max members
-                    },
-                    select: {
-                        groupId: true,
                     }
-                })
+                },
+                select: {groupId: true, isOwner: true}
+            })
 
-             await db.treasureGroupMember.create({
-                    data: {
-                        groupId: g.groupId,
-                        userId,
-                        isOwner: IS_OWNER.YES,
-                        orderId,
-                        joinedAt: new Date()
-                    }
-             })
-                finalGroupId = g.groupId;
-                isOwner = IS_OWNER.YES;
-         }
-        return { finalGroupId, isOwner};
+            if (existingMember){
+                // already in group,just return group
+                return  {
+                    finalGroupId: existingMember.groupId,
+                    isOwner: existingMember.isOwner,
+                    alreadyInGroup: true
+                }
+            }
 
+            // 2.2 不在的话，创建新团 + 自己进成员表
+            const group = await db.treasureGroup.create({
+                data: {
+                    treasureId,
+                    creatorId: userId,
+                    groupName: '',
+                    currentMembers: 1,
+                    groupStatus: GROUP_STATUS.ACTIVE,
+                    maxMembers: 99999, // default max members
+                },
+                select: {
+                    groupId: true,
+                }
+            })
+
+            await db.treasureGroupMember.create({
+                data: {
+                    groupId: group.groupId,
+                    userId,
+                    isOwner: IS_OWNER.YES,
+                    orderId,
+                    joinedAt: new Date()
+                }
+            })
+
+            finalGroupId = group.groupId;
+            isOwner = IS_OWNER.YES;
+            alreadyInGroup = false;
+        }
+        return {finalGroupId, isOwner, alreadyInGroup};
 
 
     }

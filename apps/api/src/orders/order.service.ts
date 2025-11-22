@@ -60,83 +60,84 @@ export class OrderService {
         // Get exchange rate
         const rate = await this.getExchangeRate();
 
-        // Transactional operation
-        return this.prisma.$transaction(async (tx) => {
-            // Get treasure details, validate availability
-            const treasure = await tx.treasure.findUnique({
-                where: {treasureId: treasureId},
-                select: {
-                    treasureId: true,
-                    state: true,
-                    unitAmount: true,
-                    seqShelvesQuantity: true,
-                    seqBuyQuantity: true,
-                    maxPerBuyQuantity: true,
-                    maxUnitCoins: true,
+        try {
+            // Transactional operation
+            return this.prisma.$transaction(async (tx) => {
+                // Get treasure details, validate availability
+                const treasure = await tx.treasure.findUnique({
+                    where: {treasureId: treasureId},
+                    select: {
+                        treasureId: true,
+                        state: true,
+                        unitAmount: true,
+                        seqShelvesQuantity: true,
+                        seqBuyQuantity: true,
+                        maxPerBuyQuantity: true,
+                        maxUnitCoins: true,
+                    }
+                })
+
+                // Validate treasure
+                if (!treasure || treasure.state !== TREASURE_STATE.ACTIVE) {
+                    throw new BadRequestException('treasure not available for purchase');
                 }
-            })
+                if (treasure.maxPerBuyQuantity && entries > treasure.maxPerBuyQuantity) {
+                    throw new BadRequestException(`cannot purchase more than ${treasure.maxPerBuyQuantity} entries at once`);
+                }
 
-            // Validate treasure
-            if (!treasure || treasure.state !== TREASURE_STATE.ACTIVE) {
-                throw new BadRequestException('treasure not available for purchase');
-            }
-            if (treasure.maxPerBuyQuantity && entries > treasure.maxPerBuyQuantity) {
-                throw new BadRequestException(`cannot purchase more than ${treasure.maxPerBuyQuantity} entries at once`);
-            }
+                // Calculate total amount
+                const unit = treasure.unitAmount as unknown as Prisma.Decimal;
+                const originalAmount = unit.mul(entries);
 
-            // Calculate total amount
-            const unit = treasure.unitAmount as unknown as Prisma.Decimal;
-            const originalAmount = unit.mul(entries);
+                let couponAmount = D(0);
+                let coinUsed = D(0);
+                let coinAmount = D(0);
 
-            let couponAmount = D(0);
-            let coinUsed = D(0);
-            let coinAmount = D(0);
+                // coin payment
+                if (paymentMethod === 2) {
+                    const w = await this.wallet.ensureWallet(userId, tx);
+                    const maxCoinUsable = treasure.maxUnitCoins?.mul(entries) || D(0);
+                    const canUseCoins = w.coinBalance.lessThan(maxCoinUsable) ? w.coinBalance : maxCoinUsable;
+                    coinUsed = canUseCoins;
+                    coinAmount = canUseCoins.div(rate);
+                } else {
+                    // coupon payment
+                    /*if (couponId) {
+                        const c = await tx.userCoupon.findUnique({
+                            where: { id: couponId },
+                            select: { rewardAmount: true, status: true, actEndAt: true },
+                        }).catch(() => null as any);
+                        const valid = c && c.status === 1 && (!c.actEndAt || c.actEndAt.getTime() > Date.now());
+                        couponAmount = valid ? D(c.rewardAmount) : D(0);
+                    }*/
 
-            // coin payment
-            if (paymentMethod === 2) {
-                const w = await this.wallet.ensureWallet(userId, tx);
-                const maxCoinUsable = treasure.maxUnitCoins?.mul(entries) || D(0);
-                const canUseCoins = w.coinBalance.lessThan(maxCoinUsable) ? w.coinBalance : maxCoinUsable;
-                coinUsed = canUseCoins;
-                coinAmount = canUseCoins.div(rate);
-            } else {
-                // coupon payment
-                /*if (couponId) {
-                    const c = await tx.userCoupon.findUnique({
-                        where: { id: couponId },
-                        select: { rewardAmount: true, status: true, actEndAt: true },
-                    }).catch(() => null as any);
-                    const valid = c && c.status === 1 && (!c.actEndAt || c.actEndAt.getTime() > Date.now());
-                    couponAmount = valid ? D(c.rewardAmount) : D(0);
-                }*/
+                }
 
-            }
+                const discountAmount = couponAmount.gt(coinAmount) ? couponAmount : coinAmount;
+                const diff = originalAmount.sub(discountAmount);
+                const finalAmount = Prisma.Decimal.max(diff, D(0));
 
-            const discountAmount = couponAmount.gt(coinAmount) ? couponAmount : coinAmount;
-            const diff = originalAmount.sub(discountAmount);
-            const finalAmount = Prisma.Decimal.max(diff, D(0));
+                // deduce wallet coin balance before cash payment
+                const related = {id: null as any, type: 'order' as string};
+                if (paymentMethod ==2 && coinUsed.gt(0)) {
+                    await this.wallet.debitCoin({
+                        userId,
+                        coins: coinUsed,
+                        related,
+                        desc: `coin discount for treasure ${treasureId}`,
+                    },tx);
+                }
+                if (finalAmount.gt(0)){
+                    await this.wallet.debitCash({
+                        userId,
+                        amount: finalAmount,
+                        related,
+                        desc: `order pay for treasure ${treasureId}`,
+                    },tx);
+                }
 
-            // deduce wallet coin balance before cash payment
-            const related = {id: null as any, type: 'order' as string};
-            if (paymentMethod ==2 && coinUsed.gt(0)) {
-                await this.wallet.debitCoin({
-                    userId,
-                    coins: coinUsed,
-                    related,
-                    desc: `coin discount for treasure ${treasureId}`,
-                },tx);
-            }
-            if (finalAmount.gt(0)){
-                await this.wallet.debitCash({
-                    userId,
-                    amount: finalAmount,
-                    related,
-                    desc: `order pay for treasure ${treasureId}`,
-                },tx);
-            }
-
-            // safe to deduce stock now, ensure enough stock
-            const uqd = await tx.$executeRawUnsafe(`
+                // safe to deduce stock now, ensure enough stock
+                const uqd = await tx.$executeRawUnsafe(`
                  UPDATE treasures
                  SET seq_buy_quantity = seq_buy_quantity + $1
                  WHERE treasure_id = $2
@@ -144,72 +145,80 @@ export class OrderService {
                  AND (seq_shelves_quantity - seq_buy_quantity) >= $1
             `,entries,treasureId)
 
-            if (uqd !== 1) {
-                throw new BadRequestException('insufficient treasure stock');
-            }
-
-            // create order record
-            const order = await tx.order.create({
-                data: {
-                    orderNo: this.genOrderNo(),
-                    userId,
-                    treasureId,
-                    originalAmount,
-                    discountAmount,
-                    couponAmount,
-                    coinAmount,
-                    finalAmount,
-                    buyQuantity: entries,
-                    unitPrice: unit,
-                    orderStatus: ORDER_STATUS.PROCESSING_PAYMENT,
-                    payStatus: PAY_STATUS.PAID,
-                    paidAt: BigInt(Date.now()),
-                    coinUsed,
-                    couponId: couponId || null,
-                    groupId: groupId || null,
-                    isGroupOwner: 0
-                },
-                select: {
-                    orderId: true,
-                    orderNo: true,
-                    treasureId: true,
+                if (uqd !== 1) {
+                    throw new BadRequestException('insufficient treasure stock');
                 }
-            });
 
-            // fill the transaction related id
-            await tx.walletTransaction.updateMany({
-                where: {
-                    userId,
-                    relatedType: related.type,
-                    relatedId: related.id,
-                },
-                data: {
-                    relatedId: order.orderId,
-                }
-            });
+                // create order record
+                const order = await tx.order.create({
+                    data: {
+                        orderNo: this.genOrderNo(),
+                        userId,
+                        treasureId,
+                        originalAmount,
+                        discountAmount,
+                        couponAmount,
+                        coinAmount,
+                        finalAmount,
+                        buyQuantity: entries,
+                        unitPrice: unit,
+                        orderStatus: ORDER_STATUS.PROCESSING_PAYMENT,
+                        payStatus: PAY_STATUS.PAID,
+                        paidAt: BigInt(Date.now()),
+                        coinUsed,
+                        couponId: couponId || null,
+                        groupId: groupId || null,
+                        isGroupOwner: 0
+                    },
+                    select: {
+                        orderId: true,
+                        orderNo: true,
+                        treasureId: true,
+                    }
+                });
 
-            // open group purchase if groupId is provided
-            const {finalGroupId,isOwner} = await this.group.joinOrCreateGroup(
-                {userId, treasureId, orderId: order.orderId, groupId: groupId,}, tx
-            )
-            // update order with groupId and isOwner
-            await tx.order.update({
-                where: {orderId: order.orderId},
-                data: {
-                    groupId: finalGroupId,
+                // fill the transaction related id
+                await tx.walletTransaction.updateMany({
+                    where: {
+                        userId,
+                        relatedType: related.type,
+                        relatedId: related.id,
+                    },
+                    data: {
+                        relatedId: order.orderId,
+                    }
+                });
+
+                // open group purchase if groupId is provided
+                const {finalGroupId,isOwner, alreadyInGroup} = await this.group.joinOrCreateGroup(
+                    {userId, treasureId, orderId: order.orderId, groupId: groupId,}, tx
+                )
+                // update order with groupId and isOwner
+                await tx.order.update({
+                    where: {orderId: order.orderId},
+                    data: {
+                        groupId: finalGroupId,
+                        isGroupOwner: isOwner,
+                    }
+                });
+
+                // return order summary
+                return {
+                    orderId: order.orderId,
+                    orderNo: order.orderNo,
+                    treasureId: order.treasureId,
+                    lotteryTickets: [],
+                    activityCoin: 0,
+                    groupId: finalGroupId ?? '',
                     isGroupOwner: isOwner,
+                    alreadyInGroup
                 }
-            });
+            })
+        }catch (e) {
+            console.log('checkout error:', e);
+            throw e;
+        }
 
-            // return order summary
-            return {
-                orderId: order.orderId,
-                orderNo: order.orderNo,
-                treasureId: order.treasureId,
-                lotteryTickets: [],
-                activityCoin: 0,
-            }
-        })
     }
 
 }

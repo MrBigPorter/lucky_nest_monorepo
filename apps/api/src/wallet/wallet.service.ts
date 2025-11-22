@@ -124,6 +124,8 @@ export class WalletService {
         const snap = await this.ensureWallet(userId, db);
         const before = D(snap.realBalance ?? 0);
 
+        console.log('Attempting to debit cash:', {userId, amt, before});
+
        const r = await db.userWallet.updateMany({
             where: {userId, realBalance: {gte: amt}},
             data: {
