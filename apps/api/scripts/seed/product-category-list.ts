@@ -1,30 +1,74 @@
+// apps/api/scripts/seed/product-category-list.ts
 import { PrismaClient } from '@prisma/client';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 
-const prisma = new PrismaClient();
+const db = new PrismaClient();
 
-async function main() {
-    const file = process.env.CATEGORIES_FILE
-        ?? path.resolve(process.cwd(), 'scripts/seed/data/productCategoryList.json');
+/**
+ * 重新插入产品分类
+ * - 清空 treasureCategory + productCategory
+ * - 使用自增 id
+ * - name / nameEn 都用「短名字」，方便前端展示
+ */
+export async function seedProductCategories() {
+    // 先清掉关联，再清分类
+    await db.treasureCategory.deleteMany({});
+    await db.productCategory.deleteMany({});
 
-    const text = await fs.readFile(file, 'utf8');
-    const json = JSON.parse(text) as { data?: any[] } | any[];
+    const categories = [
+        {
+            name: 'Cash',
+            nameEn: 'Cash',
+            icon: 'https://cdn.example.com/categories/cash.png',
+            sortOrder: 10,
+            state: 1,
+        },
+        {
+            name: 'Phone',
+            nameEn: 'Phone',
+            icon: 'https://cdn.example.com/categories/phone.png',
+            sortOrder: 20,
+            state: 1,
+        },
+        {
+            name: 'Gadget',
+            nameEn: 'Gadget',
+            icon: 'https://cdn.example.com/categories/gadget.png',
+            sortOrder: 30,
+            state: 1,
+        },
+        {
+            name: 'Home',
+            nameEn: 'Home',
+            icon: 'https://cdn.example.com/categories/home.png',
+            sortOrder: 40,
+            state: 1,
+        },
+        {
+            name: 'Fashion',
+            nameEn: 'Fashion',
+            icon: 'https://cdn.example.com/categories/fashion.png',
+            sortOrder: 50,
+            state: 1,
+        },
+        {
+            name: 'Game',
+            nameEn: 'Game',
+            icon: 'https://cdn.example.com/categories/game.png',
+            sortOrder: 60,
+            state: 1,
+        },
+        {
+            name: 'Voucher',
+            nameEn: 'Voucher',
+            icon: 'https://cdn.example.com/categories/voucher.png',
+            sortOrder: 70,
+            state: 1,
+        },
+    ];
 
-    const rows = Array.isArray(json) ? json : json.data!;
-    const data = rows.map(r => ({
-        id: Number(r.products_category_id),
-        name: String(r.name),
-    }));
-
-    // 有就跳过
-    await prisma.productCategory.createMany({
-        data,
-        skipDuplicates: true,
+    await db.productCategory.createMany({
+        data: categories,
     });
 
-    const count = await prisma.productCategory.count();
-    console.log('product_categories total =', count);
+    console.log('✅ Product categories seeded');
 }
-
-main().finally(() => prisma.$disconnect());

@@ -8,6 +8,20 @@ export class TreasureService {
 
     }
 
+    // 统一计算购买进度，返回 0~100，保留两位小数
+    private calcProgressPercent(
+        seqShelvesQuantity: number | null | undefined,
+        seqBuyQuantity: number | null | undefined,
+    ): number {
+        const total = seqShelvesQuantity ?? 0;
+        const bought = seqBuyQuantity ?? 0;
+
+        if (total <= 0) return 0;
+
+        // 保留两位小数，比如 37.52
+        return Math.round((bought * 10000) / total) / 100;
+    }
+
     // 商品列表
     async list(query: TreasureQueryDto) {
         const {page, pageSize, q, categoryId, state} = query;
@@ -47,7 +61,6 @@ export class TreasureService {
                     unitAmount: true,
                     seqShelvesQuantity: true,
                     seqBuyQuantity: true,
-                    buyQuantityRate: true,
                     lotteryMode: true,
                     lotteryTime: true,
                     state: true,
@@ -68,6 +81,7 @@ export class TreasureService {
 
         const  mapped = items.map(it=>({
             ...it,
+            buyQuantityRate: this.calcProgressPercent(it.seqShelvesQuantity, it.seqBuyQuantity),
             categories: it.categories.map(c=>c.category),
         }))
 
@@ -92,7 +106,6 @@ export class TreasureService {
                 unitAmount: true,
                 seqShelvesQuantity: true,
                 seqBuyQuantity: true,
-                buyQuantityRate: true,
                 lotteryMode: true,
                 lotteryTime: true,
                 state: true,
@@ -110,8 +123,19 @@ export class TreasureService {
                 maxPerBuyQuantity: true,
             }
         });
+
+        if (!result){
+            throw  new Error('Treasure not found');
+        }
+
+        const progressPercent = this.calcProgressPercent(
+            result.seqShelvesQuantity,
+            result.seqBuyQuantity,
+        );
+
         return {
-            ...result
+            ...result,
+            buyQuantityRate: progressPercent
         }
     }
 }

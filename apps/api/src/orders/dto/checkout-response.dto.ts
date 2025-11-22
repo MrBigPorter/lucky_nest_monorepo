@@ -11,4 +11,8 @@ export class CheckoutResponseDto {
     lotteryTickets!: string[];
     @ApiProperty({ description: 'Amount of activity coins used', example: 0, type: Number})
     activityCoin!: number;
+    @ApiProperty({ description: 'Indicates if the user was already in the group purchase', example: false, type: Boolean})
+    alreadyInGroup!: boolean;
+    @ApiProperty({ description: 'Indicates if the user is the group owner', example: false, type: Boolean})
+    isGroupOwner!: number;
 }

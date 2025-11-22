@@ -77,7 +77,6 @@ function deepCamel(obj: any): any {
 @Injectable()
 export class CamelSnakeInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-        // 1. 只处理 HTTP
         if (context.getType() !== 'http') {
             return next.handle();
         }
@@ -85,23 +84,32 @@ export class CamelSnakeInterceptor implements NestInterceptor {
         const httpCtx = context.switchToHttp();
         const req = httpCtx.getRequest();
 
-        // 2. 进来的：snake -> camel
         try {
+            // body：一般是普通对象，可以直接替换（稳一点也可以用 mutate）
             if (req.body && typeof req.body === 'object') {
                 req.body = deepCamel(req.body);
             }
+
+            // query：属性是只读的，不能 req.query = ...
             if (req.query && typeof req.query === 'object') {
-                req.query = deepCamel(req.query);
-            }
-            if (req.params && typeof req.params === 'object') {
-                req.params = deepCamel(req.params);
+                const camelQuery = deepCamel(req.query);
+
+                // 先清空原来的，再拷贝新值
+                Object.keys(req.query).forEach((k) => delete (req.query as any)[k]);
+                Object.assign(req.query, camelQuery);
             }
 
+            // params：有些平台也是 getter，按同样方式处理比较保险
+            if (req.params && typeof req.params === 'object') {
+                const camelParams = deepCamel(req.params);
+                Object.keys(req.params).forEach((k) => delete (req.params as any)[k]);
+                Object.assign(req.params, camelParams);
+            }
         } catch (e) {
             console.error('CamelSnakeInterceptor request transform error:', e);
         }
 
-        // 3. 出去的：camel -> snake
+        // 出去的：保持你现在的写法
         return next.handle().pipe(
             map((data) => {
                 try {
