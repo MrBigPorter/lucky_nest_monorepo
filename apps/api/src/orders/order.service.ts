@@ -203,11 +203,11 @@ export class OrderService {
 
             // return order summary
             return {
-                order_id: order.orderId,
-                order_no: order.orderNo,
-                treasure_id: order.treasureId,
-                lottery_tickets: [],
-                activity_coin: 0,
+                orderId: order.orderId,
+                orderNo: order.orderNo,
+                treasureId: order.treasureId,
+                lotteryTickets: [],
+                activityCoin: 0,
             }
         })
     }

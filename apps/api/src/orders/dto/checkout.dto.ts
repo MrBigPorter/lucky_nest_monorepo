@@ -3,9 +3,9 @@ import {ApiProperty, ApiPropertyOptional} from "@nestjs/swagger";
 import {ToNumber} from "@api/common/dto/transforms";
 
 export class CheckoutDto {
-    @ApiPropertyOptional({description: 'Group ID for group purchase', example: 'groupId123', type: String})
-    @IsString()
+    @ApiProperty({description: 'Group ID for group purchase', example: 'groupId123', type: String})
     @IsNotEmpty()
+    @IsString()
     treasureId!: string;
 
     @ApiProperty({description: 'Number of entries to purchase', example: 1, type: Number})
