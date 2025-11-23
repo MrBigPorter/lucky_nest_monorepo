@@ -21,71 +21,6 @@ export class GroupService {
         return (tx ?? this.prisma) as Tx;
     }
 
-
-    private async getOrCreateGroup(params: {
-        userId: string;
-        treasureId: string;
-    }, tx?: Tx) {
-        const db = this.orm(tx);
-        const {userId, treasureId} = params;
-        //check existing active group created by user for the treasure
-        let group = await db.treasureGroup.findFirst({
-            where: {
-                treasureId,
-                creatorId: userId,
-                groupStatus: GROUP_STATUS.ACTIVE,
-            },
-            select: {
-                groupId: true,
-                currentMembers: true,
-                maxMembers: true,
-            }
-        })
-
-        if (group) return group;
-
-        //create new group
-        try {
-            group = await db.treasureGroup.create({
-                data: {
-                    treasureId,
-                    creatorId: userId,
-                    groupName: '',
-                    currentMembers: 1,
-                    groupStatus: GROUP_STATUS.ACTIVE,
-                    maxMembers: 99999, // default max members
-                },
-                select: {
-                    groupId: true,
-                    currentMembers: true,
-                    maxMembers: true,
-                }
-            })
-
-            return group;
-
-        } catch (e) {
-            // 3) 并发下：另一条请求先创建成功了，这里会撞唯一键 -> 再查一次
-            const isP2002 = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
-            if (isP2002){
-                const  again = await db.treasureGroup.findFirst({
-                    where: {
-                        treasureId,
-                        creatorId: userId,
-                        groupStatus: GROUP_STATUS.ACTIVE,
-                    },
-                    select: {
-                        groupId: true,
-                        currentMembers: true,
-                        maxMembers: true,
-                    }
-                });
-                if (again) return again;
-            }
-            throw e;
-        }
-    }
-
     /**
      * 组团逻辑：- create or join
      * - 传了 groupId：尝试加团（满员/状态不对则报错） - join group if groupId provided (error if full/inactive)
@@ -109,6 +44,7 @@ export class GroupService {
         let finalGroupId: string | null = null;
         let isOwner: number = IS_OWNER.NO;
         let alreadyInGroup = false;
+
 
         if (groupId) {
             // 加入指定团
@@ -151,7 +87,8 @@ export class GroupService {
             // 并发安全占位（满员则 0 行受影响）
             const  updated = await db.$queryRaw<{ok: number}[]>(Prisma.sql`
                 UPDATE treasure_groups
-                SET current_members = current_members + 1
+                SET current_members = current_members + 1,
+                    updated_at = NOW()
                 WHERE group_id = ${groupId}
                 AND treasure_id = ${treasureId}
                 AND group_status = ${GROUP_STATUS.ACTIVE}
@@ -320,11 +257,13 @@ export class GroupService {
                 ctx.$queryRaw<{ ok: number }[]>(
                     Prisma.sql`
                         UPDATE treasure_groups
-                        SET current_members = current_members + 1
+                        SET current_members = current_members + 1,
+                            updated_at = NOW()
                         WHERE group_id = ${groupId}
+                          AND group_status = ${GROUP_STATUS.ACTIVE}
                           AND current_members < max_members RETURNING 1 AS ok
                     `
-                )
+                );
             //没有行被更新，说明满员
             if (updated.length == 0) throw new ConflictException('Group is full');
 
@@ -345,7 +284,8 @@ export class GroupService {
                     await ctx.$executeRaw(
                         Prisma.sql`
                             UPDATE treasure_groups
-                            SET current_members = GREATEST(current_members - 1, 0)
+                            SET current_members = GREATEST(current_members - 1, 0),
+                                updated_at = NOW()
                             WHERE group_id = ${groupId}
                         `
                     );
@@ -377,8 +317,8 @@ export class GroupService {
             if (member.isOwner == IS_OWNER.YES) {
                 //查询最早加入的成员
                 const nextOwner = await ctx.treasureGroupMember.findFirst({
-                    where: {groupId},
-                    orderBy: {joinedAt: 'asc'},
+                    where: {groupId, NOT: {userId}},
+                    orderBy: [{isOwner: 'desc'}, {joinedAt: 'asc'}],
                     select: {userId: true}
                 })
 
@@ -409,7 +349,8 @@ export class GroupService {
             await ctx.$executeRaw(
                 Prisma.sql`
                     UPDATE treasure_groups
-                    SET current_members = GREATEST(current_members - 1, 0)
+                    SET current_members = GREATEST(current_members - 1, 0),
+                        updated_at = NOW()
                     WHERE group_id = ${groupId}
                 `
             );
@@ -420,6 +361,8 @@ export class GroupService {
     // 组团列表
     async listGroupForTreasure(dto: GroupListForTreasureDto) {
         const {treasureId, page, pageSize} = dto;
+
+        console.log('listGroupForTreasure dto===>', treasureId);
 
 
         const [total, groups] = await this.prisma.$transaction([
@@ -457,6 +400,9 @@ export class GroupService {
                 }
             })
         ])
+
+        console.log('groups====>', groups);
+
 
         return {
             page,

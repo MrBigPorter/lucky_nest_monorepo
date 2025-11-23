@@ -4,6 +4,8 @@ import {GroupCreateDto} from "@api/group/dto/group-create.dto";
 import {GroupService} from "@api/group/group.service";
 import {CurrentUserId} from "@api/auth/user.decorator";
 import {GroupListForTreasureDto} from "@api/group/dto/group-list-for-treasure.dto";
+import {ApiOkResponse} from "@nestjs/swagger";
+import {GroupListForTreasureResultDto} from "@api/group/dto/group-list-for-treasure-result.dto";
 
 @Controller('groups')
 export class GroupController {
@@ -12,7 +14,7 @@ export class GroupController {
 
     // 开团：leaderUserId 不信前端，强制用登录用户
     @UseGuards(JwtAuthGuard)
-    @Post()
+    @Post('create')
     async create(@Body() dto: GroupCreateDto, @CurrentUserId() userId: string) {
         return await this.groupService.createGroup({
             ...dto,
@@ -45,9 +47,10 @@ export class GroupController {
         });
     }
 
-    // 某宝箱的组团列表：?treasureId=xxx&page=1&pageSize=10
-    @Get()
+    @Get('list')
+    @ApiOkResponse({type:GroupListForTreasureResultDto})
     async list(@Query() query: GroupListForTreasureDto) {
+        console.log('list groups for treasure', query);
         return await this.groupService.listGroupForTreasure(query);
     }
 }

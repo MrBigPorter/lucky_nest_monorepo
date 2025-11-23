@@ -20,13 +20,11 @@ export class OrderService {
     }
 
     // Get exchange rate for the order
-    private async getExchangeRate(): Promise<Prisma.Decimal> {
-        const cfg = await this.prisma.systemConfig.findFirst({
-            where: {key: 'exchange_rate'},
-            select: {value: true},
-        }).catch(() => null);
-        const rate = cfg?.value ? Number(cfg.value) : 10;
-        return D(rate);
+    private async getExchangeRateTx(tx: Prisma.TransactionClient): Promise<Prisma.Decimal> {
+        const cfg = await tx.systemConfig.findFirst({
+            where: {key: 'exchange_rate'}, select: {value: true},
+        }).catch(() => null as any);
+        return D(cfg?.value ? Number(cfg.value) : 10);
     }
 
     // Generate a unique order number
@@ -58,12 +56,14 @@ export class OrderService {
         // check payment method
         if (![1, 2].includes(Number(paymentMethod))) throw new BadRequestException('invalid payment method');
 
-        // Get exchange rate
-        const rate = await this.getExchangeRate();
 
         try {
             // Transactional operation
             return this.prisma.$transaction(async (tx) => {
+
+                // Get exchange rate
+                const rate = await this.getExchangeRateTx(tx);
+
                 // Get treasure details, validate availability
                 const treasure = await tx.treasure.findUnique({
                     where: {treasureId: treasureId},
@@ -100,7 +100,7 @@ export class OrderService {
                 // maxPerBuyQuantity check
                 const cap = treasure.maxPerBuyQuantity ? Number(treasure.maxPerBuyQuantity) : null;
 
-                if (cap &&  cap > 0) {
+                if (cap && cap > 0) {
                     const agg = await tx.order.aggregate({
                         _sum: {buyQuantity: true},
                         where: {
@@ -116,7 +116,7 @@ export class OrderService {
                     })
 
                     const alreadyBought = Number(agg._sum.buyQuantity || 0);
-                    const  leftQuota = cap - alreadyBought;
+                    const leftQuota = cap - alreadyBought;
                     if (leftQuota <= 0) {
                         // reached purchase limit
                         throw new BadRequestException(`purchase limit of ${cap} entries reached for this treasure`);
@@ -157,34 +157,37 @@ export class OrderService {
                 const discountAmount = couponAmount.gt(coinAmount) ? couponAmount : coinAmount;
                 const diff = originalAmount.sub(discountAmount);
                 const finalAmount = Prisma.Decimal.max(diff, D(0));
+                const createdTxnIds: string[] = [];
 
                 // deduce wallet coin balance before cash payment
                 const related = {id: null as any, type: 'order' as string};
-                if (paymentMethod ==2 && coinUsed.gt(0)) {
-                    await this.wallet.debitCoin({
+                if (paymentMethod == 2 && coinUsed.gt(0)) {
+                    const {transactionId: coinTxnId} = await this.wallet.debitCoin({
                         userId,
                         coins: coinUsed,
                         related,
                         desc: `coin discount for treasure ${treasureId}`,
-                    },tx);
+                    }, tx);
+                    createdTxnIds.push(coinTxnId)
                 }
-                if (finalAmount.gt(0)){
-                    await this.wallet.debitCash({
+                if (finalAmount.gt(0)) {
+                    const {transactionId} = await this.wallet.debitCash({
                         userId,
                         amount: finalAmount,
                         related,
                         desc: `order pay for treasure ${treasureId}`,
-                    },tx);
+                    }, tx);
+                    createdTxnIds.push(transactionId);
                 }
 
                 // safe to deduce stock now, ensure enough stock
-                const uqd = await tx.$executeRawUnsafe(`
-                 UPDATE treasures
-                 SET seq_buy_quantity = seq_buy_quantity + $1
-                 WHERE treasure_id = $2
-                 AND state = ${TREASURE_STATE.ACTIVE}
-                 AND (seq_shelves_quantity - seq_buy_quantity) >= $1
-            `,entries,treasureId)
+                const uqd = await tx.$executeRaw`
+                          UPDATE treasures
+                             SET seq_buy_quantity = seq_buy_quantity + ${entries}
+                           WHERE treasure_id = ${treasureId}
+                             AND state = ${TREASURE_STATE.ACTIVE}
+                             AND (seq_shelves_quantity - seq_buy_quantity) >= ${entries}
+                        `;
 
                 if (uqd !== 1) {
                     throw new BadRequestException('insufficient treasure stock');
@@ -209,7 +212,7 @@ export class OrderService {
                         paidAt: BigInt(Date.now()),
                         coinUsed,
                         couponId: couponId || null,
-                        groupId: groupId || null,
+                        groupId: null,
                         isGroupOwner: 0
                     },
                     select: {
@@ -222,9 +225,7 @@ export class OrderService {
                 // fill the transaction related id
                 await tx.walletTransaction.updateMany({
                     where: {
-                        userId,
-                        relatedType: related.type,
-                        relatedId: related.id,
+                        id: {in: createdTxnIds},
                     },
                     data: {
                         relatedId: order.orderId,
@@ -232,7 +233,7 @@ export class OrderService {
                 });
 
                 // open group purchase if groupId is provided
-                const {finalGroupId,isOwner, alreadyInGroup} = await this.group.joinOrCreateGroup(
+                const {finalGroupId, isOwner, alreadyInGroup} = await this.group.joinOrCreateGroup(
                     {userId, treasureId, orderId: order.orderId, groupId: groupId,}, tx
                 )
                 // update order with groupId and isOwner
@@ -256,7 +257,7 @@ export class OrderService {
                     alreadyInGroup
                 }
             })
-        }catch (e) {
+        } catch (e) {
             console.log('checkout error:', e);
             throw e;
         }

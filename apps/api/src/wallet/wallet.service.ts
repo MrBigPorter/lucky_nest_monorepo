@@ -22,22 +22,11 @@ export class WalletService {
     async ensureWallet(userId: string, tx?: Tx) {
         const db = this.orm(tx);
 
-        await db.userWallet.upsert({
-            where: {userId},
-            create: {userId},
+        return await db.userWallet.upsert({
+            where: { userId },
+            create: { userId },
             update: {},
-        })
-        return db.userWallet.findUnique({
-            where: {userId},
-            select: {
-                id: true,
-                userId: true,
-                realBalance: true,
-                totalRecharge: true,
-                coinBalance: true,
-                frozenBalance: true,
-                totalWithdraw: true,
-            }
+            select: { id: true, userId: true, realBalance: true, coinBalance: true, totalRecharge: true, frozenBalance: true, totalWithdraw: true }
         })
     }
 
@@ -88,7 +77,7 @@ export class WalletService {
 
         const after = before.add(amt);
 
-       await db.walletTransaction.create({
+      const txn =  await db.walletTransaction.create({
             data: {
                 transactionNo: this.genTxnNo(),
                 userId,
@@ -102,10 +91,13 @@ export class WalletService {
                 relatedType: related?.type,
                 description: desc,
                 status: TRANSACTION_STATUS.SUCCESS
-            }
+            },
+           select: {
+                id: true
+           }
         });
 
-        return {realBalance: after};
+        return {realBalance: after, transactionId: txn.id };
     }
 
     // deduct amount from the wallet of the given userId
@@ -114,7 +106,7 @@ export class WalletService {
         amount: number | string | Prisma.Decimal,
         related?: { id: string, type: string },
         desc?: string
-    }, tx?: Tx) : Promise<{realBalance: Prisma.Decimal}> {
+    }, tx?: Tx) : Promise<{realBalance: Prisma.Decimal, transactionId: string}> {
         const db = this.orm(tx);
         const {userId, amount, related, desc} = params
         const amt = D(amount);
@@ -123,8 +115,6 @@ export class WalletService {
 
         const snap = await this.ensureWallet(userId, db);
         const before = D(snap.realBalance ?? 0);
-
-        console.log('Attempting to debit cash:', {userId, amt, before});
 
        const r = await db.userWallet.updateMany({
             where: {userId, realBalance: {gte: amt}},
@@ -139,12 +129,12 @@ export class WalletService {
 
         const after = before.sub(amt);
 
-        await db.walletTransaction.create({
+        const txn = await db.walletTransaction.create({
             data: {
                 transactionNo: this.genTxnNo(),
                 userId,
                 walletId: snap.id,
-                transactionType: TRANSACTION_TYPE.WITHDRAWAL,
+                transactionType: TRANSACTION_TYPE.CONSUMPTION,
                 balanceType: BALANCE_TYPE.CASH,
                 amount: amt.neg(), // negative amount for debit
                 beforeBalance: before,
@@ -153,10 +143,13 @@ export class WalletService {
                 relatedType: related?.type ?? 'order',
                 description: desc ?? 'spend',
                 status: TRANSACTION_STATUS.SUCCESS
+            },
+            select: {
+                id: true
             }
         })
 
-       return {realBalance: after};
+       return {realBalance: after, transactionId: txn.id};
     }
 
     // coin credit
@@ -165,7 +158,7 @@ export class WalletService {
         coins: number | string,
         related?: { id: string, type: string },
         desc?: string
-    }, tx?: Tx): Promise<{coinBalance: Prisma.Decimal}> {
+    }, tx?: Tx): Promise<{coinBalance: Prisma.Decimal, transactionId: string}> {
         const db = this.orm(tx);
         const {userId, coins, related, desc} = params
         const amt = D(coins);
@@ -184,7 +177,7 @@ export class WalletService {
 
         const after = before.add(amt);
 
-        await db.walletTransaction.create({
+       const txn =  await db.walletTransaction.create({
             data: {
                 transactionNo: this.genTxnNo(),
                 userId,
@@ -198,9 +191,12 @@ export class WalletService {
                 relatedType: related?.type ?? null,
                 description: desc ?? 'coin credit',
                 status: TRANSACTION_STATUS.SUCCESS
+            },
+            select: {
+                id: true
             }
         })
-        return {coinBalance: after};
+        return {coinBalance: after, transactionId: txn.id};
     }
 
     // coin debit
@@ -209,7 +205,7 @@ export class WalletService {
         coins: number | string | Prisma.Decimal,
         related?: { id: string, type: string },
         desc?: string
-    }, tx?: Tx): Promise<{coinBalance: Prisma.Decimal}> {
+    }, tx?: Tx): Promise<{coinBalance: Prisma.Decimal, transactionId: string}> {
         const db = this.orm(tx);
         const {userId, coins, related, desc} = params
         const amt = D(coins);
@@ -231,7 +227,7 @@ export class WalletService {
 
         const after = before.sub(amt);
 
-        await db.walletTransaction.create({
+       const txn =  await db.walletTransaction.create({
             data: {
                 transactionNo: this.genTxnNo(),
                 userId,
@@ -245,9 +241,12 @@ export class WalletService {
                 relatedType: related?.type ?? 'order',
                 description: desc ?? 'coin debit',
                 status: TRANSACTION_STATUS.SUCCESS
+            },
+            select: {
+                id: true
             }
         })
-        return {coinBalance: after};
+        return {coinBalance: after, transactionId: txn.id};
     }
 
     // generate a unique transaction number
