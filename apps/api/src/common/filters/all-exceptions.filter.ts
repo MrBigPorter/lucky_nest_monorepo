@@ -3,7 +3,7 @@ import {
     Catch,
     ExceptionFilter,
     HttpException,
-    HttpStatus,
+    HttpStatus, Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { randomUUID } from 'node:crypto';
@@ -32,6 +32,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
         const tid = (reqId ?? randomUUID().replaceAll('-', ''));
 
+        const logger = new Logger('AllExceptionsFilter');
+        logger.error(
+            `Exception caught: TID=${tid}, Exception=${JSON.stringify(exception)}`,
+        )
 
         // —— 默认兜底：系统错误 —— //
         let status: number = HttpStatus.INTERNAL_SERVER_ERROR;

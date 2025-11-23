@@ -50,7 +50,7 @@ export class GroupController {
     @Get('list')
     @ApiOkResponse({type:GroupListForTreasureResultDto})
     async list(@Query() query: GroupListForTreasureDto) {
-        console.log('list groups for treasure', query);
+        console.log('=== [GroupController] list() CALLED ===', query);
         return await this.groupService.listGroupForTreasure(query);
     }
 }
