@@ -16,6 +16,11 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile.dev
+    # update the command to start the dev server with hot-reloading
+    command: >
+      sh -lc "corepack enable &&
+              yarn install --immutable &&
+              yarn workspace @lucky/api start:dev"
     # after build, use image
     image: lucky-backend-dev:latest
     # container name

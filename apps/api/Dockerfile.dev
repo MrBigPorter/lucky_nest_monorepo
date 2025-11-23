@@ -12,8 +12,12 @@ WORKDIR /app
 # copy the entire monorepo into the container
 COPY . .
 
-# generate the Prisma client
-RUN yarn workspace @lucky/api prisma generate
+# generate the Prisma client， its's run on build time to ensure the client is up-to-date,
+# uncomment the following line if you want to generate the client during build,
+# use command `yarn workspace @lucky/api prisma generate` to generate it manually in compose.yml.
+#RUN yarn workspace @lucky/api prisma generate
 
+# if you want uto use docker run  to start the development server
+# if use compose.yml, this line will be overridden by the command in compose.yml
 CMD ["yarn", "workspace", "@lucky/api", "start:dev"]
 
