@@ -160,11 +160,11 @@ export class AuthService {
             tokens: tokens,
             id: user.id,
             phone: user.phone,
-            phone_md5: user.phoneMd5,
+            phoneMd5: user.phoneMd5,
             nickname: user.nickname,
             username: user.nickname,
             avatar: user.avatar,
-            country_code: meta?.countryCode ?? null,
+            countryCode: meta?.countryCode ?? null,
         };
     }
 
@@ -189,14 +189,14 @@ export class AuthService {
             Id: user.id,
             nickname: user.nickname ?? `pl_${user.id}`,
             avatar: user.avatar,
-            phone_md5: user.phoneMd5,
+            phoneMd5: user.phoneMd5,
             phone: user.phone,
-            invite_code: user.inviteCode ?? null,
-            vip_level: user.vipLevel,
-            last_login_at: user.lastLoginAt ? user.lastLoginAt.getTime() : null,
-            kyc_status: mapKyc(user.kycStatus),
-            delivery_address_id: 0,
-            self_exclusion_expire_at: user.selfExclusionExpireAt ? user.selfExclusionExpireAt.getTime() : 0,
+            inviteCode: user.inviteCode ?? null,
+            vipLevel: user.vipLevel,
+            lastLoginAt: user.lastLoginAt ? user.lastLoginAt.getTime() : null,
+            kycStatus: mapKyc(user.kycStatus),
+            deliveryAddress_id: 0,
+            selfExclusionExpireAt: user.selfExclusionExpireAt ? user.selfExclusionExpireAt.getTime() : 0,
         }
     }
 }

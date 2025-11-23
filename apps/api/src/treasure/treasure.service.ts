@@ -85,6 +85,7 @@ export class TreasureService {
             categories: it.categories.map(c=>c.category),
         }))
 
+
         return {
             page,
             pageSize,

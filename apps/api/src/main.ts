@@ -9,8 +9,6 @@ import morganBody from 'morgan-body';
 import { requestId } from '@api/common/middleware/request-id';
 import { AllExceptionsFilter } from '@api/common/filters/all-exceptions.filter';
 import { ResponseWrapInterceptor } from '@api/common/interceptors/response-wrap.interceptor';
-import {CamelSnakeInterceptor} from "@api/common/interceptors/snake-case.interceptor";
-import {camelSwaggerToSnake} from "@api/common/utils/swagger-snake.util";
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -71,9 +69,6 @@ async function bootstrap() {
 
   // 统一响应壳 response wrap
   app.useGlobalInterceptors(
-      // 1.
-      new CamelSnakeInterceptor(),
-      // 2.
       new ResponseWrapInterceptor(app.get('Reflector'))
   );
 
@@ -96,7 +91,6 @@ async function bootstrap() {
       .addBearerAuth()
       .build();
     const doc = SwaggerModule.createDocument(app, swaggerCfg);
-    camelSwaggerToSnake(doc);
     SwaggerModule.setup('docs', app, doc);
 
   }
