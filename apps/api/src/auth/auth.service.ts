@@ -32,6 +32,36 @@ export class AuthService {
         }
     }
 
+    async refreshToken(refreshToken: string){
+        if (!refreshToken){
+            throwBiz(ERROR_KEYS.INVALID_JWT_TOKEN );
+        }
+
+        try {
+            // check refresh token，if invalid, will throw error to catch block
+            const payload = await this.jwt.verifyAsync<{sub:string}>(refreshToken);
+            // check user existence
+            const user = await this.prisma.user.findUnique({
+                where: {id: payload.sub},
+                select: { id: true }
+            })
+
+            // user not found
+            if (!user){
+                throwBiz(ERROR_KEYS.USER_NOT_FOUND );
+            }
+
+            // issue new tokens, return to client
+            const tokens = await this.issueToken({id: user!.id});
+
+            return {tokens}
+
+        }catch (e) {
+            throwBiz(ERROR_KEYS.INVALID_JWT_TOKEN );
+        }
+    }
+
+
     // 手机号登陆(登录即注册)
     async loginWithOtp(phone: string, meta?: {ip?: string, ua?: string, countryCode?: number}){
         const p = phone.trim();

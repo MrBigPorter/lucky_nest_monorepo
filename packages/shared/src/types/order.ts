@@ -12,5 +12,12 @@ export const PAY_STATUS = {
     UNPAID: 0,
     PAID: 1,
     FAILED: 2,
+}
 
+export const REFUND_STATUS = {
+    /// 退款状态: 0-未退款 1-退款中 2-已退款 3-退款失败
+    NO_REFUND: 0,
+    REFUNDING: 1,
+    REFUNDED: 2,
+    REFUND_FAILED: 3,
 }

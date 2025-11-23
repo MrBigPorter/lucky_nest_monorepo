@@ -1,10 +1,13 @@
-import {ApiBearerAuth, ApiOperation, ApiTags} from "@nestjs/swagger";
+import {ApiBearerAuth, ApiOkResponse, ApiOperation, ApiProperty, ApiTags} from "@nestjs/swagger";
 import {Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards} from "@nestjs/common";
 import {AuthService} from "./auth.service";
 import {JwtAuthGuard} from "./jwt.guard";
 import {LoginOtpDto} from "./dto/login.dto";
 import {Throttle} from '@nestjs/throttler';
 import {CurrentUserId} from "@api/auth/user.decorator";
+import {RefreshTokenDto} from "@api/auth/dto/refresh-token.dto";
+import {TokenResponseDto} from "@api/auth/dto/token-response.dto";
+import {ApiResponseProperty} from "@nestjs/swagger/dist/extra/swagger-shim";
 
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
@@ -25,6 +28,13 @@ export class AuthController {
           ua: req.headers['user-agent'],
           countryCode: req.headers['x-country-code']
       })
+    }
+
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    @ApiOkResponse({ type: TokenResponseDto })
+    async refresh(@Body() dto:RefreshTokenDto) {
+        return  this.auth.refreshToken(dto.refreshToken);
     }
 
     // 获取用户信息

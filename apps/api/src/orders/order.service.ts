@@ -4,8 +4,9 @@ import {WalletService} from "@api/wallet/wallet.service";
 import {Prisma} from "@prisma/client";
 import {CheckoutDto} from "@api/orders/dto/checkout.dto";
 import {TREASURE_STATE} from "@lucky/shared/dist/types/treasure";
-import {ORDER_STATUS, PAY_STATUS} from "@lucky/shared/dist/types/order";
+import {ORDER_STATUS, PAY_STATUS, REFUND_STATUS} from "@lucky/shared/dist/types/order";
 import {GroupService} from "@api/group/group.service";
+import {ERROR_KEYS} from "@api/common/error-codes.gen";
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -85,6 +86,46 @@ export class OrderService {
                     throw new BadRequestException(`cannot purchase more than ${treasure.maxPerBuyQuantity} entries at once`);
                 }
 
+                // available stock check will be done at stock deduction step
+                const available = Number(treasure.seqShelvesQuantity) - Number(treasure.seqBuyQuantity);
+
+                if (available <= 0) {
+                    throw new BadRequestException('insufficient treasure stock');
+                }
+
+                if (entries > available) {
+                    throw new BadRequestException(`only ${available} entries left in stock`);
+                }
+
+                // maxPerBuyQuantity check
+                const cap = treasure.maxPerBuyQuantity ? Number(treasure.maxPerBuyQuantity) : null;
+
+                if (cap &&  cap > 0) {
+                    const agg = await tx.order.aggregate({
+                        _sum: {buyQuantity: true},
+                        where: {
+                            userId,
+                            treasureId,
+                            payStatus: PAY_STATUS.PAID,
+                            orderStatus: ORDER_STATUS.PAID,
+                            NOT: {
+                                // exclude refunded orders
+                                refundStatus: REFUND_STATUS.REFUNDED
+                            }
+                        },
+                    })
+
+                    const alreadyBought = Number(agg._sum.buyQuantity || 0);
+                    const  leftQuota = cap - alreadyBought;
+                    if (leftQuota <= 0) {
+                        // reached purchase limit
+                        throw new BadRequestException(`purchase limit of ${cap} entries reached for this treasure`);
+                    }
+                    if (entries > leftQuota) {
+                        throw new BadRequestException(`can only purchase ${leftQuota} more entries for this treasure`);
+                    }
+                }
+
                 // Calculate total amount
                 const unit = treasure.unitAmount as unknown as Prisma.Decimal;
                 const originalAmount = unit.mul(entries);
@@ -162,8 +203,9 @@ export class OrderService {
                         finalAmount,
                         buyQuantity: entries,
                         unitPrice: unit,
-                        orderStatus: ORDER_STATUS.PROCESSING_PAYMENT,
+                        orderStatus: ORDER_STATUS.PAID,
                         payStatus: PAY_STATUS.PAID,
+                        refundStatus: REFUND_STATUS.NO_REFUND,
                         paidAt: BigInt(Date.now()),
                         coinUsed,
                         couponId: couponId || null,
