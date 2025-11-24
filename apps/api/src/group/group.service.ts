@@ -362,8 +362,6 @@ export class GroupService {
     async listGroupForTreasure(dto: GroupListForTreasureDto) {
         const {treasureId, page, pageSize} = dto;
 
-        console.log('listGroupForTreasure dto===>', treasureId);
-
 
         const [total, groups] = await this.prisma.$transaction([
             this.prisma.treasureGroup.count({
@@ -400,8 +398,6 @@ export class GroupService {
                 }
             })
         ])
-
-        console.log('groups====>', groups);
 
 
         return {

@@ -12,5 +12,4 @@ export class GroupForTreasureItemDto {
 
     creator!: GroupUserDto;              // 开团人
     members!: GroupMemberPreviewDto[];   // 成员预览（最多 8 个）
-    memberCount!: number;                // 成员总数（来自 _count.members）
 }
