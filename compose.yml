@@ -36,8 +36,8 @@ services:
       # 挂载整个仓库，内部包源码可用
       - .:/app
       # 避免宿主机空目录覆盖容器依赖
-      - /app/node_modules
-      - /app/apps/api/node_modules
+      #- /app/node_modules
+      #- /app/apps/api/node_modules
     environment:
       # macOS/WSL 下文件监听更稳
       CHOKIDAR_USEPOLLING: "true"

@@ -31,3 +31,8 @@ yarn workspace @lucky/api dlx tsx scripts/seed/seed-sections.ts"
 # exchange rates
 docker exec -it lucky-backend-dev \
 sh -lc "cd apps/api && yarn dlx tsx scripts/seed/system-config-exchange-rate.ts"
+
+# 钱包
+docker exec -it lucky-backend-dev sh -lc "\
+cd /app && \
+yarn workspace @lucky/api dlx tsx scripts/seed/seed-wallet.ts"
