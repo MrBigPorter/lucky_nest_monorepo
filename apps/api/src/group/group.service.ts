@@ -412,4 +412,9 @@ export class GroupService {
     private generateSnowflake(): string {
         return `${Date.now()}${Math.floor(Math.random() * 10000)}`
     }
+
+    // 查找团对应的成员
+    async listGroupMembers(groupId: string) {
+        const membsers = await this.prisma.treasureGroupMember.
+    }
 }
