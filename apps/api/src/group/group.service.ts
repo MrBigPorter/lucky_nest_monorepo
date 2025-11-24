@@ -414,7 +414,53 @@ export class GroupService {
     }
 
     // 查找团对应的成员
-    async listGroupMembers(groupId: string) {
-        const membsers = await this.prisma.treasureGroupMember.
+    async listGroupMembers(params:{
+        groupId: string;
+        page: number;
+        pageSize: number;
+    }) {
+        const {groupId, page, pageSize} = params;
+
+        // check groupId exists
+        const group = await this.prisma.treasureGroup.findUnique({
+            where: {groupId},
+            select: {groupId: true}
+        })
+
+        // group not found, return empty list
+        if(!group){
+            return {
+                page,
+                pageSize,
+                total: 0,
+                list: []
+            }
+        }
+
+        // fetch members
+        const [count, members] = await this.prisma.$transaction([
+            this.prisma.treasureGroupMember.count({where:{groupId}}),
+            this.prisma.treasureGroupMember.findMany({
+                where: {groupId},
+                orderBy:[{isOwner:'desc'},{joinedAt:'asc'},{id:'asc'}],
+                skip:(page - 1) * pageSize,
+                take: pageSize,
+                include:{
+                    user:{
+                        select:{
+                            id:true,
+                            nickname:true,
+                            avatar:true,
+                        }
+                    }
+                }
+            })
+        ]);
+        return {
+            page,
+            pageSize,
+            total: count,
+            list: members
+        }
     }
 }
