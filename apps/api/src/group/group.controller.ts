@@ -5,7 +5,7 @@ import {GroupService} from "@api/group/group.service";
 import {CurrentUserId} from "@api/auth/user.decorator";
 import {GroupListForTreasureDto} from "@api/group/dto/group-list-for-treasure.dto";
 import {ApiOkResponse} from "@nestjs/swagger";
-import {GroupListForTreasureResultDto} from "@api/group/dto/group-list-for-treasure-result.dto";
+import {GroupListForTreasureResponseDto} from "@api/group/dto/group-list-for-treasure-response.dto";
 import {GroupMembersDto} from "@api/group/dto/group-members.dto";
 import {GroupMembersResponseDto} from "@api/group/dto/group-members-response.dto";
 
@@ -50,14 +50,14 @@ export class GroupController {
     }
 
     @Get('list')
-    @ApiOkResponse({type:GroupListForTreasureResultDto})
+    @ApiOkResponse({type:GroupListForTreasureResponseDto})
     async list(@Query() query: GroupListForTreasureDto) {
         return await this.groupService.listGroupForTreasure(query);
     }
 
-    @Get(':groupId')
+    @Get(':groupId/members')
     @ApiOkResponse({type:GroupMembersResponseDto})
-    async get(@Query() query: GroupMembersDto){
-        return await this.groupService.listGroupMembers(query);
+    async get(@Param('groupId') groupId: string,@Query() query: GroupMembersDto){
+        return await this.groupService.listGroupMembers(groupId,query);
     }
 }

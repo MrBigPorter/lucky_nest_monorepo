@@ -404,7 +404,16 @@ export class GroupService {
             page,
             pageSize,
             total,
-            list: groups
+            list: groups.map((g) => ({
+                ...g,
+                updatedAt: g.updatedAt.getTime(),
+                createdAt: g.createdAt.getTime(),
+                members: g.members.map((m) => ({
+                    ...m,
+                    joinedAt: m.joinedAt.getTime(),
+                    createdAt: m.createdAt.getTime(),
+                })),
+            }))
         }
 
     }
@@ -414,12 +423,11 @@ export class GroupService {
     }
 
     // 查找团对应的成员
-    async listGroupMembers(params:{
-        groupId: string;
+    async listGroupMembers(groupId:string,params:{
         page: number;
         pageSize: number;
     }) {
-        const {groupId, page, pageSize} = params;
+        const { page, pageSize} = params;
 
         // check groupId exists
         const group = await this.prisma.treasureGroup.findUnique({
@@ -460,7 +468,11 @@ export class GroupService {
             page,
             pageSize,
             total: count,
-            list: members
+            list: members.map((m)=>({
+                ...m,
+                joinedAt: m.joinedAt.getTime(),
+                createdAt: m.createdAt.getTime(),
+            }))
         }
     }
 }

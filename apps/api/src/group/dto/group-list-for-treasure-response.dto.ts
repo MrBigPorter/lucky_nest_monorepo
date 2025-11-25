@@ -1,6 +1,6 @@
 import { GroupForTreasureItemDto } from './group-for-treasure-item.dto';
 
-export class GroupListForTreasureResultDto {
+export class GroupListForTreasureResponseDto {
     page!: number;
     pageSize!: number;
     total!: number;

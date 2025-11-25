@@ -1,4 +1,3 @@
-// apps/api/scripts/seed/index.ts
 import { seedSystemConfigExchangeRate } from './system-config-exchange-rate';
 import { seedProductCategories } from './product-category-list';
 import { seedTreasures } from './seed-treasures';
