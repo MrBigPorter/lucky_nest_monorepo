@@ -3,10 +3,6 @@ import {ToNumber} from "@api/common/dto/transforms";
 import {IsInt, IsString, Max, Min} from "class-validator";
 
 export class GroupMembersDto {
-    @ApiProperty({ description: 'groupId', example: '1', type: String})
-    @IsString()
-    groupId!: string;
-
     @ApiProperty({ description: 'page', example: 1, type: Number})
     @ToNumber()
     @IsInt()
