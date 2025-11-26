@@ -7,6 +7,7 @@ import {TREASURE_STATE} from "@lucky/shared/dist/types/treasure";
 import {ORDER_STATUS, PAY_STATUS, REFUND_STATUS} from "@lucky/shared/dist/types/order";
 import {GroupService} from "@api/group/group.service";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
+import {throwBiz} from "@api/common/exceptions/biz.exception";
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -209,7 +210,7 @@ export class OrderService {
                         orderStatus: ORDER_STATUS.PAID,
                         payStatus: PAY_STATUS.PAID,
                         refundStatus: REFUND_STATUS.NO_REFUND,
-                        paidAt: BigInt(Date.now()),
+                        paidAt: Date.now().toString(),
                         coinUsed,
                         couponId: couponId || null,
                         groupId: null,
@@ -263,5 +264,154 @@ export class OrderService {
         }
 
     }
+
+    // order list
+    async listOrders(
+        userId: string,
+        q:{
+            status?: 'all' | 'paid' | 'unpaid' | 'refunded' | 'cancelled',
+            page?: number,
+            pageSize?: number,
+            treasureId?: string
+        }
+    ) {
+        if (!userId) return throwBiz(ERROR_KEYS.UNAUTHORIZED);
+
+        const status = q.status || 'all';
+        const page = Math.max(1, Number(q.page ?? 1));
+        const pageSize = Math.min(100, Math.max(1,Number(q.pageSize ?? 20)));
+        const treasureId = q.treasureId || null;
+
+        const where = this.whereByStatus(userId, status, treasureId || undefined);
+
+
+        const [total, list] = await  this.prisma.$transaction([
+            this.prisma.order.count({where}),
+            this.prisma.order.findMany({
+                where,
+                orderBy:[{createdAt:'desc'},{orderId:'desc'}],
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                select:{
+                    orderId: true,
+                    orderNo: true,
+                    createdAt: true,
+                    buyQuantity: true,
+                    treasureId: true,
+                    unitPrice: true,
+                    originalAmount: true,
+                    discountAmount: true,
+                    couponAmount: true,
+                    coinAmount: true,
+                    finalAmount: true,
+                    orderStatus: true,
+                    payStatus: true,
+                    refundStatus: true,
+                    paidAt: true,
+                    treasure:{
+                        select:{
+                            treasureName: true,
+                            treasureCoverImg: true,
+                        }
+                    }
+                }
+            })
+        ])
+
+
+        return {
+            page,
+            pageSize,
+            total,
+            list:list.map((o)=>({
+                ...o,
+                createdAt: o.createdAt.getTime(),
+                paidAt: o.paidAt ? Number(o.paidAt) : null,
+            }))
+        }
+    }
+
+    // order details
+    async getOrderDetail(userId: string, orderId: string) {
+        if (!userId) return throwBiz(ERROR_KEYS.UNAUTHORIZED);
+        if (!orderId) return throwBiz(ERROR_KEYS.ORDER_NUMBER_ERROR);
+
+        // check order
+        const row = await this.prisma.order.findFirst({
+            where: {orderId, userId},
+            include: {
+                treasure: {
+                    select: {
+                        treasureName: true,
+                        treasureCoverImg: true,
+                        seqShelvesQuantity: true,
+                        seqBuyQuantity: true,
+                    }
+                }
+            }
+        })
+
+        if (!row) return throwBiz(ERROR_KEYS.ORDER_NUMBER_OR_THIRD_PARTY_ORDER_NUMBER_ERROR);
+
+        console.log('order detail row:', row);
+        // find related transactions records
+        const transactions = await this.prisma.walletTransaction.findMany({
+            where: {
+                userId,
+                relatedId: orderId,
+            },
+            orderBy: {createdAt: 'desc'},
+            take: 2,
+            select:{
+                transactionNo: true,
+                amount: true,
+                balanceType: true,
+                createdAt: true,
+                status: true,
+            }
+        })
+
+        return {
+            ...row,
+            createdAt: row.createdAt.getTime(),
+            paidAt: row.paidAt ? Number(row.paidAt) : null,
+            updatedAt: row.updatedAt.getTime(),
+
+            transactions:transactions.map((t)=>({
+                ...t,
+                createdAt: t.createdAt.getTime(),
+            }))
+        }
+
+    }
+
+    // build where condition by status
+    private whereByStatus(
+         userId: string,
+         status: 'all' | 'paid' | 'unpaid' | 'refunded' | 'cancelled',
+         treasureId?: string
+     ): Prisma.OrderWhereInput{
+        const base: Prisma.OrderWhereInput = {userId, ...(treasureId?{treasureId}:{})};
+
+        const OS = ORDER_STATUS;
+        const PS = PAY_STATUS;
+        const RS = REFUND_STATUS;
+
+        switch (status){
+            case "paid":
+                return {...base, payStatus: PS.PAID, orderStatus: OS.PAID, refundStatus: RS.NO_REFUND};
+            case "unpaid":
+                return {...base, payStatus: PS.UNPAID, orderStatus: OS.PENDING_PAYMENT};
+            case "refunded":
+                return {...base, refundStatus: RS.REFUNDED};
+            case "cancelled":
+                return {...base, orderStatus: OS.CANCELED};
+            case "all":
+            default:
+                return base;
+        }
+    }
+
+
 
 }

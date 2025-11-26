@@ -34,7 +34,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
         const logger = new Logger('AllExceptionsFilter');
         logger.error(
-            `Exception caught: TID=${tid}, Exception=${JSON.stringify(exception)}`,
+            `Exception caught: tid=${tid}, exception=${exception}`,
         )
 
         // —— 默认兜底：系统错误 —— //

@@ -587,7 +587,7 @@ model Order {
   couponId   String?  @map("coupon_id") @db.VarChar(32)
   coinUsed    Decimal  @default(0) @map("coin_used") @db.Decimal(10, 2)
 
-  paidAt     BigInt? @map("paid_at") @db.BigInt
+  paidAt     DateTime? @map("paid_at")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
