@@ -15,7 +15,7 @@ SET joined_at = COALESCE(joined_at, created_at, NOW())
 WHERE joined_at IS NULL;
 
 /* ---------- 2) 先删旧约束（若存在）再新增 ---------- */
-ALTER TABLE treasure_group
+ALTER TABLE treasure_groups
     DROP CONSTRAINT IF EXISTS chk_members_nonneg;
 
 ALTER TABLE treasure_groups
