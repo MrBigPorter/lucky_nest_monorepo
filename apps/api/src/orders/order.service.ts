@@ -3,7 +3,7 @@ import {PrismaService} from "@api/prisma/prisma.service";
 import {WalletService} from "@api/wallet/wallet.service";
 import {Prisma} from "@prisma/client";
 import {CheckoutDto} from "@api/orders/dto/checkout.dto";
-import {TREASURE_STATE} from "@lucky/shared/dist/types/treasure";
+import {GROUP_STATUS, TREASURE_STATE} from "@lucky/shared/dist/types/treasure";
 import {ORDER_STATUS, PAY_STATUS, REFUND_STATUS} from "@lucky/shared/dist/types/order";
 import {GroupService} from "@api/group/group.service";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
@@ -284,6 +284,7 @@ export class OrderService {
 
         const where = this.whereByStatus(userId, status, treasureId || undefined);
 
+        console.log('listOrders where:', where);
 
         const [total, list] = await  this.prisma.$transaction([
             this.prisma.order.count({where}),
@@ -296,6 +297,7 @@ export class OrderService {
                     orderId: true,
                     orderNo: true,
                     createdAt: true,
+                    updatedAt: true,
                     buyQuantity: true,
                     treasureId: true,
                     unitPrice: true,
@@ -312,9 +314,25 @@ export class OrderService {
                         select:{
                             treasureName: true,
                             treasureCoverImg: true,
+                            productName: true,
+                            virtual: true,
+                            cashAmount: true,
+                            cashState: true,
                         }
-                    }
-                }
+                    },
+                    group:{
+                        where:{
+                            groupStatus: GROUP_STATUS.ACTIVE
+                        },
+                        select:{
+                            groupId: true,
+                            currentMembers: true,
+                            maxMembers: true,
+                            groupStatus: true,
+                        }
+                    },
+
+                },
             })
         ])
 
@@ -327,6 +345,7 @@ export class OrderService {
                 ...o,
                 createdAt: o.createdAt.getTime(),
                 paidAt: o.paidAt ? Number(o.paidAt) : null,
+                group: o.group ? o.group : null,
             }))
         }
     }
@@ -344,8 +363,10 @@ export class OrderService {
                     select: {
                         treasureName: true,
                         treasureCoverImg: true,
-                        seqShelvesQuantity: true,
-                        seqBuyQuantity: true,
+                        productName: true,
+                        virtual: true,
+                        cashAmount: true,
+                        cashState: true,
                     }
                 }
             }
@@ -353,7 +374,6 @@ export class OrderService {
 
         if (!row) return throwBiz(ERROR_KEYS.ORDER_NUMBER_OR_THIRD_PARTY_ORDER_NUMBER_ERROR);
 
-        console.log('order detail row:', row);
         // find related transactions records
         const transactions = await this.prisma.walletTransaction.findMany({
             where: {
