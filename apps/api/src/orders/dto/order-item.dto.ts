@@ -13,6 +13,10 @@ class TreasureDTo{
     cashAmount!: string;
     @ApiProperty({description: 'coinAmount', example: '100', type: String})
     cashState!: number;
+    @ApiProperty({description: 'seqBuyQuantity', example: 100, type: Number})
+    seqBuyQuantity!: number;
+    @ApiProperty({description: 'seqShelvesQuantity', example: 500, type: Number})
+    seqShelvesQuantity!: number
 }
 
 class groupDto {
@@ -25,6 +29,19 @@ class groupDto {
     @ApiProperty({ description: 'groupStatus', example: 1, type: Number})
     groupStatus!: number;
 
+}
+
+export class WalletTransactionDto {
+    @ApiProperty({ description: 'Transaction ID', example: 'txnId123', type: String})
+    transactionNo!: string;
+    @ApiProperty({ description: 'Amount', example: '50.00', type: String})
+    amount!: string;
+    @ApiProperty({ description: 'balanceType 1-balance 2-coin', example: 1, type: Number})
+    balanceType!: number;
+    @ApiProperty({ description: 'Status', example: 1, type: Number})
+    status!: number;
+    @ApiProperty({type: Number, description: 'createdAt', example: 1704067200000})
+    createdAt!: number;
 }
 
 export class OrderItemDto{
@@ -59,10 +76,10 @@ export class OrderItemDto{
     @ApiProperty({ description: 'refundStatus', example: 0, type: Number})
     refundStatus!: number;
     @ApiProperty({type: Number, description: 'paidAt', example: null})
-    paidAt!: null;
+    paidAt!: number | null;
     @ApiProperty({ description: 'treasure', type: TreasureDTo})
     treasure!: TreasureDTo;
     @ApiProperty({ description: 'groupInfo', type: groupDto, nullable: true})
-    groupInfo!: groupDto | null;
+    group!: groupDto | null;
 }
 
