@@ -8,6 +8,7 @@ import {ORDER_STATUS, PAY_STATUS, REFUND_STATUS} from "@lucky/shared/dist/types/
 import {GroupService} from "@api/group/group.service";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 import {throwBiz} from "@api/common/exceptions/biz.exception";
+import {OrderItemDto} from "@api/orders/dto/order-item.dto";
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -284,9 +285,8 @@ export class OrderService {
 
         const where = this.whereByStatus(userId, status, treasureId || undefined);
 
-        console.log('listOrders where:', where);
 
-        const [total, list] = await  this.prisma.$transaction([
+        const [total, rows] = await  this.prisma.$transaction([
             this.prisma.order.count({where}),
             this.prisma.order.findMany({
                 where,
@@ -310,43 +310,39 @@ export class OrderService {
                     payStatus: true,
                     refundStatus: true,
                     paidAt: true,
-                    treasure:{
-                        select:{
+                    treasure: {
+                        select: {
                             treasureName: true,
                             treasureCoverImg: true,
                             productName: true,
                             virtual: true,
                             cashAmount: true,
                             cashState: true,
-                        }
+                            seqBuyQuantity: true,
+                            seqShelvesQuantity: true,
+                        },
                     },
                     group:{
-                        where:{
-                            groupStatus: GROUP_STATUS.ACTIVE
-                        },
-                        select:{
+                        where: { groupStatus: GROUP_STATUS.ACTIVE },
+                        select: {
                             groupId: true,
                             currentMembers: true,
                             maxMembers: true,
                             groupStatus: true,
-                        }
+                        },
                     },
 
                 },
             })
         ])
 
+        const list = rows.map((o) => this.buildOrderView(o));
 
         return {
             page,
             pageSize,
             total,
-            list:list.map((o)=>({
-                ...o,
-                createdAt: o.createdAt.getTime(),
-                paidAt: o.paidAt ? Number(o.paidAt) : null,
-                group: o.group ? o.group : null,
-            }))
+            list
         }
     }
 
@@ -367,7 +363,18 @@ export class OrderService {
                         virtual: true,
                         cashAmount: true,
                         cashState: true,
+                        seqBuyQuantity: true,
+                        seqShelvesQuantity: true,
                     }
+                },
+                group:{
+                    where: { groupStatus: GROUP_STATUS.ACTIVE },
+                    select: {
+                        groupId: true,
+                        currentMembers: true,
+                        maxMembers: true,
+                        groupStatus: true,
+                    },
                 }
             }
         })
@@ -391,12 +398,10 @@ export class OrderService {
             }
         })
 
-        return {
-            ...row,
-            createdAt: row.createdAt.getTime(),
-            paidAt: row.paidAt ? Number(row.paidAt) : null,
-            updatedAt: row.updatedAt.getTime(),
+        const base = this.buildOrderView(row);
 
+        return {
+            ...base,
             transactions:transactions.map((t)=>({
                 ...t,
                 createdAt: t.createdAt.getTime(),
@@ -432,6 +437,52 @@ export class OrderService {
         }
     }
 
+
+    /**
+     * 构建订单视图 - build order view
+     * @param o 订单对象 - order object
+     * @private
+     */
+    private buildOrderView(o: any): OrderItemDto {
+        return {
+            orderId: o.orderId,
+            orderNo: o.orderNo,
+            createdAt: o.createdAt.getTime(),
+            updatedAt: o.updatedAt.getTime(),
+            paidAt: o.paidAt ? Number(o.paidAt) : null,
+
+            buyQuantity: o.buyQuantity,
+            treasureId: o.treasureId,
+
+            unitPrice: o.unitPrice,
+            originalAmount: o.originalAmount,
+            discountAmount: o.discountAmount,
+            couponAmount: o.couponAmount,
+            coinAmount: o.coinAmount,
+            finalAmount: o.finalAmount,
+
+            orderStatus: o.orderStatus,
+            payStatus: o.payStatus,
+            refundStatus: o.refundStatus,
+
+            treasure:{
+                treasureName: o.treasure.treasureName,
+                treasureCoverImg: o.treasure.treasureCoverImg,
+                productName: o.treasure.productName,
+                virtual: o.treasure.virtual,
+                cashAmount: o.treasure.cashAmount,
+                cashState: o.treasure.cashState,
+                seqBuyQuantity: o.treasure.seqBuyQuantity,
+                seqShelvesQuantity: o.treasure.seqShelvesQuantity,
+            },
+            group: o.group ? {
+                groupId: o.group.groupId,
+                currentMembers: o.group.currentMembers,
+                maxMembers: o.group.maxMembers,
+                groupStatus: o.group.groupStatus,
+            } : null,
+        }
+    }
 
 
 }
