@@ -22,7 +22,7 @@ class TreasureDTo{
 class groupDto {
     @ApiProperty({ description: 'groupId', example: 'uuid-v4', type: String})
     groupId!: string;
-    @ApiProperty({ description: 'treasureId', example: '1', type: String})
+    @ApiProperty({ description: 'currentMembers', example: 5, type: Number})
     currentMembers!: number;
     @ApiProperty({ description: 'maxMembers', example: 10, type: Number})
     maxMembers!: number;
