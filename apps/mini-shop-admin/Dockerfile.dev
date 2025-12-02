@@ -1,0 +1,9 @@
+FROM lucky-monorepo-base
+
+WORKDIR /app
+
+COPY . .
+
+EXPOSE 4000
+
+CMD ["yarn", "workspace", "@lucky/mini-shop-admin", "dev"]

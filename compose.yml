@@ -64,6 +64,22 @@ services:
       - backend
     networks: [ app ]
 
+  # mini-shop-admin
+  mini-shop-admin:
+    build:
+      context: .
+      dockerfile: apps/mini-shop-admin/Dockerfile.dev
+    container_name: lucky-mini-shop-admin-dev
+    ports:
+      - "${MINI_SHOP_ADMIN_PORT}:4000"
+    volumes:
+      - .:/app
+    env_file:
+      - apps/mini-shop-admin/.env.docker
+    depends_on:
+      - backend
+    networks: [ app ]
+
   # redis service, for caching and session storage
   redis:
     image: redis:7
