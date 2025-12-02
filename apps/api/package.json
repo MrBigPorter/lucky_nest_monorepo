@@ -4,7 +4,7 @@
   "scripts": {
     "prestart:dev": "prisma generate --schema prisma/schema.prisma",
     "start:dev": "nest start --watch",
-    "build": "nest build",
+    "build": "prisma generate && npm run codes:gen && nest build",
     "start": "node dist/main.js",
     "clean": "rimraf dist",
     "generate": "nest g",
@@ -13,7 +13,6 @@
     "pr:dev": "prisma migrate dev",
     "pr:deploy": "prisma migrate deploy",
     "codes:gen": "node scripts/gen-error-codes.mjs",
-    "prebuild": "npm run codes:gen",
     "seed:treasures": "tsx scripts/seed/seed-treasures.ts"
   },
   "dependencies": {
