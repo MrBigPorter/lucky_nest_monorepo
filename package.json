@@ -27,7 +27,6 @@
     "pr:baseline": "docker exec -it lucky-backend-dev sh -lc 'mkdir -p apps/api/prisma/migrations/BASELINE && yarn workspace @lucky/api prisma migrate diff --from-empty --to-schema-datamodel apps/api/prisma/schema.prisma --script > apps/api/prisma/migrations/BASELINE/migration.sql && yarn workspace @lucky/api prisma migrate resolve --applied BASELINE && yarn workspace @lucky/api prisma migrate status'"
   },
   "devDependencies": {
-    "@nuxt/ui": "^4.1.0",
     "@types/jest": "^30.0.0",
     "jest": "^30.2.0",
     "prettier": "^3.6.2",
@@ -44,8 +43,6 @@
     "packages/*"
   ],
   "dependencies": {
-    "@pinia/nuxt": "^0.11.3",
-    "pinia": "^3.0.4",
     "rimraf": "^6.0.1",
     "turbo": "^2.1.1"
   }
