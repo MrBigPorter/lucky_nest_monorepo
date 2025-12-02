@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Bell, Send, Users, Clock, CheckCircle } from 'lucide-react';
-import { Card, Button, Input, Select, Badge } from '../components/UIComponents';
-import { MOCK_NOTIFICATIONS } from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { SystemNotification } from '../types';
+import { Card, Button, Input, Select, Badge } from '../components/UIComponents.tsx';
+import { MOCK_NOTIFICATIONS } from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { SystemNotification } from '../../types.ts';
 
 export const NotificationCenter: React.FC = () => {
   const { data: notifications, add } =

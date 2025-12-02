@@ -4,7 +4,7 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
-import type { ApiResponse, ApiError, RequestConfig } from './types';
+import type { ApiResponse, ApiError, RequestConfig } from './types.ts';
 
 /**
  * HTTP 请求拦截器

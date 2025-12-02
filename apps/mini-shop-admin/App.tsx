@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { HashRouter as Router } from 'react-router-dom';
 import { AppRoutes } from './AppRoutes';
 import { Theme, Language, UserRole } from './types';
-import { ToastContainer, ToastMessage } from './components/UIComponents';
+import { ToastContainer, ToastMessage } from './src/components/UIComponents.tsx';
 
 interface AppContextType {
   theme: Theme;

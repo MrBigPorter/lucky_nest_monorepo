@@ -18,11 +18,11 @@ import {
   Input,
   Select,
   ExportButton,
-} from '../components/UIComponents';
-import { MOCK_ORDERS } from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { useToast } from '../App';
-import { Order } from '../types';
+} from '../components/UIComponents.tsx';
+import { MOCK_ORDERS } from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { useToast } from '../../App.tsx';
+import { Order } from '../../types.ts';
 
 export const OrderManagement: React.FC = () => {
   const { data: orders, update } = useMockData<Order>(MOCK_ORDERS);

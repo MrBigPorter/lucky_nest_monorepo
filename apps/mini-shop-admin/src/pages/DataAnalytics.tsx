@@ -20,12 +20,12 @@ import {
   ArrowRight,
   MousePointer,
 } from 'lucide-react';
-import { Card, Badge, DateRangePicker } from '../components/UIComponents';
+import { Card, Badge, DateRangePicker } from '../components/UIComponents.tsx';
 import {
   MOCK_FUNNEL_DATA,
   MOCK_PRODUCT_METRICS,
   MOCK_COHORT_DATA,
-} from '../constants';
+} from '../../constants.ts';
 
 // --- SUB-COMPONENT: CONVERSION FUNNEL ---
 const ConversionFunnel: React.FC = () => {

@@ -17,14 +17,14 @@ import {
   Modal,
   Badge,
   Select,
-} from '../components/UIComponents';
+} from '../components/UIComponents.tsx';
 import {
   MOCK_ADMIN_USERS,
   MOCK_ROLES,
   MOCK_OPERATION_LOGS,
-} from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { AdminUser, Role, OperationLog } from '../types';
+} from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { AdminUser, Role, OperationLog } from '../../types.ts';
 
 // --- SUB-COMPONENT: ADMIN USERS ---
 const AdminUsers: React.FC = () => {

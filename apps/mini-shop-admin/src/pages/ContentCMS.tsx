@@ -15,10 +15,10 @@ import {
   Modal,
   Badge,
   Select,
-} from '../components/UIComponents';
-import { MOCK_ARTICLES, MOCK_FAQS } from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { Article, Faq } from '../types';
+} from '../components/UIComponents.tsx';
+import { MOCK_ARTICLES, MOCK_FAQS } from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { Article, Faq } from '../../types.ts';
 
 const ArticleManager: React.FC = () => {
   const {

@@ -1,12 +1,14 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../App';
+import { useAuthStore } from '../store/useAuthStore';
+import { useToastStore } from '../store/useToastStore';
 import { Button } from '../components/UIComponents';
 import { ShieldCheck, ArrowRight, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const Login: React.FC = () => {
-  const { login } = useContext(AppContext);
+  const login = useAuthStore((state) => state.login);
+  const addToast = useToastStore((state) => state.addToast);
   const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,6 +25,7 @@ export const Login: React.FC = () => {
     setTimeout(() => {
       setLoading(false);
       login('admin-token'); // Mock token
+      addToast('success', 'Welcome back, Admin!');
       navigate('/');
     }, 1000);
   };

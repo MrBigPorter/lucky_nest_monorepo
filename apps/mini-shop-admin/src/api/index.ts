@@ -3,9 +3,9 @@
  * 使用方法：根据后端接口定义具体的 API 方法
  */
 
-import http from './http';
-import type { PaginatedResponse, PaginationParams } from './types';
-import type { Product, Category, User, TreasureGroup } from '../types';
+import http from './http.ts';
+import type { PaginatedResponse, PaginationParams } from './types.ts';
+import type { Product, Category, User, TreasureGroup } from '../../types.ts';
 
 /**
  * 用户相关 API

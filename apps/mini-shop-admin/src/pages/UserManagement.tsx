@@ -29,7 +29,7 @@ import {
   Badge,
   Select,
   Switch,
-} from '../components/UIComponents';
+} from '../components/UIComponents.tsx';
 import {
   MOCK_USERS,
   MOCK_RECHARGE_ORDERS,
@@ -38,9 +38,9 @@ import {
   MOCK_BETTING_RECORDS,
   MOCK_LOGIN_LOGS,
   MOCK_REFERRALS,
-} from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { useToast } from '../App';
+} from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { useToast } from '../../App.tsx';
 import {
   User,
   RechargeOrder,
@@ -49,7 +49,7 @@ import {
   BettingRecord,
   LoginLog,
   ReferralUser,
-} from '../types';
+} from '../../types.ts';
 
 export const UserManagement: React.FC = () => {
   const { data: users, update } = useMockData<User>(MOCK_USERS);

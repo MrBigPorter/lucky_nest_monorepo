@@ -21,16 +21,16 @@ import {
   Modal,
   Badge,
   DateRangePicker,
-} from '../components/UIComponents';
+} from '../components/UIComponents.tsx';
 import {
   MOCK_RECHARGE_PLANS,
   MOCK_WITHDRAWALS,
   MOCK_RECHARGE_ORDERS,
   MOCK_TRANSACTIONS,
-} from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { useToast } from '../App';
-import { RechargePlan, Withdrawal, RechargeOrder, Transaction } from '../types';
+} from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { useToast } from '../../App.tsx';
+import { RechargePlan, Withdrawal, RechargeOrder, Transaction } from '../../types.ts';
 
 // --- SUB-COMPONENT: RECHARGE PLANS ---
 const RechargeConfig: React.FC = () => {

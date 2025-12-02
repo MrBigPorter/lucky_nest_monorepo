@@ -10,11 +10,11 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import {Badge, Button, Card, ImageUpload, Input, Modal, Select, Switch, Textarea,} from '../components/UIComponents';
-import {MOCK_CATEGORIES, MOCK_PRODUCTS, TRANSLATIONS} from '../constants';
-import {useMockData} from '../hooks/useMockData';
-import {AppContext, useToast} from '../App';
-import {Category, Product} from '../types';
+import {Badge, Button, Card, ImageUpload, Input, Modal, Select, Switch, Textarea,} from '../components/UIComponents.tsx';
+import {MOCK_CATEGORIES, MOCK_PRODUCTS, TRANSLATIONS} from '../../constants.ts';
+import {useMockData} from '../hooks/useMockData.ts';
+import {AppContext, useToast} from '../../App.tsx';
+import {Category, Product} from '../../types.ts';
 
 export const ProductManagement: React.FC = () => {
   const { lang } = useContext(AppContext);

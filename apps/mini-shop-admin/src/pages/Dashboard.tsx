@@ -11,9 +11,9 @@ import {
   Bar,
 } from 'recharts';
 import { DollarSign, Users, ShoppingCart, AlertCircle } from 'lucide-react';
-import { Card, Badge } from '../components/UIComponents';
-import { MOCK_STATS, MOCK_ORDERS, TRANSLATIONS } from '../constants';
-import { AppContext } from '../App';
+import { Card, Badge } from '../components/UIComponents.tsx';
+import { MOCK_STATS, MOCK_ORDERS, TRANSLATIONS } from '../../constants.ts';
+import { AppContext } from '../../App.tsx';
 
 const StatCard: React.FC<{
   title: string;

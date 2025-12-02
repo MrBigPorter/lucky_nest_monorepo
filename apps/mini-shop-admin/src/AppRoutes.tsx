@@ -1,30 +1,30 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AppContext } from './App';
-import { Layout } from './src/components/Layout.tsx';
-import { Login } from './src/pages/Login.tsx';
-import { Dashboard } from './src/pages/Dashboard.tsx';
-import { UserManagement } from './src/pages/UserManagement.tsx';
+import { useAuthStore } from './store/useAuthStore';
+import { Layout } from './components/Layout';
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { UserManagement } from './pages/UserManagement';
 import {
   ProductManagement,
   CategoryManagement,
-} from './src/pages/ProductManagement.tsx';
-import { GroupManagement } from './src/pages/GroupManagement.tsx';
-import { OrderManagement } from './src/pages/OrderManagement.tsx';
-import { Marketing } from './src/pages/Marketing.tsx';
-import { Finance } from './src/pages/Finance.tsx';
-import { SystemSettings } from './src/pages/SystemSettings.tsx';
-import { LotteryControl } from './src/pages/LotteryControl.tsx';
-import { VipConfig } from './src/pages/VipConfig.tsx';
-import { NotificationCenter } from './src/pages/NotificationCenter.tsx';
-import { ActivityConfig } from './src/pages/ActivityConfig.tsx';
-import { AdminSecurity } from './src/pages/AdminSecurity.tsx';
-import { ContentCMS } from './src/pages/ContentCMS.tsx';
-import { DataAnalytics } from './src/pages/DataAnalytics.tsx';
-import { ServiceCenter } from './src/pages/ServiceCenter.tsx';
+} from './pages/ProductManagement';
+import { GroupManagement } from './pages/GroupManagement';
+import { OrderManagement } from './pages/OrderManagement';
+import { Marketing } from './pages/Marketing';
+import { Finance } from './pages/Finance';
+import { SystemSettings } from './pages/SystemSettings';
+import { LotteryControl } from './pages/LotteryControl';
+import { VipConfig } from './pages/VipConfig';
+import { NotificationCenter } from './pages/NotificationCenter';
+import { ActivityConfig } from './pages/ActivityConfig';
+import { AdminSecurity } from './pages/AdminSecurity';
+import { ContentCMS } from './pages/ContentCMS';
+import { DataAnalytics } from './pages/DataAnalytics';
+import { ServiceCenter } from './pages/ServiceCenter';
 
 const ProtectedRoute: React.FC<{ children: JSX.Element }> = ({ children }) => {
-  const { isAuthenticated } = useContext(AppContext);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -35,7 +35,7 @@ const ProtectedRoute: React.FC<{ children: JSX.Element }> = ({ children }) => {
 };
 
 export const AppRoutes: React.FC = () => {
-  const { isAuthenticated } = useContext(AppContext);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
     <Routes>

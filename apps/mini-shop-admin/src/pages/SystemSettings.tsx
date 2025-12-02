@@ -13,10 +13,10 @@ import {
   Input,
   Switch,
   Select,
-} from '../components/UIComponents';
-import { MOCK_BANNERS } from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { Banner } from '../types';
+} from '../components/UIComponents.tsx';
+import { MOCK_BANNERS } from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { Banner } from '../../types.ts';
 
 export const SystemSettings: React.FC = () => {
   const { data: banners, add, remove } = useMockData<Banner>(MOCK_BANNERS);

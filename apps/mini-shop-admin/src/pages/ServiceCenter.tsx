@@ -18,10 +18,10 @@ import {
   Badge,
   Textarea,
   Modal,
-} from '../components/UIComponents';
-import { MOCK_WORK_ORDERS } from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { WorkOrder } from '../types';
+} from '../components/UIComponents.tsx';
+import { MOCK_WORK_ORDERS } from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { WorkOrder } from '../../types.ts';
 
 export const ServiceCenter: React.FC = () => {
   const { data: tickets, update } = useMockData<WorkOrder>(MOCK_WORK_ORDERS);

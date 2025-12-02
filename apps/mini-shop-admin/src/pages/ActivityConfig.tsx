@@ -19,14 +19,14 @@ import {
   Badge,
   Modal,
   DragHandle,
-} from '../components/UIComponents';
+} from '../components/UIComponents.tsx';
 import {
   MOCK_LOTTERY_ACTIVITIES,
   MOCK_PRODUCTS,
   MOCK_COUPONS,
-} from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { LotteryActivity, ActivityPrize } from '../types';
+} from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { LotteryActivity, ActivityPrize } from '../../types.ts';
 
 export const ActivityConfig: React.FC = () => {
   const {

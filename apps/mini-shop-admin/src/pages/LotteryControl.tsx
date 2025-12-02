@@ -7,10 +7,10 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import { Card, Button, Badge } from '../components/UIComponents';
-import { MOCK_LOTTERY_DRAWS } from '../constants';
-import { useMockData } from '../hooks/useMockData';
-import { LotteryDraw } from '../types';
+import { Card, Button, Badge } from '../components/UIComponents.tsx';
+import { MOCK_LOTTERY_DRAWS } from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { LotteryDraw } from '../../types.ts';
 
 export const LotteryControl: React.FC = () => {
   const { data: draws, update } = useMockData<LotteryDraw>(MOCK_LOTTERY_DRAWS);

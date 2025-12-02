@@ -4,9 +4,9 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productApi, categoryApi, userApi, treasureApi } from './index';
-import type { Product, Category, User, TreasureGroup } from '../types';
-import type { PaginationParams } from './types';
+import { productApi, categoryApi, userApi, treasureApi } from './index.ts';
+import type { Product, Category, User, TreasureGroup } from '../../types.ts';
+import type { PaginationParams } from './types.ts';
 
 /**
  * 商品相关 Hooks

@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { NavLink, useLocation, Navigate } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -26,7 +26,9 @@ import {
   Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppContext, useToast } from '../App';
+import { useAppStore } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { useToastStore } from '../store/useToastStore';
 import { TRANSLATIONS } from '../constants';
 import { Dropdown, Breadcrumbs } from './UIComponents';
 
@@ -56,65 +58,38 @@ const SidebarItem: React.FC<{
 export const Layout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { theme, toggleTheme, lang, toggleLang, isAuthenticated, logout } =
-    useContext(AppContext);
-  const toast = useToast();
+  const { theme, toggleTheme, lang, toggleLang } = useAppStore();
+  const { logout } = useAuthStore();
+  const addToast = useToastStore((state) => state.addToast);
   const t = TRANSLATIONS[lang];
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const location = useLocation();
 
-  if (location.pathname === '/login') {
-    return <>{children}</>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
   const handleLogout = () => {
     logout();
+    addToast('info', 'Logged out successfully');
   };
 
   const getPageInfo = () => {
-    switch (location.pathname) {
-      case '/':
-        return { title: t.dashboard, path: ['Overview', 'Dashboard'] };
-      case '/users':
-        return { title: t.users, path: ['Management', 'Users'] };
-      case '/products':
-        return { title: t.products, path: ['Management', 'Products'] };
-      case '/groups':
-        return { title: t.groups, path: ['Management', 'Groups'] };
-      case '/orders':
-        return { title: t.orders, path: ['Management', 'Orders'] };
-      case '/marketing':
-        return { title: t.marketing, path: ['Operations', 'Marketing'] };
-      case '/finance':
-        return { title: t.finance, path: ['System', 'Finance'] };
-      case '/system':
-        return { title: t.system, path: ['System', 'Settings'] };
-      case '/lottery':
-        return { title: t.lottery, path: ['Operations', 'Lottery'] };
-      case '/vip':
-        return { title: t.vip, path: ['Operations', 'VIP'] };
-      case '/notifications':
-        return {
-          title: t.notifications,
-          path: ['Operations', 'Notifications'],
-        };
-      case '/activity':
-        return { title: t.activity, path: ['Operations', 'Activity'] };
-      case '/admin-security':
-        return { title: t.admin_security, path: ['System', 'Security'] };
-      case '/content':
-        return { title: t.content_cms, path: ['System', 'Content'] };
-      case '/analytics':
-        return { title: t.analytics, path: ['Operations', 'Analytics'] };
-      case '/service':
-        return { title: t.service, path: ['Management', 'Service'] };
-      default:
-        return { title: 'LuxeAdmin', path: [] };
-    }
+    // This logic can be improved later with a more scalable solution
+    const path = location.pathname;
+    if (path === '/') return { title: t.dashboard, path: ['Overview', 'Dashboard'] };
+    if (path.startsWith('/users')) return { title: t.users, path: ['Management', 'Users'] };
+    if (path.startsWith('/products')) return { title: t.products, path: ['Management', 'Products'] };
+    if (path.startsWith('/groups')) return { title: t.groups, path: ['Management', 'Groups'] };
+    if (path.startsWith('/orders')) return { title: t.orders, path: ['Management', 'Orders'] };
+    if (path.startsWith('/marketing')) return { title: t.marketing, path: ['Operations', 'Marketing'] };
+    if (path.startsWith('/finance')) return { title: t.finance, path: ['System', 'Finance'] };
+    if (path.startsWith('/system')) return { title: t.system, path: ['System', 'Settings'] };
+    if (path.startsWith('/lottery')) return { title: t.lottery, path: ['Operations', 'Lottery'] };
+    if (path.startsWith('/vip')) return { title: t.vip, path: ['Operations', 'VIP'] };
+    if (path.startsWith('/notifications')) return { title: t.notifications, path: ['Operations', 'Notifications'] };
+    if (path.startsWith('/activity')) return { title: t.activity, path: ['Operations', 'Activity'] };
+    if (path.startsWith('/admin-security')) return { title: t.admin_security, path: ['System', 'Security'] };
+    if (path.startsWith('/content')) return { title: t.content_cms, path: ['System', 'Content'] };
+    if (path.startsWith('/analytics')) return { title: t.analytics, path: ['Operations', 'Analytics'] };
+    if (path.startsWith('/service')) return { title: t.service, path: ['Management', 'Service'] };
+    return { title: 'LuxeAdmin', path: [] };
   };
 
   const pageInfo = getPageInfo();
@@ -152,108 +127,32 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6">
               Management
             </div>
-            <SidebarItem
-              to="/users"
-              icon={<Users size={18} />}
-              label={t.users}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/products"
-              icon={<ShoppingBag size={18} />}
-              label={t.products}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/groups"
-              icon={<Users size={18} />}
-              label={t.groups}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/orders"
-              icon={<Package size={18} />}
-              label={t.orders}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/service"
-              icon={<Headphones size={18} />}
-              label={t.service}
-              onClick={() => setMobileMenuOpen(false)}
-            />
+            <SidebarItem to="/users" icon={<Users size={18} />} label={t.users} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/products" icon={<ShoppingBag size={18} />} label={t.products} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/groups" icon={<Users size={18} />} label={t.groups} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/orders" icon={<Package size={18} />} label={t.orders} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/service" icon={<Headphones size={18} />} label={t.service} onClick={() => setMobileMenuOpen(false)} />
 
             <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6">
               Operations
             </div>
-            <SidebarItem
-              to="/analytics"
-              icon={<PieChart size={18} />}
-              label={t.analytics}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/lottery"
-              icon={<Zap size={18} />}
-              label={t.lottery}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/activity"
-              icon={<Gift size={18} />}
-              label={t.activity}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/vip"
-              icon={<Crown size={18} />}
-              label={t.vip}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/notifications"
-              icon={<Bell size={18} />}
-              label={t.notifications}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/marketing"
-              icon={<Ticket size={18} />}
-              label={t.marketing}
-              onClick={() => setMobileMenuOpen(false)}
-            />
+            <SidebarItem to="/analytics" icon={<PieChart size={18} />} label={t.analytics} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/lottery" icon={<Zap size={18} />} label={t.lottery} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/activity" icon={<Gift size={18} />} label={t.activity} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/vip" icon={<Crown size={18} />} label={t.vip} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/notifications" icon={<Bell size={18} />} label={t.notifications} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/marketing" icon={<Ticket size={18} />} label={t.marketing} onClick={() => setMobileMenuOpen(false)} />
 
             <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6">
               System
             </div>
-            <SidebarItem
-              to="/finance"
-              icon={<CreditCard size={18} />}
-              label={t.finance}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/admin-security"
-              icon={<Shield size={18} />}
-              label={t.admin_security}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/content"
-              icon={<FileText size={18} />}
-              label={t.content_cms}
-              onClick={() => setMobileMenuOpen(false)}
-            />
-            <SidebarItem
-              to="/system"
-              icon={<Settings size={18} />}
-              label={t.system}
-              onClick={() => setMobileMenuOpen(false)}
-            />
+            <SidebarItem to="/finance" icon={<CreditCard size={18} />} label={t.finance} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/admin-security" icon={<Shield size={18} />} label={t.admin_security} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/content" icon={<FileText size={18} />} label={t.content_cms} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem to="/system" icon={<Settings size={18} />} label={t.system} onClick={() => setMobileMenuOpen(false)} />
           </nav>
 
           <div className="pt-4 mt-4 border-t border-gray-100 dark:border-white/5 space-y-1">
-            {/* Mobile Logout */}
             <button
               onClick={handleLogout}
               className="lg:hidden w-full flex items-center gap-3 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -283,7 +182,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </h2>
             </div>
 
-            {/* Global Search Bar */}
             <div className="hidden md:flex items-center ml-8 bg-gray-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-transparent focus-within:border-primary-500/50 focus-within:bg-white dark:focus-within:bg-black/20 transition-all w-64 lg:w-96 group">
               <Search
                 size={16}
@@ -303,7 +201,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               whileTap={{ scale: 0.95 }}
               className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 transition-all text-sm font-medium"
               onClick={() =>
-                toast.addToast(
+                addToast(
                   'info',
                   'AI Assistant: I can help analyze your sales data or generate marketing copy.',
                 )
@@ -330,7 +228,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
 
-            {/* User Dropdown */}
             <Dropdown
               trigger={
                 <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
@@ -369,7 +266,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           </div>
         </header>
 
-        {/* Page Scroll Area */}
         <div className="flex-1 overflow-auto p-4 lg:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto space-y-6">
             <AnimatePresence mode="wait">

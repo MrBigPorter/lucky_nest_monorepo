@@ -8,10 +8,13 @@ export default defineConfig({
     port: 4000,
     host: '0.0.0.0',
   },
-  plugins: [tailwindcss(), react()],
+  plugins: [
+    tailwindcss(),
+    react()
+  ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
-    },
-  },
+      '@': path.resolve(__dirname, './src'),
+    }
+  }
 });
