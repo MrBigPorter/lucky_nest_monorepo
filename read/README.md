@@ -152,10 +152,12 @@ yarn workspace api prisma migrate dev --name <你的变更描述>
 
 ### 4.2. Docker 常用命令
 
--   `docker compose ps`: 查看当前所有服务的运行状态。
--   `docker compose logs -f api`: 持续查看 `api` 服务的日志。
--   `docker compose exec api sh`: 进入 `api` 服务的容器内部（用于调试）。
--   `docker compose down -v`: 停止并**删除所有数据**（用于彻底重置）。
+-   `yarn docker:up`: **一键启动**所有服务。
+-   `yarn docker:down`: **停止**所有服务。
+-   `yarn docker:clean`: **彻底清理** (停止并删除数据)。
+-   `yarn docker:logs`: **查看后端日志**。
+-   `yarn docker:ps`: **查看服务状态**。
+-   `yarn docker:sh`: **进入后端容器** (用于调试)。
 
 ### 4.3. Redis 缓存
 
@@ -167,3 +169,69 @@ yarn workspace api prisma migrate dev --name <你的变更描述>
 
 -   当后端服务运行时，可以通过访问 `http://localhost:4000/docs` 查看所有 API 接口的详细文档和进行在线测试。
 -   **注意**: 如果 Swagger 页面空白，可能是 `helmet` 的安全策略导致，请检查 `main.ts` 中的相关配置。
+
+---
+
+## 5. 可对接 API 接口总览
+
+这份列表汇总了后端已经实现、可供 `mini-shop-admin` 对接的接口。
+
+#### **认证模块 (`/auth`)**
+
+-   `POST /auth/login/otp`: **OTP 登录**
+    -   **作用**: 使用手机号和验证码进行登录。
+    -   **对接页面**: `Login.tsx`
+-   `POST /auth/refresh`: **刷新 Token**
+    -   **作用**: 维持登录状态。
+    -   **对接页面**: 在 API 请求的全局封装中处理。
+-   `GET /auth/profile`: **获取当前用户信息**
+    -   **作用**: 获取当前已登录管理员的详细信息。
+    -   **对接页面**: `Layout.tsx` (用于显示右上角的用户信息)。
+
+#### **用户模块 (`/users`)**
+
+-   `GET /users`: **获取用户列表**
+    -   **对接页面**: `UserManagement.tsx`
+-   `POST /users`: **创建用户**
+    -   **对接页面**: `UserManagement.tsx` (在“新增用户”的弹窗表单中)。
+
+#### **订单模块 (`/orders`)**
+
+-   `POST /orders/list`: **获取订单列表**
+    -   **作用**: 分页、筛选获取订单列表。
+    -   **对接页面**: `OrderManagement.tsx`
+-   `POST /orders/detail`: **获取订单详情**
+    -   **作用**: 获取单个订单的详细信息。
+    -   **对接页面**: `OrderManagement.tsx` (点击某个订单后)。
+
+#### **产品 (抽奖) 模块 (`/treasure`)**
+
+-   `GET /treasure`: **获取产品列表**
+    -   **对接页面**: `ProductManagement.tsx`
+-   `GET /treasure/:id`: **获取产品详情**
+    -   **对接页面**: `ProductManagement.tsx` (编辑产品时)。
+
+#### **优惠券模块 (`/coupons`)**
+
+-   **后台管理所需接口 (待开发)**:
+    -   `GET /admin/coupons`: 获取优惠券模板列表。
+    -   `POST /admin/coupons`: 创建新的优惠券模板。
+    -   `PUT /admin/coupons/:id`: 更新指定的优惠券模板。
+    -   `DELETE /admin/coupons/:id`: 删除指定的优惠券模板。
+-   **用户端接口 (已实现)**:
+    -   `POST /coupons/claim`: 用户领取优惠券。
+    -   `POST /coupons/redeem`: 兑换码兑换。
+
+#### **其他模块**
+
+-   `GET /categories`: **获取产品分类列表** (`CategoryManagement.tsx`)
+-   `GET /groups/list`: **获取组团列表** (`GroupManagement.tsx`)
+-   `GET /groups/:groupId/members`: **获取组团成员** (`GroupManagement.tsx`)
+-   `POST /wallet/balance`: **查询用户钱包余额** (`UserManagement.tsx` 的用户详情中)
+-   `GET /banners`: **获取 Banner 列表** (`ContentCMS.tsx`)
+-   `GET /ads`: **获取广告列表** (`ContentCMS.tsx`)
+-   `GET /home/sections`: **获取首页专区** (`ContentCMS.tsx`)
+-   `GET /health`, `GET /dbcheck`: **健康检查** (用于系统监控，前端一般不用)
+
+---
+*文档整理完毕。*
