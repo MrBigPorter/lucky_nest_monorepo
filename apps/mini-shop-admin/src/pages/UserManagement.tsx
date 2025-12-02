@@ -20,7 +20,7 @@ import {
   Edit3,
   Key,
   Crown,
-} from 'lucide-react';
+} from 'lucide-react'; // (React and other imports)
 import {
   Card,
   Button,
@@ -29,18 +29,9 @@ import {
   Badge,
   Select,
   Switch,
-} from '../components/UIComponents.tsx';
-import {
-  MOCK_USERS,
-  MOCK_RECHARGE_ORDERS,
-  MOCK_WITHDRAWALS,
-  MOCK_TRANSACTIONS,
-  MOCK_BETTING_RECORDS,
-  MOCK_LOGIN_LOGS,
-  MOCK_REFERRALS,
-} from '../../constants.ts';
-import { useMockData } from '../hooks/useMockData.ts';
-import { useToast } from '../../App.tsx';
+} from '../components/UIComponents';
+import { useToastStore } from '../store/useToastStore';
+import { api } from '../lib/api';
 import {
   User,
   RechargeOrder,
@@ -49,11 +40,12 @@ import {
   BettingRecord,
   LoginLog,
   ReferralUser,
-} from '../../types.ts';
+} from '../types'; // Adjust path if needed
 
 export const UserManagement: React.FC = () => {
-  const { data: users, update } = useMockData<User>(MOCK_USERS);
-  const toast = useToast();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const addToast = useToastStore((state) => state.addToast);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals State
@@ -74,6 +66,24 @@ export const UserManagement: React.FC = () => {
     remark: '',
   });
 
+  // --- Data Fetching ---
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        // 假设获取用户列表的接口是 /admin/users
+        const response = await api.get<{ list: User[] }>('/admin/users');
+        setUsers(response.list || []);
+      } catch (error: any) {
+        addToast('error', `Failed to fetch users: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [addToast]);
+
   const filteredUsers = users.filter(
     (user) =>
       user.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,10 +94,18 @@ export const UserManagement: React.FC = () => {
 
   // --- Handlers ---
 
+  // Helper to update local state after a successful API call
+  const updateUserInState = (id: string, updates: Partial<User>) => {
+    setUsers(currentUsers =>
+      currentUsers.map(u => (u.id === id ? { ...u, ...updates } : u))
+    );
+  };
+
   const handleAudit = (status: 2 | 4) => {
     if (!auditUser) return;
-    update(auditUser.id, { kycStatus: status });
-    toast.addToast(
+    // TODO: API call to /admin/users/{id}/kyc
+    updateUserInState(auditUser.id, { kycStatus: status });
+    addToast(
       'success',
       status === 4
         ? `KYC approved for ${auditUser.nickname}`
@@ -98,30 +116,34 @@ export const UserManagement: React.FC = () => {
 
   const handleBanUser = () => {
     if (!banModal) return;
-    update(banModal.id, { status: 'banned', banReason });
-    toast.addToast('success', `User ${banModal.nickname} has been banned.`);
+    // TODO: API call to /admin/users/{id}/ban
+    updateUserInState(banModal.id, { status: 'banned', banReason });
+    addToast('success', `User ${banModal.nickname} has been banned.`);
     setBanModal(null);
     setBanReason('');
   };
 
   const handleUnbanUser = (id: string) => {
-    update(id, { status: 'active', banReason: undefined });
-    toast.addToast('success', `User unbanned.`);
+    // TODO: API call to /admin/users/{id}/unban
+    updateUserInState(id, { status: 'active', banReason: undefined });
+    addToast('success', `User unbanned.`);
   };
 
   const handleUpdateProfile = (id: string, updates: Partial<User>) => {
-    update(id, updates);
-    toast.addToast('success', 'User profile updated.');
+    // TODO: API call to /admin/users/{id}
+    updateUserInState(id, updates);
+    addToast('success', 'User profile updated.');
   };
 
   const handleAdjustBalance = () => {
     if (!selectedUser) return;
     const change =
       adjustForm.type === 'add' ? adjustForm.amount : -adjustForm.amount;
-    update(selectedUser.id, {
+    // TODO: API call to /admin/users/{id}/balance
+    updateUserInState(selectedUser.id, {
       realBalance: selectedUser.realBalance + change,
     });
-    toast.addToast('success', `Balance updated successfully.`);
+    addToast('success', `Balance updated successfully.`);
     setAdjustForm({ type: 'add', amount: 0, remark: '' });
   };
 
@@ -147,20 +169,16 @@ export const UserManagement: React.FC = () => {
   };
 
   // --- Mock Data Filtering for Selected User ---
-  const userDeposits = selectedUser
-    ? MOCK_RECHARGE_ORDERS.filter((r) => r.user.id === selectedUser.id)
-    : [];
-  const userWithdrawals = selectedUser
-    ? MOCK_WITHDRAWALS.filter((w) => w.user.id === selectedUser.id)
-    : [];
-  const userTransactions = selectedUser
-    ? MOCK_TRANSACTIONS.filter((t) => t.user.id === selectedUser.id)
-    : [];
+  // TODO: These should be fetched via API when a user is selected
+  const userDeposits: RechargeOrder[] = [];
+  const userWithdrawals: Withdrawal[] = [];
+  const userTransactions: Transaction[] = [];
 
   // These would be filtered by ID in a real app
-  const userBets = MOCK_BETTING_RECORDS;
-  const userLogs = MOCK_LOGIN_LOGS;
-  const userReferrals = MOCK_REFERRALS;
+  // TODO: Fetch these via API
+  const userBets: BettingRecord[] = [];
+  const userLogs: LoginLog[] = [];
+  const userReferrals: ReferralUser[] = [];
 
   return (
     <div className="space-y-6">

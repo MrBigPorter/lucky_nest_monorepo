@@ -5,6 +5,7 @@ import { useToastStore } from '../store/useToastStore';
 import { Button } from '../components/UIComponents';
 import { ShieldCheck, ArrowRight, Lock, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { api } from '../lib/api';
 
 export const Login: React.FC = () => {
   const login = useAuthStore((state) => state.login);
@@ -18,16 +19,26 @@ export const Login: React.FC = () => {
     confirmPassword: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // 假设登录接口是 /auth/admin/login，返回 { accessToken: '...' }
+      const response = await api.post<{ accessToken: string }>('/auth/admin/login', {
+        email: form.email,
+        password: form.password,
+      });
+
+      if (response.accessToken) {
+        login(response.accessToken); // 使用从后端获取的真实 token
+        addToast('success', 'Welcome back, Admin!');
+        navigate('/');
+      }
+    } catch (error: any) {
+      addToast('error', error.message || 'Login failed. Please check your credentials.');
+    } finally {
       setLoading(false);
-      login('admin-token'); // Mock token
-      addToast('success', 'Welcome back, Admin!');
-      navigate('/');
-    }, 1000);
+    }
   };
 
   return (
