@@ -1,14 +1,15 @@
-import {BadRequestException, Injectable} from "@nestjs/common";
-import {PrismaService} from "@api/prisma/prisma.service";
-import {WalletService} from "@api/wallet/wallet.service";
-import {Prisma} from "@prisma/client";
-import {CheckoutDto} from "@api/orders/dto/checkout.dto";
-import {GROUP_STATUS, TREASURE_STATE} from "@lucky/shared/dist/types/treasure";
-import {ORDER_STATUS, PAY_STATUS, REFUND_STATUS} from "@lucky/shared/dist/types/order";
-import {GroupService} from "@api/group/group.service";
-import {ERROR_KEYS} from "@api/common/error-codes.gen";
-import {throwBiz} from "@api/common/exceptions/biz.exception";
-import {OrderItemDto} from "@api/orders/dto/order-item.dto";
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { PrismaService } from "@api/prisma/prisma.service";
+import { WalletService } from "@api/wallet/wallet.service";
+import { Prisma } from "@prisma/client";
+import { CheckoutDto } from "@api/orders/dto/checkout.dto";
+import { GROUP_STATUS, TREASURE_STATE } from "@lucky/shared/dist/types/treasure";
+import { ORDER_STATUS, PAY_STATUS, REFUND_STATUS } from "@lucky/shared/dist/types/order";
+import { GroupService } from "@api/group/group.service";
+import { ERROR_KEYS } from "@api/common/error-codes.gen";
+import { throwBiz } from "@api/common/exceptions/biz.exception";
+import { OrderItemDto } from "@api/orders/dto/order-item.dto";
+import { CouponsService } from "@api/coupons/coupons.service";
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -17,19 +18,17 @@ export class OrderService {
     constructor(
         private prisma: PrismaService,
         private wallet: WalletService,
-        private group: GroupService
+        private group: GroupService,
+        private couponsService: CouponsService,
     ) {
     }
 
-    // Get exchange rate for the order
     private async getExchangeRateTx(tx: Prisma.TransactionClient): Promise<Prisma.Decimal> {
         const cfg = await tx.systemConfig.findFirst({
             where: {key: 'exchange_rate'}, select: {value: true},
         }).catch(() => null as any);
         return D(cfg?.value ? Number(cfg.value) : 10);
     }
-
-    // Generate a unique order number
     private genOrderNo() {
         const d = new Date();
         const p = (n: number, w = 2) => `${n}`.padStart(w, '0');
@@ -38,35 +37,17 @@ export class OrderService {
     }
 
 
-    /**
-     * 下单全流程（同一事务内）：- create order
-     * 1. 校验商品 / 限购 / 库存 - check treasure availability / purchase limit / stock
-     * 2. 计算金额（原价、金币抵扣、优惠券抵扣）- calculate amounts (original, coin discount, coupon discount)
-     * 3. 扣金币 → 扣现金 - deduct coins → deduct cash
-     * 4. 并发安全占库存- safe stock deduction
-     * 5. 创建订单 - create order record
-     * 6. 回填钱包流水 relatedId - fill wallet txn relatedId
-     * 7. 组团（加入/开团）+ 回写 groupId - group purchase (join/create) + update groupId
-     */
-
     async checkOut(userId: string, dto: CheckoutDto) {
-        const {treasureId, addressId, couponId, entries, groupId, paymentMethod} = dto;
-        // Validate entries
+        const { treasureId, addressId, userCouponId, entries, groupId, paymentMethod } = dto;
         if (!entries || entries < 1) {
             throw new BadRequestException('entries must be at least 1');
         }
-        // check payment method
         if (![1, 2].includes(Number(paymentMethod))) throw new BadRequestException('invalid payment method');
 
 
         try {
-            // Transactional operation
             return this.prisma.$transaction(async (tx) => {
-
-                // Get exchange rate
                 const rate = await this.getExchangeRateTx(tx);
-
-                // Get treasure details, validate availability
                 const treasure = await tx.treasure.findUnique({
                     where: {treasureId: treasureId},
                     select: {
@@ -79,29 +60,20 @@ export class OrderService {
                         maxUnitCoins: true,
                     }
                 })
-
-                // Validate treasure
                 if (!treasure || treasure.state !== TREASURE_STATE.ACTIVE) {
                     throw new BadRequestException('treasure not available for purchase');
                 }
                 if (treasure.maxPerBuyQuantity && entries > treasure.maxPerBuyQuantity) {
                     throw new BadRequestException(`cannot purchase more than ${treasure.maxPerBuyQuantity} entries at once`);
                 }
-
-                // available stock check will be done at stock deduction step
                 const available = Number(treasure.seqShelvesQuantity) - Number(treasure.seqBuyQuantity);
-
                 if (available <= 0) {
                     throw new BadRequestException('insufficient treasure stock');
                 }
-
                 if (entries > available) {
                     throw new BadRequestException(`only ${available} entries left in stock`);
                 }
-
-                // maxPerBuyQuantity check
                 const cap = treasure.maxPerBuyQuantity ? Number(treasure.maxPerBuyQuantity) : null;
-
                 if (cap && cap > 0) {
                     const agg = await tx.order.aggregate({
                         _sum: {buyQuantity: true},
@@ -111,16 +83,13 @@ export class OrderService {
                             payStatus: PAY_STATUS.PAID,
                             orderStatus: ORDER_STATUS.PAID,
                             NOT: {
-                                // exclude refunded orders
                                 refundStatus: REFUND_STATUS.REFUNDED
                             }
                         },
                     })
-
                     const alreadyBought = Number(agg._sum.buyQuantity || 0);
                     const leftQuota = cap - alreadyBought;
                     if (leftQuota <= 0) {
-                        // reached purchase limit
                         throw new BadRequestException(`purchase limit of ${cap} entries reached for this treasure`);
                     }
                     if (entries > leftQuota) {
@@ -128,7 +97,6 @@ export class OrderService {
                     }
                 }
 
-                // Calculate total amount
                 const unit = treasure.unitAmount as unknown as Prisma.Decimal;
                 const originalAmount = unit.mul(entries);
 
@@ -136,32 +104,42 @@ export class OrderService {
                 let coinUsed = D(0);
                 let coinAmount = D(0);
 
-                // coin payment
-                if (paymentMethod === 2) {
+                if (paymentMethod === 2) { // Coin payment
                     const w = await this.wallet.ensureWallet(userId, tx);
                     const maxCoinUsable = treasure.maxUnitCoins?.mul(entries) || D(0);
                     const canUseCoins = w.coinBalance.lessThan(maxCoinUsable) ? w.coinBalance : maxCoinUsable;
                     coinUsed = canUseCoins;
                     coinAmount = canUseCoins.div(rate);
-                } else {
-                    // coupon payment
-                    /*if (couponId) {
-                        const c = await tx.userCoupon.findUnique({
-                            where: { id: couponId },
-                            select: { rewardAmount: true, status: true, actEndAt: true },
-                        }).catch(() => null as any);
-                        const valid = c && c.status === 1 && (!c.actEndAt || c.actEndAt.getTime() > Date.now());
-                        couponAmount = valid ? D(c.rewardAmount) : D(0);
-                    }*/
+                } else if (userCouponId) { // Coupon payment (only if not using coins)
+                    const userCoupon = await tx.userCoupon.findFirst({
+                        where: { id: userCouponId, userId: userId, status: 0 },
+                        include: { coupon: true },
+                    });
 
+                    if (!userCoupon) {
+                        throw new BadRequestException('Invalid or used coupon.');
+                    }
+                    if (new Date() > userCoupon.validTo) {
+                        throw new BadRequestException('Coupon has expired.');
+                    }
+                    if (originalAmount.lt(userCoupon.coupon.minPurchaseAmount)) {
+                        throw new BadRequestException('Order amount does not meet coupon minimum purchase requirement.');
+                    }
+
+                    if (userCoupon.coupon.type === 1 || userCoupon.coupon.type === 3) { // 满减 or 固定
+                        couponAmount = D(userCoupon.coupon.value);
+                    } else if (userCoupon.coupon.type === 2) { // 折扣
+                        const discount = originalAmount.mul(userCoupon.coupon.value.div(100));
+                        const maxDiscount = userCoupon.coupon.maxDiscountAmount ? D(userCoupon.coupon.maxDiscountAmount) : null;
+                        couponAmount = (maxDiscount && discount.gt(maxDiscount)) ? maxDiscount : discount;
+                    }
                 }
 
-                const discountAmount = couponAmount.gt(coinAmount) ? couponAmount : coinAmount;
+                const discountAmount = couponAmount.plus(coinAmount); // Total discount
                 const diff = originalAmount.sub(discountAmount);
                 const finalAmount = Prisma.Decimal.max(diff, D(0));
                 const createdTxnIds: string[] = [];
 
-                // deduce wallet coin balance before cash payment
                 const related = {id: null as any, type: 'order' as string};
                 if (paymentMethod == 2 && coinUsed.gt(0)) {
                     const {transactionId: coinTxnId} = await this.wallet.debitCoin({
@@ -182,7 +160,6 @@ export class OrderService {
                     createdTxnIds.push(transactionId);
                 }
 
-                // safe to deduce stock now, ensure enough stock
                 const uqd = await tx.$executeRaw`
                           UPDATE treasures
                              SET seq_buy_quantity = seq_buy_quantity + ${entries}
@@ -190,12 +167,10 @@ export class OrderService {
                              AND state = ${TREASURE_STATE.ACTIVE}
                              AND (seq_shelves_quantity - seq_buy_quantity) >= ${entries}
                         `;
-
                 if (uqd !== 1) {
                     throw new BadRequestException('insufficient treasure stock');
                 }
 
-                // create order record
                 const order = await tx.order.create({
                     data: {
                         orderNo: this.genOrderNo(),
@@ -211,9 +186,9 @@ export class OrderService {
                         orderStatus: ORDER_STATUS.PAID,
                         payStatus: PAY_STATUS.PAID,
                         refundStatus: REFUND_STATUS.NO_REFUND,
-                        paidAt: Date.now().toString(),
+                        paidAt: new Date(),
                         coinUsed,
-                        couponId: couponId || null,
+                        userCouponId: userCouponId || null,
                         groupId: null,
                         isGroupOwner: 0
                     },
@@ -224,7 +199,10 @@ export class OrderService {
                     }
                 });
 
-                // fill the transaction related id
+                if (userCouponId) {
+                    await this.couponsService.useCoupon(userCouponId, order.orderId, tx);
+                }
+
                 await tx.walletTransaction.updateMany({
                     where: {
                         id: {in: createdTxnIds},
@@ -233,12 +211,9 @@ export class OrderService {
                         relatedId: order.orderId,
                     }
                 });
-
-                // open group purchase if groupId is provided
                 const {finalGroupId, isOwner, alreadyInGroup} = await this.group.joinOrCreateGroup(
                     {userId, treasureId, orderId: order.orderId, groupId: groupId,}, tx
                 )
-                // update order with groupId and isOwner
                 await tx.order.update({
                     where: {orderId: order.orderId},
                     data: {
@@ -247,7 +222,6 @@ export class OrderService {
                     }
                 });
 
-                // return order summary
                 return {
                     orderId: order.orderId,
                     orderNo: order.orderNo,
@@ -263,10 +237,8 @@ export class OrderService {
             console.log('checkout error:', e);
             throw e;
         }
-
     }
 
-    // order list
     async listOrders(
         userId: string,
         q:{
@@ -345,13 +317,10 @@ export class OrderService {
             list
         }
     }
-
-    // order details
     async getOrderDetail(userId: string, orderId: string) {
         if (!userId) return throwBiz(ERROR_KEYS.UNAUTHORIZED);
         if (!orderId) return throwBiz(ERROR_KEYS.ORDER_NUMBER_ERROR);
 
-        // check order
         const row = await this.prisma.order.findFirst({
             where: {orderId, userId},
             include: {
@@ -381,7 +350,6 @@ export class OrderService {
 
         if (!row) return throwBiz(ERROR_KEYS.ORDER_NUMBER_OR_THIRD_PARTY_ORDER_NUMBER_ERROR);
 
-        // find related transactions records
         const transactions = await this.prisma.walletTransaction.findMany({
             where: {
                 userId,
@@ -409,8 +377,6 @@ export class OrderService {
         }
 
     }
-
-    // build where condition by status
     private whereByStatus(
          userId: string,
          status: 'all' | 'paid' | 'unpaid' | 'refunded' | 'cancelled',
@@ -436,20 +402,13 @@ export class OrderService {
                 return base;
         }
     }
-
-
-    /**
-     * 构建订单视图 - build order view
-     * @param o 订单对象 - order object
-     * @private
-     */
     private buildOrderView(o: any): OrderItemDto {
         return {
             orderId: o.orderId,
             orderNo: o.orderNo,
             createdAt: o.createdAt.getTime(),
             updatedAt: o.updatedAt.getTime(),
-            paidAt: o.paidAt ? Number(o.paidAt) : null,
+            paidAt: o.paidAt ? o.paidAt.getTime() : null,
 
             buyQuantity: o.buyQuantity,
             treasureId: o.treasureId,
@@ -483,6 +442,4 @@ export class OrderService {
             } : null,
         }
     }
-
-
 }

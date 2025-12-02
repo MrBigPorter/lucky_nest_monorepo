@@ -20,6 +20,7 @@ import {SectionsModule} from "@api/sections/sections.module";
 import {GroupModule} from "@api/group/group.module";
 import {WalletModule} from "@api/wallet/wallet.module";
 import {OrderModule} from "@api/orders/order.module";
+import { CouponsModule } from './coupons/coupons.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -71,7 +72,8 @@ import {OrderModule} from "@api/orders/order.module";
         SectionsModule,
         GroupModule,
         WalletModule,
-        OrderModule
+        OrderModule,
+        CouponsModule
 
 
         // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
