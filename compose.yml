@@ -48,22 +48,6 @@ services:
         condition: service_healthy
     networks: [ app ]
 
-  # admin service, a management ui for backend
-  admin:
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile.dev
-    container_name: lucky-admin-dev
-    ports:
-      - "${ADMIN_PORT}:3000"
-    volumes:
-      - .:/app
-    env_file:
-      - apps/admin/.env.docker
-    depends_on:
-      - backend
-    networks: [ app ]
-
   # mini-shop-admin
   mini-shop-admin:
     build:
