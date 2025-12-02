@@ -1,4 +1,3 @@
-
 export type Language = 'en' | 'zh';
 export type Theme = 'light' | 'dark';
 
@@ -53,8 +52,8 @@ export interface Coupon {
   code: string;
   discount: number;
   type: 'percent' | 'fixed';
-  category: 'general' | 'new_user' | 'referral' | 'threshold'; 
-  minPurchase?: number; 
+  category: 'general' | 'new_user' | 'referral' | 'threshold';
+  minPurchase?: number;
   expiryDate: string;
   usageLimit: number;
   usedCount: number;
@@ -153,8 +152,8 @@ export interface SignInRule {
   id?: string;
   day: number;
   rewardType: 'coin' | 'coupon' | 'cash';
-  amount: number; 
-  couponId?: string; 
+  amount: number;
+  couponId?: string;
 }
 
 export interface GrowthRule {

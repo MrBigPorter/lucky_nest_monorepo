@@ -27,9 +27,11 @@ export const AppContext = createContext<AppContextType>({
 });
 
 interface ToastContextType {
-    addToast: (type: 'success' | 'error' | 'info', message: string) => void;
+  addToast: (type: 'success' | 'error' | 'info', message: string) => void;
 }
-export const ToastContext = createContext<ToastContextType>({ addToast: () => {} });
+export const ToastContext = createContext<ToastContextType>({
+  addToast: () => {},
+});
 
 export const useToast = () => useContext(ToastContext);
 
@@ -41,16 +43,16 @@ const App: React.FC = () => {
     return !!localStorage.getItem('auth_token');
   });
   const [userRole, setUserRole] = useState<UserRole>('viewer');
-  
+
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const addToast = (type: 'success' | 'error' | 'info', message: string) => {
-      const id = Date.now().toString();
-      setToasts(prev => [...prev, { id, type, message }]);
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, message }]);
   };
 
   const removeToast = (id: string) => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   useEffect(() => {
@@ -59,28 +61,40 @@ const App: React.FC = () => {
     root.classList.add(theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  const toggleLang = () => setLang(prev => (prev === 'en' ? 'zh' : 'en'));
-  
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  const toggleLang = () => setLang((prev) => (prev === 'en' ? 'zh' : 'en'));
+
   const login = (token: string) => {
-      localStorage.setItem('auth_token', token);
-      setIsAuthenticated(true);
-      setUserRole('admin'); 
-      addToast('success', 'Welcome back, Admin!');
+    localStorage.setItem('auth_token', token);
+    setIsAuthenticated(true);
+    setUserRole('admin');
+    addToast('success', 'Welcome back, Admin!');
   };
 
   const logout = () => {
-      localStorage.removeItem('auth_token');
-      setIsAuthenticated(false);
-      addToast('info', 'Logged out successfully');
+    localStorage.removeItem('auth_token');
+    setIsAuthenticated(false);
+    addToast('info', 'Logged out successfully');
   };
 
   return (
-    <AppContext.Provider value={{ theme, toggleTheme, lang, toggleLang, isAuthenticated, userRole, login, logout }}>
+    <AppContext.Provider
+      value={{
+        theme,
+        toggleTheme,
+        lang,
+        toggleLang,
+        isAuthenticated,
+        userRole,
+        login,
+        logout,
+      }}
+    >
       <ToastContext.Provider value={{ addToast }}>
         <Router>
-            <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <AppRoutes />
+          <ToastContainer toasts={toasts} removeToast={removeToast} />
+          <AppRoutes />
         </Router>
       </ToastContext.Provider>
     </AppContext.Provider>

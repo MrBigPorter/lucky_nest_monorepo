@@ -5,7 +5,10 @@ import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { UserManagement } from './pages/UserManagement';
-import { ProductManagement, CategoryManagement } from './pages/ProductManagement';
+import {
+  ProductManagement,
+  CategoryManagement,
+} from './pages/ProductManagement';
 import { GroupManagement } from './pages/GroupManagement';
 import { OrderManagement } from './pages/OrderManagement';
 import { Marketing } from './pages/Marketing';
@@ -36,8 +39,11 @@ export const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route 
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <Login />}
+      />
+      <Route
         path="/*"
         element={
           <ProtectedRoute>
@@ -64,7 +70,7 @@ export const AppRoutes: React.FC = () => {
               </Routes>
             </Layout>
           </ProtectedRoute>
-        } 
+        }
       />
     </Routes>
   );

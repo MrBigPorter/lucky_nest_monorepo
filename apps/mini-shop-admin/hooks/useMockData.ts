@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 
 // Generic hook to handle list data with simulated delay
@@ -15,7 +14,7 @@ export function useMockData<T>(initialData: T[]) {
   const add = (item: T) => {
     setLoading(true);
     setTimeout(() => {
-      setData(prev => [...prev, item]);
+      setData((prev) => [...prev, item]);
       setLoading(false);
     }, 500);
   };
@@ -23,16 +22,24 @@ export function useMockData<T>(initialData: T[]) {
   const update = (id: string, updatedItem: Partial<T>) => {
     setLoading(true);
     setTimeout(() => {
-      setData(prev => prev.map((item: any) => item.id === id ? { ...item, ...updatedItem } : item));
+      setData((prev) =>
+        prev.map((item: any) =>
+          item.id === id ? { ...item, ...updatedItem } : item,
+        ),
+      );
       setLoading(false);
     }, 500);
   };
 
   const remove = (id: string, requireConfirm = true) => {
-    if(requireConfirm && !window.confirm('Are you sure you want to delete this item?')) return;
+    if (
+      requireConfirm &&
+      !window.confirm('Are you sure you want to delete this item?')
+    )
+      return;
     setLoading(true);
     setTimeout(() => {
-      setData(prev => prev.filter((item: any) => item.id !== id));
+      setData((prev) => prev.filter((item: any) => item.id !== id));
       setLoading(false);
     }, 500);
   };
