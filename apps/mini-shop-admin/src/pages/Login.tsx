@@ -9,7 +9,7 @@ import { useToastStore } from '../store/useToastStore';
 import { Button, Input } from '../components/UIComponents';
 import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { userApi } from '@/api';
+import { authApi } from '@/api';
 import { LoginResponse } from '@/types';
 
 // 1. 使用 Zod 定义数据结构和校验规则
@@ -25,7 +25,7 @@ type LoginFormInputs = z.infer<typeof loginSchema>;
 
 // 2. 封装 API 请求函数
 async function signIn(data: LoginFormInputs): Promise<LoginResponse> {
-  return await userApi.login(data);
+  return await authApi.login(data);
 }
 
 export const Login: React.FC = () => {

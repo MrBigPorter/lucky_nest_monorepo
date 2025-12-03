@@ -7,10 +7,8 @@ import {Throttle} from '@nestjs/throttler';
 import {CurrentUserId} from "@api/auth/user.decorator";
 import {RefreshTokenDto} from "@api/auth/dto/refresh-token.dto";
 import {TokenResponseDto} from "@api/auth/dto/token-response.dto";
-import {ApiResponseProperty} from "@nestjs/swagger/dist/extra/swagger-shim";
 import {AdminLoginDto} from "@api/auth/dto/admin-login.dto";
 import {ReaIp, UserAgent} from "@api/common/decorators/http.decorators";
-import {AdminLogoutDto} from "@api/auth/dto/admin-logout.dto";
 
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
@@ -60,7 +58,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
-    async logoutAdmin(@Body() dto: AdminLogoutDto,@ReaIp() ip: string, @UserAgent() ua: string){
-        return this.auth.adminLogout(dto, ip, ua)
+    async logoutAdmin(@CurrentUserId() userId: string,@ReaIp() ip: string, @UserAgent() ua: string){
+        return this.auth.adminLogout(userId, ip, ua)
     }
 }

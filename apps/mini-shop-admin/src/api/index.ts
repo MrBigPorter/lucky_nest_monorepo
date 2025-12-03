@@ -17,9 +17,7 @@ import type {
  * 用户相关 API
  */
 export const userApi = {
-  // 登录
-  login: (data: { username: string; password: string }) =>
-    http.post<LoginResponse>('/v1/auth/admin/login', data),
+
 
   // 获取用户列表
   getUsers: (params?: PaginationParams) =>
@@ -129,10 +127,10 @@ export const treasureApi = {
 export const authApi = {
   // 登录
   login: (data: { username: string; password: string }) =>
-    http.post<{ token: string; user: User }>('/auth/login', data),
+    http.post<LoginResponse>('/v1/auth/admin/login', data),
 
   // 登出
-  logout: () => http.post('/auth/logout'),
+  logout: () => http.post('/v1/auth/admin/logout'),
 
   // 刷新 token
   refreshToken: () => http.post<{ token: string }>('/auth/refresh-token'),
