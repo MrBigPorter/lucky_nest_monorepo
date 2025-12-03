@@ -8,7 +8,6 @@ import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 import {CODE_TYPE, LOGIN_METHOD, LOGIN_STATUS, LOGIN_TYPE, TOKEN_ISSUED, VERIFY_STATUS} from "@lucky/shared";
 import {AdminLoginDto} from "@api/auth/dto/admin-login.dto";
-import {AdminLogoutDto} from "@api/auth/dto/admin-logout.dto";
 
 // login validity window: 3 minutes
 const OTP_LOGIN_WINDOW_SECONDS = Number(process.env.OTP_LOGIN_WINDOW_SECONDS ?? 300);
@@ -301,19 +300,28 @@ export class AuthService {
     }
 
     // admin logout
-    async adminLogout({adminId,username}: AdminLogoutDto,ip: string, ua: string){
+    async adminLogout(userId:string,ip: string, ua: string){
+        const admin = await this.prisma.adminUser.findUnique({
+            where:{id:userId},
+            select:{
+                username:true,
+                realName:true,
+                id: true
+            }
+        })
+        console.log('admin==>',admin)
         // record logout
         await this.prisma.adminOperationLog.create({
             data:{
-                adminId,
-                adminName: username,
+                adminId:admin?.id ?? null,
+                adminName: admin?.realName || admin?.username || '',
                 module: 'auth',
                 action: 'logout',
                 requestIp: ip,
                 details:JSON.stringify({msg:'logout success', ip, ua})
             }
         })
-        return true;
+        return {ok:true};
     }
     // 获取用户信息
     async profile(userId: string){
