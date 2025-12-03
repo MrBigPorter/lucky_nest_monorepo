@@ -5,12 +5,22 @@
 
 import http from './http.ts';
 import type { PaginatedResponse, PaginationParams } from './types.ts';
-import type { Product, Category, User, TreasureGroup } from '../../types.ts';
+import type {
+  Product,
+  Category,
+  User,
+  TreasureGroup,
+  LoginResponse,
+} from '@/types';
 
 /**
  * 用户相关 API
  */
 export const userApi = {
+  // 登录
+  login: (data: { username: string; password: string }) =>
+    http.post<LoginResponse>('/v1/auth/admin/login', data),
+
   // 获取用户列表
   getUsers: (params?: PaginationParams) =>
     http.get<PaginatedResponse<User>>('/users', params),
@@ -125,8 +135,7 @@ export const authApi = {
   logout: () => http.post('/auth/logout'),
 
   // 刷新 token
-  refreshToken: () =>
-    http.post<{ token: string }>('/auth/refresh-token'),
+  refreshToken: () => http.post<{ token: string }>('/auth/refresh-token'),
 
   // 修改密码
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
@@ -186,4 +195,3 @@ export default {
   upload: uploadApi,
   stats: statsApi,
 };
-

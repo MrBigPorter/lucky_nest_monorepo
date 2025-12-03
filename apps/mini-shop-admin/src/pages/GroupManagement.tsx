@@ -1,6 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { Users, Timer, ChevronRight, PlayCircle, XCircle } from 'lucide-react';
-import { Card, Button, Badge, Modal, Input } from '../components/UIComponents.tsx';
+import {
+  Card,
+  Button,
+  Badge,
+  Modal,
+  Input,
+} from '../components/UIComponents.tsx';
 import { MOCK_GROUPS, TRANSLATIONS } from '../../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { AppContext } from '../../App.tsx';

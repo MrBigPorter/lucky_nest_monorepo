@@ -1,13 +1,22 @@
 import {PrismaService} from "../prisma/prisma.service";
 import {JwtService} from "@nestjs/jwt";
+import * as bcrypt from "bcryptjs";
+import {Request} from "express";
 import { md5} from "../common/crypto.util";
-import { Injectable } from '@nestjs/common';
+import {BadRequestException, Injectable, UnauthorizedException} from '@nestjs/common';
 import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 import {CODE_TYPE, LOGIN_METHOD, LOGIN_STATUS, LOGIN_TYPE, TOKEN_ISSUED, VERIFY_STATUS} from "@lucky/shared";
+import {AdminLoginDto} from "@api/auth/dto/admin-login.dto";
 
 // login validity window: 3 minutes
 const OTP_LOGIN_WINDOW_SECONDS = Number(process.env.OTP_LOGIN_WINDOW_SECONDS ?? 300);
+
+interface JwtPayload {
+    sub: string;
+    role?: string;
+    type?: 'user' | 'admin';
+}
 
 @Injectable()
 export class AuthService {
@@ -15,12 +24,22 @@ export class AuthService {
     }
 
     // sign access token
-    private async issueToken(user: { id: string;}){
-        const  payload = {sub: user.id};
+    private async issueToken(user: { id: string;role?:string},withRefreshToken:boolean = true){
+        const  payload:JwtPayload = {sub: user.id};
+
+        if (user.role){
+            payload.role = user.role;
+        }
+
+        const expireIn = withRefreshToken ? '30m' : '12h';
 
         const  accessToken = await this.jwt.signAsync(payload, {
-            expiresIn: '30m',
+            expiresIn: expireIn,
         });
+
+        if (!withRefreshToken){
+            return {accessToken}
+        }
 
         const  refreshToken = await this.jwt.signAsync(payload, {
             expiresIn: '7d',
@@ -39,7 +58,7 @@ export class AuthService {
 
         try {
             // check refresh token，if invalid, will throw error to catch block
-            const payload = await this.jwt.verifyAsync<{sub:string}>(refreshToken);
+            const payload = await this.jwt.verifyAsync<JwtPayload>(refreshToken);
             // check user existence
             const user = await this.prisma.user.findUnique({
                 where: {id: payload.sub},
@@ -91,7 +110,7 @@ export class AuthService {
         }
 
         // 交互式事务：原子消费 OTP + upsert 用户 + 日志 + 最后登录时间
-        const  user = await this.prisma.$transaction(async (ctx: { smsVerificationCode: { updateMany: (arg0: { where: { id: any; verifyStatus: 1; }; data: { verifyStatus: 2; }; }) => any; }; })=>{
+        const  user = await this.prisma.$transaction(async (ctx)=>{
             // 1) 原子把 VERIFIED → CONSUMED，只允许成功一次
             const  consumed = await ctx.smsVerificationCode.updateMany({
                 where:{id:opt?.id,verifyStatus:VERIFY_STATUS.VERIFIED},
@@ -103,7 +122,7 @@ export class AuthService {
             }
 
             // 2) 登陆即注册
-            const u = await this.prisma.user.upsert({
+            const u = await ctx.user.upsert({
                 //用 唯一键 phone 查用户。这里要求 User 模型里 phone 是 @unique 或 @id。
                 where: { phone: p },
                 //如果没查到，就新建：
@@ -128,7 +147,7 @@ export class AuthService {
                 }
             })
            // 3) 登录日志
-            this.prisma.userLoginLog.create({
+           await ctx.userLoginLog.create({
                 data: {
                     userId: u.id,
                     loginType: LOGIN_TYPE.OTP,
@@ -144,7 +163,7 @@ export class AuthService {
             });
 
               // 4) 更新最后登录时间
-                this.prisma.user.update({
+            await    ctx.user.update({
                     where: {id: u.id},
                     data: { lastLoginAt: now }
                 })
@@ -168,6 +187,120 @@ export class AuthService {
         };
     }
 
+    // admin login
+    async adminLogin({username,password}:AdminLoginDto, req:Request){
+        const  ip = this.extractIp(req);
+        const uaHeader = req.headers['user-agent'];
+        const ua = Array.isArray(uaHeader) ? uaHeader[0] : uaHeader;
+
+        // check username
+        const  admin = await this.prisma.adminUser.findUnique({
+            where:{username},
+            select: {
+                status: true,
+                password: true,
+                id:true,
+                username: true,
+                realName: true,
+                role: true
+            }
+        })
+
+        const invalid = ()=> new UnauthorizedException('invalid username or password')
+
+        // check user
+        if (!admin) {
+            // mock password ,模拟耗时防止计时攻击-
+             await  bcrypt.compare(password,'$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.60r.wwLs8BHlijROgM3.W9q');
+             await  this.loginAuth(
+                 false,
+                 {
+                     username,
+                     ip,
+                     ua:ua,
+                     adminId:null,
+                 }
+             )
+             throw  invalid();
+        }
+
+        // verify password
+        const isMatch = await bcrypt.compare(password,admin.password);
+        if (!isMatch){
+            await this.loginAuth(
+                false,
+                {
+                    username,
+                    ip,
+                    ua:ua,
+                    adminId:admin.id,
+                }
+            )
+            throw invalid();
+        }
+
+
+        //  密码验证通过后，再检查状态
+        // 这样黑客无法通过错误提示区分 "密码错" 还是 "账号被封"
+        if (admin.status != 1) {
+            await this.loginAuth(
+                false,
+                {
+                    username,
+                    ip,
+                    ua:ua,
+                    adminId:admin.id,
+                }
+            )
+            throw  new BadRequestException('user is disabled, please contact admin');
+        }
+
+
+
+        //login success
+        const result = await this.prisma.$transaction(async (ctx)=>{
+            // update login time
+            const  updatedUser = await ctx.adminUser.update({
+                where: {id:admin.id},
+                data: {
+                    lastLoginAt: new Date(),
+                    lastLoginIp: ip,
+                }
+            })
+
+            // create login log
+            await ctx.adminOperationLog.create({
+                data:{
+                    adminId:admin.id,
+                    adminName: admin.realName || admin.username,
+                    module: 'auth',
+                    action: 'login',
+                    requestIp: ip,
+                    details:JSON.stringify({msg:'login success',ip,ua:ua})
+                }
+            })
+            return updatedUser;
+        })
+
+        // issue token
+        const tokens = await this.issueToken({
+            id: admin.id,
+            role: admin.role
+        },false);
+
+        return {
+            tokens,
+            userInfo:{
+                id: result.id,
+                username: result.username,
+                realName: result.realName,
+                role: result.role,
+                status: result.status,
+                lastLoginAt: result.lastLoginAt ? result.lastLoginAt.getTime() : null,
+            }
+        }
+
+    }
     // 获取用户信息
     async profile(userId: string){
         const  user = await this.prisma.user.findUniqueOrThrow({
@@ -199,7 +332,37 @@ export class AuthService {
             selfExclusionExpireAt: user.selfExclusionExpireAt ? user.selfExclusionExpireAt.getTime() : 0,
         }
     }
+
+    private extractIp(req:Request){
+        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        if (Array.isArray(ip)){
+            ip = ip[0];
+        }else if (typeof ip === 'string' && ip.includes(',')){
+            ip = ip.split(',')[0];
+        }
+        const cleanIp = (ip as string)?.trim() || '';
+        return  cleanIp.substring(0,50);
+    }
+
+    private async loginAuth(
+        ok: boolean,
+        params: { adminId?: string | null; username: string; ip: string; ua?: string }
+    ){
+        await this.prisma.adminOperationLog.create({
+            data: {
+                adminId: params.adminId ?? undefined,
+                adminName: params.username,
+                module: 'auth',
+                action: ok ? 'login' : 'login_fail',
+                requestIp: params.ip,
+                details: JSON.stringify({ msg: ok ? 'login success' : 'login fail', ip: params.ip, ua: params.ua }),
+            }
+        })
+    }
+
 }
+
+
 
 function mapKyc(k: any): number {
     const map: Record<string, number> = { PENDING: 0, REVIEW: 1, REJECTED: 2, APPROVED: 3, VERIFIED: 4 };

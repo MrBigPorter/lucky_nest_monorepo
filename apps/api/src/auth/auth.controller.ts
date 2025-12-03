@@ -8,6 +8,7 @@ import {CurrentUserId} from "@api/auth/user.decorator";
 import {RefreshTokenDto} from "@api/auth/dto/refresh-token.dto";
 import {TokenResponseDto} from "@api/auth/dto/token-response.dto";
 import {ApiResponseProperty} from "@nestjs/swagger/dist/extra/swagger-shim";
+import {AdminLoginDto} from "@api/auth/dto/admin-login.dto";
 
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
@@ -45,5 +46,11 @@ export class AuthController {
     @Get('profile')
     async profile(@CurrentUserId() userId: string) {
         return  this.auth.profile(userId)
+    }
+
+    @Post('admin/login')
+    @HttpCode(HttpStatus.OK)
+    async loginAdmin(@Body() dto: AdminLoginDto, @Req() request: any){
+        return this.auth.adminLogin(dto, request)
     }
 }

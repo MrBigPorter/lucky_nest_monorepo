@@ -3,6 +3,26 @@ export type Theme = 'light' | 'dark';
 
 export type UserRole = 'admin' | 'editor' | 'viewer';
 
+export interface Tokens {
+  accessToken: string;
+  refreshToken?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  roleId: string;
+  roleName: string;
+  lastLoginAt: number;
+  role: string;
+  status: number;
+}
+
+export interface LoginResponse {
+  tokens: Tokens;
+  userInfo: AdminUser;
+}
+
 export interface User {
   id: string;
   nickname: string;
@@ -76,7 +96,7 @@ export interface RechargePlan {
 }
 
 export interface RechargeOrder {
-  id:string;
+  id: string;
   orderNo: string;
   user: { id: string; name: string; avatar: string };
   amount: number;
@@ -273,7 +293,7 @@ export interface AdminUser {
   username: string;
   roleId: string;
   roleName: string;
-  status: 'active' | 'inactive';
+  status: number;
   lastLogin: string;
 }
 

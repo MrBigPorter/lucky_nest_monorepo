@@ -4,7 +4,7 @@ import {ApiBearerAuth, ApiOkResponse, ApiProperty} from "@nestjs/swagger";
 import {JwtAuthGuard} from "@api/auth/jwt.guard";
 import {CurrentUserId} from "@api/auth/user.decorator";
 import {CreditDto} from "@api/wallet/dto/credit.dto";
-import {Html} from "@lucky/admin/.nuxt/components";
+
 import {WalletBalanceResponseDto} from "@api/wallet/dto/wallet-balance.response.dto";
 import {WalletCreditResponseDto} from "@api/wallet/dto/wallet-credit.response.dto";
 import {WalletDebitResponseDto} from "@api/wallet/dto/wallet-debit.response.dto";

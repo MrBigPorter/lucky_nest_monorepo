@@ -63,3 +63,4 @@ export const SEND_STATUS = {
     /** 发送失败 */ FAILED: 3,
 } as const;
 export type SendStatusNum = typeof SEND_STATUS[keyof typeof SEND_STATUS];
+

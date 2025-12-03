@@ -99,6 +99,47 @@ model UserLoginLog {
   @@map("user_login_logs")
 }
 
+model AdminUser {
+  id        String  @id @default(cuid()) @map("admin_id") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+
+  username  String  @unique @map("username") @db.VarChar(50)
+  password  String  @map("password") @db.VarChar(255)
+  realName  String? @map("real_name") @db.VarChar(100)
+  role      String  @default("viewer") @map("role") @db.VarChar(50)
+  status    Int     @default(1) @map("status") @db.SmallInt
+  lastLoginAt DateTime? @map("last_login_at")
+  lastLoginIp String? @map("last_login_ip") @db.VarChar(50)
+
+  operationLogs AdminOperationLog[]
+
+  @@index([status], map: "idx_admin_status")
+  @@map("admin_users")
+}
+
+model AdminOperationLog {
+  id          String  @id @default(cuid()) @map("log_id") @db.VarChar(32)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  adminId     String?  @map("admin_id")
+  adminName   String @map("admin_name") @db.VarChar(100)
+  module      String @map("module") @db.VarChar(100)
+  action      String @map("action") @db.VarChar(100)
+  details     String? @map("details") @db.Text
+  requestIp   String? @map("request_ip") @db.VarChar(50)
+
+  /// avoid cascade delete admin user
+  admin        AdminUser? @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([adminId])
+  @@index([module,action])
+  @@index([createdAt])
+  @@map("admin_operation_logs")
+}
+
 // ======== 第三方登录账户 third part login=========
 model OauthAccount {
   id        String   @id @default(cuid()) @map("oauth_id") @db.VarChar(32)

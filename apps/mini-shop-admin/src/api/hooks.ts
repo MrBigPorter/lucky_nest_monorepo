@@ -5,13 +5,15 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi, categoryApi, userApi, treasureApi } from './index.ts';
-import type { Product, Category, User, TreasureGroup } from '../../types.ts';
+import type { Product, Category, TreasureGroup } from '@/types';
 import type { PaginationParams } from './types.ts';
 
 /**
  * 商品相关 Hooks
  */
-export const useProducts = (params?: PaginationParams & { category?: string }) => {
+export const useProducts = (
+  params?: PaginationParams & { category?: string },
+) => {
   return useQuery({
     queryKey: ['products', params],
     queryFn: () => productApi.getProducts(params),
@@ -165,8 +167,9 @@ export const useUpdateTreasureGroup = () => {
       treasureApi.updateTreasureGroup(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['treasureGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['treasureGroup', variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['treasureGroup', variables.id],
+      });
     },
   });
 };
-

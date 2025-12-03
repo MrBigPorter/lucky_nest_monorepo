@@ -1,4 +1,4 @@
-import React, {useContext, useState} from 'react';
+import React, { useContext, useState } from 'react';
 import {
   AlertTriangle,
   Edit2,
@@ -10,11 +10,25 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react';
-import {Badge, Button, Card, ImageUpload, Input, Modal, Select, Switch, Textarea,} from '../components/UIComponents.tsx';
-import {MOCK_CATEGORIES, MOCK_PRODUCTS, TRANSLATIONS} from '../../constants.ts';
-import {useMockData} from '../hooks/useMockData.ts';
-import {AppContext, useToast} from '../../App.tsx';
-import {Category, Product} from '../../types.ts';
+import {
+  Badge,
+  Button,
+  Card,
+  ImageUpload,
+  Input,
+  Modal,
+  Select,
+  Switch,
+  Textarea,
+} from '../components/UIComponents.tsx';
+import {
+  MOCK_CATEGORIES,
+  MOCK_PRODUCTS,
+  TRANSLATIONS,
+} from '../../constants.ts';
+import { useMockData } from '../hooks/useMockData.ts';
+import { AppContext, useToast } from '../../App.tsx';
+import { Category, Product } from '../../types.ts';
 
 export const ProductManagement: React.FC = () => {
   const { lang } = useContext(AppContext);

@@ -73,22 +73,38 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const getPageInfo = () => {
     // This logic can be improved later with a more scalable solution
     const path = location.pathname;
-    if (path === '/') return { title: t.dashboard, path: ['Overview', 'Dashboard'] };
-    if (path.startsWith('/users')) return { title: t.users, path: ['Management', 'Users'] };
-    if (path.startsWith('/products')) return { title: t.products, path: ['Management', 'Products'] };
-    if (path.startsWith('/groups')) return { title: t.groups, path: ['Management', 'Groups'] };
-    if (path.startsWith('/orders')) return { title: t.orders, path: ['Management', 'Orders'] };
-    if (path.startsWith('/marketing')) return { title: t.marketing, path: ['Operations', 'Marketing'] };
-    if (path.startsWith('/finance')) return { title: t.finance, path: ['System', 'Finance'] };
-    if (path.startsWith('/system')) return { title: t.system, path: ['System', 'Settings'] };
-    if (path.startsWith('/lottery')) return { title: t.lottery, path: ['Operations', 'Lottery'] };
-    if (path.startsWith('/vip')) return { title: t.vip, path: ['Operations', 'VIP'] };
-    if (path.startsWith('/notifications')) return { title: t.notifications, path: ['Operations', 'Notifications'] };
-    if (path.startsWith('/activity')) return { title: t.activity, path: ['Operations', 'Activity'] };
-    if (path.startsWith('/admin-security')) return { title: t.admin_security, path: ['System', 'Security'] };
-    if (path.startsWith('/content')) return { title: t.content_cms, path: ['System', 'Content'] };
-    if (path.startsWith('/analytics')) return { title: t.analytics, path: ['Operations', 'Analytics'] };
-    if (path.startsWith('/service')) return { title: t.service, path: ['Management', 'Service'] };
+    if (path === '/')
+      return { title: t.dashboard, path: ['Overview', 'Dashboard'] };
+    if (path.startsWith('/users'))
+      return { title: t.users, path: ['Management', 'Users'] };
+    if (path.startsWith('/products'))
+      return { title: t.products, path: ['Management', 'Products'] };
+    if (path.startsWith('/groups'))
+      return { title: t.groups, path: ['Management', 'Groups'] };
+    if (path.startsWith('/orders'))
+      return { title: t.orders, path: ['Management', 'Orders'] };
+    if (path.startsWith('/marketing'))
+      return { title: t.marketing, path: ['Operations', 'Marketing'] };
+    if (path.startsWith('/finance'))
+      return { title: t.finance, path: ['System', 'Finance'] };
+    if (path.startsWith('/system'))
+      return { title: t.system, path: ['System', 'Settings'] };
+    if (path.startsWith('/lottery'))
+      return { title: t.lottery, path: ['Operations', 'Lottery'] };
+    if (path.startsWith('/vip'))
+      return { title: t.vip, path: ['Operations', 'VIP'] };
+    if (path.startsWith('/notifications'))
+      return { title: t.notifications, path: ['Operations', 'Notifications'] };
+    if (path.startsWith('/activity'))
+      return { title: t.activity, path: ['Operations', 'Activity'] };
+    if (path.startsWith('/admin-security'))
+      return { title: t.admin_security, path: ['System', 'Security'] };
+    if (path.startsWith('/content'))
+      return { title: t.content_cms, path: ['System', 'Content'] };
+    if (path.startsWith('/analytics'))
+      return { title: t.analytics, path: ['Operations', 'Analytics'] };
+    if (path.startsWith('/service'))
+      return { title: t.service, path: ['Management', 'Service'] };
     return { title: 'LuxeAdmin', path: [] };
   };
 
@@ -127,29 +143,104 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6">
               Management
             </div>
-            <SidebarItem to="/users" icon={<Users size={18} />} label={t.users} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/products" icon={<ShoppingBag size={18} />} label={t.products} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/groups" icon={<Users size={18} />} label={t.groups} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/orders" icon={<Package size={18} />} label={t.orders} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/service" icon={<Headphones size={18} />} label={t.service} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem
+              to="/users"
+              icon={<Users size={18} />}
+              label={t.users}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/products"
+              icon={<ShoppingBag size={18} />}
+              label={t.products}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/groups"
+              icon={<Users size={18} />}
+              label={t.groups}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/orders"
+              icon={<Package size={18} />}
+              label={t.orders}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/service"
+              icon={<Headphones size={18} />}
+              label={t.service}
+              onClick={() => setMobileMenuOpen(false)}
+            />
 
             <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6">
               Operations
             </div>
-            <SidebarItem to="/analytics" icon={<PieChart size={18} />} label={t.analytics} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/lottery" icon={<Zap size={18} />} label={t.lottery} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/activity" icon={<Gift size={18} />} label={t.activity} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/vip" icon={<Crown size={18} />} label={t.vip} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/notifications" icon={<Bell size={18} />} label={t.notifications} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/marketing" icon={<Ticket size={18} />} label={t.marketing} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem
+              to="/analytics"
+              icon={<PieChart size={18} />}
+              label={t.analytics}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/lottery"
+              icon={<Zap size={18} />}
+              label={t.lottery}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/activity"
+              icon={<Gift size={18} />}
+              label={t.activity}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/vip"
+              icon={<Crown size={18} />}
+              label={t.vip}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/notifications"
+              icon={<Bell size={18} />}
+              label={t.notifications}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/marketing"
+              icon={<Ticket size={18} />}
+              label={t.marketing}
+              onClick={() => setMobileMenuOpen(false)}
+            />
 
             <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6">
               System
             </div>
-            <SidebarItem to="/finance" icon={<CreditCard size={18} />} label={t.finance} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/admin-security" icon={<Shield size={18} />} label={t.admin_security} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/content" icon={<FileText size={18} />} label={t.content_cms} onClick={() => setMobileMenuOpen(false)} />
-            <SidebarItem to="/system" icon={<Settings size={18} />} label={t.system} onClick={() => setMobileMenuOpen(false)} />
+            <SidebarItem
+              to="/finance"
+              icon={<CreditCard size={18} />}
+              label={t.finance}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/admin-security"
+              icon={<Shield size={18} />}
+              label={t.admin_security}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/content"
+              icon={<FileText size={18} />}
+              label={t.content_cms}
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <SidebarItem
+              to="/system"
+              icon={<Settings size={18} />}
+              label={t.system}
+              onClick={() => setMobileMenuOpen(false)}
+            />
           </nav>
 
           <div className="pt-4 mt-4 border-t border-gray-100 dark:border-white/5 space-y-1">

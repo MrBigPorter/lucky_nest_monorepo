@@ -1,49 +1,72 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useRequest } from 'ahooks';
 import { useAuthStore } from '../store/useAuthStore';
 import { useToastStore } from '../store/useToastStore';
-import { Button } from '../components/UIComponents';
-import { ShieldCheck, ArrowRight, Lock, Mail } from 'lucide-react';
+import { Button, Input } from '../components/UIComponents';
+import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { api } from '../lib/api';
+import { userApi } from '@/api';
+import { LoginResponse } from '@/types';
+
+// 1. 使用 Zod 定义数据结构和校验规则
+const loginSchema = z.object({
+  username: z.string().min(1, { message: 'Username is required.' }),
+  password: z
+    .string()
+    .min(6, { message: 'Password must be at least 6 characters.' }),
+});
+
+// 从 schema 推断出 TypeScript 类型
+type LoginFormInputs = z.infer<typeof loginSchema>;
+
+// 2. 封装 API 请求函数
+async function signIn(data: LoginFormInputs): Promise<LoginResponse> {
+  return await userApi.login(data);
+}
 
 export const Login: React.FC = () => {
-  const login = useAuthStore((state) => state.login);
-  const addToast = useToastStore((state) => state.addToast);
   const navigate = useNavigate();
-  const [isRegister, setIsRegister] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
+  const loginAction = useAuthStore((state) => state.login);
+  const addToast = useToastStore((state) => state.addToast);
+
+  // 3. 使用 useForm 管理表单状态和校验
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormInputs>({
+    resolver: zodResolver(loginSchema),
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // 假设登录接口是 /auth/admin/login，返回 { accessToken: '...' }
-      const response = await api.post<{ accessToken: string }>('/auth/admin/login', {
-        email: form.email,
-        password: form.password,
-      });
-
-      if (response.accessToken) {
-        login(response.accessToken); // 使用从后端获取的真实 token
+  // 4. 使用 ahooks 的 useRequest 处理 API 请求
+  const { loading, runAsync } = useRequest(signIn, {
+    manual: true, // 手动触发
+    onSuccess: (result) => {
+      if (result.tokens.accessToken) {
+        loginAction(result.tokens.accessToken);
         addToast('success', 'Welcome back, Admin!');
         navigate('/');
+      } else {
+        addToast('error', 'Login failed: No access token received.');
       }
-    } catch (error: any) {
-      addToast('error', error.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
+    },
+    onError: (error) => {
+      // http 客户端已经处理了 toast，这里只做日志记录
+      console.error('Login request failed:', error);
+    },
+  });
+
+  // 5. 表单提交时调用 runAsync
+  const onSubmit = (data: LoginFormInputs) => {
+    runAsync(data);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-950 relative overflow-hidden">
-      {/* Abstract Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <motion.div
           animate={{ scale: [1, 1.1, 1], x: [0, 20, 0] }}
@@ -74,29 +97,27 @@ export const Login: React.FC = () => {
               L
             </motion.div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {isRegister ? 'Create Account' : 'Welcome Back'}
+              Welcome Back
             </h1>
             <p className="text-gray-500 text-sm text-center">
-              {isRegister
-                ? 'Join LuxeAdmin to manage your empire'
-                : 'Enter your credentials to access the dashboard'}
+              Enter your credentials to access the dashboard
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-4">
               <div className="relative group">
-                <Mail
+                <User
                   className="absolute left-3 top-3 text-gray-400 group-focus-within:text-primary-500 transition-colors"
                   size={18}
                 />
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
+                <Input
+                  className="pl-10"
+                  type="text"
+                  placeholder="Username"
+                  autoComplete="username"
+                  error={errors.username?.message}
+                  {...register('username')}
                 />
               </div>
 
@@ -105,66 +126,27 @@ export const Login: React.FC = () => {
                   className="absolute left-3 top-3 text-gray-400 group-focus-within:text-primary-500 transition-colors"
                   size={18}
                 />
-                <input
+                <Input
+                  className="pl-10"
                   type="password"
                   placeholder="Password"
-                  className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                  required
+                  autoComplete="current-password"
+                  error={errors.password?.message}
+                  {...register('password')}
                 />
               </div>
-
-              {isRegister && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="relative group"
-                >
-                  <ShieldCheck
-                    className="absolute left-3 top-3 text-gray-400 group-focus-within:text-primary-500 transition-colors"
-                    size={18}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Confirm Password"
-                    className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
-                    value={form.confirmPassword}
-                    onChange={(e) =>
-                      setForm({ ...form, confirmPassword: e.target.value })
-                    }
-                    required
-                  />
-                </motion.div>
-              )}
             </div>
 
             <Button
               type="submit"
-              className="w-full py-3 text-lg shadow-xl shadow-primary-500/20 group relative overflow-hidden"
+              className="w-full py-3 text-lg shadow-xl shadow-primary-500/20"
               isLoading={loading}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
-                {isRegister ? 'Sign Up' : 'Sign In'} <ArrowRight size={18} />
+                Sign In <ArrowRight size={18} />
               </span>
             </Button>
           </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 text-sm">
-              {isRegister
-                ? 'Already have an account?'
-                : "Don't have an account?"}{' '}
-              <button
-                onClick={() => setIsRegister(!isRegister)}
-                className="text-primary-500 font-semibold hover:text-primary-600 transition-colors"
-              >
-                {isRegister ? 'Log in' : 'Register now'}
-              </button>
-            </p>
-          </div>
         </motion.div>
 
         <motion.div

@@ -4,7 +4,7 @@ import axios, {
   AxiosResponse,
   InternalAxiosRequestConfig,
 } from 'axios';
-import type { ApiResponse, ApiError, RequestConfig } from './types.ts';
+import type { ApiResponse, RequestConfig } from './types.ts';
 
 /**
  * HTTP 请求拦截器
@@ -88,7 +88,7 @@ class HttpClient {
         const { data } = response;
 
         // 统一处理业务状态码
-        if (data.code === 0 || data.code === 200) {
+        if (data.code === 10000 || data.code === 200) {
           return response;
         }
 
@@ -241,9 +241,9 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
-    return this.instance
-      .post<ApiResponse<T>>(url, data, config)
-      .then((res) => res.data.data);
+    return this.instance.post<ApiResponse<T>>(url, data, config).then((res) => {
+      return res.data.data;
+    });
   }
 
   /**
@@ -343,4 +343,3 @@ class HttpClient {
 // 导出单例
 export const http = new HttpClient();
 export default http;
-

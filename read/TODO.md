@@ -84,7 +84,7 @@
 
 ### 步骤 2: 创建 API Client
 
--   [ ] **创建 `src/lib/api.ts` 文件**，使用 `axios` 或 `fetch` 封装一个 API 请求客户端，并配置好请求拦截器（用于自动附加 `Authorization` 头）。
+-   [ ] **创建 `src/api/http.ts` 文件**，使用 `axios` 或 `fetch` 封装一个 API 请求客户端，并配置好请求拦截器（用于自动附加 `Authorization` 头）。
 -   [ ] **创建 `src/services` 目录**，按模块（如 `userService.ts`, `orderService.ts`）封装所有 API 请求函数。
 
 ### 步骤 3: 引入 QueryClientProvider
