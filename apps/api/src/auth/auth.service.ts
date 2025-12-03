@@ -8,6 +8,7 @@ import {throwBiz} from "@api/common/exceptions/biz.exception";
 import {ERROR_KEYS} from "@api/common/error-codes.gen";
 import {CODE_TYPE, LOGIN_METHOD, LOGIN_STATUS, LOGIN_TYPE, TOKEN_ISSUED, VERIFY_STATUS} from "@lucky/shared";
 import {AdminLoginDto} from "@api/auth/dto/admin-login.dto";
+import {AdminLogoutDto} from "@api/auth/dto/admin-logout.dto";
 
 // login validity window: 3 minutes
 const OTP_LOGIN_WINDOW_SECONDS = Number(process.env.OTP_LOGIN_WINDOW_SECONDS ?? 300);
@@ -188,10 +189,7 @@ export class AuthService {
     }
 
     // admin login
-    async adminLogin({username,password}:AdminLoginDto, req:Request){
-        const  ip = this.extractIp(req);
-        const uaHeader = req.headers['user-agent'];
-        const ua = Array.isArray(uaHeader) ? uaHeader[0] : uaHeader;
+    async adminLogin({username,password}:AdminLoginDto,ip: string,ua: string){
 
         // check username
         const  admin = await this.prisma.adminUser.findUnique({
@@ -301,6 +299,22 @@ export class AuthService {
         }
 
     }
+
+    // admin logout
+    async adminLogout({adminId,username}: AdminLogoutDto,ip: string, ua: string){
+        // record logout
+        await this.prisma.adminOperationLog.create({
+            data:{
+                adminId,
+                adminName: username,
+                module: 'auth',
+                action: 'logout',
+                requestIp: ip,
+                details:JSON.stringify({msg:'logout success', ip, ua})
+            }
+        })
+        return true;
+    }
     // 获取用户信息
     async profile(userId: string){
         const  user = await this.prisma.user.findUniqueOrThrow({
@@ -333,15 +347,10 @@ export class AuthService {
         }
     }
 
-    private extractIp(req:Request){
-        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        if (Array.isArray(ip)){
-            ip = ip[0];
-        }else if (typeof ip === 'string' && ip.includes(',')){
-            ip = ip.split(',')[0];
-        }
-        const cleanIp = (ip as string)?.trim() || '';
-        return  cleanIp.substring(0,50);
+
+    private extractUa(req:Request){
+        const uaHeader = req.headers['user-agent'];
+        return Array.isArray(uaHeader) ? uaHeader[0] : uaHeader;
     }
 
     private async loginAuth(
