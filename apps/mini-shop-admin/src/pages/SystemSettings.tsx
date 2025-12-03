@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Settings,
-  Image as ImageIcon,
   Save,
   Upload,
   Trash2,
@@ -12,7 +10,7 @@ import {
   Button,
   Input,
   Switch,
-  Select,
+
 } from '../components/UIComponents.tsx';
 import { MOCK_BANNERS } from '../../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
