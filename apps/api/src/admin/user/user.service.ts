@@ -5,11 +5,14 @@ import {AdminListDto} from "@api/admin/user/dto/admin-list.dto";
 import {CreateAdminDto} from "@api/admin/user/dto/create-admin.dto";
 import {ADMIN_USER_STATUS, Role} from "@lucky/shared";
 import {UpdateAdminDto} from "@api/admin/user/dto/update-admin.dto";
-import * as bcrypt from 'bcryptjs';
+import {PasswordService} from "@api/common/service/password.service";
 
 @Injectable()
 export class UserService {
-    constructor(private prisma: PrismaService) {
+    constructor(
+        private prisma: PrismaService,
+        private passwordService: PasswordService
+    ) {
     }
 
     /**
@@ -75,10 +78,7 @@ export class UserService {
         })
         if (exists)  throw new BadRequestException('username already exists');
 
-        //加密
-        const rawPassword = dto.password || '12345'
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(rawPassword, salt);
+        const hashedPassword = await this.passwordService.hash(dto.password || '123456');
 
         const user = await this.prisma.adminUser.create({
             data:{
@@ -114,9 +114,14 @@ export class UserService {
         if (id === userId && ( dto.status === ADMIN_USER_STATUS.INACTIVE || dto.role)){
             throw new ForbiddenException('cannot update yourself')
         }
+
+        if (dto.password){
+            dto.password = await this.passwordService.hash(dto.password);
+        }
+
         return this.prisma.adminUser.update({
             where:{id},
-            data:dto
+            data: dto
         })
     }
 
