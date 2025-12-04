@@ -21,9 +21,8 @@ import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { AdminLoginDto } from '@api/client/auth/dto/admin-login.dto';
 import { ReaIp, UserAgent } from '@api/common/decorators/http.decorators';
 
-//@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
-//@Controller('auth')：这组接口的前缀是 /auth/*。
-@ApiTags('auth')
+
+@ApiTags('管理员登录')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
