@@ -3,14 +3,15 @@
  * 使用方法：根据后端接口定义具体的 API 方法
  */
 
-import http from './http.ts';
+import http from './http';
 import type { PaginatedResponse, PaginationParams } from './types.ts';
 import type {
   Product,
   Category,
   User,
   TreasureGroup,
-  LoginResponse, AdminUser,
+  LoginResponse,
+  AdminUser,
 } from '@/types';
 
 /**

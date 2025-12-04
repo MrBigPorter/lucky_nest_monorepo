@@ -69,3 +69,9 @@ export enum Role {
   EDITOR = 'EDITOR',           // 编辑
   VIEWER = 'VIEWER',           // 观察者
 }
+
+
+export const ADMIN_USER_STATUS = {
+  ACTIVE: 1, // 启用
+  INACTIVE: 0, //禁用
+} as const

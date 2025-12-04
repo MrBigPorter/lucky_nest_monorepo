@@ -58,8 +58,6 @@ services:
       - "${MINI_SHOP_ADMIN_PORT}:4000"
     volumes:
       - .:/app
-    env_file:
-      - apps/mini-shop-admin/.env.docker
     depends_on:
       - backend
     networks: [ app ]
