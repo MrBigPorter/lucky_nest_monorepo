@@ -1,11 +1,10 @@
-
 ## TL;DR｜三步启动
 
-   ```bash
-   docker compose up -d --build
-   ```
+```bash
+docker compose up -d --build
+```
 
-   访问：`http://localhost:4000/api/health`（健康），`/docs`（Swagger，仅开发/预发） ，pgAdmin：`http://localhost:5050`
+访问：`http://localhost:4000/api/health`（健康），`/docs`（Swagger，仅开发/预发） ，pgAdmin：`http://localhost:5050`
 
 ---
 
@@ -29,7 +28,7 @@
 ## compose.yml（根目录，完整复制）
 
 ```yaml
-version: "3.9"
+version: '3.9'
 
 services:
   db:
@@ -40,11 +39,11 @@ services:
       POSTGRES_PASSWORD: dev
       POSTGRES_DB: app
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev"]
+      test: ['CMD-SHELL', 'pg_isready -U dev']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -60,9 +59,10 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "4000:4000"
+      - '4000:4000'
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/health"]
+      test:
+        ['CMD', 'wget', '--spider', '-q', 'http://localhost:4000/api/health']
       interval: 10s
       timeout: 3s
       retries: 10
@@ -74,7 +74,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
-      - "5050:80"
+      - '5050:80'
     depends_on:
       - db
 
@@ -217,8 +217,8 @@ yarn dlx prisma db seed
 
 ### 生产/容器
 
-* `entrypoint.sh` 已在启动时执行 `npx prisma migrate deploy`（幂等）；
-* 如需执行种子，将 `apps/api/.env.docker` 中 `SEED=true`（仅建议在开发/预发）。
+- `entrypoint.sh` 已在启动时执行 `npx prisma migrate deploy`（幂等）；
+- 如需执行种子，将 `apps/api/.env.docker` 中 `SEED=true`（仅建议在开发/预发）。
 
 ---
 
@@ -226,12 +226,11 @@ yarn dlx prisma db seed
 
 1. 打开 [http://localhost:5050](http://localhost:5050)（默认：`admin@example.com` / `admin123`）。
 2. Add New Server → 连接参数：
-
-    * **Name**: `local-db`
-    * **Host**: `db`
-    * **Port**: `5432`
-    * **Username**: `dev`
-    * **Password**: `dev`
+   - **Name**: `local-db`
+   - **Host**: `db`
+   - **Port**: `5432`
+   - **Username**: `dev`
+   - **Password**: `dev`
 
 ---
 
@@ -239,39 +238,39 @@ yarn dlx prisma db seed
 
 ### Prisma P1001：无法连接数据库
 
-* `DATABASE_URL` 里的主机应为 `db`（不是 `localhost`）。
-* 查看 DB 容器：`docker compose logs -f db`，等待 `ready to accept connections`。
-* Compose 里 `depends_on.db.condition=service_healthy` 是否存在。
+- `DATABASE_URL` 里的主机应为 `db`（不是 `localhost`）。
+- 查看 DB 容器：`docker compose logs -f db`，等待 `ready to accept connections`。
+- Compose 里 `depends_on.db.condition=service_healthy` 是否存在。
 
 ### 健康检查失败（API）
 
-* 确认你的应用有 `GET /api/health` 路由；
-* 如端口修改，更新 compose 的 `"4000:4000"` 映射与健康检查 URL。
+- 确认你的应用有 `GET /api/health` 路由；
+- 如端口修改，更新 compose 的 `"4000:4000"` 映射与健康检查 URL。
 
 ### 迁移未执行
 
-* 看 API 日志中是否出现 `prisma migrate deploy`；
-* 确认 `Dockerfile` 有 `COPY apps/api/prisma ./prisma`；
-* 确认迁移文件已提交到仓库。
+- 看 API 日志中是否出现 `prisma migrate deploy`；
+- 确认 `Dockerfile` 有 `COPY apps/api/prisma ./prisma`；
+- 确认迁移文件已提交到仓库。
 
 ### 端口占用
 
-* 修改 `compose.yml` 中的端口映射，例如：`"4100:4000"`、`"55432:5432"`。
+- 修改 `compose.yml` 中的端口映射，例如：`"4100:4000"`、`"55432:5432"`。
 
 ### pgAdmin 连接失败
 
-* Host 一定填 `db`；若仍失败，查看 `db` 容器日志和健康状态。
+- Host 一定填 `db`；若仍失败，查看 `db` 容器日志和健康状态。
 
 ---
 
 ## 生产加固（上线前必做）
 
-* **关闭或保护 Swagger**：生产环境禁用 `/docs` 或加 Basic Auth，仅内网可访问。
-* **JWT**：使用强随机 `JWT_SECRET`，合理设置 `JWT_EXPIRES_IN`；考虑加入 Refresh Token 旋转/失效管理。
-* **CORS**：严格白名单，多域用逗号分隔；不要在 `credentials:true` 下使用 `*`。
-* **TLS**：通过反向代理（Nginx/Ingress/Cloudflare）终止 TLS；容器仅暴露内网端口。
-* **日志**：输出结构化 JSON；为探针准备 `/api/health`（liveness/readiness）。
-* **数据库**：只暴露内网；启用自动备份；必要时使用连接池（pgBouncer）。
+- **关闭或保护 Swagger**：生产环境禁用 `/docs` 或加 Basic Auth，仅内网可访问。
+- **JWT**：使用强随机 `JWT_SECRET`，合理设置 `JWT_EXPIRES_IN`；考虑加入 Refresh Token 旋转/失效管理。
+- **CORS**：严格白名单，多域用逗号分隔；不要在 `credentials:true` 下使用 `*`。
+- **TLS**：通过反向代理（Nginx/Ingress/Cloudflare）终止 TLS；容器仅暴露内网端口。
+- **日志**：输出结构化 JSON；为探针准备 `/api/health`（liveness/readiness）。
+- **数据库**：只暴露内网；启用自动备份；必要时使用连接池（pgBouncer）。
 
 ---
 
@@ -293,99 +292,125 @@ docker compose up -d --no-deps --build api
 
 ## Monorepo 运行时依赖说明（如有 @lucky/shared 运行时代码）
 
-* 本 Dockerfile 默认假设 `@lucky/shared` **仅用于类型**（编译期）。
-* 若 `api` 在运行时也需要它：
+- 本 Dockerfile 默认假设 `@lucky/shared` **仅用于类型**（编译期）。
+- 若 `api` 在运行时也需要它：
+  1. 在 Dockerfile 的 build 阶段 `COPY packages/shared ./packages/shared`；
+  2. 在构建命令前执行 **工作区聚焦安装**（Yarn）：
 
-    1. 在 Dockerfile 的 build 阶段 `COPY packages/shared ./packages/shared`；
-    2. 在构建命令前执行 **工作区聚焦安装**（Yarn）：
+     ```bash
+     corepack enable && corepack prepare yarn@4.4.0 --activate \
+       && yarn workspaces focus @lucky/api --production
+     ```
 
-       ```bash
-       corepack enable && corepack prepare yarn@4.4.0 --activate \
-         && yarn workspaces focus @lucky/api --production
-       ```
-    3. 或者将 `@lucky/shared` 预编译为 JS 并发布到私有 npm，然后在 `apps/api/package.json` 直接依赖它的版本号。
-
+  3. 或者将 `@lucky/shared` 预编译为 JS 并发布到私有 npm，然后在 `apps/api/package.json` 直接依赖它的版本号。
 
 # 1. 看容器
-docker ps                 # 正在跑
-docker ps -a              # 包括停掉的
+
+docker ps # 正在跑
+docker ps -a # 包括停掉的
 
 # 2. 看镜像
+
 docker images
 
 # 3. 运行一次试试（-p 映射端口，--name 起名字）
+
 docker run -d --name web -p 8080:80 nginx
 
 # 4. 进容器里（交互）
+
 docker exec — it web sh
 
 # 5. 看日志（-f 持续输出）
+
 docker logs -f web
 
 # 6. 停/删容器（-f 强制）
+
 docker stop web && docker rm web
 
 # 7. 构建镜像（-t 打标签）
+
 docker build -t myapp:dev .
 
 # 8. Compose 起/停（-d 后台；down -v 还会把匿名卷删掉）
+
 # 先校验 YAML 是否正确
+
 docker compose config
+
 # 重建并启动所有
+
 docker compose up -d --build
 
 # 开发（db + api-dev + pgadmin）
+
 docker compose --profile dev up -d
 
 # 生产（db + api）
+
 docker compose --profile prod up -d --build
 
 # 看日志
+
 docker compose logs -f api
 
 # 重新打镜像（避免旧缓存）
+
 docker compose build --no-cache api
 
 # 重新创建容器（即使镜像/配置没变）
+
 docker compose up -d --force-recreate api
 
 # 看镜像/容器/卷/构建缓存的总体占用
+
 docker system df
 
 # 专看构建缓存（BuildKit）
+
 docker builder du
 
 # 删掉“悬空镜像层”（没有标签的旧层）
+
 docker image prune -f
 
 # 清理构建缓存（保留最近常用的，默认会询问，加 -f 直接执行）
+
 docker builder prune -f
 
 # 极限清：包含没在用的卷（例如历史 DB 数据卷也会删）
+
 docker system prune -af --volumes
 
-
-
 # 端口占用
+
 # 找出谁占了 5432
+
 docker ps --format '{{.ID}}\t{{.Names}}\t{{.Ports}}' | grep '5432->'
 
 # 停掉并删掉它（把 <ID> 换成上一步输出的容器 ID）
+
 docker stop <ID> && docker rm <ID>
+
 # 看到了 ID：bd8e67926dd2
+
 docker stop bd8e67926dd2
-docker rm bd8e67926dd2   # 只是删容器，不删数据卷
+docker rm bd8e67926dd2 # 只是删容器，不删数据卷
+
 # 再起我们的栈
+
 docker compose up -d
 
 # 装 → 产 → 跑；先依赖，后源码；先生成，再剪裁；脚本先迁移，再开服。
-1.	两段式：builder“装+编译”，runner“精简跑”。
-2.	先依赖后源码：提升缓存命中。
-3.	focus：只装 @lucky/api 需要的依赖（要有 workspace-tools 插件）。
-4.	build + prisma generate：先产出 dist/ 和 Prisma Client。
-5.	production 剪裁：workspaces focus --production 产出最小运行依赖。
-6.	entrypoint：先迁移再启动服务。
+
+1. 两段式：builder“装+编译”，runner“精简跑”。
+2. 先依赖后源码：提升缓存命中。
+3. focus：只装 @lucky/api 需要的依赖（要有 workspace-tools 插件）。
+4. build + prisma generate：先产出 dist/ 和 Prisma Client。
+5. production 剪裁：workspaces focus --production 产出最小运行依赖。
+6. entrypoint：先迁移再启动服务。
 7. 口诀再来一遍：装 → 产 → 跑；先依赖，后源码；先生成，再剪裁；脚本先迁移，再开服。
    Dockerfile 六件套：FROM / WORKDIR / COPY / RUN / ENV / CMD(或ENTRYPOINT)
----
 
+---

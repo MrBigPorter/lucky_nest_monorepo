@@ -22,7 +22,7 @@ import {
   MOCK_ADMIN_USERS,
   MOCK_ROLES,
   MOCK_OPERATION_LOGS,
-} from '../../constants.ts';
+} from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { AdminUser, Role, OperationLog } from '../../types.ts';
 

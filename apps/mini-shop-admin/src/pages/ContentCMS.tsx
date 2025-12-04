@@ -16,7 +16,7 @@ import {
   Badge,
   Select,
 } from '../components/UIComponents.tsx';
-import { MOCK_ARTICLES, MOCK_FAQS } from '../../constants.ts';
+import { MOCK_ARTICLES, MOCK_FAQS } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { Article, Faq } from '../../types.ts';
 

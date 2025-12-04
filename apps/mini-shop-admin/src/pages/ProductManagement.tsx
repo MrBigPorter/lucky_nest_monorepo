@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import {
   AlertTriangle,
   Edit2,
@@ -20,24 +20,20 @@ import {
   Select,
   Switch,
   Textarea,
-} from '../components/UIComponents.tsx';
-import {
-  MOCK_CATEGORIES,
-  MOCK_PRODUCTS,
-  TRANSLATIONS,
-} from '../../constants.ts';
-import { useMockData } from '../hooks/useMockData.ts';
-import { AppContext, useToast } from '../../App.tsx';
-import { Category, Product } from '../../types.ts';
+} from '@/components/UIComponents';
+import { MOCK_CATEGORIES, MOCK_PRODUCTS, TRANSLATIONS } from '@/constants';
+import { useMockData } from '@/hooks/useMockData';
+import { useAppStore } from '@/store/useAppStore';
+import { useToastStore } from '@/store/useToastStore';
+import { Category, Product } from '@/types';
 
 export const ProductManagement: React.FC = () => {
-  const { lang } = useContext(AppContext);
+  const { lang } = useAppStore();
   const t = TRANSLATIONS[lang];
-  const toast = useToast();
+  const addToast = useToastStore((state) => state.addToast);
 
   const {
     data: products,
-    loading,
     add,
     remove,
     update,
@@ -46,11 +42,7 @@ export const ProductManagement: React.FC = () => {
   const [editingItem, setEditingItem] = useState<Partial<Product> | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
-
-  // Drag and Drop state
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-
-  // Delete State
   const [deleteItem, setDeleteItem] = useState<Product | null>(null);
 
   const defaultProduct: Partial<Product> = {
@@ -71,7 +63,6 @@ export const ProductManagement: React.FC = () => {
   };
   const [formData, setFormData] = useState<Partial<Product>>(defaultProduct);
 
-  // Profit Calc
   const totalRevenue = (formData.price || 0) * (formData.totalShares || 0);
   const profit = totalRevenue - (formData.cost || 0);
   const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
@@ -90,7 +81,7 @@ export const ProductManagement: React.FC = () => {
   const handleSave = () => {
     if (editingItem && editingItem.id) {
       update(editingItem.id, formData);
-      toast.addToast('success', 'Product updated successfully');
+      addToast('success', 'Product updated successfully');
     } else {
       add({
         ...formData,
@@ -98,22 +89,21 @@ export const ProductManagement: React.FC = () => {
         seq: `TRE${Date.now()}`,
         sortOrder: products.length + 1,
       } as Product);
-      toast.addToast('success', 'Product created successfully');
+      addToast('success', 'Product created successfully');
     }
     setIsModalOpen(false);
   };
 
-  // Safe Delete Logic
   const handleDeleteClick = (product: Product) => {
     if (product.status === 'active') {
-      toast.addToast(
+      addToast(
         'error',
         'Action Blocked: Cannot delete an active product. Please deactivate it first.',
       );
       return;
     }
     if (product.soldShares > 0) {
-      toast.addToast(
+      addToast(
         'error',
         `Action Blocked: This product has sold ${product.soldShares} shares. Archive it instead.`,
       );
@@ -125,12 +115,11 @@ export const ProductManagement: React.FC = () => {
   const confirmDelete = () => {
     if (deleteItem) {
       remove(deleteItem.id, false); // Skip native confirm
-      toast.addToast('success', 'Product deleted permanently.');
+      addToast('success', 'Product deleted permanently.');
       setDeleteItem(null);
     }
   };
 
-  // DnD Handlers
   const handleDragStart = (index: number) => {
     setDraggedItemIndex(index);
   };
@@ -337,248 +326,6 @@ export const ProductManagement: React.FC = () => {
           </table>
         </div>
       </Card>
-
-      {/* CREATE/EDIT MODAL */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingItem ? 'Edit Product' : 'New Product'}
-        size="lg"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-2">
-            <ImageUpload
-              label="Product Image (Cover)"
-              value={formData.image || ''}
-              onChange={(val) => setFormData({ ...formData, image: val })}
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <Input
-              label="Product Name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Input
-                label="Price per Share (₱)"
-                type="number"
-                value={formData.price}
-                onChange={(e) =>
-                  setFormData({ ...formData, price: Number(e.target.value) })
-                }
-              />
-              <div className="h-4"></div>
-              <Input
-                label="Cost Price (₱)"
-                type="number"
-                value={formData.cost}
-                onChange={(e) =>
-                  setFormData({ ...formData, cost: Number(e.target.value) })
-                }
-              />
-            </div>
-
-            {/* Profit Calculator Card */}
-            <div
-              className={`rounded-xl p-4 border flex flex-col justify-center transition-colors ${profit >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'}`}
-            >
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
-                Estimated Profit
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-2xl font-bold ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
-                >
-                  {profit >= 0 ? '+' : ''}₱{profit.toLocaleString()}
-                </span>
-                {profit >= 0 ? (
-                  <TrendingUp size={20} className="text-emerald-500" />
-                ) : (
-                  <TrendingDown size={20} className="text-red-500" />
-                )}
-              </div>
-              <div className="text-sm mt-2 flex justify-between text-gray-600 dark:text-gray-300">
-                <span>
-                  Margin:{' '}
-                  <span className="font-bold">{margin.toFixed(1)}%</span>
-                </span>
-                <span>Rev: ₱{totalRevenue.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          <Input
-            label="Total Shares"
-            type="number"
-            value={formData.totalShares}
-            onChange={(e) =>
-              setFormData({ ...formData, totalShares: Number(e.target.value) })
-            }
-          />
-
-          <Select
-            label="Category"
-            value={formData.category}
-            onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
-            }
-            options={categories.map((c) => ({ label: c, value: c }))}
-          />
-
-          <Select
-            label="Lottery Mode"
-            value={formData.lotteryMode}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                lotteryMode: Number(e.target.value) as 1 | 2,
-              })
-            }
-            options={[
-              { label: 'Sold Out Mode (Auto)', value: 1 },
-              { label: 'Timed Mode (Fixed)', value: 2 },
-            ]}
-          />
-
-          {formData.lotteryMode === 2 && (
-            <Input
-              label="Draw Time"
-              type="datetime-local"
-              value={formData.lotteryTime}
-              onChange={(e) =>
-                setFormData({ ...formData, lotteryTime: e.target.value })
-              }
-            />
-          )}
-
-          <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100 dark:border-white/5">
-            <h4 className="font-bold text-gray-900 dark:text-white">
-              Content & Risk Control
-            </h4>
-            <Textarea
-              label="Product Description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              placeholder="Describe the product details, specs, etc."
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Max Purchase Limit (0 = Unlimited)"
-                type="number"
-                value={formData.purchaseLimit}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    purchaseLimit: Number(e.target.value),
-                  })
-                }
-              />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Marketing Tags
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {commonTags.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-2 py-1 rounded text-xs border transition-all ${formData.tags?.includes(tag) ? 'bg-primary-500 text-white border-primary-500' : 'bg-gray-100 dark:bg-white/5 text-gray-500 border-transparent hover:border-gray-300'}`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <RotateCcw size={16} className="text-gray-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Auto Restart Next Round
-                </span>
-              </div>
-              <Switch
-                checked={!!formData.autoRestart}
-                onChange={(c) => setFormData({ ...formData, autoRestart: c })}
-              />
-            </div>
-          </div>
-
-          <div className="md:col-span-2 flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5 h-[74px] mt-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Product Status
-            </span>
-            <div className="flex items-center gap-3">
-              <span
-                className={`text-xs ${formData.status === 'active' ? 'text-primary-500 font-bold' : 'text-gray-400'}`}
-              >
-                {formData.status?.toUpperCase()}
-              </span>
-              <Switch
-                checked={formData.status === 'active'}
-                onChange={(checked) =>
-                  setFormData({
-                    ...formData,
-                    status: checked ? 'active' : 'draft',
-                  })
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100 dark:border-white/5">
-          <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
-            {t.cancel}
-          </Button>
-          <Button onClick={handleSave}>{t.save}</Button>
-        </div>
-      </Modal>
-
-      {/* DELETE CONFIRMATION MODAL */}
-      <Modal
-        isOpen={!!deleteItem}
-        onClose={() => setDeleteItem(null)}
-        title="Confirm Deletion"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl flex items-start gap-3 border border-red-100 dark:border-red-900/30">
-            <AlertTriangle
-              className="text-red-600 dark:text-red-400 shrink-0"
-              size={24}
-            />
-            <div>
-              <h4 className="font-bold text-red-900 dark:text-red-400">
-                Danger Zone
-              </h4>
-              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                You are about to delete <strong>{deleteItem?.name}</strong>.
-                This action is irreversible.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setDeleteItem(null)}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={confirmDelete}>
-              Delete Permanently
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };
@@ -586,7 +333,6 @@ export const ProductManagement: React.FC = () => {
 export const CategoryManagement: React.FC = () => {
   const {
     data: categories,
-    loading,
     add,
     remove,
     update,

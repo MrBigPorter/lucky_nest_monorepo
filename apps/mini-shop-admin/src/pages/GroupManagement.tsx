@@ -1,25 +1,15 @@
-import React, { useState, useContext } from 'react';
-import { Users, Timer, ChevronRight, PlayCircle, XCircle } from 'lucide-react';
-import {
-  Card,
-  Button,
-  Badge,
-  Modal,
-  Input,
-} from '../components/UIComponents.tsx';
-import { MOCK_GROUPS, TRANSLATIONS } from '../../constants.ts';
-import { useMockData } from '../hooks/useMockData.ts';
-import { AppContext } from '../../App.tsx';
-import { TreasureGroup } from '../../types.ts';
+import React, { useState } from 'react';
+import { Users, Timer } from 'lucide-react';
+import { Card, Button, Badge } from '@/components/UIComponents';
+import { MOCK_GROUPS, TRANSLATIONS } from '@/constants';
+import { useMockData } from '@/hooks/useMockData';
+import { useAppStore } from '@/store/useAppStore';
+import { TreasureGroup } from '@/types';
 
 export const GroupManagement: React.FC = () => {
-  const { lang } = useContext(AppContext);
+  const { lang } = useAppStore();
   const t = TRANSLATIONS[lang];
   const { data: groups, update } = useMockData<TreasureGroup>(MOCK_GROUPS);
-
-  const [selectedGroup, setSelectedGroup] = useState<TreasureGroup | null>(
-    null,
-  );
 
   const handleStatusChange = (id: string, status: 'completed' | 'failed') => {
     update(id, { status });

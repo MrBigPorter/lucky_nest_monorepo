@@ -8,7 +8,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { Card, Button, Badge } from '../components/UIComponents.tsx';
-import { MOCK_LOTTERY_DRAWS } from '../../constants.ts';
+import { MOCK_LOTTERY_DRAWS } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { LotteryDraw } from '../../types.ts';
 

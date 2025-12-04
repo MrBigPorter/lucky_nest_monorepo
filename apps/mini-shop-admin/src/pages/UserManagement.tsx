@@ -2,19 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   ShieldCheck,
-  ShieldAlert,
-  MoreVertical,
   Ban,
   CheckCircle,
-  XCircle,
-  FileText,
-  DollarSign,
-  ArrowUpRight,
-  Edit3,
   Crown,
+  Edit3,
 } from 'lucide-react';
-import { Card, Button, Badge } from '../components/UIComponents';
-import { useToastStore } from '../store/useToastStore';
+import { Card, Button, Badge } from '@/components/UIComponents';
+import { useToastStore } from '@/store/useToastStore';
 import {
   User,
   RechargeOrder,
@@ -23,8 +17,8 @@ import {
   BettingRecord,
   LoginLog,
   ReferralUser,
-} from '../types';
-import http from '@/api/http.ts';
+} from '@/types';
+import { http } from '@/api/http';
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -32,31 +26,17 @@ export const UserManagement: React.FC = () => {
   const addToast = useToastStore((state) => state.addToast);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Modals State
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    'profile' | 'finance' | 'gameplay' | 'team' | 'security'
-  >('profile');
   const [banModal, setBanModal] = useState<User | null>(null);
   const [banReason, setBanReason] = useState('');
-
-  // KYC Audit Modal
   const [auditUser, setAuditUser] = useState<User | null>(null);
 
-  // Manual Adjustment (Now inside the detail view, but kept separate logic for clarity)
-  const [adjustForm, setAdjustForm] = useState({
-    type: 'add',
-    amount: 0,
-    remark: '',
-  });
-
-  // --- Data Fetching ---
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const response = await http.get<{ list: User[] }>('/users'); // Assuming the endpoint is /users
-        setUsers(response.data.list || []);
+        const response = await http.get<{ list: User[] }>('/users');
+        setUsers(response.list || []);
       } catch (error: any) {
         addToast('error', `Failed to fetch users: ${error.message}`);
       } finally {
@@ -75,8 +55,6 @@ export const UserManagement: React.FC = () => {
         user.email.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
-  // --- Handlers ---
-
   const updateUserInState = (id: string, updates: Partial<User>) => {
     setUsers((currentUsers) =>
       currentUsers.map((u) => (u.id === id ? { ...u, ...updates } : u)),
@@ -85,7 +63,6 @@ export const UserManagement: React.FC = () => {
 
   const handleAudit = (status: 2 | 4) => {
     if (!auditUser) return;
-    // TODO: API call to /admin/users/{id}/kyc
     updateUserInState(auditUser.id, { kycStatus: status });
     addToast(
       'success',
@@ -98,7 +75,6 @@ export const UserManagement: React.FC = () => {
 
   const handleBanUser = () => {
     if (!banModal) return;
-    // TODO: API call to /admin/users/{id}/ban
     updateUserInState(banModal.id, { status: 'banned', banReason });
     addToast('success', `User ${banModal.nickname} has been banned.`);
     setBanModal(null);
@@ -106,27 +82,8 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleUnbanUser = (id: string) => {
-    // TODO: API call to /admin/users/{id}/unban
     updateUserInState(id, { status: 'active', banReason: undefined });
     addToast('success', `User unbanned.`);
-  };
-
-  const handleUpdateProfile = (id: string, updates: Partial<User>) => {
-    // TODO: API call to /admin/users/{id}
-    updateUserInState(id, updates);
-    addToast('success', 'User profile updated.');
-  };
-
-  const handleAdjustBalance = () => {
-    if (!selectedUser) return;
-    const change =
-      adjustForm.type === 'add' ? adjustForm.amount : -adjustForm.amount;
-    // TODO: API call to /admin/users/{id}/balance
-    updateUserInState(selectedUser.id, {
-      realBalance: selectedUser.realBalance + change,
-    });
-    addToast('success', `Balance updated successfully.`);
-    setAdjustForm({ type: 'add', amount: 0, remark: '' });
   };
 
   const getKycBadge = (status: number) => {
@@ -149,13 +106,6 @@ export const UserManagement: React.FC = () => {
     if (level === 1) return 'border-slate-300 text-slate-500';
     return 'border-transparent text-gray-400';
   };
-
-  const userDeposits: RechargeOrder[] = [];
-  const userWithdrawals: Withdrawal[] = [];
-  const userTransactions: Transaction[] = [];
-  const userBets: BettingRecord[] = [];
-  const userLogs: LoginLog[] = [];
-  const userReferrals: ReferralUser[] = [];
 
   return (
     <div className="space-y-6">

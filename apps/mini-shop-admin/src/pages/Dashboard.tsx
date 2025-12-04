@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import {
   AreaChart,
   Area,
@@ -11,9 +11,9 @@ import {
   Bar,
 } from 'recharts';
 import { DollarSign, Users, ShoppingCart, AlertCircle } from 'lucide-react';
-import { Card, Badge } from '../components/UIComponents.tsx';
-import { MOCK_STATS, MOCK_ORDERS, TRANSLATIONS } from '../../constants.ts';
-import { AppContext } from '../../App.tsx';
+import { Card, Badge } from '@/components/UIComponents';
+import { MOCK_STATS, MOCK_ORDERS, TRANSLATIONS } from '@/constants';
+import { useAppStore } from '@/store/useAppStore';
 
 const StatCard: React.FC<{
   title: string;
@@ -63,7 +63,7 @@ const data = [
 ];
 
 export const Dashboard: React.FC = () => {
-  const { lang } = useContext(AppContext);
+  const { lang } = useAppStore();
   const t = TRANSLATIONS[lang];
 
   return (

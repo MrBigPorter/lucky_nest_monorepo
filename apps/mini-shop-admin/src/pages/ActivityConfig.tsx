@@ -24,7 +24,7 @@ import {
   MOCK_LOTTERY_ACTIVITIES,
   MOCK_PRODUCTS,
   MOCK_COUPONS,
-} from '../../constants.ts';
+} from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { LotteryActivity, ActivityPrize } from '../../types.ts';
 

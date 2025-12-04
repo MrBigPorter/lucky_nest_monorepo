@@ -17,8 +17,6 @@ import type {
  * 用户相关 API
  */
 export const userApi = {
-
-
   // 获取用户列表
   getUsers: (params?: PaginationParams) =>
     http.get<PaginatedResponse<User>>('/users', params),

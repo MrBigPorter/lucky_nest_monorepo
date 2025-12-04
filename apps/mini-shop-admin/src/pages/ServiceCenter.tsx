@@ -19,7 +19,7 @@ import {
   Textarea,
   Modal,
 } from '../components/UIComponents.tsx';
-import { MOCK_WORK_ORDERS } from '../../constants.ts';
+import { MOCK_WORK_ORDERS } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { WorkOrder } from '../../types.ts';
 

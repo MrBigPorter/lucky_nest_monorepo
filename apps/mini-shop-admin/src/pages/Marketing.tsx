@@ -21,15 +21,15 @@ import {
   Modal,
   Select,
   Switch,
-} from '../components/UIComponents.tsx';
+} from '@/components/UIComponents';
 import {
   MOCK_COUPONS,
   MOCK_ACTIVITIES,
   MOCK_SIGN_IN_RULES,
   MOCK_GROWTH_RULES,
-} from '../../constants.ts';
-import { useMockData } from '../hooks/useMockData.ts';
-import { Coupon, ActivityZone, SignInRule, GrowthRule } from '../../types.ts';
+} from '@/constants';
+import { useMockData } from '@/hooks/useMockData';
+import { Coupon, ActivityZone, SignInRule, GrowthRule } from '@/types';
 
 // --- SUB-COMPONENT: COUPON LIST ---
 const CouponList: React.FC = () => {

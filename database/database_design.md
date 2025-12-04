@@ -1,6 +1,7 @@
 # 抽奖电商系统数据库设计文档
 
 ## 目录
+
 - [概述](#概述)
 - [数据库表设计](#数据库表设计)
   - [用户体系 (5张表)](#用户体系)
@@ -13,6 +14,7 @@
 本文档描述了基于 Flutter App 的抽奖电商系统的完整数据库设计。系统包含用户管理、产品抽奖、订单交易、优惠券营销、客服系统等核心功能模块。
 
 **技术栈：**
+
 - 数据库：MySQL 8.0+
 - 主键策略：雪花ID (BIGINT)
 - 时间存储：毫秒级时间戳 (BIGINT) 或 TIMESTAMP
@@ -20,6 +22,7 @@
 - 币种：PHP (菲律宾比索)
 
 **数据特点：**
+
 - 所有API响应遵循统一格式：`{code, message, tid, data}`
 - 使用雪花算法生成分布式唯一ID
 - 图片资源存储在 AWS S3
@@ -33,7 +36,7 @@
 
 #### 1. users - 用户表
 
-**表说明：** 存储用户基本信息，是整个系统的核心用户表。  ✅完成
+**表说明：** 存储用户基本信息，是整个系统的核心用户表。 ✅完成
 
 ```sql
 CREATE TABLE users (
@@ -58,19 +61,19 @@ CREATE TABLE users (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 用户唯一ID（雪花算法） | 584112257881866250 |
-| nickname | VARCHAR(100) | 用户昵称 | pl_584112257881866250 |
-| avatar | VARCHAR(255) | 头像URL | https://xxx.s3.amazonaws.com/avatar.png |
-| phone | VARCHAR(20) | 手机号（包含国家码） | 9043443444 |
-| phone_md5 | VARCHAR(32) | 手机号MD5（隐私保护） | dd98cba23faa4c515ceb2d6c30c841e3 |
-| invite_code | VARCHAR(20) | 邀请码（唯一） | 635995310 |
-| vip_level | TINYINT | VIP等级 | 0-普通 1-VIP1 2-VIP2... |
-| kyc_status | TINYINT | KYC认证状态 | 0-未认证 4-已认证 |
-| delivery_address_id | BIGINT | 默认收货地址ID | 201 |
-| self_exclusion_expire_at | BIGINT | 自我排除过期时间 | 1757687636519 |
-| last_login_at | BIGINT | 最后登录时间戳 | 1757687636519 |
+| 字段名                   | 类型         | 说明                   | 示例值                                  |
+| ------------------------ | ------------ | ---------------------- | --------------------------------------- |
+| id                       | BIGINT       | 用户唯一ID（雪花算法） | 584112257881866250                      |
+| nickname                 | VARCHAR(100) | 用户昵称               | pl_584112257881866250                   |
+| avatar                   | VARCHAR(255) | 头像URL                | https://xxx.s3.amazonaws.com/avatar.png |
+| phone                    | VARCHAR(20)  | 手机号（包含国家码）   | 9043443444                              |
+| phone_md5                | VARCHAR(32)  | 手机号MD5（隐私保护）  | dd98cba23faa4c515ceb2d6c30c841e3        |
+| invite_code              | VARCHAR(20)  | 邀请码（唯一）         | 635995310                               |
+| vip_level                | TINYINT      | VIP等级                | 0-普通 1-VIP1 2-VIP2...                 |
+| kyc_status               | TINYINT      | KYC认证状态            | 0-未认证 4-已认证                       |
+| delivery_address_id      | BIGINT       | 默认收货地址ID         | 201                                     |
+| self_exclusion_expire_at | BIGINT       | 自我排除过期时间       | 1757687636519                           |
+| last_login_at            | BIGINT       | 最后登录时间戳         | 1757687636519                           |
 
 ---
 
@@ -101,21 +104,22 @@ CREATE TABLE user_addresses (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| address_id | BIGINT | 地址唯一ID | 201 |
-| user_id | BIGINT | 用户ID（外键） | 584112257881866250 |
-| first_name | VARCHAR(50) | 名 | Juan |
-| middle_name | VARCHAR(50) | 中间名（可选） | D. |
-| last_name | VARCHAR(50) | 姓 | Cruz |
-| phone | VARCHAR(20) | 联系电话 | +63 912 345 6789 |
-| province | VARCHAR(50) | 省份 | Metro Manila |
-| city | VARCHAR(50) | 城市 | Quezon City |
-| full_address | TEXT | 详细地址 | Blk 12 Lot 5, Camella Homes |
-| postal_code | VARCHAR(10) | 邮政编码 | 1121 |
-| is_default | TINYINT | 是否默认地址 | 0-否 1-是 |
+| 字段名       | 类型        | 说明           | 示例值                      |
+| ------------ | ----------- | -------------- | --------------------------- |
+| address_id   | BIGINT      | 地址唯一ID     | 201                         |
+| user_id      | BIGINT      | 用户ID（外键） | 584112257881866250          |
+| first_name   | VARCHAR(50) | 名             | Juan                        |
+| middle_name  | VARCHAR(50) | 中间名（可选） | D.                          |
+| last_name    | VARCHAR(50) | 姓             | Cruz                        |
+| phone        | VARCHAR(20) | 联系电话       | +63 912 345 6789            |
+| province     | VARCHAR(50) | 省份           | Metro Manila                |
+| city         | VARCHAR(50) | 城市           | Quezon City                 |
+| full_address | TEXT        | 详细地址       | Blk 12 Lot 5, Camella Homes |
+| postal_code  | VARCHAR(10) | 邮政编码       | 1121                        |
+| is_default   | TINYINT     | 是否默认地址   | 0-否 1-是                   |
 
 **业务规则：**
+
 - 每个用户可以有多个地址
 - 只能有一个默认地址
 - 删除用户时级联删除所有地址
@@ -144,17 +148,18 @@ CREATE TABLE user_wallets (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 钱包ID | 1 |
-| user_id | BIGINT | 用户ID（唯一） | 584112257881866250 |
-| real_balance | DECIMAL(10,2) | 现金余额 | 2000.00 |
-| coin_balance | DECIMAL(10,2) | 金币余额 | 5.00 |
-| frozen_balance | DECIMAL(10,2) | 冻结金额 | 100.00 |
-| total_recharge | DECIMAL(10,2) | 累计充值 | 5000.00 |
-| total_withdraw | DECIMAL(10,2) | 累计提现 | 500.00 |
+| 字段名         | 类型          | 说明           | 示例值             |
+| -------------- | ------------- | -------------- | ------------------ |
+| id             | BIGINT        | 钱包ID         | 1                  |
+| user_id        | BIGINT        | 用户ID（唯一） | 584112257881866250 |
+| real_balance   | DECIMAL(10,2) | 现金余额       | 2000.00            |
+| coin_balance   | DECIMAL(10,2) | 金币余额       | 5.00               |
+| frozen_balance | DECIMAL(10,2) | 冻结金额       | 100.00             |
+| total_recharge | DECIMAL(10,2) | 累计充值       | 5000.00            |
+| total_withdraw | DECIMAL(10,2) | 累计提现       | 500.00             |
 
 **业务规则：**
+
 - 每个用户只有一个钱包（1对1关系）
 - 金币与现金兑换比例：10 Lucky Coins = ₱1
 - 余额变动需记录到 wallet_transactions 表
@@ -190,22 +195,23 @@ CREATE TABLE kyc_records (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 认证记录ID | 1 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| kyc_status | TINYINT | 认证状态 | 4-已通过 |
-| id_card_front | VARCHAR(255) | 身份证正面 | https://xxx.s3.amazonaws.com/id_front.jpg |
-| id_card_back | VARCHAR(255) | 身份证背面 | https://xxx.s3.amazonaws.com/id_back.jpg |
-| face_image | VARCHAR(255) | 人脸照片 | https://xxx.s3.amazonaws.com/face.jpg |
-| liveness_token | TEXT | 活体检测token | eyJhbGciOiJIUzI1NiIsInR5cCI6... |
-| ocr_result | JSON | OCR识别结果 | {"name":"Juan Cruz","id":"123456"} |
-| audit_result | TEXT | 审核结果 | 认证通过 |
-| rejected_reason | VARCHAR(255) | 拒绝原因 | 照片模糊，请重新上传 |
-| submitted_at | BIGINT | 提交时间戳 | 1757687636519 |
-| audited_at | BIGINT | 审核时间戳 | 1757687636519 |
+| 字段名          | 类型         | 说明          | 示例值                                    |
+| --------------- | ------------ | ------------- | ----------------------------------------- |
+| id              | BIGINT       | 认证记录ID    | 1                                         |
+| user_id         | BIGINT       | 用户ID        | 584112257881866250                        |
+| kyc_status      | TINYINT      | 认证状态      | 4-已通过                                  |
+| id_card_front   | VARCHAR(255) | 身份证正面    | https://xxx.s3.amazonaws.com/id_front.jpg |
+| id_card_back    | VARCHAR(255) | 身份证背面    | https://xxx.s3.amazonaws.com/id_back.jpg  |
+| face_image      | VARCHAR(255) | 人脸照片      | https://xxx.s3.amazonaws.com/face.jpg     |
+| liveness_token  | TEXT         | 活体检测token | eyJhbGciOiJIUzI1NiIsInR5cCI6...           |
+| ocr_result      | JSON         | OCR识别结果   | {"name":"Juan Cruz","id":"123456"}        |
+| audit_result    | TEXT         | 审核结果      | 认证通过                                  |
+| rejected_reason | VARCHAR(255) | 拒绝原因      | 照片模糊，请重新上传                      |
+| submitted_at    | BIGINT       | 提交时间戳    | 1757687636519                             |
+| audited_at      | BIGINT       | 审核时间戳    | 1757687636519                             |
 
 **业务规则：**
+
 - 用户可以有多次KYC提交记录
 - 只有KYC通过（status=4）才能购买抽奖票
 - OCR结果使用JSON存储，包含姓名、证件号等信息
@@ -240,19 +246,20 @@ CREATE TABLE user_invitations (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 邀请记录ID | 1 |
-| inviter_id | BIGINT | 邀请人ID | 584112257881866250 |
-| invitee_id | BIGINT | 被邀请人ID | 584113257881866251 |
-| invitee_nickname | VARCHAR(100) | 被邀请人昵称 | Alice |
-| invitee_avatar | VARCHAR(255) | 被邀请人头像 | https://xxx.s3.amazonaws.com/avatar.png |
-| status | TINYINT | 状态 | 1-已注册 2-已完成首充 |
-| invitee_first_receive_coin | DECIMAL(10,2) | 被邀请人获得金币 | 100.00 |
-| coupon_amount | DECIMAL(10,2) | 邀请人获得优惠券 | 50.00 |
-| invitee_registered_at | BIGINT | 注册时间戳 | 1757823600000 |
+| 字段名                     | 类型          | 说明             | 示例值                                  |
+| -------------------------- | ------------- | ---------------- | --------------------------------------- |
+| id                         | BIGINT        | 邀请记录ID       | 1                                       |
+| inviter_id                 | BIGINT        | 邀请人ID         | 584112257881866250                      |
+| invitee_id                 | BIGINT        | 被邀请人ID       | 584113257881866251                      |
+| invitee_nickname           | VARCHAR(100)  | 被邀请人昵称     | Alice                                   |
+| invitee_avatar             | VARCHAR(255)  | 被邀请人头像     | https://xxx.s3.amazonaws.com/avatar.png |
+| status                     | TINYINT       | 状态             | 1-已注册 2-已完成首充                   |
+| invitee_first_receive_coin | DECIMAL(10,2) | 被邀请人获得金币 | 100.00                                  |
+| coupon_amount              | DECIMAL(10,2) | 邀请人获得优惠券 | 50.00                                   |
+| invitee_registered_at      | BIGINT        | 注册时间戳       | 1757823600000                           |
 
 **业务规则：**
+
 - 邀请关系是一对多的（一个用户可以邀请多个人）
 - 被邀请人注册时自动创建邀请记录
 - 被邀请人完成首充后，邀请人获得奖励
@@ -277,6 +284,7 @@ users (用户表)
 ## 索引策略
 
 ### 常用查询索引
+
 1. **用户登录：** `idx_phone` (users表)
 2. **邀请查询：** `idx_invite_code` (users表)
 3. **KYC查询：** `idx_user_status` (kyc_records表)
@@ -284,6 +292,7 @@ users (用户表)
 5. **邀请统计：** `idx_inviter`, `idx_status` (user_invitations表)
 
 ### 外键约束
+
 - 所有关联表都使用 `ON DELETE CASCADE`，删除用户时自动清理关联数据
 - 钱包表与用户表是1对1强关联
 
@@ -367,30 +376,31 @@ CREATE TABLE treasures (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| treasure_id | BIGINT | 产品唯一ID | 10 |
-| treasure_seq | VARCHAR(50) | 产品序列号 | TRE20250101001 |
-| treasure_name | VARCHAR(200) | 产品名称 | Win ₱3,200 or Realme T300 |
-| product_name | VARCHAR(200) | 实物产品名 | Realme T300 |
-| treasure_cover_img | VARCHAR(255) | 封面图 | https://xxx.s3.amazonaws.com/cover.jpg |
-| main_image_list | JSON | 主图数组 | ["url1", "url2"] |
-| cost_amount | DECIMAL(10,2) | 成本 | 3200.00 |
-| unit_amount | DECIMAL(10,2) | 单价 | 1.00 |
-| cash_amount | DECIMAL(10,2) | 现金奖励 | 3200.00 |
-| seq_shelves_quantity | INT | 总份数 | 4600 |
-| seq_buy_quantity | INT | 已售份数 | 3668 |
-| min_buy_quantity | INT | 开奖所需份数 | 4600 |
-| buy_quantity_rate | DECIMAL(5,2) | 购买率% | 79.74 |
-| lottery_mode | TINYINT | 抽奖模式 | 1-售罄 2-定时 |
-| lottery_time | BIGINT | 开奖时间戳 | 1759734000000 |
-| virtual | TINYINT | 是否虚拟 | 1-虚拟 2-实物 |
-| group_max_num | INT | 最大组团人数 | 9999 |
+| 字段名               | 类型          | 说明         | 示例值                                 |
+| -------------------- | ------------- | ------------ | -------------------------------------- |
+| treasure_id          | BIGINT        | 产品唯一ID   | 10                                     |
+| treasure_seq         | VARCHAR(50)   | 产品序列号   | TRE20250101001                         |
+| treasure_name        | VARCHAR(200)  | 产品名称     | Win ₱3,200 or Realme T300              |
+| product_name         | VARCHAR(200)  | 实物产品名   | Realme T300                            |
+| treasure_cover_img   | VARCHAR(255)  | 封面图       | https://xxx.s3.amazonaws.com/cover.jpg |
+| main_image_list      | JSON          | 主图数组     | ["url1", "url2"]                       |
+| cost_amount          | DECIMAL(10,2) | 成本         | 3200.00                                |
+| unit_amount          | DECIMAL(10,2) | 单价         | 1.00                                   |
+| cash_amount          | DECIMAL(10,2) | 现金奖励     | 3200.00                                |
+| seq_shelves_quantity | INT           | 总份数       | 4600                                   |
+| seq_buy_quantity     | INT           | 已售份数     | 3668                                   |
+| min_buy_quantity     | INT           | 开奖所需份数 | 4600                                   |
+| buy_quantity_rate    | DECIMAL(5,2)  | 购买率%      | 79.74                                  |
+| lottery_mode         | TINYINT       | 抽奖模式     | 1-售罄 2-定时                          |
+| lottery_time         | BIGINT        | 开奖时间戳   | 1759734000000                          |
+| virtual              | TINYINT       | 是否虚拟     | 1-虚拟 2-实物                          |
+| group_max_num        | INT           | 最大组团人数 | 9999                                   |
 
 **业务规则：**
+
 - 售罄模式：达到 min_buy_quantity 时自动开奖
 - 定时模式：到达 lottery_time 时开奖
-- 购买率 = (seq_buy_quantity / seq_shelves_quantity) * 100
+- 购买率 = (seq_buy_quantity / seq_shelves_quantity) \* 100
 - 虚拟产品直接发放兑换码，实物产品需要物流配送
 
 ---
@@ -416,16 +426,17 @@ CREATE TABLE product_categories (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| products_category_id | INT | 分类ID | 18 |
-| name | VARCHAR(100) | 分类名称 | Hot |
-| name_en | VARCHAR(100) | 英文名 | Hot Items |
-| icon | VARCHAR(255) | 分类图标 | https://xxx.s3.amazonaws.com/icon.png |
-| sort_order | INT | 排序 | 1 |
-| state | TINYINT | 状态 | 0-禁用 1-启用 |
+| 字段名               | 类型         | 说明     | 示例值                                |
+| -------------------- | ------------ | -------- | ------------------------------------- |
+| products_category_id | INT          | 分类ID   | 18                                    |
+| name                 | VARCHAR(100) | 分类名称 | Hot                                   |
+| name_en              | VARCHAR(100) | 英文名   | Hot Items                             |
+| icon                 | VARCHAR(255) | 分类图标 | https://xxx.s3.amazonaws.com/icon.png |
+| sort_order           | INT          | 排序     | 1                                     |
+| state                | TINYINT      | 状态     | 0-禁用 1-启用                         |
 
 **预设分类：**
+
 - Hot (热门)
 - Tech (数码科技)
 - Home (家居用品)
@@ -454,13 +465,14 @@ CREATE TABLE treasure_categories (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 关联ID | 1 |
-| treasure_id | BIGINT | 产品ID | 10 |
-| category_id | INT | 分类ID | 18 |
+| 字段名      | 类型   | 说明   | 示例值 |
+| ----------- | ------ | ------ | ------ |
+| id          | BIGINT | 关联ID | 1      |
+| treasure_id | BIGINT | 产品ID | 10     |
+| category_id | INT    | 分类ID | 18     |
 
 **业务规则：**
+
 - 一个产品可以属于多个分类（多对多关系）
 - 删除产品或分类时，自动删除关联记录
 - 前端可按分类筛选产品列表
@@ -494,19 +506,20 @@ CREATE TABLE treasure_groups (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| group_id | BIGINT | 组团ID | 584239367690649859 |
-| treasure_id | BIGINT | 产品ID | 10 |
-| creator_id | BIGINT | 团长用户ID | 584238315222335747 |
-| group_name | VARCHAR(100) | 组团名称 | lizzie9's Team |
-| max_members | INT | 最大成员数 | 9999 |
-| current_members | INT | 当前成员数 | 5 |
-| lucky_winners_count | INT | 组内中奖次数 | 2 |
-| total_winning_times | INT | 总中奖次数 | 10 |
-| group_status | TINYINT | 状态 | 1-进行中 2-已结束 |
+| 字段名              | 类型         | 说明         | 示例值             |
+| ------------------- | ------------ | ------------ | ------------------ |
+| group_id            | BIGINT       | 组团ID       | 584239367690649859 |
+| treasure_id         | BIGINT       | 产品ID       | 10                 |
+| creator_id          | BIGINT       | 团长用户ID   | 584238315222335747 |
+| group_name          | VARCHAR(100) | 组团名称     | lizzie9's Team     |
+| max_members         | INT          | 最大成员数   | 9999               |
+| current_members     | INT          | 当前成员数   | 5                  |
+| lucky_winners_count | INT          | 组内中奖次数 | 2                  |
+| total_winning_times | INT          | 总中奖次数   | 10                 |
+| group_status        | TINYINT      | 状态         | 1-进行中 2-已结束  |
 
 **业务规则：**
+
 - 每个产品可以有多个组团
 - 团长购买产品时自动创建组团
 - 其他用户可以加入已有组团
@@ -540,18 +553,19 @@ CREATE TABLE treasure_group_members (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 成员记录ID | 1 |
-| group_id | BIGINT | 组团ID | 584239367690649859 |
-| user_id | BIGINT | 用户ID | 584238315222335747 |
-| order_id | BIGINT | 订单ID | 1001 |
-| is_owner | TINYINT | 是否团长 | 0-否 1-是 |
-| share_coin | DECIMAL(10,2) | 分享获得金币 | 50.00 |
-| share_amount | DECIMAL(10,2) | 分享获得金额 | 5.00 |
-| joined_at | BIGINT | 加入时间戳 | 1757763399759 |
+| 字段名       | 类型          | 说明         | 示例值             |
+| ------------ | ------------- | ------------ | ------------------ |
+| id           | BIGINT        | 成员记录ID   | 1                  |
+| group_id     | BIGINT        | 组团ID       | 584239367690649859 |
+| user_id      | BIGINT        | 用户ID       | 584238315222335747 |
+| order_id     | BIGINT        | 订单ID       | 1001               |
+| is_owner     | TINYINT       | 是否团长     | 0-否 1-是          |
+| share_coin   | DECIMAL(10,2) | 分享获得金币 | 50.00              |
+| share_amount | DECIMAL(10,2) | 分享获得金额 | 5.00               |
+| joined_at    | BIGINT        | 加入时间戳   | 1757763399759      |
 
 **业务规则：**
+
 - 一个用户在同一组团中只能有一条记录
 - 团长的 is_owner = 1
 - 组员中奖时，其他成员随机获得金币红包
@@ -638,27 +652,28 @@ CREATE TABLE orders (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| order_id | BIGINT | 订单ID | 584249482517872846 |
-| order_no | VARCHAR(50) | 订单编号 | ORD20250121123456 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| treasure_id | BIGINT | 产品ID | 10 |
-| original_amount | DECIMAL(10,2) | 原始金额 | 100.00 |
-| discount_amount | DECIMAL(10,2) | 折扣金额 | 10.00 |
-| coupon_amount | DECIMAL(10,2) | 优惠券抵扣 | 5.00 |
-| coin_amount | DECIMAL(10,2) | 金币抵扣 | 0.50 |
-| final_amount | DECIMAL(10,2) | 实付金额 | 84.50 |
-| buy_quantity | INT | 购买份数 | 100 |
-| unit_price | DECIMAL(10,2) | 单价 | 1.00 |
-| lucky_code_start | VARCHAR(50) | 幸运码起始 | 000001 |
-| lucky_code_end | VARCHAR(50) | 幸运码结束 | 000100 |
-| order_status | TINYINT | 订单状态 | 2-已支付 |
-| pay_status | TINYINT | 支付状态 | 1-已支付 |
-| group_id | BIGINT | 组团ID | 584239367690649859 |
-| is_group_owner | TINYINT | 是否团长 | 0-否 1-是 |
+| 字段名           | 类型          | 说明       | 示例值             |
+| ---------------- | ------------- | ---------- | ------------------ |
+| order_id         | BIGINT        | 订单ID     | 584249482517872846 |
+| order_no         | VARCHAR(50)   | 订单编号   | ORD20250121123456  |
+| user_id          | BIGINT        | 用户ID     | 584112257881866250 |
+| treasure_id      | BIGINT        | 产品ID     | 10                 |
+| original_amount  | DECIMAL(10,2) | 原始金额   | 100.00             |
+| discount_amount  | DECIMAL(10,2) | 折扣金额   | 10.00              |
+| coupon_amount    | DECIMAL(10,2) | 优惠券抵扣 | 5.00               |
+| coin_amount      | DECIMAL(10,2) | 金币抵扣   | 0.50               |
+| final_amount     | DECIMAL(10,2) | 实付金额   | 84.50              |
+| buy_quantity     | INT           | 购买份数   | 100                |
+| unit_price       | DECIMAL(10,2) | 单价       | 1.00               |
+| lucky_code_start | VARCHAR(50)   | 幸运码起始 | 000001             |
+| lucky_code_end   | VARCHAR(50)   | 幸运码结束 | 000100             |
+| order_status     | TINYINT       | 订单状态   | 2-已支付           |
+| pay_status       | TINYINT       | 支付状态   | 1-已支付           |
+| group_id         | BIGINT        | 组团ID     | 584239367690649859 |
+| is_group_owner   | TINYINT       | 是否团长   | 0-否 1-是          |
 
 **业务规则：**
+
 - 订单编号格式：ORD + 年月日 + 序列号
 - 实付金额 = 原始金额 - 折扣金额 - 优惠券抵扣 - 金币抵扣
 - 金币抵扣比例：10 Lucky Coins = ₱1
@@ -695,17 +710,18 @@ CREATE TABLE order_lucky_codes (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 记录ID | 1 |
-| order_id | BIGINT | 订单ID | 584249482517872846 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| treasure_id | BIGINT | 产品ID | 10 |
-| lucky_code | VARCHAR(50) | 幸运码 | 000001 |
-| is_winning | TINYINT | 是否中奖 | 0-未中奖 1-中奖 |
-| winning_record_id | BIGINT | 中奖记录ID | 1001 |
+| 字段名            | 类型        | 说明       | 示例值             |
+| ----------------- | ----------- | ---------- | ------------------ |
+| id                | BIGINT      | 记录ID     | 1                  |
+| order_id          | BIGINT      | 订单ID     | 584249482517872846 |
+| user_id           | BIGINT      | 用户ID     | 584112257881866250 |
+| treasure_id       | BIGINT      | 产品ID     | 10                 |
+| lucky_code        | VARCHAR(50) | 幸运码     | 000001             |
+| is_winning        | TINYINT     | 是否中奖   | 0-未中奖 1-中奖    |
+| winning_record_id | BIGINT      | 中奖记录ID | 1001               |
 
 **业务规则：**
+
 - 每个订单根据购买份数生成对应数量的幸运码
 - 幸运码在同一产品内唯一
 - 开奖时随机抽取幸运码确定中奖者
@@ -760,20 +776,21 @@ CREATE TABLE payments (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| payment_id | BIGINT | 支付ID | 584250123456789012 |
-| payment_no | VARCHAR(50) | 支付流水号 | PAY20250121123456 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| order_id | BIGINT | 订单ID | 584249482517872846 |
-| payment_type | TINYINT | 支付类型 | 1-充值 2-购买 |
-| payment_method | TINYINT | 支付方式 | 1-GCash 2-PayMaya |
-| payment_amount | DECIMAL(10,2) | 支付金额 | 100.00 |
-| payment_status | TINYINT | 支付状态 | 3-支付成功 |
-| third_party_order_no | VARCHAR(100) | 第三方订单号 | GCASH202501211234 |
-| callback_data | JSON | 回调数据 | {"status":"success",...} |
+| 字段名               | 类型          | 说明         | 示例值                   |
+| -------------------- | ------------- | ------------ | ------------------------ |
+| payment_id           | BIGINT        | 支付ID       | 584250123456789012       |
+| payment_no           | VARCHAR(50)   | 支付流水号   | PAY20250121123456        |
+| user_id              | BIGINT        | 用户ID       | 584112257881866250       |
+| order_id             | BIGINT        | 订单ID       | 584249482517872846       |
+| payment_type         | TINYINT       | 支付类型     | 1-充值 2-购买            |
+| payment_method       | TINYINT       | 支付方式     | 1-GCash 2-PayMaya        |
+| payment_amount       | DECIMAL(10,2) | 支付金额     | 100.00                   |
+| payment_status       | TINYINT       | 支付状态     | 3-支付成功               |
+| third_party_order_no | VARCHAR(100)  | 第三方订单号 | GCASH202501211234        |
+| callback_data        | JSON          | 回调数据     | {"status":"success",...} |
 
 **业务规则：**
+
 - 支付流水号格式：PAY + 年月日 + 序列号
 - 充值时 order_id 为空
 - 支付成功后更新订单状态和用户钱包余额
@@ -832,19 +849,20 @@ CREATE TABLE refunds (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| refund_id | BIGINT | 退款ID | 584251123456789012 |
-| refund_no | VARCHAR(50) | 退款单号 | REF20250121123456 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| order_id | BIGINT | 订单ID | 584249482517872846 |
-| refund_type | TINYINT | 退款类型 | 1-用户申请 |
-| refund_reason | VARCHAR(500) | 退款原因 | 误操作，需要退款 |
-| refund_amount | DECIMAL(10,2) | 退款金额 | 84.50 |
-| refund_method | TINYINT | 退款方式 | 1-原路退回 2-退到钱包 |
-| refund_status | TINYINT | 退款状态 | 4-退款成功 |
+| 字段名        | 类型          | 说明     | 示例值                |
+| ------------- | ------------- | -------- | --------------------- |
+| refund_id     | BIGINT        | 退款ID   | 584251123456789012    |
+| refund_no     | VARCHAR(50)   | 退款单号 | REF20250121123456     |
+| user_id       | BIGINT        | 用户ID   | 584112257881866250    |
+| order_id      | BIGINT        | 订单ID   | 584249482517872846    |
+| refund_type   | TINYINT       | 退款类型 | 1-用户申请            |
+| refund_reason | VARCHAR(500)  | 退款原因 | 误操作，需要退款      |
+| refund_amount | DECIMAL(10,2) | 退款金额 | 84.50                 |
+| refund_method | TINYINT       | 退款方式 | 1-原路退回 2-退到钱包 |
+| refund_status | TINYINT       | 退款状态 | 4-退款成功            |
 
 **业务规则：**
+
 - 退款单号格式：REF + 年月日 + 序列号
 - 已开奖的订单不可退款
 - 退款金额不超过实付金额
@@ -897,21 +915,22 @@ CREATE TABLE wallet_transactions (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| transaction_id | BIGINT | 交易ID | 584252123456789012 |
-| transaction_no | VARCHAR(50) | 交易流水号 | TXN20250121123456 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| transaction_type | TINYINT | 交易类型 | 1-充值 2-消费 |
-| amount | DECIMAL(10,2) | 交易金额 | 100.00（收入）-50.00（支出）|
-| balance_type | TINYINT | 余额类型 | 1-现金 2-金币 |
-| before_balance | DECIMAL(10,2) | 交易前余额 | 500.00 |
-| after_balance | DECIMAL(10,2) | 交易后余额 | 600.00 |
-| related_id | BIGINT | 关联业务ID | 584249482517872846 |
-| related_type | VARCHAR(50) | 关联业务类型 | order/recharge/withdraw |
-| description | VARCHAR(500) | 交易描述 | 购买抽奖票 |
+| 字段名           | 类型          | 说明         | 示例值                       |
+| ---------------- | ------------- | ------------ | ---------------------------- |
+| transaction_id   | BIGINT        | 交易ID       | 584252123456789012           |
+| transaction_no   | VARCHAR(50)   | 交易流水号   | TXN20250121123456            |
+| user_id          | BIGINT        | 用户ID       | 584112257881866250           |
+| transaction_type | TINYINT       | 交易类型     | 1-充值 2-消费                |
+| amount           | DECIMAL(10,2) | 交易金额     | 100.00（收入）-50.00（支出） |
+| balance_type     | TINYINT       | 余额类型     | 1-现金 2-金币                |
+| before_balance   | DECIMAL(10,2) | 交易前余额   | 500.00                       |
+| after_balance    | DECIMAL(10,2) | 交易后余额   | 600.00                       |
+| related_id       | BIGINT        | 关联业务ID   | 584249482517872846           |
+| related_type     | VARCHAR(50)   | 关联业务类型 | order/recharge/withdraw      |
+| description      | VARCHAR(500)  | 交易描述     | 购买抽奖票                   |
 
 **业务规则：**
+
 - 交易流水号格式：TXN + 年月日 + 序列号
 - 所有钱包余额变动必须记录流水
 - amount 为正数表示收入，负数表示支出
@@ -1003,24 +1022,25 @@ CREATE TABLE winning_records (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| winning_id | BIGINT | 中奖记录ID | 584260123456789012 |
-| treasure_id | BIGINT | 产品ID | 10 |
-| user_id | BIGINT | 中奖用户ID | 584112257881866250 |
-| order_id | BIGINT | 中奖订单ID | 584249482517872846 |
-| lucky_code | VARCHAR(50) | 中奖幸运码 | 002365 |
-| winning_type | TINYINT | 奖品类型 | 1-实物 2-现金 |
-| prize_name | VARCHAR(200) | 奖品名称 | Realme T300 |
-| prize_value | DECIMAL(10,2) | 奖品价值 | 3200.00 |
-| cash_amount | DECIMAL(10,2) | 现金奖励 | 3200.00 |
-| cash_status | TINYINT | 现金发放状态 | 1-已发放 |
-| delivery_status | TINYINT | 发货状态 | 1-已发货 |
-| group_id | BIGINT | 组团ID | 584239367690649859 |
-| lottery_time | BIGINT | 开奖时间戳 | 1757823600000 |
-| lottery_algorithm | VARCHAR(100) | 开奖算法 | SHA256-Random |
+| 字段名            | 类型          | 说明         | 示例值             |
+| ----------------- | ------------- | ------------ | ------------------ |
+| winning_id        | BIGINT        | 中奖记录ID   | 584260123456789012 |
+| treasure_id       | BIGINT        | 产品ID       | 10                 |
+| user_id           | BIGINT        | 中奖用户ID   | 584112257881866250 |
+| order_id          | BIGINT        | 中奖订单ID   | 584249482517872846 |
+| lucky_code        | VARCHAR(50)   | 中奖幸运码   | 002365             |
+| winning_type      | TINYINT       | 奖品类型     | 1-实物 2-现金      |
+| prize_name        | VARCHAR(200)  | 奖品名称     | Realme T300        |
+| prize_value       | DECIMAL(10,2) | 奖品价值     | 3200.00            |
+| cash_amount       | DECIMAL(10,2) | 现金奖励     | 3200.00            |
+| cash_status       | TINYINT       | 现金发放状态 | 1-已发放           |
+| delivery_status   | TINYINT       | 发货状态     | 1-已发货           |
+| group_id          | BIGINT        | 组团ID       | 584239367690649859 |
+| lottery_time      | BIGINT        | 开奖时间戳   | 1757823600000      |
+| lottery_algorithm | VARCHAR(100)  | 开奖算法     | SHA256-Random      |
 
 **业务规则：**
+
 - 开奖时随机抽取幸运码生成中奖记录
 - 现金奖励直接发放到用户钱包
 - 实物产品需要创建物流订单进行配送
@@ -1073,19 +1093,20 @@ CREATE TABLE deliveries (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| delivery_id | BIGINT | 物流ID | 584261123456789012 |
-| delivery_no | VARCHAR(50) | 物流单号 | DLV20250121123456 |
-| winning_id | BIGINT | 中奖记录ID | 584260123456789012 |
-| receiver_name | VARCHAR(100) | 收货人姓名 | Juan Cruz |
-| receiver_phone | VARCHAR(20) | 收货人电话 | +63 912 345 6789 |
-| receiver_address | TEXT | 详细地址 | Blk 12 Lot 5, Camella Homes |
-| logistics_company | VARCHAR(100) | 物流公司 | LBC Express |
-| logistics_no | VARCHAR(100) | 物流单号 | LBC123456789 |
-| logistics_status | TINYINT | 物流状态 | 4-已签收 |
+| 字段名            | 类型         | 说明       | 示例值                      |
+| ----------------- | ------------ | ---------- | --------------------------- |
+| delivery_id       | BIGINT       | 物流ID     | 584261123456789012          |
+| delivery_no       | VARCHAR(50)  | 物流单号   | DLV20250121123456           |
+| winning_id        | BIGINT       | 中奖记录ID | 584260123456789012          |
+| receiver_name     | VARCHAR(100) | 收货人姓名 | Juan Cruz                   |
+| receiver_phone    | VARCHAR(20)  | 收货人电话 | +63 912 345 6789            |
+| receiver_address  | TEXT         | 详细地址   | Blk 12 Lot 5, Camella Homes |
+| logistics_company | VARCHAR(100) | 物流公司   | LBC Express                 |
+| logistics_no      | VARCHAR(100) | 物流单号   | LBC123456789                |
+| logistics_status  | TINYINT      | 物流状态   | 4-已签收                    |
 
 **业务规则：**
+
 - 实物产品中奖后自动创建物流记录
 - 物流单号格式：DLV + 年月日 + 序列号
 - 支持对接第三方物流公司API查询物流状态
@@ -1117,17 +1138,18 @@ CREATE TABLE delivery_logs (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| log_id | BIGINT | 日志ID | 1 |
-| delivery_id | BIGINT | 物流ID | 584261123456789012 |
-| logistics_status | TINYINT | 物流状态 | 2-运输中 |
-| status_desc | VARCHAR(500) | 状态描述 | Package is in transit |
-| location | VARCHAR(200) | 当前位置 | Manila Sorting Center |
-| operator | VARCHAR(100) | 操作人 | LBC-Manila |
-| log_time | BIGINT | 日志时间戳 | 1757823600000 |
+| 字段名           | 类型         | 说明       | 示例值                |
+| ---------------- | ------------ | ---------- | --------------------- |
+| log_id           | BIGINT       | 日志ID     | 1                     |
+| delivery_id      | BIGINT       | 物流ID     | 584261123456789012    |
+| logistics_status | TINYINT      | 物流状态   | 2-运输中              |
+| status_desc      | VARCHAR(500) | 状态描述   | Package is in transit |
+| location         | VARCHAR(200) | 当前位置   | Manila Sorting Center |
+| operator         | VARCHAR(100) | 操作人     | LBC-Manila            |
+| log_time         | BIGINT       | 日志时间戳 | 1757823600000         |
 
 **业务规则：**
+
 - 每次物流状态变化都需要记录日志
 - 支持从第三方物流API同步物流信息
 - 用户可查看完整的物流跟踪记录
@@ -1184,22 +1206,23 @@ CREATE TABLE coupons (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| coupon_id | BIGINT | 优惠券ID | 584262123456789012 |
-| coupon_name | VARCHAR(200) | 优惠券名称 | New User Welcome Coupon |
-| coupon_code | VARCHAR(50) | 优惠券代码 | WELCOME2025 |
-| coupon_type | TINYINT | 优惠券类型 | 1-满减券 |
-| discount_value | DECIMAL(10,2) | 折扣值 | 50.00 或 10（10%） |
-| min_purchase_amount | DECIMAL(10,2) | 最低消费 | 200.00 |
-| max_discount_amount | DECIMAL(10,2) | 最大折扣 | 100.00 |
-| issue_type | TINYINT | 发放类型 | 1-系统发放 |
-| total_quantity | INT | 总发行量 | 10000 |
-| per_user_limit | INT | 每人限领 | 1 |
-| use_scope | TINYINT | 使用范围 | 1-全部 2-指定分类 |
-| valid_type | TINYINT | 有效期类型 | 1-固定日期 2-领取后N天 |
+| 字段名              | 类型          | 说明       | 示例值                  |
+| ------------------- | ------------- | ---------- | ----------------------- |
+| coupon_id           | BIGINT        | 优惠券ID   | 584262123456789012      |
+| coupon_name         | VARCHAR(200)  | 优惠券名称 | New User Welcome Coupon |
+| coupon_code         | VARCHAR(50)   | 优惠券代码 | WELCOME2025             |
+| coupon_type         | TINYINT       | 优惠券类型 | 1-满减券                |
+| discount_value      | DECIMAL(10,2) | 折扣值     | 50.00 或 10（10%）      |
+| min_purchase_amount | DECIMAL(10,2) | 最低消费   | 200.00                  |
+| max_discount_amount | DECIMAL(10,2) | 最大折扣   | 100.00                  |
+| issue_type          | TINYINT       | 发放类型   | 1-系统发放              |
+| total_quantity      | INT           | 总发行量   | 10000                   |
+| per_user_limit      | INT           | 每人限领   | 1                       |
+| use_scope           | TINYINT       | 使用范围   | 1-全部 2-指定分类       |
+| valid_type          | TINYINT       | 有效期类型 | 1-固定日期 2-领取后N天  |
 
 **业务规则：**
+
 - 满减券：满X元减Y元
 - 折扣券：打X折，最高优惠Y元
 - 固定金额券：直接减X元
@@ -1250,21 +1273,22 @@ CREATE TABLE user_coupons (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| user_coupon_id | BIGINT | 用户优惠券ID | 584263123456789012 |
-| coupon_id | BIGINT | 优惠券ID | 584262123456789012 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| receive_type | TINYINT | 领取方式 | 1-系统发放 |
-| use_status | TINYINT | 使用状态 | 0-未使用 1-已使用 |
-| order_id | BIGINT | 使用订单ID | 584249482517872846 |
-| discount_amount | DECIMAL(10,2) | 实际抵扣 | 50.00 |
-| valid_start_time | BIGINT | 有效开始时间 | 1757737200000 |
-| valid_end_time | BIGINT | 有效结束时间 | 1758342000000 |
-| received_at | BIGINT | 领取时间 | 1757737200000 |
-| used_at | BIGINT | 使用时间 | 1757823600000 |
+| 字段名           | 类型          | 说明         | 示例值             |
+| ---------------- | ------------- | ------------ | ------------------ |
+| user_coupon_id   | BIGINT        | 用户优惠券ID | 584263123456789012 |
+| coupon_id        | BIGINT        | 优惠券ID     | 584262123456789012 |
+| user_id          | BIGINT        | 用户ID       | 584112257881866250 |
+| receive_type     | TINYINT       | 领取方式     | 1-系统发放         |
+| use_status       | TINYINT       | 使用状态     | 0-未使用 1-已使用  |
+| order_id         | BIGINT        | 使用订单ID   | 584249482517872846 |
+| discount_amount  | DECIMAL(10,2) | 实际抵扣     | 50.00              |
+| valid_start_time | BIGINT        | 有效开始时间 | 1757737200000      |
+| valid_end_time   | BIGINT        | 有效结束时间 | 1758342000000      |
+| received_at      | BIGINT        | 领取时间     | 1757737200000      |
+| used_at          | BIGINT        | 使用时间     | 1757823600000      |
 
 **业务规则：**
+
 - 用户领取优惠券后创建记录
 - 每张优惠券只能使用一次
 - 过期自动标记为已过期状态
@@ -1355,19 +1379,20 @@ CREATE TABLE recharge_orders (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| recharge_id | BIGINT | 充值ID | 584270123456789012 |
-| recharge_no | VARCHAR(50) | 充值订单号 | RCH20250121123456 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| recharge_amount | DECIMAL(10,2) | 充值金额 | 1000.00 |
-| bonus_amount | DECIMAL(10,2) | 赠送金额 | 100.00 |
-| actual_amount | DECIMAL(10,2) | 实际到账 | 1100.00 |
-| payment_method | TINYINT | 支付方式 | 1-GCash |
-| recharge_status | TINYINT | 充值状态 | 3-充值成功 |
-| first_recharge | TINYINT | 是否首充 | 1-是 |
+| 字段名          | 类型          | 说明       | 示例值             |
+| --------------- | ------------- | ---------- | ------------------ |
+| recharge_id     | BIGINT        | 充值ID     | 584270123456789012 |
+| recharge_no     | VARCHAR(50)   | 充值订单号 | RCH20250121123456  |
+| user_id         | BIGINT        | 用户ID     | 584112257881866250 |
+| recharge_amount | DECIMAL(10,2) | 充值金额   | 1000.00            |
+| bonus_amount    | DECIMAL(10,2) | 赠送金额   | 100.00             |
+| actual_amount   | DECIMAL(10,2) | 实际到账   | 1100.00            |
+| payment_method  | TINYINT       | 支付方式   | 1-GCash            |
+| recharge_status | TINYINT       | 充值状态   | 3-充值成功         |
+| first_recharge  | TINYINT       | 是否首充   | 1-是               |
 
 **业务规则：**
+
 - 充值订单号格式：RCH + 年月日 + 序列号
 - 实际到账 = 充值金额 + 赠送金额
 - 首充用户可获得额外奖励
@@ -1426,20 +1451,21 @@ CREATE TABLE withdraw_orders (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| withdraw_id | BIGINT | 提现ID | 584271123456789012 |
-| withdraw_no | VARCHAR(50) | 提现订单号 | WTD20250121123456 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| withdraw_amount | DECIMAL(10,2) | 提现金额 | 500.00 |
-| fee_amount | DECIMAL(10,2) | 手续费 | 10.00 |
-| actual_amount | DECIMAL(10,2) | 实际到账 | 490.00 |
-| withdraw_method | TINYINT | 提现方式 | 1-GCash |
-| withdraw_account | VARCHAR(100) | 提现账号 | 09123456789 |
-| account_name | VARCHAR(100) | 账户名 | Juan Cruz |
-| withdraw_status | TINYINT | 提现状态 | 4-提现成功 |
+| 字段名           | 类型          | 说明       | 示例值             |
+| ---------------- | ------------- | ---------- | ------------------ |
+| withdraw_id      | BIGINT        | 提现ID     | 584271123456789012 |
+| withdraw_no      | VARCHAR(50)   | 提现订单号 | WTD20250121123456  |
+| user_id          | BIGINT        | 用户ID     | 584112257881866250 |
+| withdraw_amount  | DECIMAL(10,2) | 提现金额   | 500.00             |
+| fee_amount       | DECIMAL(10,2) | 手续费     | 10.00              |
+| actual_amount    | DECIMAL(10,2) | 实际到账   | 490.00             |
+| withdraw_method  | TINYINT       | 提现方式   | 1-GCash            |
+| withdraw_account | VARCHAR(100)  | 提现账号   | 09123456789        |
+| account_name     | VARCHAR(100)  | 账户名     | Juan Cruz          |
+| withdraw_status  | TINYINT       | 提现状态   | 4-提现成功         |
 
 **业务规则：**
+
 - 提现订单号格式：WTD + 年月日 + 序列号
 - 实际到账 = 提现金额 - 手续费
 - 提现需要KYC认证通过
@@ -1487,19 +1513,20 @@ CREATE TABLE bank_cards (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| card_id | BIGINT | 银行卡ID | 1 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| card_no | VARCHAR(50) | 银行卡号（加密） | [encrypted] |
-| card_no_masked | VARCHAR(50) | 脱敏卡号 | **** **** **** 1234 |
-| card_holder_name | VARCHAR(100) | 持卡人姓名 | Juan Cruz |
-| bank_name | VARCHAR(100) | 银行名称 | BDO |
-| card_status | TINYINT | 状态 | 1-正常 |
-| is_default | TINYINT | 是否默认 | 1-是 |
-| verified | TINYINT | 是否已验证 | 1-已验证 |
+| 字段名           | 类型         | 说明             | 示例值                      |
+| ---------------- | ------------ | ---------------- | --------------------------- |
+| card_id          | BIGINT       | 银行卡ID         | 1                           |
+| user_id          | BIGINT       | 用户ID           | 584112257881866250          |
+| card_no          | VARCHAR(50)  | 银行卡号（加密） | [encrypted]                 |
+| card_no_masked   | VARCHAR(50)  | 脱敏卡号         | \***\* \*\*** \*\*\*\* 1234 |
+| card_holder_name | VARCHAR(100) | 持卡人姓名       | Juan Cruz                   |
+| bank_name        | VARCHAR(100) | 银行名称         | BDO                         |
+| card_status      | TINYINT      | 状态             | 1-正常                      |
+| is_default       | TINYINT      | 是否默认         | 1-是                        |
+| verified         | TINYINT      | 是否已验证       | 1-已验证                    |
 
 **业务规则：**
+
 - 银行卡号需要加密存储
 - 展示时使用脱敏卡号
 - 每个用户只能有一张默认银行卡
@@ -1546,19 +1573,20 @@ CREATE TABLE customer_service_messages (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| message_id | BIGINT | 消息ID | 584272123456789012 |
-| session_id | BIGINT | 会话ID | 584272000000000001 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| sender_type | TINYINT | 发送者类型 | 1-用户 2-客服 |
-| message_type | TINYINT | 消息类型 | 1-文本 2-图片 |
-| message_content | TEXT | 消息内容 | Hello, I need help |
-| attachment_url | VARCHAR(255) | 附件URL | https://xxx.s3.amazonaws.com/img.jpg |
-| read_status | TINYINT | 已读状态 | 1-已读 |
-| sent_at | BIGINT | 发送时间戳 | 1757823600000 |
+| 字段名          | 类型         | 说明       | 示例值                               |
+| --------------- | ------------ | ---------- | ------------------------------------ |
+| message_id      | BIGINT       | 消息ID     | 584272123456789012                   |
+| session_id      | BIGINT       | 会话ID     | 584272000000000001                   |
+| user_id         | BIGINT       | 用户ID     | 584112257881866250                   |
+| sender_type     | TINYINT      | 发送者类型 | 1-用户 2-客服                        |
+| message_type    | TINYINT      | 消息类型   | 1-文本 2-图片                        |
+| message_content | TEXT         | 消息内容   | Hello, I need help                   |
+| attachment_url  | VARCHAR(255) | 附件URL    | https://xxx.s3.amazonaws.com/img.jpg |
+| read_status     | TINYINT      | 已读状态   | 1-已读                               |
+| sent_at         | BIGINT       | 发送时间戳 | 1757823600000                        |
 
 **业务规则：**
+
 - 消息按会话ID分组管理
 - 支持文本和图片消息
 - 客服和用户可互相发送消息
@@ -1605,20 +1633,21 @@ CREATE TABLE customer_service_sessions (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| session_id | BIGINT | 会话ID | 584272000000000001 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| customer_service_id | BIGINT | 客服ID | 100001 |
-| session_type | TINYINT | 会话类型 | 1-在线客服 |
-| issue_category | VARCHAR(100) | 问题分类 | 支付问题 |
-| session_status | TINYINT | 会话状态 | 2-服务中 |
-| priority | TINYINT | 优先级 | 1-高 |
-| rating | TINYINT | 评分 | 5 |
-| feedback | TEXT | 用户反馈 | 服务很好 |
-| started_at | BIGINT | 开始时间 | 1757823600000 |
+| 字段名              | 类型         | 说明     | 示例值             |
+| ------------------- | ------------ | -------- | ------------------ |
+| session_id          | BIGINT       | 会话ID   | 584272000000000001 |
+| user_id             | BIGINT       | 用户ID   | 584112257881866250 |
+| customer_service_id | BIGINT       | 客服ID   | 100001             |
+| session_type        | TINYINT      | 会话类型 | 1-在线客服         |
+| issue_category      | VARCHAR(100) | 问题分类 | 支付问题           |
+| session_status      | TINYINT      | 会话状态 | 2-服务中           |
+| priority            | TINYINT      | 优先级   | 1-高               |
+| rating              | TINYINT      | 评分     | 5                  |
+| feedback            | TEXT         | 用户反馈 | 服务很好           |
+| started_at          | BIGINT       | 开始时间 | 1757823600000      |
 
 **业务规则：**
+
 - 用户发起咨询时创建会话
 - 客服接入后更新客服ID和状态
 - 会话结束后用户可进行评价
@@ -1716,23 +1745,24 @@ CREATE TABLE marketing_activities (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| activity_id | BIGINT | 活动ID | 584280123456789012 |
-| activity_name | VARCHAR(200) | 活动名称 | New Year Recharge Bonus |
-| activity_type | TINYINT | 活动类型 | 1-充值活动 |
-| rule_config | JSON | 活动规则 | {"min_amount":100,"bonus_rate":0.1} |
-| reward_config | JSON | 奖励配置 | {"coins":50,"coupons":[1,2]} |
-| target_user_type | TINYINT | 目标用户 | 0-全部 1-新用户 |
-| participate_limit | INT | 参与次数限制 | 1次/用户 |
-| total_budget | DECIMAL(12,2) | 活动预算 | 100000.00 |
-| used_budget | DECIMAL(12,2) | 已用预算 | 25000.00 |
-| start_time | BIGINT | 开始时间 | 1757737200000 |
-| end_time | BIGINT | 结束时间 | 1758342000000 |
-| status | TINYINT | 状态 | 1-进行中 |
-| participate_count | INT | 参与人数 | 5000 |
+| 字段名            | 类型          | 说明         | 示例值                              |
+| ----------------- | ------------- | ------------ | ----------------------------------- |
+| activity_id       | BIGINT        | 活动ID       | 584280123456789012                  |
+| activity_name     | VARCHAR(200)  | 活动名称     | New Year Recharge Bonus             |
+| activity_type     | TINYINT       | 活动类型     | 1-充值活动                          |
+| rule_config       | JSON          | 活动规则     | {"min_amount":100,"bonus_rate":0.1} |
+| reward_config     | JSON          | 奖励配置     | {"coins":50,"coupons":[1,2]}        |
+| target_user_type  | TINYINT       | 目标用户     | 0-全部 1-新用户                     |
+| participate_limit | INT           | 参与次数限制 | 1次/用户                            |
+| total_budget      | DECIMAL(12,2) | 活动预算     | 100000.00                           |
+| used_budget       | DECIMAL(12,2) | 已用预算     | 25000.00                            |
+| start_time        | BIGINT        | 开始时间     | 1757737200000                       |
+| end_time          | BIGINT        | 结束时间     | 1758342000000                       |
+| status            | TINYINT       | 状态         | 1-进行中                            |
+| participate_count | INT           | 参与人数     | 5000                                |
 
 **业务规则：**
+
 - rule_config 存储活动具体规则，如充值金额、赠送比例等
 - reward_config 存储奖励内容，如金币、优惠券、VIP等
 - 活动预算达到上限后自动结束
@@ -1740,18 +1770,19 @@ CREATE TABLE marketing_activities (
 - 活动规则使用JSON存储，灵活配置
 
 **rule_config 示例：**
+
 ```json
 {
   "recharge_activity": {
     "tiers": [
-      {"min_amount": 100, "bonus_rate": 0.1, "extra_coins": 10},
-      {"min_amount": 500, "bonus_rate": 0.15, "extra_coins": 100},
-      {"min_amount": 1000, "bonus_rate": 0.2, "extra_coins": 300}
+      { "min_amount": 100, "bonus_rate": 0.1, "extra_coins": 10 },
+      { "min_amount": 500, "bonus_rate": 0.15, "extra_coins": 100 },
+      { "min_amount": 1000, "bonus_rate": 0.2, "extra_coins": 300 }
     ]
   },
   "invite_activity": {
-    "inviter_reward": {"coins": 50, "coupon_id": 1001},
-    "invitee_reward": {"coins": 100, "coupon_id": 1002},
+    "inviter_reward": { "coins": 50, "coupon_id": 1001 },
+    "invitee_reward": { "coins": 100, "coupon_id": 1002 },
     "condition": "first_recharge"
   }
 }
@@ -1802,22 +1833,23 @@ CREATE TABLE user_activity_records (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| record_id | BIGINT | 记录ID | 584281123456789012 |
-| activity_id | BIGINT | 活动ID | 584280123456789012 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| participate_type | TINYINT | 参与方式 | 1-主动参与 |
-| related_id | BIGINT | 关联业务ID | 584270123456789012 |
-| related_type | VARCHAR(50) | 关联类型 | recharge_order |
-| reward_type | TINYINT | 奖励类型 | 1-金币 2-现金 |
-| reward_amount | DECIMAL(10,2) | 奖励金额 | 100.00 |
-| reward_detail | JSON | 奖励详情 | {"coins":100,"coupon_ids":[1001]} |
-| reward_status | TINYINT | 奖励状态 | 1-已发放 |
-| condition_met | TINYINT | 是否满足条件 | 1-满足 |
-| participated_at | BIGINT | 参与时间 | 1757823600000 |
+| 字段名           | 类型          | 说明         | 示例值                            |
+| ---------------- | ------------- | ------------ | --------------------------------- |
+| record_id        | BIGINT        | 记录ID       | 584281123456789012                |
+| activity_id      | BIGINT        | 活动ID       | 584280123456789012                |
+| user_id          | BIGINT        | 用户ID       | 584112257881866250                |
+| participate_type | TINYINT       | 参与方式     | 1-主动参与                        |
+| related_id       | BIGINT        | 关联业务ID   | 584270123456789012                |
+| related_type     | VARCHAR(50)   | 关联类型     | recharge_order                    |
+| reward_type      | TINYINT       | 奖励类型     | 1-金币 2-现金                     |
+| reward_amount    | DECIMAL(10,2) | 奖励金额     | 100.00                            |
+| reward_detail    | JSON          | 奖励详情     | {"coins":100,"coupon_ids":[1001]} |
+| reward_status    | TINYINT       | 奖励状态     | 1-已发放                          |
+| condition_met    | TINYINT       | 是否满足条件 | 1-满足                            |
+| participated_at  | BIGINT        | 参与时间     | 1757823600000                     |
 
 **业务规则：**
+
 - 用户参与活动时自动创建记录
 - 满足活动条件后自动发放奖励
 - 奖励发放后更新用户钱包或优惠券
@@ -1882,25 +1914,26 @@ CREATE TABLE system_notifications (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| notification_id | BIGINT | 通知ID | 584282123456789012 |
-| notification_type | TINYINT | 通知类型 | 3-中奖通知 |
-| receiver_type | TINYINT | 接收类型 | 2-指定用户 |
-| receiver_id | BIGINT | 接收用户ID | 584112257881866250 |
-| title | VARCHAR(200) | 通知标题 | Congratulations! You won! |
-| content | TEXT | 通知内容 | You won the Realme T300... |
-| thumbnail | VARCHAR(255) | 缩略图 | https://xxx.s3.amazonaws.com/notif.jpg |
-| jump_url | VARCHAR(500) | 跳转链接 | /winning/detail?id=123 |
-| jump_type | TINYINT | 跳转类型 | 2-APP内页 |
-| related_id | BIGINT | 关联ID | 584260123456789012 |
-| related_type | VARCHAR(50) | 关联类型 | winning_record |
-| push_type | TINYINT | 推送方式 | 2-推送通知 |
-| status | TINYINT | 状态 | 2-已发送 |
-| send_count | INT | 发送数量 | 1 |
-| read_count | INT | 已读数量 | 1 |
+| 字段名            | 类型         | 说明       | 示例值                                 |
+| ----------------- | ------------ | ---------- | -------------------------------------- |
+| notification_id   | BIGINT       | 通知ID     | 584282123456789012                     |
+| notification_type | TINYINT      | 通知类型   | 3-中奖通知                             |
+| receiver_type     | TINYINT      | 接收类型   | 2-指定用户                             |
+| receiver_id       | BIGINT       | 接收用户ID | 584112257881866250                     |
+| title             | VARCHAR(200) | 通知标题   | Congratulations! You won!              |
+| content           | TEXT         | 通知内容   | You won the Realme T300...             |
+| thumbnail         | VARCHAR(255) | 缩略图     | https://xxx.s3.amazonaws.com/notif.jpg |
+| jump_url          | VARCHAR(500) | 跳转链接   | /winning/detail?id=123                 |
+| jump_type         | TINYINT      | 跳转类型   | 2-APP内页                              |
+| related_id        | BIGINT       | 关联ID     | 584260123456789012                     |
+| related_type      | VARCHAR(50)  | 关联类型   | winning_record                         |
+| push_type         | TINYINT      | 推送方式   | 2-推送通知                             |
+| status            | TINYINT      | 状态       | 2-已发送                               |
+| send_count        | INT          | 发送数量   | 1                                      |
+| read_count        | INT          | 已读数量   | 1                                      |
 
 **业务规则：**
+
 - 支持站内信、推送通知、短信、邮件多种推送方式
 - 全局通知（receiver_type=1）自动推送给所有用户
 - 支持定时推送功能
@@ -1909,11 +1942,12 @@ CREATE TABLE system_notifications (
 - 未读通知在APP首页显示红点提示
 
 **receiver_group 示例：**
+
 ```json
 {
   "conditions": [
-    {"field": "vip_level", "operator": ">=", "value": 1},
-    {"field": "kyc_status", "operator": "=", "value": 4}
+    { "field": "vip_level", "operator": ">=", "value": 1 },
+    { "field": "kyc_status", "operator": "=", "value": 4 }
   ],
   "logic": "AND"
 }
@@ -1963,21 +1997,22 @@ CREATE TABLE user_notifications (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| id | BIGINT | 记录ID | 1 |
-| notification_id | BIGINT | 通知ID | 584282123456789012 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| read_status | TINYINT | 阅读状态 | 1-已读 |
-| read_at | BIGINT | 阅读时间 | 1757823600000 |
-| clicked | TINYINT | 是否点击 | 1-已点击 |
-| clicked_at | BIGINT | 点击时间 | 1757823700000 |
-| deleted | TINYINT | 是否删除 | 0-否 |
-| push_status | TINYINT | 推送状态 | 1-已推送 |
-| push_result | VARCHAR(500) | 推送结果 | success |
-| received_at | BIGINT | 接收时间 | 1757823600000 |
+| 字段名          | 类型         | 说明     | 示例值             |
+| --------------- | ------------ | -------- | ------------------ |
+| id              | BIGINT       | 记录ID   | 1                  |
+| notification_id | BIGINT       | 通知ID   | 584282123456789012 |
+| user_id         | BIGINT       | 用户ID   | 584112257881866250 |
+| read_status     | TINYINT      | 阅读状态 | 1-已读             |
+| read_at         | BIGINT       | 阅读时间 | 1757823600000      |
+| clicked         | TINYINT      | 是否点击 | 1-已点击           |
+| clicked_at      | BIGINT       | 点击时间 | 1757823700000      |
+| deleted         | TINYINT      | 是否删除 | 0-否               |
+| push_status     | TINYINT      | 推送状态 | 1-已推送           |
+| push_result     | VARCHAR(500) | 推送结果 | success            |
+| received_at     | BIGINT       | 接收时间 | 1757823600000      |
 
 **业务规则：**
+
 - 系统通知发送时，为目标用户批量创建记录
 - 用户查看通知列表时只显示未删除的记录
 - 未读通知数用于APP角标提示
@@ -2026,21 +2061,22 @@ CREATE TABLE sign_in_records (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| record_id | BIGINT | 记录ID | 1 |
-| user_id | BIGINT | 用户ID | 584112257881866250 |
-| sign_in_date | DATE | 签到日期 | 2025-01-21 |
-| continuous_days | INT | 连续签到天数 | 7 |
-| total_days | INT | 累计签到天数 | 30 |
-| reward_type | TINYINT | 奖励类型 | 1-金币 |
-| reward_amount | DECIMAL(10,2) | 奖励数量 | 10.00 |
-| reward_detail | JSON | 奖励详情 | {"coins":10,"extra_bonus":5} |
-| reward_status | TINYINT | 奖励状态 | 1-已发放 |
-| is_补签 | TINYINT | 是否补签 | 0-正常签到 |
-| signed_at | BIGINT | 签到时间戳 | 1757823600000 |
+| 字段名          | 类型          | 说明         | 示例值                       |
+| --------------- | ------------- | ------------ | ---------------------------- |
+| record_id       | BIGINT        | 记录ID       | 1                            |
+| user_id         | BIGINT        | 用户ID       | 584112257881866250           |
+| sign_in_date    | DATE          | 签到日期     | 2025-01-21                   |
+| continuous_days | INT           | 连续签到天数 | 7                            |
+| total_days      | INT           | 累计签到天数 | 30                           |
+| reward_type     | TINYINT       | 奖励类型     | 1-金币                       |
+| reward_amount   | DECIMAL(10,2) | 奖励数量     | 10.00                        |
+| reward_detail   | JSON          | 奖励详情     | {"coins":10,"extra_bonus":5} |
+| reward_status   | TINYINT       | 奖励状态     | 1-已发放                     |
+| is\_补签        | TINYINT       | 是否补签     | 0-正常签到                   |
+| signed_at       | BIGINT        | 签到时间戳   | 1757823600000                |
 
 **业务规则：**
+
 - 每天只能签到一次（以日期为准）
 - 连续签到天数越多，奖励越丰厚
 - 断签后连续天数清零
@@ -2049,20 +2085,21 @@ CREATE TABLE sign_in_records (
 - 连续签到7天、30天有额外奖励
 
 **签到奖励配置示例：**
+
 ```json
 {
   "daily_rewards": [
-    {"day": 1, "coins": 5},
-    {"day": 2, "coins": 5},
-    {"day": 3, "coins": 10},
-    {"day": 4, "coins": 10},
-    {"day": 5, "coins": 15},
-    {"day": 6, "coins": 15},
-    {"day": 7, "coins": 50, "extra": {"coupon_id": 1001}}
+    { "day": 1, "coins": 5 },
+    { "day": 2, "coins": 5 },
+    { "day": 3, "coins": 10 },
+    { "day": 4, "coins": 10 },
+    { "day": 5, "coins": 15 },
+    { "day": 6, "coins": 15 },
+    { "day": 7, "coins": 50, "extra": { "coupon_id": 1001 } }
   ],
   "milestone_rewards": [
-    {"total_days": 30, "reward": {"coins": 200, "coupon_id": 1002}},
-    {"total_days": 100, "reward": {"coins": 1000, "vip_days": 7}}
+    { "total_days": 30, "reward": { "coins": 200, "coupon_id": 1002 } },
+    { "total_days": 100, "reward": { "coins": 1000, "vip_days": 7 } }
   ]
 }
 ```
@@ -2148,21 +2185,22 @@ CREATE TABLE system_config (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| config_id | INT | 配置ID | 1 |
-| config_key | VARCHAR(100) | 配置键名 | min_withdraw_amount |
-| config_value | TEXT | 配置值 | 100 |
-| config_type | TINYINT | 配置类型 | 2-数字 |
-| config_group | VARCHAR(50) | 配置分组 | payment |
-| config_name | VARCHAR(200) | 配置名称 | 最低提现金额 |
-| config_desc | TEXT | 配置说明 | 用户单次提现最低金额限制 |
-| editable | TINYINT | 是否可编辑 | 1-可编辑 |
-| need_restart | TINYINT | 是否需要重启 | 0-否 |
-| default_value | TEXT | 默认值 | 100 |
-| status | TINYINT | 状态 | 1-启用 |
+| 字段名        | 类型         | 说明         | 示例值                   |
+| ------------- | ------------ | ------------ | ------------------------ |
+| config_id     | INT          | 配置ID       | 1                        |
+| config_key    | VARCHAR(100) | 配置键名     | min_withdraw_amount      |
+| config_value  | TEXT         | 配置值       | 100                      |
+| config_type   | TINYINT      | 配置类型     | 2-数字                   |
+| config_group  | VARCHAR(50)  | 配置分组     | payment                  |
+| config_name   | VARCHAR(200) | 配置名称     | 最低提现金额             |
+| config_desc   | TEXT         | 配置说明     | 用户单次提现最低金额限制 |
+| editable      | TINYINT      | 是否可编辑   | 1-可编辑                 |
+| need_restart  | TINYINT      | 是否需要重启 | 0-否                     |
+| default_value | TEXT         | 默认值       | 100                      |
+| status        | TINYINT      | 状态         | 1-启用                   |
 
 **业务规则：**
+
 - 配置按分组管理：系统配置、支付配置、抽奖配置、营销配置等
 - 支持热更新，部分配置修改后无需重启
 - 关键配置设置为不可编辑，防止误操作
@@ -2257,23 +2295,24 @@ CREATE TABLE admin_users (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| admin_id | BIGINT | 管理员ID | 584290123456789012 |
-| username | VARCHAR(50) | 用户名 | admin001 |
-| password | VARCHAR(255) | 密码（加密） | $2b$10$... |
-| real_name | VARCHAR(100) | 真实姓名 | John Smith |
-| email | VARCHAR(100) | 邮箱 | admin@example.com |
-| phone | VARCHAR(20) | 手机号 | +63 912 345 6789 |
-| role_id | INT | 角色ID | 1 |
-| role_name | VARCHAR(50) | 角色名称 | 超级管理员 |
-| permissions | JSON | 权限列表 | ["user:view","order:edit"] |
-| status | TINYINT | 状态 | 1-正常 |
-| is_super_admin | TINYINT | 是否超管 | 1-是 |
-| last_login_at | BIGINT | 最后登录时间 | 1757823600000 |
-| failed_login_count | INT | 失败次数 | 0 |
+| 字段名             | 类型         | 说明         | 示例值                     |
+| ------------------ | ------------ | ------------ | -------------------------- |
+| admin_id           | BIGINT       | 管理员ID     | 584290123456789012         |
+| username           | VARCHAR(50)  | 用户名       | admin001                   |
+| password           | VARCHAR(255) | 密码（加密） | $2b$10$...                 |
+| real_name          | VARCHAR(100) | 真实姓名     | John Smith                 |
+| email              | VARCHAR(100) | 邮箱         | admin@example.com          |
+| phone              | VARCHAR(20)  | 手机号       | +63 912 345 6789           |
+| role_id            | INT          | 角色ID       | 1                          |
+| role_name          | VARCHAR(50)  | 角色名称     | 超级管理员                 |
+| permissions        | JSON         | 权限列表     | ["user:view","order:edit"] |
+| status             | TINYINT      | 状态         | 1-正常                     |
+| is_super_admin     | TINYINT      | 是否超管     | 1-是                       |
+| last_login_at      | BIGINT       | 最后登录时间 | 1757823600000              |
+| failed_login_count | INT          | 失败次数     | 0                          |
 
 **业务规则：**
+
 - 密码使用bcrypt加密存储
 - 连续登录失败5次自动锁定账户30分钟
 - 超级管理员拥有所有权限
@@ -2287,24 +2326,34 @@ CREATE TABLE admin_users (
 {
   "super_admin": ["*:*"],
   "operation": [
-    "user:view", "user:edit", "user:kyc",
-    "treasure:view", "treasure:edit", "treasure:lottery",
-    "order:view", "order:refund",
-    "activity:view", "activity:edit",
+    "user:view",
+    "user:edit",
+    "user:kyc",
+    "treasure:view",
+    "treasure:edit",
+    "treasure:lottery",
+    "order:view",
+    "order:refund",
+    "activity:view",
+    "activity:edit",
     "notification:send"
   ],
   "finance": [
     "user:view",
-    "order:view", "order:export",
-    "payment:view", "payment:export",
-    "recharge:view", "withdraw:audit",
+    "order:view",
+    "order:export",
+    "payment:view",
+    "payment:export",
+    "recharge:view",
+    "withdraw:audit",
     "refund:audit",
     "report:view"
   ],
   "customer_service": [
     "user:view",
     "order:view",
-    "ticket:view", "ticket:reply",
+    "ticket:view",
+    "ticket:reply",
     "notification:view"
   ]
 }
@@ -2366,29 +2415,30 @@ CREATE TABLE admin_operation_logs (
 
 **字段说明：**
 
-| 字段名 | 类型 | 说明 | 示例值 |
-|--------|------|------|--------|
-| log_id | BIGINT | 日志ID | 1 |
-| admin_id | BIGINT | 管理员ID | 584290123456789012 |
-| admin_name | VARCHAR(100) | 管理员名称 | admin001 |
-| operation_type | TINYINT | 操作类型 | 3-修改 |
-| operation_module | VARCHAR(50) | 操作模块 | user_management |
-| operation_action | VARCHAR(100) | 操作动作 | update_kyc_status |
-| operation_desc | TEXT | 操作描述 | 审核通过用户KYC认证 |
-| request_method | VARCHAR(10) | 请求方法 | POST |
-| request_url | VARCHAR(500) | 请求URL | /api/admin/user/kyc/approve |
-| request_params | TEXT | 请求参数 | {"user_id":123,"status":4} |
-| request_ip | VARCHAR(50) | 请求IP | 192.168.1.100 |
-| response_status | INT | 响应状态码 | 200 |
-| response_time | INT | 响应时间 | 150 |
-| related_id | BIGINT | 关联业务ID | 584112257881866250 |
-| related_type | VARCHAR(50) | 关联类型 | user |
-| before_data | JSON | 变更前 | {"kyc_status":1} |
-| after_data | JSON | 变更后 | {"kyc_status":4} |
-| is_success | TINYINT | 是否成功 | 1-成功 |
-| operation_time | BIGINT | 操作时间 | 1757823600000 |
+| 字段名           | 类型         | 说明       | 示例值                      |
+| ---------------- | ------------ | ---------- | --------------------------- |
+| log_id           | BIGINT       | 日志ID     | 1                           |
+| admin_id         | BIGINT       | 管理员ID   | 584290123456789012          |
+| admin_name       | VARCHAR(100) | 管理员名称 | admin001                    |
+| operation_type   | TINYINT      | 操作类型   | 3-修改                      |
+| operation_module | VARCHAR(50)  | 操作模块   | user_management             |
+| operation_action | VARCHAR(100) | 操作动作   | update_kyc_status           |
+| operation_desc   | TEXT         | 操作描述   | 审核通过用户KYC认证         |
+| request_method   | VARCHAR(10)  | 请求方法   | POST                        |
+| request_url      | VARCHAR(500) | 请求URL    | /api/admin/user/kyc/approve |
+| request_params   | TEXT         | 请求参数   | {"user_id":123,"status":4}  |
+| request_ip       | VARCHAR(50)  | 请求IP     | 192.168.1.100               |
+| response_status  | INT          | 响应状态码 | 200                         |
+| response_time    | INT          | 响应时间   | 150                         |
+| related_id       | BIGINT       | 关联业务ID | 584112257881866250          |
+| related_type     | VARCHAR(50)  | 关联类型   | user                        |
+| before_data      | JSON         | 变更前     | {"kyc_status":1}            |
+| after_data       | JSON         | 变更后     | {"kyc_status":4}            |
+| is_success       | TINYINT      | 是否成功   | 1-成功                      |
+| operation_time   | BIGINT       | 操作时间   | 1757823600000               |
 
 **业务规则：**
+
 - 记录所有管理员的增删改操作
 - 敏感操作（如审核、删除）必须记录
 - 变更记录保存修改前后的数据对比
@@ -2475,6 +2525,7 @@ system_config (系统配置表) - 独立表
 ## 数据库索引策略总结
 
 ### 高频查询索引
+
 1. **用户相关：** `idx_phone`, `idx_invite_code`, `idx_kyc_status`
 2. **订单相关：** `idx_user`, `idx_order_no`, `idx_status`, `idx_created_at`
 3. **产品相关：** `idx_lottery_mode`, `idx_lottery_time`, `idx_state`
@@ -2482,12 +2533,14 @@ system_config (系统配置表) - 独立表
 5. **钱包相关：** `idx_user`, `idx_transaction_type`, `idx_created_at`
 
 ### 复合索引
+
 1. **用户状态查询：** `idx_user_status(user_id, kyc_status)`
 2. **订单状态查询：** `idx_status(order_status, pay_status)`
 3. **通知已读查询：** `idx_user_read(user_id, read_status)`
 4. **活动参与查询：** `idx_user_activity(user_id, activity_id)`
 
 ### 唯一索引
+
 1. **业务单号：** `order_no`, `payment_no`, `refund_no`, `withdraw_no`
 2. **邀请码：** `invite_code`
 3. **优惠券代码：** `coupon_code`
@@ -2498,12 +2551,14 @@ system_config (系统配置表) - 独立表
 ## 数据安全与备份策略
 
 ### 数据加密
+
 1. **密码加密：** bcrypt加密存储
 2. **银行卡号：** AES加密存储，展示时脱敏
 3. **手机号：** 存储MD5用于查重
 4. **身份证号：** OCR结果加密存储
 
 ### 备份策略
+
 1. **全量备份：** 每天凌晨2点全量备份
 2. **增量备份：** 每小时增量备份
 3. **归档策略：**
@@ -2512,6 +2567,7 @@ system_config (系统配置表) - 独立表
    - 用户行为数据保存6个月
 
 ### 数据权限
+
 1. **读写分离：** 主库写入，从库查询
 2. **敏感数据：** 限制查询权限
 3. **数据导出：** 需要审批和日志记录
@@ -2522,12 +2578,14 @@ system_config (系统配置表) - 独立表
 ## 性能优化建议
 
 ### 分库分表策略
+
 1. **订单表：** 按月分表 `orders_202501`, `orders_202502`
 2. **流水表：** 按月分表 `wallet_transactions_202501`
 3. **日志表：** 按月分表 `admin_operation_logs_202501`
 4. **用户表：** 达到1000万后考虑分库
 
 ### 缓存策略
+
 1. **热点数据：**
    - 产品信息缓存1小时
    - 用户钱包余额缓存5分钟
@@ -2536,6 +2594,7 @@ system_config (系统配置表) - 独立表
 3. **分布式锁：** 防止并发操作（抽奖、扣款）
 
 ### 查询优化
+
 1. **避免全表扫描：** 所有查询都使用索引
 2. **分页查询：** 大数据量使用游标分页
 3. **批量操作：** 批量插入、批量更新

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { UserRole } from '../types';
+import { UserRole } from '@/types';
 import { authApi } from '@/api';
 
 interface AuthState {

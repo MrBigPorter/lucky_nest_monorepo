@@ -1,17 +1,16 @@
 # Lucky Monorepo · 架构设计与运行原理（架构师级）
 
-
 ---
 
 ## 0. 总览（Monorepo 与领域边界）
 
 - 仓库模式：Yarn Workspaces + Turborepo
-  - apps/*：可运行应用
+  - apps/\*：可运行应用
     - apps/api：NestJS 后端 API
     - apps/web：Next.js Web 前端
-  - packages/*：共享库与配置
+  - packages/\*：共享库与配置
     - packages/shared：类型/常量/工具函数与契约（DTO/Response 类型）
-    - packages/*-config：工程配置（eslint、tsconfig 等）
+    - packages/\*-config：工程配置（eslint、tsconfig 等）
 - 架构风格：
   - 前后端分离，契约统一（shared 包导出公共类型/DTO）
   - 基于 Turbo 的任务编排与缓存（本地/可接入远程）
@@ -62,7 +61,7 @@ root
 ```
 
 - shared 只放“无副作用”的纯类型/纯函数/常量/协议，不依赖 runtime 服务
-- apps/* 可以依赖 packages/*，反之不允许
+- apps/_ 可以依赖 packages/_，反之不允许
 
 ---
 
@@ -263,7 +262,7 @@ PR → CI(Lint/TypeCheck/Test/Build) → Preview/Artifacts
    |                         [Prisma Client]
    |                                |
    |                           [Postgres]
-   v                                
+   v
 [Response] <----- [Interceptors/Error Filters]
 ```
 
@@ -279,7 +278,7 @@ packages/shared ─┬─> apps/api
 ## 12. 演进与优化建议（Roadmap）
 
 - 工程治理
-  - 引入 Changesets 做版本与变更日志管理（packages/* 发布）
+  - 引入 Changesets 做版本与变更日志管理（packages/\* 发布）
   - 开启 Turbo 远程缓存（团队/CI 提速）
   - 代码所有权与 CODEOWNERS（按目录划分）
 - 后端能力
@@ -303,4 +302,3 @@ packages/shared ─┬─> apps/api
 - 环境命名：dev/staging/prod
 
 ---
-

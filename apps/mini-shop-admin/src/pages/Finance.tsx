@@ -21,21 +21,16 @@ import {
   Modal,
   Badge,
   DateRangePicker,
-} from '../components/UIComponents.tsx';
+} from '@/components/UIComponents';
 import {
   MOCK_RECHARGE_PLANS,
   MOCK_WITHDRAWALS,
   MOCK_RECHARGE_ORDERS,
   MOCK_TRANSACTIONS,
-} from '../../constants.ts';
-import { useMockData } from '../hooks/useMockData.ts';
-import { useToast } from '../../App.tsx';
-import {
-  RechargePlan,
-  Withdrawal,
-  RechargeOrder,
-  Transaction,
-} from '../../types.ts';
+} from '@/constants';
+import { useMockData } from '@/hooks/useMockData';
+import { useToastStore } from '@/store/useToastStore';
+import { RechargePlan, Withdrawal, RechargeOrder, Transaction } from '@/types';
 
 // --- SUB-COMPONENT: RECHARGE PLANS ---
 const RechargeConfig: React.FC = () => {
@@ -45,7 +40,7 @@ const RechargeConfig: React.FC = () => {
     remove,
     update,
   } = useMockData<RechargePlan>(MOCK_RECHARGE_PLANS);
-  const toast = useToast();
+  const addToast = useToastStore((state) => state.addToast);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<RechargePlan> | null>(
     null,
@@ -68,10 +63,10 @@ const RechargeConfig: React.FC = () => {
   const handleSave = () => {
     if (editingItem && editingItem.id) {
       update(editingItem.id, formData);
-      toast.addToast('success', 'Plan updated successfully');
+      addToast('success', 'Plan updated successfully');
     } else {
       add({ ...formData, id: Date.now().toString() } as RechargePlan);
-      toast.addToast('success', 'New recharge plan created');
+      addToast('success', 'New recharge plan created');
     }
     setIsModalOpen(false);
   };
@@ -346,12 +341,12 @@ const TransactionLogs: React.FC = () => {
 const WithdrawalAudit: React.FC = () => {
   const { data: withdrawals, update } =
     useMockData<Withdrawal>(MOCK_WITHDRAWALS);
-  const toast = useToast();
+  const addToast = useToastStore((state) => state.addToast);
   const [riskModal, setRiskModal] = useState<Withdrawal | null>(null);
 
   const handleStatus = (id: string, status: 'approved' | 'rejected') => {
     update(id, { status });
-    toast.addToast(
+    addToast(
       status === 'approved' ? 'success' : 'error',
       `Withdrawal ${status.toUpperCase()}`,
     );

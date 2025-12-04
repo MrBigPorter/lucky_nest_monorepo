@@ -7,7 +7,7 @@ import {
   Select,
   Badge,
 } from '../components/UIComponents.tsx';
-import { MOCK_NOTIFICATIONS } from '../../constants.ts';
+import { MOCK_NOTIFICATIONS } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { SystemNotification } from '../../types.ts';
 

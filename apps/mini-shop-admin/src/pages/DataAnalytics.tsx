@@ -25,7 +25,7 @@ import {
   MOCK_FUNNEL_DATA,
   MOCK_PRODUCT_METRICS,
   MOCK_COHORT_DATA,
-} from '../../constants.ts';
+} from '../constants.ts';
 
 // --- SUB-COMPONENT: CONVERSION FUNNEL ---
 const ConversionFunnel: React.FC = () => {

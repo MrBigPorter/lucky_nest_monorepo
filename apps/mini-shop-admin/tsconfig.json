@@ -14,20 +14,13 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/"],
-      "@/api": ["./src/api/index.ts"],
-      "@/api/*": ["./src/api/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/store/*": ["./src/store/*"],
-      "@/pages/*": ["./src/pages/*"],
-      "@/types": ["./src/types.ts"]
+      "@/*": ["src/*"]
     },
-    "include": ["src", "env.d.ts"],
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
-  }
+  },
+  "include": ["src", "env.d.ts"]
 }

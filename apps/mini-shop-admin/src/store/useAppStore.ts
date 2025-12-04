@@ -4,13 +4,16 @@ import { Theme, Language } from '../types';
 interface AppState {
   theme: Theme;
   lang: Language;
+  isSidebarCollapsed: boolean;
   toggleTheme: () => void;
   toggleLang: () => void;
+  toggleSidebar: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   theme: 'dark',
   lang: 'en',
+  isSidebarCollapsed: false,
   toggleTheme: () =>
     set((state) => {
       const newTheme = state.theme === 'dark' ? 'light' : 'dark';
@@ -20,4 +23,6 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   toggleLang: () =>
     set((state) => ({ lang: state.lang === 'en' ? 'zh' : 'en' })),
+  toggleSidebar: () =>
+    set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
 }));

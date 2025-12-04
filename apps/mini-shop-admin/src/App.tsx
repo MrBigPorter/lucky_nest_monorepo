@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { HashRouter as Router } from 'react-router-dom';
-import { AppRoutes } from './AppRoutes';
-import { ToastContainer } from './components/UIComponents';
-import { useAuthStore } from './store/useAuthStore';
-import { useAppStore } from './store/useAppStore';
-import { useToastStore } from './store/useToastStore';
+import { AppRoutes } from './AppRoutes.tsx';
+import { ToastContainer } from './components/UIComponents.tsx';
+import { useAuthStore } from './store/useAuthStore.ts';
+import { useAppStore } from './store/useAppStore.ts';
+import { useToastStore } from './store/useToastStore.ts';
 
 const App: React.FC = () => {
   // Initialize stores

@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
-import {
-  Save,
-  Upload,
-  Trash2,
-  PlusCircle,
-} from 'lucide-react';
-import {
-  Card,
-  Button,
-  Input,
-  Switch,
-
-} from '../components/UIComponents.tsx';
-import { MOCK_BANNERS } from '../../constants.ts';
+import { Save, Upload, Trash2, PlusCircle } from 'lucide-react';
+import { Card, Button, Input, Switch } from '../components/UIComponents.tsx';
+import { MOCK_BANNERS } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
 import { Banner } from '../../types.ts';
 

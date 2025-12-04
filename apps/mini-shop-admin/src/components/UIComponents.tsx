@@ -12,12 +12,7 @@ import {
   Info,
   ChevronRight,
 } from 'lucide-react';
-import {
-  motion,
-  AnimatePresence,
-  HTMLMotionProps,
-  Variants,
-} from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 // --- Animation Variants ---
 export const fadeInUp: Variants = {
