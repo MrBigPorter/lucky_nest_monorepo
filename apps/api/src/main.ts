@@ -93,7 +93,7 @@ async function bootstrap() {
   // Swagger（开发环境默认开；生产用 ENABLE_DOCS 控制） just for dev
   if (!isProd) {
     const swaggerCfg = new DocumentBuilder()
-      .setTitle('Lucky API')
+      .setTitle(' mini-shop-client API')
       .setDescription('REST API for web/mobile')
       .setVersion('1.0')
       .addBearerAuth()

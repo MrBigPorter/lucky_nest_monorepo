@@ -1,25 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
-import { PrismaModule } from './prisma/prisma.module';
+import { PrismaModule } from '@api/common/prisma/prisma.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { AuthModule } from './auth/auth.module'; // 如果你 tsconfig 没开 esModuleInterop，用这种写法最稳
-import { APP_GUARD } from '@nestjs/core';
-import { OtpThrottlerGuard } from './common/guards/otp-throttler.guard';
-import { OtpModule } from './otp/otp.module';
-import { HealthController } from '@api/health/health.controller';
-import { TreasureModule } from '@api/treasure/treasure.module';
-import { CategoryModule } from '@api/category/category.module';
-import { BannersModule } from '@api/banners/banners.module';
-import { AdsModule } from '@api/ads/ads.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
-import { SectionsModule } from '@api/sections/sections.module';
-import { GroupModule } from '@api/group/group.module';
-import { WalletModule } from '@api/wallet/wallet.module';
-import { OrderModule } from '@api/orders/order.module';
+import {ClientModule} from "@api/client/client.module";
+import {AdminModule} from "@api/admin/admin.module";
+import {APP_GUARD} from "@nestjs/core";
+import {OtpThrottlerGuard} from "@api/common/guards/otp-throttler.guard";
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -69,20 +60,13 @@ import { OrderModule } from '@api/orders/order.module';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 60 }]),
     //根模块，把业务模块“挂进来”。Nest 会读这些元数据，生成依赖图。
     PrismaModule,
-    AuthModule,
-    OtpModule,
-    TreasureModule,
-    CategoryModule,
-    BannersModule,
-    AdsModule,
-    SectionsModule,
-    GroupModule,
-    WalletModule,
-    OrderModule,
+    ClientModule,
+      AdminModule
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],
-  controllers: [AppController, HealthController],
+
+  controllers: [AppController],
   providers: [
     AppService,
     //让限流生效：把 ThrottlerGuard 设为全局守卫，否则 @Throttle 不会拦截。

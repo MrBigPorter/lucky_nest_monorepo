@@ -62,3 +62,10 @@ export const SEND_STATUS = {
   /** 发送失败 */ FAILED: 3,
 } as const;
 export type SendStatusNum = (typeof SEND_STATUS)[keyof typeof SEND_STATUS];
+
+export enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN', // 超级管理员
+  ADMIN = 'ADMIN',             // 普通管理员
+  EDITOR = 'EDITOR',           // 编辑
+  VIEWER = 'VIEWER',           // 观察者
+}
