@@ -167,7 +167,11 @@ export const AdminUserManagement: React.FC = () => {
          await userApi.updateUser(editingAdmin.id, formData);
         addToast('success', `Admin ${formData.username} updated successfully.`);
       } else {
-         await userApi.createUser({ ...formData });
+        await userApi.createUser({
+          role: formData.role,
+          username: formData.username,
+          realName: formData.realName,
+        });
         addToast('success', `Admin ${formData.username} created successfully.`);
       }
       setIsEditModalOpen(false);
