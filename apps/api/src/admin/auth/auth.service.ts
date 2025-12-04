@@ -1,7 +1,6 @@
 import {PrismaService} from "@api/common/prisma/prisma.service";
 
 import {JwtService} from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
 import {
     BadRequestException,
     Injectable,
@@ -9,6 +8,7 @@ import {
 } from '@nestjs/common';
 
 import {AdminLoginDto} from '@api/client/auth/dto/admin-login.dto';
+import {PasswordService} from "@api/common/service/password.service";
 
 
 interface JwtPayload {
@@ -22,6 +22,7 @@ export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly jwt: JwtService,
+        private readonly  passwordService: PasswordService
     ) {
     }
 
@@ -71,7 +72,7 @@ export class AuthService {
         // check user
         if (!admin) {
             // mock password ,模拟耗时防止计时攻击-
-            await bcrypt.compare(
+            await this.passwordService.compare(
                 password,
                 '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxwKc.60r.wwLs8BHlijROgM3.W9q',
             );
@@ -85,7 +86,7 @@ export class AuthService {
         }
 
         // verify password
-        const isMatch = await bcrypt.compare(password, admin.password);
+        const isMatch = await this.passwordService.compare(password, admin.password);
         if (!isMatch) {
             await this.loginAuth(false, {
                 username,
