@@ -48,7 +48,11 @@ export class UserService {
             pageSize,
             page,
             totalPages: Math.ceil(total / pageSize),
-            list
+            list:list.map((item)=> ({
+                ...item,
+                createdAt:item.createdAt.getTime(),
+                lastLoginAt: item?.lastLoginAt?.getTime() || null
+            }))
         }
     }
 
