@@ -19,6 +19,18 @@ export interface AdminUser {
   realName: string;
 }
 
+export type AdminCreateUser = Pick<AdminUser, 'username' | 'role'> & {
+  realName?: AdminUser['realName'];
+  password?: string;
+};
+
+export type AdminUpdateUser = Pick<
+  AdminUser,
+  'realName' | 'role' | 'status'
+> & {
+  password: string;
+};
+
 export interface LoginResponse {
   tokens: Tokens;
   userInfo: AdminUser;

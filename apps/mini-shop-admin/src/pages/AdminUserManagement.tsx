@@ -164,10 +164,10 @@ export const AdminUserManagement: React.FC = () => {
   const handleSaveAdmin = async () => {
     try {
       if (editingAdmin) {
-        // await userApi.updateAdmin(editingAdmin.id, formData);
+         await userApi.updateUser(editingAdmin.id, formData);
         addToast('success', `Admin ${formData.username} updated successfully.`);
       } else {
-        // await userApi.createAdmin({ ...formData, password: 'InitialPassword123' });
+         await userApi.createUser({ ...formData });
         addToast('success', `Admin ${formData.username} created successfully.`);
       }
       setIsEditModalOpen(false);

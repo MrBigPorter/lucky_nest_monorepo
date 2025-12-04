@@ -11,7 +11,7 @@ import type {
   User,
   TreasureGroup,
   LoginResponse,
-  AdminUser,
+  AdminUser, AdminCreateUser, AdminUpdateUser,
 } from '@/types';
 
 /**
@@ -23,17 +23,18 @@ export const userApi = {
     http.get<PaginatedResponse<AdminUser>>('/v1/admin/user/list', params),
 
   // 获取用户详情
-  getUserById: (id: string) => http.get<User>(`/users/${id}`),
+  getUserById: (id: string) => http.get<User>(`/v1/admin/user/${id}`),
 
   // 创建用户
-  createUser: (data: Partial<User>) => http.post<User>('/users', data),
+  createUser: (data: AdminCreateUser) =>
+    http.post<User>('/v1/admin/user/create', data),
 
   // 更新用户
-  updateUser: (id: string, data: Partial<User>) =>
-    http.put<User>(`/users/${id}`, data),
+  updateUser: (id: string, data: Partial<AdminUpdateUser>) =>
+    http.put<User>(`/v1/admin/user/${id}`, data),
 
   // 删除用户
-  deleteUser: (id: string) => http.delete(`/users/${id}`),
+  deleteUser: (id: string) => http.delete(`/api/v1/admin/user/${id}`),
 
   // 获取当前登录用户信息
   getCurrentUser: () => http.get<User>('/users/me'),
