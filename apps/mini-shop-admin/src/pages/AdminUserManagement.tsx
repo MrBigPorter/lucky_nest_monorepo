@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Search,
   ShieldCheck,
   Ban,
   CheckCircle,
@@ -29,8 +28,26 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 
-// -------------------- 数据请求封装：对齐后端参数 --------------------
+type AdminUserSearchForm = {
+  username?: string;
+  realName?: string;
+  role?: string;
+  status?: string;
+};
 
+type AdminUserListParams = {
+  page: number;
+  pageSize: number;
+  username?: string;
+  realName?: string;
+  role?: string;
+  status?: string | number;
+};
+
+/**
+ * 表格数据请求：适配后端返回结构
+ * GET /api/v1/admin/user/list?page=1&pageSize=10&username=...&realName=...&role=...&status=...
+ */
 const getAdminUserTableData = async (
   { current, pageSize }: { current: number; pageSize: number },
   formData: {
@@ -40,7 +57,7 @@ const getAdminUserTableData = async (
     status?: string | number;
   },
 ) => {
-  const params: Record<string, any> = {
+  const params: AdminUserListParams = {
     page: current,
     pageSize,
   };
@@ -56,19 +73,16 @@ const getAdminUserTableData = async (
     params.status = formData.status;
   }
 
-  // 这里按你的实际 userApi 实现
-  const res = await userApi.getUsers(params);
-  // 假设返回 { data: { items: AdminUser[], total: number } }
-  const items: AdminUser[] = res.list ?? [];
-  const total: number = res.total ?? 0;
+  const data = await userApi.getUsers(params);
+
+  const items: AdminUser[] = data.list ?? [];
+  const total: number = data.total ?? 0;
 
   return {
     list: items,
     total,
   };
 };
-
-// -------------------- 组件主体 --------------------
 
 export const AdminUserManagement: React.FC = () => {
   const addToast = useToastStore((state) => state.addToast);
@@ -79,7 +93,7 @@ export const AdminUserManagement: React.FC = () => {
   const [isResetPwdModalOpen, setIsResetPwdModalOpen] = useState(false);
   const [resetPwdAdmin, setResetPwdAdmin] = useState<AdminUser | null>(null);
 
-  // 表单（创建/编辑）状态
+  // 表单（创建/编辑）
   const [formData, setFormData] = useState<Partial<AdminUser>>({
     username: '',
     realName: '',
@@ -88,21 +102,21 @@ export const AdminUserManagement: React.FC = () => {
   });
   const [newPassword, setNewPassword] = useState('');
 
-  // 列表筛选条件
-  const [filters, setFilters] = useState<{
-    username: string;
-    realName: string;
-    role: string;
-    status: string;
-  }>({
+  // 列表筛选条件（只保存在本地，由我们手动调用 submit 触发 useAntdTable）
+  const [filters, setFilters] = useState<AdminUserSearchForm>({
     username: '',
     realName: '',
     role: 'ALL',
     status: 'ALL',
   });
 
-  // Table data fetching（只当数据源和分页引擎使用）
-  const { tableProps, search, refresh } = useAntdTable(getAdminUserTableData, {
+  // useAntdTable 只负责「请求 + 分页」
+  const {
+    tableProps,
+    run,
+    refresh,
+    search: { reset },
+  } = useAntdTable(getAdminUserTableData, {
     defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
@@ -115,9 +129,6 @@ export const AdminUserManagement: React.FC = () => {
     ],
   });
 
-  const { submit, reset } = search;
-
-  // 从 tableProps 里拆出分页信息
   const pagination = tableProps.pagination || {};
   const current = pagination.current ?? 1;
   const pageSize = pagination.pageSize ?? 10;
@@ -162,6 +173,7 @@ export const AdminUserManagement: React.FC = () => {
       setIsEditModalOpen(false);
       refresh();
     } catch (error) {
+      console.error(error);
       addToast('error', 'Operation failed.');
     }
   };
@@ -178,6 +190,7 @@ export const AdminUserManagement: React.FC = () => {
       );
       refresh();
     } catch (error) {
+      console.error(error);
       addToast('error', 'Failed to update status.');
     }
   };
@@ -191,7 +204,6 @@ export const AdminUserManagement: React.FC = () => {
   const handleResetPassword = async () => {
     if (!resetPwdAdmin || !newPassword) return;
     try {
-      // await userApi.resetAdminPassword(resetPwdAdmin.id, newPassword);
       addToast(
         'success',
         `Password for ${resetPwdAdmin.username} reset successfully.`,
@@ -204,13 +216,13 @@ export const AdminUserManagement: React.FC = () => {
 
   // 提交筛选
   const handleSearch = () => {
-    submit(
+    run(
       { current: 1, pageSize },
       {
-        username: filters.username.trim(),
-        realName: filters.realName.trim(),
-        role: filters.role,
-        status: filters.status,
+        username: filters?.username?.trim() ?? '',
+        realName: filters?.realName?.trim() ?? '',
+        role: filters.role ?? '',
+        status: filters.status ?? '',
       },
     );
   };
@@ -224,11 +236,10 @@ export const AdminUserManagement: React.FC = () => {
       status: 'ALL',
     };
     setFilters(initial);
-    // reset 会使用 defaultParams（已经设置成同样的初始值）
     reset();
   };
 
-  // -------------------- Table Configuration (TanStack Table) --------------------
+  // -------------------- TanStack Table 列定义 --------------------
 
   const columnHelper = createColumnHelper<AdminUser>();
 
@@ -346,8 +357,6 @@ export const AdminUserManagement: React.FC = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  console.log('===>',table);
-
   // -------------------- Render --------------------
 
   return (
@@ -378,7 +387,6 @@ export const AdminUserManagement: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, username: e.target.value }))
               }
-              leftIcon={<Search size={16} />}
               onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                 if (e.key === 'Enter') handleSearch();
               }}
@@ -390,7 +398,6 @@ export const AdminUserManagement: React.FC = () => {
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, realName: e.target.value }))
               }
-              leftIcon={<Search size={16} />}
               onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                 if (e.key === 'Enter') handleSearch();
               }}
@@ -432,16 +439,16 @@ export const AdminUserManagement: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/5">
           <table className="w-full text-left">
-            <thead>
+            <thead className="bg-gray-50/60 dark:bg-white/5">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr
                   key={headerGroup.id}
-                  className="border-b border-gray-100 dark:border-white/5 text-gray-400 text-xs font-semibold uppercase tracking-wider"
+                  className="border-b border-gray-100 dark:border-white/5 text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider"
                 >
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="pb-4 pl-4">
+                    <th key={header.id} className="px-4 py-3">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -453,14 +460,14 @@ export const AdminUserManagement: React.FC = () => {
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
               {table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="group hover:bg-gray-50 dark:hover:bg白/5 transition-colors duration-200"
+                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-150"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="py-4 pl-4">
+                    <td key={cell.id} className="px-4 py-3 text-sm">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -484,26 +491,38 @@ export const AdminUserManagement: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-between items-center mt-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => pagination.onChange?.(current - 1, pageSize)}
-            disabled={current <= 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-gray-500">
-            Page {current} of {totalPage}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => pagination.onChange?.(current + 1, pageSize)}
-            disabled={current >= totalPage}
-          >
-            Next
-          </Button>
+        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
+          <div>
+            Total{' '}
+            <span className="font-semibold text-gray-800 dark:text-gray-100">
+              {total}
+            </span>{' '}
+            items
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => pagination.onChange?.(current - 1, pageSize)}
+              disabled={current <= 1}
+            >
+              Previous
+            </Button>
+            <span>
+              Page{' '}
+              <span className="font-semibold">
+                {current} / {totalPage}
+              </span>
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => pagination.onChange?.(current + 1, pageSize)}
+              disabled={current >= totalPage}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -535,7 +554,7 @@ export const AdminUserManagement: React.FC = () => {
             label="Role"
             value={formData.role}
             onChange={(e) =>
-              setFormData({ ...formData, role: e.target.value as any })
+              setFormData({ ...formData, role: e.target.value as string })
             }
             options={[
               { label: 'Viewer', value: 'VIEWER' },
@@ -562,8 +581,8 @@ export const AdminUserManagement: React.FC = () => {
           {!editingAdmin && (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg text-sm text-yellow-700 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-900/20">
               <ShieldCheck size={16} className="inline mr-1 -mt-0.5" />
-              Default password will be <strong>InitialPassword123</strong>.
-              Please ask the user to change it upon first login.
+              Default password will be <strong>InitialPassword123</strong>. Ask
+              the user to change it on first login.
             </div>
           )}
 

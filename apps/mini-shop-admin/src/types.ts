@@ -296,6 +296,7 @@ export interface AdminUser {
   roleName: string;
   status: number;
   lastLogin: string;
+  lastLoginIp: string;
 }
 
 export interface OperationLog {

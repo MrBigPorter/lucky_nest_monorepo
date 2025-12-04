@@ -10,7 +10,7 @@ import type {
   Category,
   User,
   TreasureGroup,
-  LoginResponse,
+  LoginResponse, AdminUser,
 } from '@/types';
 
 /**
@@ -19,7 +19,7 @@ import type {
 export const userApi = {
   // 获取用户列表
   getUsers: (params?: PaginationParams) =>
-    http.get<PaginatedResponse<User>>('/v1/admin/user/list', params),
+    http.get<PaginatedResponse<AdminUser>>('/v1/admin/user/list', params),
 
   // 获取用户详情
   getUserById: (id: string) => http.get<User>(`/users/${id}`),
