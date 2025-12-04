@@ -7,21 +7,21 @@ import { seedActSections } from './seed-sections';
 import { seedTestUserWallet } from './seed-wallet';
 
 async function main() {
-    await seedSystemConfigExchangeRate();
-    await seedProductCategories();
-    await seedTreasures();
-    await seedBanners();
-    await seedAdvertisements();
-    await seedActSections();
-     await seedTestUserWallet();
+  await seedSystemConfigExchangeRate();
+  await seedProductCategories();
+  await seedTreasures();
+  await seedBanners();
+  await seedAdvertisements();
+  await seedActSections();
+  await seedTestUserWallet();
 }
 
 main()
-    .then(() => {
-        console.log('✅ All seed finished');
-        process.exit(0);
-    })
-    .catch((e) => {
-        console.error(e);
-        process.exit(1);
-    });
+  .then(() => {
+    console.log('✅ All seed finished');
+    process.exit(0);
+  })
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });

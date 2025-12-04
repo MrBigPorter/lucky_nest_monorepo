@@ -1,4 +1,4 @@
-import {ApiProperty} from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * DTO for paginated responses.
@@ -9,12 +9,12 @@ import {ApiProperty} from "@nestjs/swagger";
  * - list: Array of items of type T.
  */
 export class PaginatedResponseDto<T> {
-    @ApiProperty()
-    page!: number;
-    @ApiProperty()
-    pageSize!: number
-    @ApiProperty()
-    total!: number;
-    @ApiProperty({ isArray: true })
-    list!: T[];
+  @ApiProperty()
+  page!: number;
+  @ApiProperty()
+  pageSize!: number;
+  @ApiProperty()
+  total!: number;
+  @ApiProperty({ isArray: true })
+  list!: T[];
 }

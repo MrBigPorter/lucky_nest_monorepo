@@ -3,10 +3,10 @@
    1: Active 上架
    0: Inactive 下架
  */
-export  const TREASURE_STATE = {
-    ACTIVE:1,
-    INACTIVE:0,
-} as const
+export const TREASURE_STATE = {
+  ACTIVE: 1,
+  INACTIVE: 0,
+} as const;
 
 /**
  * TreasureVirtual
@@ -14,9 +14,9 @@ export  const TREASURE_STATE = {
  *   2: REAL 实物
  */
 export const TREASURE_VIRTUAL = {
-    VIRTUAL:1,
-    REAL:2,
-} as const
+  VIRTUAL: 1,
+  REAL: 2,
+} as const;
 
 /**
  * TreasureLotteryMode
@@ -24,9 +24,9 @@ export const TREASURE_VIRTUAL = {
  * 2: TIMED
  */
 export const LOTTERY_MODE = {
-    SOLD_OUT:1,
-    TIMED:2,
-} as const
+  SOLD_OUT: 1,
+  TIMED: 2,
+} as const;
 
 /**
  * TreasureLotteryDelayState
@@ -34,9 +34,9 @@ export const LOTTERY_MODE = {
  * 1: YES
  */
 export const LOTTERY_DELAY_STATE = {
-    NO:0,
-    YES:1,
-} as const
+  NO: 0,
+  YES: 1,
+} as const;
 
 /**
  * TreasureGroupStatus
@@ -44,9 +44,9 @@ export const LOTTERY_DELAY_STATE = {
  * 2: INACTIVE
  */
 export const GROUP_STATUS = {
-    ACTIVE:1,
-    INACTIVE:2,
-} as const
+  ACTIVE: 1,
+  INACTIVE: 2,
+} as const;
 
 /**
  * IS_OWNER
@@ -54,7 +54,6 @@ export const GROUP_STATUS = {
  * 0: NO
  */
 export const IS_OWNER = {
-    YES:1,
-    NO:0,
-} as const
-
+  YES: 1,
+  NO: 0,
+} as const;

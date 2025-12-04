@@ -5,9 +5,9 @@ import { OtpController } from './otp.controller';
 import { OtpService } from './otp.service';
 
 @Module({
-    imports: [ConfigModule.forFeature(() => ({})), PrismaModule],
-    controllers: [OtpController],
-    providers: [OtpService],
-    exports: [OtpService],
+  imports: [ConfigModule.forFeature(() => ({})), PrismaModule],
+  controllers: [OtpController],
+  providers: [OtpService],
+  exports: [OtpService],
 })
 export class OtpModule {}

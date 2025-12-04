@@ -139,6 +139,7 @@ CREATE TABLE sms_verification_codes (
 ```
 
 **业务规则：**
+
 - 同一手机号同一类型验证码，1分钟内只能发送1次
 - 验证码有效期5分钟
 - 最多验证5次，超过后验证码失效
@@ -193,6 +194,7 @@ CREATE TABLE recharge_channels (
 ```
 
 **常见渠道：**
+
 - QR VIA GCASH
 - qrph (Payloro)
 - PayMaya
@@ -236,6 +238,7 @@ CREATE TABLE recharge_options (
 ```
 
 **示例数据：**
+
 - ₱100 → 实际到账 ₱100
 - ₱500 → 实际到账 ₱550（赠送₱50）
 - ₱1000 → 实际到账 ₱1200（赠送₱200）
@@ -278,6 +281,7 @@ CREATE TABLE payment_types (
 ```
 
 **常见类型：**
+
 - GCash（电子钱包）
 - PayMaya（电子钱包）
 - RCBC（银行）
@@ -335,6 +339,7 @@ CREATE TABLE winners_display (
 ```
 
 **展示场景：**
+
 - 首页：最新中奖者滚动展示
 - Winners页：按月份展示历史中奖
 - 产品详情页：该产品的中奖记录
@@ -432,6 +437,7 @@ CREATE TABLE kyc_id_types (
 ```
 
 **支持的证件类型：**
+
 - Philippine National ID（菲律宾国民身份证）
 - Valid Passport（有效护照）
 - Driver's License（驾驶执照）
@@ -468,6 +474,7 @@ CREATE TABLE kyc_occupation_types (
 ```
 
 **职业分类：**
+
 - 180+ 种职业选项
 - Engineer, Manager, Teacher, Developer, Nurse, Driver, etc.
 
@@ -591,6 +598,7 @@ CREATE TABLE user_whitelist (
 ```
 
 **白名单用途：**
+
 - Google登录白名单（测试阶段限制）
 - 特殊功能测试用户
 - 内部员工账号
@@ -603,16 +611,19 @@ CREATE TABLE user_whitelist (
 ### **P0 优先级（必需）- 15张表**
 
 #### 登录与认证（3张）
+
 1. ✅ **user_login_logs** - 用户登录日志表
 2. ✅ **oauth_accounts** - 第三方登录账户表
 3. ✅ **sms_verification_codes** - 短信验证码表
 
 #### 充值与支付（3张）
+
 4. ✅ **recharge_channels** - 充值渠道配置表
 5. ✅ **recharge_options** - 充值金额选项表
 6. ✅ **payment_types** - 收款方式类型表
 
 #### 内容管理（6张）
+
 7. ✅ **banners** - 横幅广告表
 8. ✅ **advertisements** - 广告位表
 9. ✅ **help_faqs** - 常见问题表
@@ -621,10 +632,12 @@ CREATE TABLE user_whitelist (
 12. ✅ **work_orders** - 工单表
 
 #### 地区配置（2张）
+
 13. ✅ **provinces** - 省份配置表
 14. ✅ **cities** - 城市配置表
 
 #### KYC配置（2张）
+
 15. ✅ **kyc_id_types** - KYC证件类型表
 16. ✅ **kyc_occupation_types** - KYC职业类型表
 
@@ -651,30 +664,30 @@ CREATE TABLE user_whitelist (
 
 ## 🎯 最终统计
 
-| 模块 | 原设计表数 | 遗漏表数 | 最终表数 |
-|------|----------|---------|---------|
-| 原有设计 | 33 | - | 33 |
-| P0（必需）| - | 16 | 16 |
-| P1（重要）| - | 3 | 3 |
-| P2（可选）| - | 6 | 6 |
-| **总计** | **33** | **25** | **58张表** |
+| 模块       | 原设计表数 | 遗漏表数 | 最终表数   |
+| ---------- | ---------- | -------- | ---------- |
+| 原有设计   | 33         | -        | 33         |
+| P0（必需） | -          | 16       | 16         |
+| P1（重要） | -          | 3        | 3          |
+| P2（可选） | -          | 6        | 6          |
+| **总计**   | **33**     | **25**   | **58张表** |
 
 ---
 
 ## ✅ 核心模块覆盖检查
 
-| 功能模块 | 是否完整 | 涉及表数 | 备注 |
-|---------|---------|---------|------|
-| ✅ 登录认证 | 完整 | 5张 | users + login_logs + oauth + sms_codes |
-| ✅ 第三方登录 | 完整 | 2张 | oauth_accounts + user_login_logs |
-| ✅ 短信验证 | 完整 | 1张 | sms_verification_codes |
-| ✅ 充值存款 | 完整 | 5张 | recharge_orders + channels + options + payments |
-| ✅ 提现 | 完整 | 3张 | withdraw_orders + receive_payment_methods + bank_cards |
-| ✅ 订单管理 | 完整 | 5张 | orders + lucky_codes + payments + refunds + transactions |
-| ✅ 中奖展示 | 完整 | 4张 | winning_records + winners_display + testimonials + deliveries |
-| ✅ 工单系统 | 完整 | 2张 | work_orders + work_order_types |
-| ✅ Banner管理 | 完整 | 2张 | banners + advertisements |
-| ✅ 历史记录 | 完整 | 6张 | login_logs + wallet_transactions + order_history + visit_records |
+| 功能模块      | 是否完整 | 涉及表数 | 备注                                                             |
+| ------------- | -------- | -------- | ---------------------------------------------------------------- |
+| ✅ 登录认证   | 完整     | 5张      | users + login_logs + oauth + sms_codes                           |
+| ✅ 第三方登录 | 完整     | 2张      | oauth_accounts + user_login_logs                                 |
+| ✅ 短信验证   | 完整     | 1张      | sms_verification_codes                                           |
+| ✅ 充值存款   | 完整     | 5张      | recharge_orders + channels + options + payments                  |
+| ✅ 提现       | 完整     | 3张      | withdraw_orders + receive_payment_methods + bank_cards           |
+| ✅ 订单管理   | 完整     | 5张      | orders + lucky_codes + payments + refunds + transactions         |
+| ✅ 中奖展示   | 完整     | 4张      | winning_records + winners_display + testimonials + deliveries    |
+| ✅ 工单系统   | 完整     | 2张      | work_orders + work_order_types                                   |
+| ✅ Banner管理 | 完整     | 2张      | banners + advertisements                                         |
+| ✅ 历史记录   | 完整     | 6张      | login_logs + wallet_transactions + order_history + visit_records |
 
 ---
 
@@ -714,16 +727,19 @@ CREATE INDEX idx_display_type_time ON winners_display(display_type, lottery_time
 ## 📝 实施建议
 
 ### 阶段一：核心功能（P0）
+
 **时间：** 1-2周
 **表数：** 16张
 **优先级：** 登录、支付、工单、Banner
 
 ### 阶段二：重要功能（P1）
+
 **时间：** 1周
 **表数：** 3张
 **优先级：** 中奖展示、收款方式
 
 ### 阶段三：增强功能（P2）
+
 **时间：** 1周
 **表数：** 6张
 **优先级：** 用户行为、视频奖励、白名单

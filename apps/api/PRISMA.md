@@ -1,18 +1,18 @@
 🔥 超浓缩记忆版（容器内一律从 /app + workspace）
 
 前提约定（记这个）：
-•	容器名：lucky-backend-dev
-•	容器代码根：/app
-•	API 包：@lucky/api
-•	Prisma schema：apps/api/prisma/schema.prisma
-•	所有命令格式：
+• 容器名：lucky-backend-dev
+• 容器代码根：/app
+• API 包：@lucky/api
+• Prisma schema：apps/api/prisma/schema.prisma
+• 所有命令格式：
 
 docker exec -it lucky-backend-dev sh -lc "cd /app && <命令>"
 
-1.	生成类型：prisma generate
-2.	开发改表：prisma migrate dev --name <变更>
-3.	部署执行：prisma migrate deploy
-4.	开发重置：prisma migrate reset --force --skip-seed
+1. 生成类型：prisma generate
+2. 开发改表：prisma migrate dev --name <变更>
+3. 部署执行：prisma migrate deploy
+4. 开发重置：prisma migrate reset --force --skip-seed
 
 1）第一次初始化（空库或可清空的开发库）
 
@@ -73,7 +73,6 @@ yarn prisma migrate diff \
 --script > prisma/migrations/BASELINE/migration.sql && \
 yarn prisma migrate resolve --applied BASELINE --schema prisma/schema.prisma && \
 yarn prisma migrate status --schema prisma/schema.prisma"
-
 
 5）用 postgres 超级用户给 dev 开权限
 docker exec -it lucky-db psql -U postgres -d postgres -c "ALTER ROLE dev WITH CREATEDB;"

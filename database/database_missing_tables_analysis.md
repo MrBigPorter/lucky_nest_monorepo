@@ -63,6 +63,7 @@ CREATE TABLE banners (
 ```
 
 **关键字段说明：**
+
 - `banner_array`: 支持多图轮播（JSON数组）
 - `grid_id`: 用于分组管理轮播图
 - `jump_cate`: 控制点击后的跳转行为
@@ -244,6 +245,7 @@ CREATE TABLE work_order_types (
 ```
 
 **常见工单类型：**
+
 - Result Issue（结果问题）
 - Payment Issue（支付问题）
 - Prize Delivery（奖品配送）
@@ -310,6 +312,7 @@ CREATE TABLE work_orders (
 ```
 
 **与 customer_service_sessions 的区别：**
+
 - `work_orders`: 更正式的问题工单系统，有编号、分类、SLA
 - `customer_service_sessions`: 在线聊天/即时沟通
 
@@ -408,6 +411,7 @@ CREATE TABLE receive_payment_methods (
 ```
 
 **与 bank_cards 的区别：**
+
 - `bank_cards`: 用户绑定的银行卡（主要用于充值）
 - `receive_payment_methods`: 收款方式（主要用于提现和中奖现金发放，支持更多渠道）
 
@@ -529,6 +533,7 @@ session_source TINYINT COMMENT '会话来源: 1-在线聊天 2-工单 3-电话',
 ## 📝 总结
 
 ### 已设计的表：33张 ✅
+
 ### 遗漏的表：12张 ❌
 
 **建议补充的表：**
@@ -553,6 +558,7 @@ session_source TINYINT COMMENT '会话来源: 1-在线聊天 2-工单 3-电话',
 ## 🎯 优先级建议
 
 ### P0（必需）- 8张
+
 - banners
 - advertisements
 - help_faqs
@@ -563,9 +569,11 @@ session_source TINYINT COMMENT '会话来源: 1-在线聊天 2-工单 3-电话',
 - cities
 
 ### P1（重要）- 1张
+
 - receive_payment_methods
 
 ### P2（可选）- 3张
+
 - treasure_visit_records
 - avatar_defaults
 - homepage_statistics
