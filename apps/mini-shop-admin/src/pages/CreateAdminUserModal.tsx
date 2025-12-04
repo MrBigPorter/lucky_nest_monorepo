@@ -3,16 +3,19 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRequest } from 'ahooks';
-import { Modal, Input, Select, Button, Switch } from '@/components/UIComponents';
+import { Modal, Input, Select, Button } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
-import { userApi, AdminCreateUser } from '@/api/adminUserApi';
+import { userApi } from '@/api';
 
 const createAdminUserSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   realName: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.string(),
-  status: z.number(),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .optional()
+    .or(z.literal('')),
 });
 
 type CreateAdminUserFormInputs = z.infer<typeof createAdminUserSchema>;
@@ -34,27 +37,28 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
     register,
     handleSubmit,
     reset,
-    control,
     formState: { errors },
   } = useForm<CreateAdminUserFormInputs>({
     resolver: zodResolver(createAdminUserSchema),
     defaultValues: {
       username: '',
       realName: '',
-      password: '',
       role: 'viewer',
-      status: 1,
+      password: '',
     },
   });
 
-  const { run: createUser, loading: isCreating } = useRequest(userApi.createAdminUser, {
-    manual: true,
-    onSuccess: () => {
-      addToast('success', 'Admin user created successfully');
-      onSuccess();
-      onClose();
+  const { run: createUser, loading: isCreating } = useRequest(
+    userApi.createUser,
+    {
+      manual: true,
+      onSuccess: () => {
+        addToast('success', 'Admin user created successfully');
+        onSuccess();
+        onClose();
+      },
     },
-  });
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -92,7 +96,6 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
         />
         <Select
           label="Role"
-          error={errors.role?.message}
           {...register('role')}
           options={[
             { label: 'Super Admin', value: 'super_admin' },
@@ -101,21 +104,6 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
             { label: 'Viewer', value: 'viewer' },
           ]}
         />
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Status
-          </label>
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <Switch
-                checked={field.value === 1}
-                onChange={(checked) => field.onChange(checked ? 1 : 0)}
-              />
-            )}
-          />
-        </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
           <Button type="button" variant="ghost" onClick={onClose}>

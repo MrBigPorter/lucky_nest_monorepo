@@ -27,6 +27,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { CreateAdminUserModal } from '@/pages/CreateAdminUserModal.tsx';
 
 type AdminUserSearchForm = {
   username?: string;
@@ -89,6 +90,7 @@ export const AdminUserManagement: React.FC = () => {
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [isResetPwdModalOpen, setIsResetPwdModalOpen] = useState(false);
   const [resetPwdAdmin, setResetPwdAdmin] = useState<AdminUser | null>(null);
@@ -140,14 +142,7 @@ export const AdminUserManagement: React.FC = () => {
   // -------------------- 列表操作 --------------------
 
   const handleCreate = () => {
-    setEditingAdmin(null);
-    setFormData({
-      username: '',
-      realName: '',
-      role: 'VIEWER',
-      status: 1,
-    });
-    setIsEditModalOpen(true);
+    setIsCreateModalOpen(true);
   };
 
   const handleEdit = (admin: AdminUser) => {
@@ -164,7 +159,7 @@ export const AdminUserManagement: React.FC = () => {
   const handleSaveAdmin = async () => {
     try {
       if (editingAdmin) {
-         await userApi.updateUser(editingAdmin.id, formData);
+        await userApi.updateUser(editingAdmin.id, formData);
         addToast('success', `Admin ${formData.username} updated successfully.`);
       } else {
         await userApi.createUser({
@@ -529,6 +524,12 @@ export const AdminUserManagement: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      <CreateAdminUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => setIsCreateModalOpen(false)}
+      />
 
       {/* Edit/Create Modal */}
       <Modal

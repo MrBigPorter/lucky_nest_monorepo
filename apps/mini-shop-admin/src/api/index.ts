@@ -11,7 +11,9 @@ import type {
   User,
   TreasureGroup,
   LoginResponse,
-  AdminUser, AdminCreateUser, AdminUpdateUser,
+  AdminUser,
+  AdminCreateUser,
+  AdminUpdateUser,
 } from '@/types';
 
 /**

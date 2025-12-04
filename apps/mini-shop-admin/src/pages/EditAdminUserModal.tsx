@@ -3,7 +3,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRequest } from 'ahooks';
-import { Modal, Input, Select, Button, Switch } from '@/components/UIComponents';
+import {
+  Modal,
+  Input,
+  Select,
+  Button,
+  Switch,
+} from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { userApi, AdminUpdateUser } from '@/api/adminUserApi';
 import { AdminUser } from '@/types';
@@ -11,7 +17,11 @@ import { AdminUser } from '@/types';
 const editAdminUserSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   realName: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .optional()
+    .or(z.literal('')),
   role: z.string(),
   status: z.number(),
 });
@@ -43,14 +53,17 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
     resolver: zodResolver(editAdminUserSchema),
   });
 
-  const { run: updateUser, loading: isUpdating } = useRequest(userApi.updateUser, {
-    manual: true,
-    onSuccess: () => {
-      addToast('success', 'Admin user updated successfully');
-      onSuccess();
-      onClose();
+  const { run: updateUser, loading: isUpdating } = useRequest(
+    userApi.updateUser,
+    {
+      manual: true,
+      onSuccess: () => {
+        addToast('success', 'Admin user updated successfully');
+        onSuccess();
+        onClose();
+      },
     },
-  });
+  );
 
   useEffect(() => {
     if (isOpen && editingUser) {
