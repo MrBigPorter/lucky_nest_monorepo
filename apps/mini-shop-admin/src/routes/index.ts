@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Dashboard } from '../pages/Dashboard';
 import { UserManagement } from '../pages/UserManagement';
+import { AdminUserManagement } from '../pages/AdminUserManagement';
 import {
   ProductManagement,
   CategoryManagement,
@@ -58,6 +59,13 @@ export const routes: RouteConfig[] = [
     path: '/users',
     name: 'users',
     component: UserManagement,
+    icon: Users,
+    group: 'Management',
+  },
+  {
+    path: '/admin-users',
+    name: 'adminUsers',
+    component: AdminUserManagement,
     icon: Users,
     group: 'Management',
   },

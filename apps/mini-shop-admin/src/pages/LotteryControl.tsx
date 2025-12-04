@@ -7,10 +7,10 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import { Card, Button, Badge } from '../components/UIComponents.tsx';
-import { MOCK_LOTTERY_DRAWS } from '../constants.ts';
-import { useMockData } from '../hooks/useMockData.ts';
-import { LotteryDraw } from '../../types.ts';
+import { Card, Button, Badge } from '@/components/UIComponents';
+import { MOCK_LOTTERY_DRAWS } from '@/constants';
+import { useMockData } from '@/hooks/useMockData';
+import { LotteryDraw } from '@/types';
 
 export const LotteryControl: React.FC = () => {
   const { data: draws, update } = useMockData<LotteryDraw>(MOCK_LOTTERY_DRAWS);
@@ -24,7 +24,6 @@ export const LotteryControl: React.FC = () => {
     setCalculatingId(id);
     update(id, { status: 'calculating' });
 
-    // Simulate Hash Calculation Effect
     const interval = setInterval(() => {
       setSimulatedHash(
         Array.from({ length: 64 }, () =>
@@ -36,7 +35,6 @@ export const LotteryControl: React.FC = () => {
     setTimeout(() => {
       clearInterval(interval);
       setCalculatingId(null);
-      // Determine a winner (Mock)
       const mockWinner = {
         id: '999',
         name: 'LuckyUser',
@@ -66,7 +64,6 @@ export const LotteryControl: React.FC = () => {
         </p>
       </div>
 
-      {/* Calculating Overlay */}
       {calculatingId && (
         <Card className="bg-gradient-to-r from-gray-900 to-black text-white border-primary-500/50 border animate-pulse">
           <div className="flex flex-col items-center py-8">
@@ -85,7 +82,6 @@ export const LotteryControl: React.FC = () => {
         </Card>
       )}
 
-      {/* Pending Draws */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {pendingDraws.map((draw) => (
           <Card key={draw.id} className="relative overflow-hidden">
@@ -144,7 +140,6 @@ export const LotteryControl: React.FC = () => {
         )}
       </div>
 
-      {/* History */}
       <Card title="Draw History">
         <div className="overflow-x-auto">
           <table className="w-full text-left">

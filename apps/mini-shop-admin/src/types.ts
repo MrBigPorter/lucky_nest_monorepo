@@ -16,6 +16,7 @@ export interface AdminUser {
   lastLoginAt: number;
   role: string;
   status: number;
+  realName: string;
 }
 
 export interface LoginResponse {
