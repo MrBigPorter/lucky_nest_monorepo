@@ -16,7 +16,7 @@ export class CategoryController {
     constructor(private readonly categoryService: CategoryService) {
     }
 
-    @Post()
+    @Post('create')
     @Roles(Role.SUPER_ADMIN, Role.ADMIN)
     async create(@Body() dto: CreateCategoryDto) {
         return this.categoryService.create(dto)
