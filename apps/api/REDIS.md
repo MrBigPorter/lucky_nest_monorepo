@@ -4,7 +4,7 @@ docker exec -it lucky-redis sh -lc 'redis-cli -a "$REDIS_PASSWORD" DBSIZE'
 
 # 扫描相关键（你现在前缀是 lucky:）
 
-docker exec -it lucky-redis sh -lc 'redis-cli -a "$REDIS_PASSWORD" --scan --pattern "lucky::_banners_" | head'
+docker exec -it lucky-redis sh -lc 'redis-cli -a "$REDIS*PASSWORD" --scan --pattern "lucky::\_banners*" | head'
 
 # 看某个键的剩余寿命（毫秒）
 

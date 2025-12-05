@@ -11,7 +11,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Post, Query,
+  Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -20,7 +21,6 @@ import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { AdminLoginDto } from '@api/client/auth/dto/admin-login.dto';
 import { ReaIp, UserAgent } from '@api/common/decorators/http.decorators';
-
 
 @ApiTags('管理员登录')
 @Controller('auth')
@@ -48,5 +48,4 @@ export class AuthController {
   ) {
     return this.auth.adminLogout(userId, ip, ua);
   }
-
 }

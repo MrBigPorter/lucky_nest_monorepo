@@ -7,10 +7,10 @@ import { AppService } from './app.service';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
-import {ClientModule} from "@api/client/client.module";
-import {AdminModule} from "@api/admin/admin.module";
-import {APP_GUARD} from "@nestjs/core";
-import {OtpThrottlerGuard} from "@api/common/guards/otp-throttler.guard";
+import { ClientModule } from '@api/client/client.module';
+import { AdminModule } from '@api/admin/admin.module';
+import { APP_GUARD } from '@nestjs/core';
+import { OtpThrottlerGuard } from '@api/common/guards/otp-throttler.guard';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -61,7 +61,7 @@ import {OtpThrottlerGuard} from "@api/common/guards/otp-throttler.guard";
     //根模块，把业务模块“挂进来”。Nest 会读这些元数据，生成依赖图。
     PrismaModule,
     ClientModule,
-      AdminModule
+    AdminModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],
