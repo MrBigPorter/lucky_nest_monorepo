@@ -1,4 +1,4 @@
-
+import * as React from "react";
 import {
   Select,
   SelectContent,
@@ -8,292 +8,148 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from "@/select";
-import type { BaseSelectProps } from "@/components/BaseSelect/type";
-import { cva } from "class-variance-authority";
-import { cn } from "@/lib/utils";
-import React from "react";
-import { motion } from "framer-motion";
-import { ChevronDownIcon } from "lucide-react";
+} from "../ui/select"; // 👈 引用刚才创建的 select.tsx
+import { cn } from "../../../lib/utils";
+import { Loader2 } from "lucide-react";
 
-const selectTriggerVariants = cva(
-  "w-full bg-white pl-[10px] border-gray-300 rounded-[8px] focus:outline-none focus:ring-0 focus:ring-blue-500 focus:border-blue-500 focus-visible:ring-0",
-  {
-    variants: {
-      variant: {
-        default: "border-gray-300",
-        error:
-          "border-red-500 bg-red-50 focus:ring-red-400 focus:border-red-500",
-        success:
-          "border-green-500 bg-green-50 focus:ring-green-400 focus:border-green-500",
-        warning:
-          "border-yellow-500 bg-yellow-50 focus:ring-yellow-400 focus:border-yellow-500",
-      },
-      size: {
-        sm: "!h-[30px] text-[14px]",
-        md: "!h-[40px] text-[16px]",
-        lg: "!h-[50px] text-[18px] py-[2px] px-[10px]",
-      },
+// --- 类型定义 ---
+export interface SelectOption {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  disabled?: boolean;
+}
+
+export interface SelectGroupOption {
+  label: string;
+  items: SelectOption[];
+}
+
+export type BaseSelectOptions = SelectOption[] | SelectGroupOption[];
+
+export interface BaseSelectProps
+  extends Omit<
+    React.ComponentPropsWithoutRef<typeof Select>,
+    "value" | "onValueChange"
+  > {
+  value?: string;
+  onChange?: (value: string) => void;
+  options: BaseSelectOptions;
+  placeholder?: string;
+  className?: string; // Trigger 样式
+  contentClassName?: string; // 下拉框样式
+  containerClassName?: string; // 容器样式
+  error?: boolean;
+  isLoading?: boolean;
+  label?: string; // Label 文本
+  emptyText?: string;
+}
+
+// 辅助函数：判断是否为分组
+function isGrouped(options: BaseSelectOptions): options is SelectGroupOption[] {
+  return options.length > 0 && "items" in options[0];
+}
+
+export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
+  (
+    {
+      value,
+      onChange,
+      options,
+      placeholder = "请选择",
+      className,
+      contentClassName,
+      containerClassName,
+      disabled,
+      error,
+      isLoading,
+      label,
+      emptyText = "暂无数据",
+      ...props
     },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
-    },
-  },
-);
-
-const selectContentVariants = cva(
-  "max-h-[300px] min-w-[8px] pl-[10px] overflow-y-auto bg-white shadow-lg rounded-md border border-gray-300 focus:outline-none focus:ring-0 focus:ring-blue-500",
-  {
-    variants: {
-      variant: {
-        default: "bg-white",
-        error: "bg-red-50",
-        success: "bg-green-50",
-        warning: "bg-yellow-50",
-      },
-      size: {
-        sm: "text-[14px]",
-        md: "text-[16px]",
-        lg: "text-[18px]",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
-    },
-  },
-);
-
-const selectItemVariants = cva(
-  "relative flex cursor-default select-none items-center rounded-[8px] py-[1.5px] pl-[10px] pr-[8px] outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "text-gray-900 hover:bg-gray-100 focus:bg-gray-200",
-        error: "text-red-700 hover:bg-red-100 focus:bg-red-200",
-        success: "text-green-700 hover:bg-green-100 focus:bg-green-200",
-        warning: "text-yellow-700 hover:bg-yellow-100 focus:bg-yellow-200",
-      },
-      size: {
-        sm: "text-[14px]",
-        md: "text-[16px]",
-        lg: "text-[18px]",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
-    },
-  },
-);
-
-const selectLabelVariants = cva("px-2 py-1.5 text-sm font-medium", {
-  variants: {
-    variant: {
-      default: "text-gray-700",
-      error: "text-red-700",
-      success: "text-green-700",
-      warning: "text-yellow-700",
-    },
-    size: {
-      sm: "text-[14px]",
-      md: "text-[16px]",
-      lg: "text-[18px]",
-    },
-  },
-  defaultVariants: {
-    variant: "default",
-    size: "md",
-  },
-});
-
-/**
- * BaseSelect component
- * A customizable select component with support for grouped options, icons, and various styles.
- * @param {BaseSelectProps} props - The properties for the BaseSelect component.
- * @param {string} [props.value] - The currently selected value.
- * @param {GroupSelectOptionProps[]} props.options - The options for the select, grouped by category.
- * @param {(value: string) => void} [props.onChange] - Callback function when the selected value changes.
- * @param {(open: boolean) => void} [props.onOpenChange] - Callback function when the select opens or closes.
- * @param {string} [props.placeholder] - Placeholder text when no option is selected.
- * @param {boolean} [props.disabled] - Whether the select is disabled.
- * @param {'default' | 'error' | 'success' | 'warning'} [props.variant] - The variant style of the select.
- * @param {'sm' | 'md' | 'lg'} [props.size] - The size of the select.
- * @param {string} [props.triggerClassName] - Additional class names for the select trigger.
- * @param {string} [props.contentClassName] - Additional class names for the select content.
- * @param {string} [props.itemClassName] - Additional class names for the select items.
- * @param {string} [props.separatorClassName] - Additional class names for the select separator.
- * @param {boolean} [props.showSeparator] - Whether to show separators between option groups.
- * @param {React.ReactNode} [props.itemIndicator] - Custom indicator icon for selected items.
- * @param {React.ReactNode} [props.triggerIcon] - Custom icon for the select trigger.
- * @returns {JSX.Element} The rendered BaseSelect component.
- * @example
- * ```tsx
- * <BaseSelect
- *  value="option2"
- *  options={[
- *  {
- *  groupName: 'Group 1',
- *  options: [
- *  { value: 'option1', label: 'Option 1', leftIcon: <div>1</div> },
- *  { value: 'option2', label: 'Option 2', leftIcon: <div>2</div> },
- *  { value: 'option3', label: 'Option 3', leftIcon: <div>3</div> },
- *  ],
- *  },
- *  {
- *  groupName: 'Group 2',
- *  options: [
- *   { value: 'option4', label: 'Option 4', leftIcon: <div>4</div> },
- *   { value: 'option5', label: 'Option 5', leftIcon: <div>5</div> },
- *   { value: 'option6', label: 'Option 6', leftIcon: <div>6</div> },
- *   ],
- *   },
- *   ]}
- *   variant="warning"
- *   size="lg"
- *   placeholder="Select an option"
- *   onChange={value => console.log('Selected value:', value)}
- *   onOpenChange={open => console.log('Select is now', open ? 'open' : 'closed')}
- *   triggerIcon={<ChevronDownIcon />}
- *   triggerClassName="custom-trigger-class"
- *   contentClassName="custom-content-class"
- *   itemClassName="custom-item-class"
- *   separatorClassName="custom-separator-class"
- *   showSeparator={true}
- *   itemIndicator={<CheckIcon />}
- *   />
- *   ```
- *   @pxarks
- *   This component uses `framer-motion` for animations and `lucide-react` for icons.
- *   It is designed to be flexible and customizable, allowing developers to easily integrate it into their applications with various styles and behaviors.
- */
-
-const MemoizedBaseSelect = React.memo(
-  ({
-    value,
-    options,
-    onChange,
-    onOpenChange,
-    placeholder = "Select an option",
-    disabled = false,
-    variant = "default",
-    size = "lg",
-    triggerClassName,
-    contentClassName,
-    itemClassName,
-    separatorClassName,
-    showSeparator = true,
-    itemIndicator,
-    triggerIcon = <ChevronDownIcon />,
-    testId = "base-select",
-  }: Readonly<BaseSelectProps>) => {
-    const [isOpen, setIsOpen] = React.useState(false);
-
-    const triggerClass = React.useMemo(
-      () => cn(selectTriggerVariants({ variant, size }), triggerClassName),
-      [variant, size, triggerClassName],
-    );
-
-    const contentClass = React.useMemo(
-      () => cn(selectContentVariants({ variant, size }), contentClassName),
-      [variant, size, contentClassName],
-    );
-
-    const labelClass = React.useMemo(
-      () => selectLabelVariants({ variant, size }),
-      [variant, size],
-    );
-
-    const itemClass = React.useMemo(
-      () => cn(selectItemVariants({ variant, size }), itemClassName),
-      [variant, size, itemClassName],
-    );
+    ref,
+  ) => {
+    // 强制转换为字符串，避免 value={1} 导致显示不出
+    const safeValue =
+      value !== undefined && value !== null ? String(value) : undefined;
 
     return (
-      <Select
-        value={value}
-        onValueChange={onChange}
-        onOpenChange={(open) => {
-          setIsOpen(open);
-          onOpenChange?.(open);
-        }}
-        disabled={disabled}
-        aria-label={placeholder}
-      >
-        <motion.div
-          className="relative"
-          whileTap={{ scale: 1.02 }}
-          transition={{ duration: 0.2 }}
+      <div className={cn("w-full space-y-2", containerClassName)}>
+        {label && (
+          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground">
+            {label}
+          </label>
+        )}
+
+        <Select
+          value={safeValue}
+          onValueChange={onChange}
+          disabled={disabled || isLoading}
+          {...props}
         >
           <SelectTrigger
-            className={triggerClass}
-            testId={testId}
-            triggerIcon={
-              <motion.div
-                className="flex items-center justify-center"
-                animate={{ rotate: isOpen ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {triggerIcon}
-              </motion.div>
-            }
-            aria-label={placeholder}
+            ref={ref}
+            className={cn(
+              "w-full transition-colors",
+              error &&
+                "border-destructive/50 text-destructive focus:ring-destructive",
+              className,
+            )}
           >
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-        </motion.div>
-        <SelectContent testId={testId} className={contentClass}>
-          {options.map((group, index) => (
-            <SelectGroup key={`${group.key}-group-label}`}>
-              {group.groupName && (
-                <SelectLabel
-                  key={group.key}
-                  testId={`${testId}-${group.key}`}
-                  className={cn(labelClass)}
-                >
-                  {group.groupName}
-                </SelectLabel>
+            <div className="flex items-center gap-2 truncate">
+              {isLoading && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               )}
-              {group.options.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  className={itemClass}
-                  icon={itemIndicator ?? option.rightIcon}
-                  aria-label={option.label}
-                >
-                  <motion.div
-                    className="flex items-center"
-                    whileHover={{ scale: 1.02 }}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {option.leftIcon && (
-                      <span className="mr-2 flex h-4 w-4 items-center justify-center">
-                        {option.leftIcon}
-                      </span>
-                    )}
-                    {option.label}
-                  </motion.div>
-                </SelectItem>
-              ))}
-              {index < options.length - 1 &&
-                showSeparator &&
-                group?.groupName && (
-                  <SelectSeparator
-                    key={`${group.key}-separator`}
-                    className={cn("my-1", separatorClassName)}
-                  />
-                )}
-            </SelectGroup>
-          ))}
-        </SelectContent>
-      </Select>
+              <SelectValue placeholder={placeholder} />
+            </div>
+          </SelectTrigger>
+
+          {/* ⚠️ 这里的 z-[9999] 是为了防止在 Modal 里被遮挡 */}
+          <SelectContent
+            className={cn("max-h-[300px] z-[9999]", contentClassName)}
+          >
+            {options.length === 0 && (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                {emptyText}
+              </div>
+            )}
+
+            {isGrouped(options)
+              ? options.map((group, index) => (
+                  <React.Fragment key={group.label}>
+                    <SelectGroup>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.items.map((item) => (
+                        <RenderSelectItem key={item.value} item={item} />
+                      ))}
+                    </SelectGroup>
+                    {index < options.length - 1 && <SelectSeparator />}
+                  </React.Fragment>
+                ))
+              : (options as SelectOption[]).map((item) => (
+                  <RenderSelectItem key={item.value} item={item} />
+                ))}
+          </SelectContent>
+        </Select>
+      </div>
     );
   },
 );
 
-MemoizedBaseSelect.displayName = "BaseSelect";
-export const BaseSelect = MemoizedBaseSelect;
+BaseSelect.displayName = "BaseSelect";
+
+const RenderSelectItem = ({ item }: { item: SelectOption }) => {
+  return (
+    // 强制 value 转字符串
+    <SelectItem value={String(item.value)} disabled={item.disabled}>
+      <div className="flex items-center gap-2">
+        {item.icon && (
+          <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
+            {item.icon}
+          </span>
+        )}
+        <span className="truncate">{item.label}</span>
+      </div>
+    </SelectItem>
+  );
+};

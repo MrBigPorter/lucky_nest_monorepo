@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { isNullOrEmpty } from "@utils";
+import { isNullOrEmpty } from "../../lib/utils";
 import { cva } from "class-variance-authority";
 import { motion } from "framer-motion";
 

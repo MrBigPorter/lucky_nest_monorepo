@@ -1,4 +1,3 @@
-
 import {
   FormControl,
   FormField,
@@ -9,16 +8,16 @@ import {
   FormMessage,
   FormMessageVariants,
   HelpText,
-} from "@ui-kit";
+} from "./index.ts";
 import type { FieldValues } from "react-hook-form";
 import React, { ReactNode } from "react";
-import { useFormTheme } from "@ui-kit/form/formTheme/FormThemeProvider";
+import { useFormTheme } from "./formTheme/FormThemeProvider";
 import { twMerge } from "tailwind-merge";
-import { getVariantClassNames } from "@ui-kit/form/formTheme";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import type { BaseFieldProps } from "./types/baseFieldType.ts";
-import * as MediaUploader from "@ui-kit/ui/components/MediaUploader";
+import * as MediaUploader from "../components/MediaUploader";
+import { getVariantClassNames } from "./formTheme";
 
 type FormMediaUploaderFieldProps<
   TFieldValues extends FieldValues = FieldValues,

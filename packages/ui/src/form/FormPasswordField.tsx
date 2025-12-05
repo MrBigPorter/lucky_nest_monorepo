@@ -1,4 +1,3 @@
-
 import { FormField } from "./FormField.tsx";
 import { FormItem } from "./FormItem.tsx";
 import { FormLabel } from "./FormLabel.tsx";
@@ -17,9 +16,9 @@ import {
 } from "./constants.ts";
 import { getFieldDefaults } from "./getFieldDefaults.ts";
 import { HelpText } from "./HelpText.tsx";
-import { useFormTheme } from "@ui-kit/form/formTheme/FormThemeProvider";
+import { useFormTheme } from "./formTheme/FormThemeProvider";
 import { twMerge } from "tailwind-merge";
-import { getVariantClassNames } from "@ui-kit/form/formTheme";
+import { getVariantClassNames } from "./formTheme";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
