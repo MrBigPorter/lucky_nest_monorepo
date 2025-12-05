@@ -11,7 +11,8 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Post, Query,
+  Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -21,7 +22,7 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { RefreshTokenDto } from '@api/client/auth/dto/refresh-token.dto';
 import { TokenResponseDto } from '@api/client/auth/dto/token-response.dto';
-import {JwtAuthGuard} from "@api/common/jwt/jwt.guard";
+import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
 //@Controller('auth')：这组接口的前缀是 /auth/*。

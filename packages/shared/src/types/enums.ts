@@ -64,14 +64,13 @@ export const SEND_STATUS = {
 export type SendStatusNum = (typeof SEND_STATUS)[keyof typeof SEND_STATUS];
 
 export enum Role {
-  SUPER_ADMIN = 'SUPER_ADMIN', // 超级管理员
-  ADMIN = 'ADMIN',             // 普通管理员
-  EDITOR = 'EDITOR',           // 编辑
-  VIEWER = 'VIEWER',           // 观察者
+  SUPER_ADMIN = "SUPER_ADMIN", // 超级管理员
+  ADMIN = "ADMIN", // 普通管理员
+  EDITOR = "EDITOR", // 编辑
+  VIEWER = "VIEWER", // 观察者
 }
-
 
 export const ADMIN_USER_STATUS = {
   ACTIVE: 1, // 启用
   INACTIVE: 0, //禁用
-} as const
+} as const;
