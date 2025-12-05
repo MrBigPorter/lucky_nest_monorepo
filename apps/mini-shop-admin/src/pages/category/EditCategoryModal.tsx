@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { Modal, Input, Button } from '@/components/UIComponents.tsx';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToastStore } from '@/store/useToastStore.ts';
 import React, { useEffect } from 'react';
@@ -40,6 +40,7 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<editCategoryFormInput>({
     resolver: zodResolver(editCategorySchema),
@@ -94,19 +95,23 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
           error={errors.sortOrder?.message}
           {...register('sortOrder')}
         />
-        <Input
-          label="State"
-          type="number"
-          error={errors.sortOrder?.message}
-          {...register('state')}
-        />
-        <BaseSelect
-          onChange={() => {}}
-          options={[
-            { value: '1', label: 'Option 1' },
-            { value: '2', label: 'Option 2' },
-            { value: '3', label: 'Option 3' },
-          ]}
+        <Controller
+          control={control}
+          name="state"
+          render={({ field, fieldState }) => (
+            <BaseSelect
+              label="State"
+              placeholder="Select state"
+              options={[
+                { value: '1', label: 'Active' },
+                { value: '0', label: 'Inactive' },
+              ]}
+              value={field.value?.toString()}
+              onChange={(val) => field.onChange(Number(val))}
+              error={fieldState.error?.message}
+              ref={field.ref}
+            />
+          )}
         />
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
           <Button type="button" variant="ghost" onClick={onClose}>
