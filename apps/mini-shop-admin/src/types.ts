@@ -24,12 +24,7 @@ export type AdminCreateUser = Pick<AdminUser, 'username' | 'role'> & {
   password?: string;
 };
 
-export type AdminUpdateUser = Pick<
-  AdminUser,
-  'realName' | 'role' | 'status'
-> & {
-  password: string;
-};
+export type AdminUpdateUser = Pick<AdminUser, 'role' | 'status'>;
 
 export interface LoginResponse {
   tokens: Tokens;

@@ -27,7 +27,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { CreateAdminUserModal } from '@/pages/CreateAdminUserModal.tsx';
+import { CreateAdminUserModal } from '@/pages/admin/CreateAdminUserModal.tsx';
+import {EditAdminUserModal} from "@/pages/admin/EditAdminUserModal.tsx";
 
 type AdminUserSearchForm = {
   username?: string;
@@ -147,34 +148,7 @@ export const AdminUserManagement: React.FC = () => {
 
   const handleEdit = (admin: AdminUser) => {
     setEditingAdmin(admin);
-    setFormData({
-      username: admin.username,
-      realName: admin.realName,
-      role: admin.role,
-      status: admin.status,
-    });
     setIsEditModalOpen(true);
-  };
-
-  const handleSaveAdmin = async () => {
-    try {
-      if (editingAdmin) {
-        await userApi.updateUser(editingAdmin.id, formData);
-        addToast('success', `Admin ${formData.username} updated successfully.`);
-      } else {
-        await userApi.createUser({
-          role: formData.role,
-          username: formData.username,
-          realName: formData.realName,
-        });
-        addToast('success', `Admin ${formData.username} created successfully.`);
-      }
-      setIsEditModalOpen(false);
-      refresh();
-    } catch (error) {
-      console.error(error);
-      addToast('error', 'Operation failed.');
-    }
   };
 
   const handleToggleStatus = async (admin: AdminUser) => {
@@ -530,77 +504,12 @@ export const AdminUserManagement: React.FC = () => {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={refresh}
       />
-
-      {/* Edit/Create Modal */}
-      <Modal
+      <EditAdminUserModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title={editingAdmin ? 'Edit Administrator' : 'Create New Administrator'}
-      >
-        <div className="space-y-4">
-          <Input
-            label="Username"
-            value={formData.username}
-            onChange={(e) =>
-              setFormData({ ...formData, username: e.target.value })
-            }
-            placeholder="e.g. admin_john"
-            disabled={!!editingAdmin}
-          />
-          <Input
-            label="Real Name"
-            value={formData.realName}
-            onChange={(e) =>
-              setFormData({ ...formData, realName: e.target.value })
-            }
-            placeholder="e.g. John Doe"
-          />
-          <Select
-            label="Role"
-            value={formData.role}
-            onChange={(e) =>
-              setFormData({ ...formData, role: e.target.value as string })
-            }
-            options={[
-              { label: 'Viewer', value: 'VIEWER' },
-              { label: 'Editor', value: 'EDITOR' },
-              { label: 'Admin', value: 'ADMIN' },
-              { label: 'Super Admin', value: 'SUPER_ADMIN' },
-            ]}
-          />
-          <Select
-            label="Status"
-            value={formData.status?.toString()}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                status: Number(e.target.value),
-              })
-            }
-            options={[
-              { label: 'Active', value: '1' },
-              { label: 'Disabled', value: '0' },
-            ]}
-          />
-
-          {!editingAdmin && (
-            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg text-sm text-yellow-700 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-900/20">
-              <ShieldCheck size={16} className="inline mr-1 -mt-0.5" />
-              Default password will be <strong>InitialPassword123</strong>. Ask
-              the user to change it on first login.
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
-            <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveAdmin} disabled={!formData.username}>
-              {editingAdmin ? 'Save Changes' : 'Create Admin'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        editingUser={editingAdmin}
+        onSuccess={refresh}
+      />
 
       {/* Reset Password Modal */}
       <Modal

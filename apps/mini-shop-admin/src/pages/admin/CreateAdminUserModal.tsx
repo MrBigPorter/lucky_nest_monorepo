@@ -3,8 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRequest } from 'ahooks';
-import { Modal, Input, Select, Button } from '@/components/UIComponents';
-import { useToastStore } from '@/store/useToastStore';
+import { Modal, Input, Select, Button } from '@/components/UIComponents.tsx';
+import { useToastStore } from '@/store/useToastStore.ts';
 import { userApi } from '@/api';
 
 const createAdminUserSchema = z.object({

@@ -33,7 +33,7 @@ export const userApi = {
 
   // 更新用户
   updateUser: (id: string, data: Partial<AdminUpdateUser>) =>
-    http.put<AdminUser>(`/v1/admin/user/${id}`, data),
+    http.patch<AdminUser>(`/v1/admin/user/${id}`, data),
 
   // 删除用户
   deleteUser: (id: string) => http.delete(`/api/v1/admin/user/${id}`),

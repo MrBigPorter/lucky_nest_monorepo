@@ -9,19 +9,13 @@ import {
   Select,
   Button,
   Switch,
-} from '@/components/UIComponents';
-import { useToastStore } from '@/store/useToastStore';
-import { userApi, AdminUpdateUser } from '@/api/adminUserApi';
-import { AdminUser } from '@/types';
+} from '@/components/UIComponents.tsx';
+import { useToastStore } from '@/store/useToastStore.ts';
+import { AdminUpdateUser, AdminUser } from '@/types.ts';
+import { userApi } from '@/api';
 
 const editAdminUserSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
   realName: z.string().optional(),
-  password: z
-    .string()
-    .min(6, 'Password must be at least 6 characters')
-    .optional()
-    .or(z.literal('')),
   role: z.string(),
   status: z.number(),
 });
@@ -68,11 +62,9 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
   useEffect(() => {
     if (isOpen && editingUser) {
       reset({
-        username: editingUser.username,
         realName: editingUser.realName || '',
         role: editingUser.role,
         status: editingUser.status,
-        password: '', // 密码字段总是为空，以防意外提交
       });
     }
   }, [isOpen, editingUser, reset]);
@@ -80,9 +72,6 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
   const onSubmit = (data: EditAdminUserFormInputs) => {
     if (editingUser) {
       const updateData: AdminUpdateUser = { ...data };
-      if (!updateData.password) {
-        delete updateData.password;
-      }
       updateUser(editingUser.id, updateData);
     }
   };
@@ -96,30 +85,18 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
-          label="Username"
-          error={errors.username?.message}
-          {...register('username')}
-        />
-        <Input
           label="Real Name"
           error={errors.realName?.message}
           {...register('realName')}
         />
-        <Input
-          label="Password (leave blank to keep unchanged)"
-          type="password"
-          error={errors.password?.message}
-          {...register('password')}
-        />
         <Select
           label="Role"
-          error={errors.role?.message}
           {...register('role')}
           options={[
-            { label: 'Super Admin', value: 'super_admin' },
-            { label: 'Operations', value: 'operations' },
-            { label: 'Finance', value: 'finance' },
-            { label: 'Viewer', value: 'viewer' },
+            { label: 'Viewer', value: 'VIEWER' },
+            { label: 'Editor', value: 'EDITOR' },
+            { label: 'Admin', value: 'ADMIN' },
+            { label: 'Super Admin', value: 'SUPER_ADMIN' },
           ]}
         />
         <div className="flex items-center justify-between">
