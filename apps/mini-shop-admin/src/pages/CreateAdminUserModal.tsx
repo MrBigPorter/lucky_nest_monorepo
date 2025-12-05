@@ -43,7 +43,7 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
     defaultValues: {
       username: '',
       realName: '',
-      role: 'viewer',
+      role: 'VIEWER',
       password: '',
     },
   });
@@ -98,10 +98,10 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
           label="Role"
           {...register('role')}
           options={[
-            { label: 'Super Admin', value: 'super_admin' },
-            { label: 'Operations', value: 'operations' },
-            { label: 'Finance', value: 'finance' },
-            { label: 'Viewer', value: 'viewer' },
+            { label: 'Viewer', value: 'VIEWER' },
+            { label: 'Editor', value: 'EDITOR' },
+            { label: 'Admin', value: 'ADMIN' },
+            { label: 'Super Admin', value: 'SUPER_ADMIN' },
           ]}
         />
 

@@ -528,7 +528,7 @@ export const AdminUserManagement: React.FC = () => {
       <CreateAdminUserModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => setIsCreateModalOpen(false)}
+        onSuccess={refresh}
       />
 
       {/* Edit/Create Modal */}
