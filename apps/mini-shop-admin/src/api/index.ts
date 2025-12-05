@@ -5,7 +5,7 @@
 
 import http from './http';
 import type { PaginatedResponse, PaginationParams } from './types.ts';
-import type {
+import {
   Product,
   Category,
   User,
@@ -13,7 +13,7 @@ import type {
   LoginResponse,
   AdminUser,
   AdminCreateUser,
-  AdminUpdateUser,
+  AdminUpdatePassword,
 } from '@/types';
 
 /**
@@ -32,7 +32,7 @@ export const userApi = {
     http.post<User>('/v1/admin/user/create', data),
 
   // 更新用户
-  updateUser: (id: string, data: Partial<AdminUpdateUser>) =>
+  updateUser: (id: string, data: AdminUpdatePassword) =>
     http.patch<AdminUser>(`/v1/admin/user/${id}`, data),
 
   // 删除用户

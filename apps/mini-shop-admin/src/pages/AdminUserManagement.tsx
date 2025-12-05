@@ -1,22 +1,13 @@
 import React, { useState } from 'react';
 import {
-  ShieldCheck,
   Ban,
   CheckCircle,
   Edit3,
   User as UserIcon,
-  Lock,
   Key,
   Plus,
 } from 'lucide-react';
-import {
-  Card,
-  Button,
-  Badge,
-  Modal,
-  Input,
-  Select,
-} from '@/components/UIComponents';
+import { Card, Button, Badge, Input, Select } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { AdminUser } from '@/types';
 import { userApi } from '@/api';
@@ -28,7 +19,8 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { CreateAdminUserModal } from '@/pages/admin/CreateAdminUserModal.tsx';
-import {EditAdminUserModal} from "@/pages/admin/EditAdminUserModal.tsx";
+import { EditAdminUserModal } from '@/pages/admin/EditAdminUserModal.tsx';
+import { EditAdminPasswordModal } from '@/pages/admin/EditAdminPassowordModal.tsx';
 
 type AdminUserSearchForm = {
   username?: string;
@@ -96,15 +88,6 @@ export const AdminUserManagement: React.FC = () => {
   const [isResetPwdModalOpen, setIsResetPwdModalOpen] = useState(false);
   const [resetPwdAdmin, setResetPwdAdmin] = useState<AdminUser | null>(null);
 
-  // 表单（创建/编辑）
-  const [formData, setFormData] = useState<Partial<AdminUser>>({
-    username: '',
-    realName: '',
-    role: 'VIEWER',
-    status: 1,
-  });
-  const [newPassword, setNewPassword] = useState('');
-
   // 列表筛选条件（只保存在本地，由我们手动调用 submit 触发 useAntdTable）
   const [filters, setFilters] = useState<AdminUserSearchForm>({
     username: '',
@@ -170,23 +153,8 @@ export const AdminUserManagement: React.FC = () => {
 
   const handleOpenResetPwd = (admin: AdminUser) => {
     setResetPwdAdmin(admin);
-    setNewPassword('');
     setIsResetPwdModalOpen(true);
   };
-
-  const handleResetPassword = async () => {
-    if (!resetPwdAdmin || !newPassword) return;
-    try {
-      addToast(
-        'success',
-        `Password for ${resetPwdAdmin.username} reset successfully.`,
-      );
-      setIsResetPwdModalOpen(false);
-    } catch (error) {
-      addToast('error', 'Failed to reset password.');
-    }
-  };
-
   // 提交筛选
   const handleSearch = () => {
     run(
@@ -511,41 +479,12 @@ export const AdminUserManagement: React.FC = () => {
         onSuccess={refresh}
       />
 
-      {/* Reset Password Modal */}
-      <Modal
+      <EditAdminPasswordModal
         isOpen={isResetPwdModalOpen}
         onClose={() => setIsResetPwdModalOpen(false)}
-        title={`Reset Password: ${resetPwdAdmin?.username ?? ''}`}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <Input
-            label="New Password"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Enter new password"
-          />
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg text-sm text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/20">
-            <Lock size={16} className="inline mr-1 -mt-0.5" />
-            This will immediately invalidate the current password.
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsResetPwdModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleResetPassword}
-              disabled={!newPassword || newPassword.length < 6}
-            >
-              Confirm Reset
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onSuccess={refresh}
+        editingUser={resetPwdAdmin}
+      />
     </div>
   );
 };
