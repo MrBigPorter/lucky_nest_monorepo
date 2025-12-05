@@ -1,10 +1,9 @@
-"use client";
 import { ModalFixed } from "./ModalFixed.tsx";
 import type { ModalProps } from "./Types.ts";
 import ReactDOM from "react-dom/client";
 
 export const ModalManager = {
-  open: (props: Omit<ModalProps, 'onFinishClose'>) => {
+  open: (props: Omit<ModalProps, "onFinishClose">) => {
     const container = document.createElement("div");
     container.classList.add("modal-container");
     document.body.appendChild(container);

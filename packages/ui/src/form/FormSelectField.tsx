@@ -1,4 +1,3 @@
-
 import { FormField } from "./FormField.tsx";
 import { FormItem } from "./FormItem.tsx";
 import { FormLabel } from "./FormLabel.tsx";
@@ -12,14 +11,14 @@ import {
   FormMessageVariants,
 } from "./constants.ts";
 import { HelpText } from "./HelpText.tsx";
-import { useFormTheme } from "@ui-kit/form/formTheme/FormThemeProvider";
+import { useFormTheme } from "./formTheme/FormThemeProvider";
 import { twMerge } from "tailwind-merge";
-import { getVariantClassNames } from "@ui-kit/form/formTheme";
+import { getVariantClassNames } from "./formTheme";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import type { BaseFieldProps } from "./types/baseFieldType.ts";
-import { BaseSelectProps } from "@ui-kit/ui/components/BaseSelect/type";
-import { BaseSelect } from "@ui-kit/ui/components";
+import { BaseSelectProps } from "../components/BaseSelect/type";
+import { BaseSelect } from "../components";
 
 /**
  * FormSelectFieldProps type combines BaseFieldProps (excluding some input-specific props)

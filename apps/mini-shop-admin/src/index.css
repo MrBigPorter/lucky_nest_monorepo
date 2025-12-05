@@ -42,6 +42,10 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
 }
 
 .dark {
@@ -65,10 +69,11 @@
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 60 9.1% 97.8%;
 
-  /* ✅ 修正点：边框颜色无效会导致 Cancel 按钮看不见边框 */
-  --border: 12 6.5% 15.1%;
-  --input: 12 6.5% 15.1%;
-  --ring: 34 68% 50%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  /* 边框颜色 (深灰) */
+  --border: 217.2 32.6% 17.5%;
 }
 
 @theme {

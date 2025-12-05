@@ -1,12 +1,12 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   motion,
   useDragControls,
   useMotionValue,
   animate,
 } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { Button } from "@/button";
+import { cn } from "../../../../lib/utils";
+import { Button } from "../../../button.tsx";
 import { SwipeableItemProps } from "./Types.ts";
 
 let currentOpenItem: (() => void) | null = null;
@@ -39,7 +39,11 @@ export function SwipeableItem<T>({
   const handleDragEnd = (_: any, info: { velocity: { x: number } }) => {
     const actionsWidth = actionsRef.current?.offsetWidth || 0;
     if (info.velocity.x < -200 || x.get() < -actionsWidth / 2) {
-      animate(x, -actionsWidth, { type: "spring", stiffness: 400, damping: 40 });
+      animate(x, -actionsWidth, {
+        type: "spring",
+        stiffness: 400,
+        damping: 40,
+      });
       currentOpenItem = close;
     } else {
       close();
@@ -52,11 +56,16 @@ export function SwipeableItem<T>({
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
     >
-      <div ref={actionsRef} className="absolute right-0 top-0 h-full flex items-stretch">
+      <div
+        ref={actionsRef}
+        className="absolute right-0 top-0 h-full flex items-stretch"
+      >
         {actions.map((action, index) => (
           <Button
             key={index}
-            variant={action.variant || (index === 0 ? "destructive" : "secondary")}
+            variant={
+              action.variant || (index === 0 ? "destructive" : "secondary")
+            }
             className={cn("h-full rounded-none", action.className)}
             onClick={() => {
               action.onClick?.(item);

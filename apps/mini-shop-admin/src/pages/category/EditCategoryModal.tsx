@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import { useRequest } from 'ahooks';
 import { categoryApi } from '@/api';
 import { Category } from '@/types.ts';
+import { BaseSelect } from '@repo/ui';
 
 const editCategorySchema = z.object({
   name: z.string().min(3, 'Category name must be at least 3 characters'),
@@ -99,7 +100,14 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
           error={errors.sortOrder?.message}
           {...register('state')}
         />
-
+        <BaseSelect
+          onChange={() => {}}
+          options={[
+            { value: '1', label: 'Option 1' },
+            { value: '2', label: 'Option 2' },
+            { value: '3', label: 'Option 3' },
+          ]}
+        />
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel

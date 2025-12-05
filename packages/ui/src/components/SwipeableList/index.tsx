@@ -2,7 +2,7 @@ import { AnimatePresence } from "framer-motion";
 import { SwipeableItem } from "./SwipeableItem";
 import React from "react";
 import { SwipeAction } from "./SwipeableItem/Types.ts";
-import { cn } from "../../lib/utils";
+import { cn } from "../../../lib/utils";
 
 type WithKey<T> = T & { key: string };
 interface SwipeableListProps<T> {

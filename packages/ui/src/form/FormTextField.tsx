@@ -1,4 +1,3 @@
-
 import { FormField } from "./FormField.tsx";
 import { FormItem } from "./FormItem.tsx";
 import { FormLabel } from "./FormLabel.tsx";
@@ -17,12 +16,12 @@ import {
 } from "./constants.ts";
 import { getFieldDefaults } from "./getFieldDefaults.ts";
 import { HelpText } from "./HelpText.tsx";
-import { useFormTheme } from "@ui-kit/form/formTheme/FormThemeProvider";
-import { getVariantClassNames } from "@ui-kit/form/formTheme";
+import { useFormTheme } from "./formTheme/FormThemeProvider";
+import { getVariantClassNames } from "./formTheme";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import type { BaseFieldProps } from "./types/baseFieldType.ts";
-import { cn } from "@utils";
+import { cn } from "../../lib/utils.ts";
 
 /**
  * `FormTextField` is a reusable form component that wraps
