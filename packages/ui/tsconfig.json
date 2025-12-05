@@ -1,8 +1,19 @@
 {
-  "extends": "@repo/typescript-config/react-library.json",
+  "extends": "../../packages/config/tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist"
-  },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+    // 👇 关键修改：改为 bundler 模式
+    "moduleResolution": "bundler",
+    //告诉 TS 这里有浏览器环境 (DOM)
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    // 👇 配合 bundler 模式，通常需要这两个设置
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+    },
+
+    // 保持 React 支持
+    "jsx": "react-jsx"
+  }
 }
