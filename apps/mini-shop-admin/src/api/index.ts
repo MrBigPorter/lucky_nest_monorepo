@@ -37,9 +37,6 @@ export const userApi = {
 
   // 删除用户
   deleteUser: (id: string) => http.delete(`/v1/admin/user/${id}`),
-
-  // 获取当前登录用户信息
-  getCurrentUser: () => http.get<User>('/users/me'),
 };
 
 /**
@@ -78,21 +75,25 @@ export const productApi = {
  */
 export const categoryApi = {
   // 获取分类列表
-  getCategories: () => http.get<Category[]>('/categories'),
+  getCategories: () => http.get<Category[]>('/v1/admin/category/list'),
 
   // 获取分类详情
-  getCategoryById: (id: string) => http.get<Category>(`/categories/${id}`),
+  getCategoryById: (id: string) => http.get<Category>(`/category/${id}`),
 
   // 创建分类
-  createCategory: (data: Partial<Category>) =>
-    http.post<Category>('/categories', data),
+  createCategory: (data: Partial<Omit<Category, 'productCount'>>) =>
+    http.post<Category>('/v1/admin/category/create', data),
 
   // 更新分类
   updateCategory: (id: string, data: Partial<Category>) =>
-    http.put<Category>(`/categories/${id}`, data),
+    http.patch<Category>(`/v1/admin/category/${id}`, data),
 
   // 删除分类
-  deleteCategory: (id: string) => http.delete(`/categories/${id}`),
+  deleteCategory: (id: string) => http.delete(`/v1/admin/category/${id}`),
+
+  // 禁用，启用分类
+  toggleCategoryStatus: (id: string) =>
+    http.patch<Category>(`/v1/admin/category/${id}/state`),
 };
 
 /**

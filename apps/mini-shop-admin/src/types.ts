@@ -76,6 +76,10 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
+  nameEn: string;
+  icon: string;
+  sortOrder: number;
+  state: number;
   productCount: number;
 }
 

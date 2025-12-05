@@ -24,7 +24,7 @@ export class CreateCategoryDto {
     @IsOptional()
     @ToNumber()
     @IsInt()
-    sortOrder?: number;
+    sortOrder?: number = 99;
 
     @ApiPropertyOptional({description:"status", example: 1, type: 'number'})
     @IsOptional()
@@ -32,5 +32,5 @@ export class CreateCategoryDto {
     @IsInt()
     @Min(0)
     @Max(1)
-    state?: number;
+    state?: number = 1;
 }

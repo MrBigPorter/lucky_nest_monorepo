@@ -18,10 +18,8 @@ import {
 import { Dashboard } from '../pages/Dashboard';
 import { UserManagement } from '../pages/UserManagement';
 import { AdminUserManagement } from '../pages/AdminUserManagement';
-import {
-  ProductManagement,
-  CategoryManagement,
-} from '../pages/ProductManagement';
+import { ProductManagement } from '../pages/ProductManagement';
+import { CategoryManagement } from '../pages/CategoryManagement.tsx';
 import { GroupManagement } from '../pages/GroupManagement';
 import { OrderManagement } from '../pages/OrderManagement';
 import { Marketing } from '../pages/Marketing';

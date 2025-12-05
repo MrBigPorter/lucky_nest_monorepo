@@ -24,8 +24,32 @@ export class CategoryService {
 
     // 查看所有货架 - find shelf
     async findAll(){
-        return this.prisma.productCategory.findMany({
-            orderBy: { sortOrder: 'asc'}
+       const list = await this.prisma.productCategory.findMany({
+            orderBy: { sortOrder: 'asc'},
+            select:{
+                id: true,
+                name: true,
+                nameEn: true,
+                icon: true,
+                sortOrder: true,
+                state: true,
+                _count: {
+                    select: {
+                        treasures: true
+                    }
+                }
+            },
+        })
+       return list.map((item)=>({
+           ...item,
+           productCount: item._count.treasures
+       }))
+    }
+
+    // 查看单个货架 - find single shelf
+    async findOne(id: number){
+        return this.prisma.productCategory.findUnique({
+            where: {id}
         })
     }
 
