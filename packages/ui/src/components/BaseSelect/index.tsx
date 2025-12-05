@@ -8,11 +8,10 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from "../ui/select"; // 👈 引用刚才创建的 select.tsx
+} from "../ui/select";
 import { cn } from "../../../lib/utils";
 import { Loader2 } from "lucide-react";
 
-// --- 类型定义 ---
 export interface SelectOption {
   label: string;
   value: string;
@@ -36,16 +35,16 @@ export interface BaseSelectProps
   onChange?: (value: string) => void;
   options: BaseSelectOptions;
   placeholder?: string;
-  className?: string; // Trigger 样式
-  contentClassName?: string; // 下拉框样式
-  containerClassName?: string; // 容器样式
-  error?: boolean;
+  className?: string;
+  contentClassName?: string;
+  containerClassName?: string;
+  /** 和 Input 对齐：可以是 string（错误文案），也可以是 boolean */
+  error?: string | boolean;
   isLoading?: boolean;
-  label?: string; // Label 文本
+  label?: string;
   emptyText?: string;
 }
 
-// 辅助函数：判断是否为分组
 function isGrouped(options: BaseSelectOptions): options is SelectGroupOption[] {
   return options.length > 0 && "items" in options[0];
 }
@@ -69,14 +68,16 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
     },
     ref,
   ) => {
-    // 强制转换为字符串，避免 value={1} 导致显示不出
     const safeValue =
       value !== undefined && value !== null ? String(value) : undefined;
 
+    const hasError = !!error;
+
     return (
-      <div className={cn("w-full space-y-2", containerClassName)}>
+      <div className={cn("w-full", containerClassName)}>
+        {/* Label：跟 Input 的一样 */}
         {label && (
-          <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
             {label}
           </label>
         )}
@@ -90,26 +91,35 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
           <SelectTrigger
             ref={ref}
             className={cn(
-              "w-full transition-colors",
-              error &&
-                "border-destructive/50 text-destructive focus:ring-destructive",
+              "w-full px-4 py-2.5 bg-gray-50 dark:bg-black/20 border rounded-lg outline-none transition-all text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500",
+              hasError
+                ? "border-red-500"
+                : "border-gray-200 dark:border-white/10",
               className,
             )}
           >
             <div className="flex items-center gap-2 truncate">
               {isLoading && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <Loader2 className="h-4 w-4 animate-spin text-gray-400 dark:text-gray-500" />
               )}
-              <SelectValue placeholder={placeholder} />
+              <SelectValue
+                placeholder={placeholder}
+                // 让 placeholder 也用灰色
+                className="text-gray-900 dark:text-white data-[placeholder]:text-gray-400 dark:data-[placeholder]:text-gray-600"
+              />
             </div>
           </SelectTrigger>
 
-          {/* ⚠️ 这里的 z-[9999] 是为了防止在 Modal 里被遮挡 */}
           <SelectContent
-            className={cn("max-h-[300px] z-[9999]", contentClassName)}
+            className={cn(
+              "w-full appearance-none px-4 py-2.5 bg-gray-50  border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-black",
+              contentClassName,
+            )}
+            position="popper"
+            style={{ width: "var(--radix-select-trigger-width)" }}
           >
             {options.length === 0 && (
-              <div className="py-6 text-center text-sm text-muted-foreground">
+              <div className="py-6 text-center text-sm text-gray-400 dark:text-gray-500">
                 {emptyText}
               </div>
             )}
@@ -118,7 +128,9 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
               ? options.map((group, index) => (
                   <React.Fragment key={group.label}>
                     <SelectGroup>
-                      <SelectLabel>{group.label}</SelectLabel>
+                      <SelectLabel className="px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        {group.label}
+                      </SelectLabel>
                       {group.items.map((item) => (
                         <RenderSelectItem key={item.value} item={item} />
                       ))}
@@ -131,6 +143,10 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
                 ))}
           </SelectContent>
         </Select>
+
+        {typeof error === "string" && (
+          <span className="mt-1 block text-xs text-red-500">{error}</span>
+        )}
       </div>
     );
   },
@@ -140,11 +156,14 @@ BaseSelect.displayName = "BaseSelect";
 
 const RenderSelectItem = ({ item }: { item: SelectOption }) => {
   return (
-    // 强制 value 转字符串
-    <SelectItem value={String(item.value)} disabled={item.disabled}>
+    <SelectItem
+      value={String(item.value)}
+      disabled={item.disabled}
+      className="cursor-pointer text-sm text-gray-800  hover:bg-gray-100"
+    >
       <div className="flex items-center gap-2">
         {item.icon && (
-          <span className="flex h-4 w-4 items-center justify-center text-muted-foreground">
+          <span className="flex h-4 w-4 items-center justify-center text-gray-400 dark:text-gray-500">
             {item.icon}
           </span>
         )}
