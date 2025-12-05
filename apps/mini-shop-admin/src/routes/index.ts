@@ -64,9 +64,9 @@ export const routes: RouteConfig[] = [
   },
   {
     path: '/admin-users',
-    name: 'adminUsers',
+    name: 'admin',
     component: AdminUserManagement,
-    icon: Users,
+    icon: Shield,
     group: 'Management',
   },
   {

@@ -918,6 +918,7 @@ export const TRANSLATIONS = {
   en: {
     dashboard: 'Dashboard',
     users: 'User Management',
+    admin: 'admin User',
     products: 'Products',
     groups: 'Group Buying',
     orders: 'Orders & Delivery',
@@ -951,6 +952,7 @@ export const TRANSLATIONS = {
   zh: {
     dashboard: '仪表盘',
     users: '用户管理',
+    admin: '管理员账号',
     products: '商品管理',
     groups: '拼团管理',
     orders: '订单与发货',
