@@ -1,8 +1,8 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/button"; // 假设 Button 在 @/button
+import { cn } from "../../lib/utils.ts";
+import { Button } from "../../button.tsx";
 import { ModalProps } from "./Types.ts";
 
 export function ModalFixed({
@@ -16,6 +16,7 @@ export function ModalFixed({
   onFinishClose,
   showClose = true,
   className,
+  size = "lg",
 }: Readonly<ModalProps>): React.JSX.Element {
   const [visible, setVisible] = React.useState<boolean>(true);
 
@@ -32,10 +33,10 @@ export function ModalFixed({
   }, [onCancel, handleClose]);
 
   const sizes = {
-    sm: 'max-w-sm',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
+    sm: "max-w-sm",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
   };
 
   return (
@@ -55,7 +56,8 @@ export function ModalFixed({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "bg-white dark:bg-dark-900 w-full rounded-2xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh]",
+              "bg-white dark:bg-dark-900 w-full rounded-2xl shadow-2xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh] relative",
+              sizes[size],
               className,
             )}
             onClick={(e) => e.stopPropagation()}
@@ -85,12 +87,12 @@ export function ModalFixed({
             {(confirmText || cancelText) && (
               <div className="flex justify-end gap-3 p-4 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/5">
                 {cancelText && (
-                  <Button variant="ghost" onClick={cancel}>
+                  <Button size="lg" variant="ghost" onClick={cancel}>
                     {cancelText}
                   </Button>
                 )}
                 {confirmText && (
-                  <Button onClick={confirm}>
+                  <Button size="lg" onClick={confirm}>
                     {confirmText}
                   </Button>
                 )}

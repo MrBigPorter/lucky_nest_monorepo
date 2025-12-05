@@ -11,4 +11,5 @@ export interface ModalProps {
   onFinishClose?: () => void;
   showClose?: boolean;
   className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }

@@ -9,10 +9,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-    },
-
     // 保持 React 支持
     "jsx": "react-jsx"
   }
