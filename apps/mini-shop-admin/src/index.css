@@ -1,8 +1,110 @@
 @import 'tailwindcss';
 
-@variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* 基础背景和文字 */
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+
+  /* ✨ 核心：把你的金色 (#d68a29) 转换成 HSL 填在这里 */
+  /* 这样 Button variant="default" 就会显示你的金色 */
+  --primary: 34 68% 50%;
+  --primary-foreground: 60 9.1% 97.8%; /* 金色背景上的文字颜色 */
+
+  /* 次要颜色 (灰色) */
+  --secondary: 60 4.8% 95.9%;
+  --secondary-foreground: 24 9.8% 10%;
+
+  /* 柔和颜色 */
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+
+  /* 强调颜色 */
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+
+  /* 危险颜色 (红色) */
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+
+  /* 边框和输入框 */
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --ring: 34 68% 50%; /* 聚焦时的光圈，也用金色 */
+
+  /* 圆角设置 */
+  --radius: 0.5rem;
+
+  /* 图表颜色 (可选) */
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+}
+
+.dark {
+  --background: 20 14.3% 4.1%;
+  --foreground: 60 9.1% 97.8%;
+
+  /* ✅ 修正点：必须是用空格分隔的数字，不能是 #Hex */
+  /* 你的金色对应的 HSL 大约是 34 68% 50% */
+  --primary: 34 68% 50%;
+  --primary-foreground: 60 9.1% 97.8%;
+
+  --secondary: 12 6.5% 15.1%;
+  --secondary-foreground: 60 9.1% 97.8%;
+
+  --muted: 12 6.5% 15.1%;
+  --muted-foreground: 24 5.4% 63.9%;
+
+  --accent: 12 6.5% 15.1%;
+  --accent-foreground: 60 9.1% 97.8%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 60 9.1% 97.8%;
+
+  /* ✅ 修正点：边框颜色无效会导致 Cancel 按钮看不见边框 */
+  --border: 12 6.5% 15.1%;
+  --input: 12 6.5% 15.1%;
+  --ring: 34 68% 50%;
+}
 
 @theme {
+  /* 字体设置 */
+  --font-sans: 'Inter', sans-serif;
+
+  /* 👇 关键：将 CSS 变量映射为 Tailwind 类名 */
+  /* 这让 bg-primary, text-primary-foreground 等类名生效 */
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* 圆角映射 */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
   --color-primary-50: #fbf7eb;
   --color-primary-100: #f5ebd1;
   --color-primary-200: #edd5a3;
@@ -17,15 +119,16 @@
   --color-dark-800: #1e1e2e;
   --color-dark-900: #11111b;
   --color-dark-950: #0b0b12;
-
-  --font-sans: 'Inter', sans-serif;
 }
 
+/* 基础样式 */
 body {
   font-family: var(--font-sans);
+  background-color: var(--color-background); /* 使用映射后的背景色 */
+  color: var(--color-foreground); /* 使用映射后的文字颜色 */
 }
 
-/* Custom Scrollbar */
+/* 你的自定义滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -38,5 +141,6 @@ body {
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #dca449;
+  /* 这里可以直接用你的金色变量 */
+  background: hsl(var(--primary));
 }

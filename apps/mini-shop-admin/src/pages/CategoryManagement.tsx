@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Edit2, Plus, Trash2 } from 'lucide-react';
-import { Button, Card, Input, Modal } from '@/components/UIComponents';
+import { Button, Card } from '@/components/UIComponents';
 import { Category } from '@/types';
 import { useRequest } from 'ahooks';
 import { categoryApi } from '@/api';
 import { EditCategoryModal } from '@/pages/category/EditCategoryModal.tsx';
 import { CreateCategoryModal } from '@/pages/category/CreateCategoryModal.tsx';
+import { ModalManager } from '@repo/ui/components/Modal/modal-manager';
 
 export const CategoryManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -24,6 +25,28 @@ export const CategoryManagement: React.FC = () => {
       setEditingItem(null);
       setIsCreateModalOpen(true);
     }
+  };
+
+  const { run: deleteCategory, loading: isDeleting } = useRequest(
+    categoryApi.deleteCategory,
+    {
+      manual: true,
+      onSuccess: () => {
+        categories.refresh();
+      },
+    },
+  );
+  const remove = (id: string) => {
+    ModalManager.open({
+      title: 'Are you sure?',
+      content: 'Category will be removed permanently!!',
+      confirmText: 'confirm',
+      cancelText: 'cancel',
+      onConfirm: () => {
+        if (isDeleting) return;
+        deleteCategory(id);
+      },
+    });
   };
 
   return (
@@ -103,7 +126,7 @@ export const CategoryManagement: React.FC = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSuccess={categories.refresh}
-        detail={editingItem}
+        detail={editingItem as Category}
       />
     </div>
   );
