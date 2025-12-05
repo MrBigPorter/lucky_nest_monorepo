@@ -121,7 +121,14 @@ export class UserService {
 
         return this.prisma.adminUser.update({
             where:{id},
-            data: dto
+            data: dto,
+            select:{
+                id: true,
+                username: true,
+                realName: true,
+                role: true,
+                status: true,
+            }
         })
     }
 

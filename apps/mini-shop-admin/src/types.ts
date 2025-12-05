@@ -24,7 +24,9 @@ export type AdminCreateUser = Pick<AdminUser, 'username' | 'role'> & {
   password?: string;
 };
 
-export type AdminUpdateUser = Pick<AdminUser, 'role' | 'status'>;
+export type AdminUpdateUser = Pick<AdminUser, 'role' | 'status'> & {
+  password: string;
+};
 
 export type AdminUpdatePassword = { password: string };
 

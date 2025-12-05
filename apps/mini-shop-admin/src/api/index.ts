@@ -13,7 +13,7 @@ import {
   LoginResponse,
   AdminUser,
   AdminCreateUser,
-  AdminUpdatePassword,
+  AdminUpdateUser,
 } from '@/types';
 
 /**
@@ -32,11 +32,11 @@ export const userApi = {
     http.post<User>('/v1/admin/user/create', data),
 
   // 更新用户
-  updateUser: (id: string, data: AdminUpdatePassword) =>
+  updateUser: (id: string, data: Partial<AdminUpdateUser>) =>
     http.patch<AdminUser>(`/v1/admin/user/${id}`, data),
 
   // 删除用户
-  deleteUser: (id: string) => http.delete(`/api/v1/admin/user/${id}`),
+  deleteUser: (id: string) => http.delete(`/v1/admin/user/${id}`),
 
   // 获取当前登录用户信息
   getCurrentUser: () => http.get<User>('/users/me'),

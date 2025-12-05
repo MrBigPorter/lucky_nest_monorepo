@@ -71,7 +71,7 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
 
   const onSubmit = (data: EditAdminUserFormInputs) => {
     if (editingUser) {
-      const updateData: AdminUpdateUser = { ...data };
+      const updateData: Partial<AdminUpdateUser> = { ...data };
       updateUser(editingUser.id, updateData);
     }
   };

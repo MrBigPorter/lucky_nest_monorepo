@@ -11,7 +11,7 @@ import { Card, Button, Badge, Input, Select } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { AdminUser } from '@/types';
 import { userApi } from '@/api';
-import { useAntdTable } from 'ahooks';
+import { useAntdTable, useRequest } from 'ahooks';
 import {
   createColumnHelper,
   flexRender,
@@ -134,21 +134,24 @@ export const AdminUserManagement: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
+  const { run: updateUser, loading: isUpdating } = useRequest(
+    userApi.updateUser,
+    {
+      manual: true,
+      onSuccess: (data) => {
+        addToast(
+          'success',
+          `Admin ${data.username} ${
+            data.status === 1 ? 'activated' : 'disabled'
+          }.`,
+        );
+        refresh();
+      },
+    },
+  );
   const handleToggleStatus = async (admin: AdminUser) => {
-    try {
-      const newStatus = admin.status === 1 ? 0 : 1;
-      // await userApi.updateAdminStatus(admin.id, newStatus);
-      addToast(
-        'success',
-        `Admin ${admin.username} ${
-          newStatus === 1 ? 'activated' : 'disabled'
-        }.`,
-      );
-      refresh();
-    } catch (error) {
-      console.error(error);
-      addToast('error', 'Failed to update status.');
-    }
+    const newStatus = admin.status === 1 ? 0 : 1;
+    updateUser(admin.id, { status: newStatus });
   };
 
   const handleOpenResetPwd = (admin: AdminUser) => {
@@ -273,6 +276,8 @@ export const AdminUserManagement: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
+            disabled={isUpdating}
+            isLoading={isUpdating}
             className={
               info.row.original.status === 1
                 ? 'text-red-500 hover:text-red-600'
