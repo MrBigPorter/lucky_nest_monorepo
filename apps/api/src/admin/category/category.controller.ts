@@ -28,6 +28,12 @@ export class CategoryController {
         return this.categoryService.findAll()
     }
 
+    @Get(':id')
+    @Roles(Role.ADMIN,Role.SUPER_ADMIN, Role.EDITOR, Role.VIEWER)
+    async findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.categoryService.findOne(id)
+    }
+
     @Patch(':id')
     @Roles(Role.SUPER_ADMIN, Role.ADMIN)
     async update(@Param('id', ParseIntPipe) id: number, @Body() dto:UpdateCategoryDto){
