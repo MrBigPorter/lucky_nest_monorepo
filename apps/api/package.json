@@ -17,6 +17,7 @@
     "seed:treasures": "tsx scripts/seed/seed-treasures.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.946.0",
     "@nestjs/cache-manager": "^2",
     "@nestjs/common": "^11.1.7",
     "@nestjs/config": "^4.0.2",
@@ -28,6 +29,7 @@
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "6.18.0",
+    "@types/multer": "^2.0.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cache-manager": "^5",
@@ -44,7 +46,8 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
