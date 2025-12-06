@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # base image, for api, admin service , they all use it for build
   monorepo-base:
