@@ -14,6 +14,7 @@ import {
   AdminUser,
   AdminCreateUser,
   AdminUpdateUser,
+  CreateProduct,
 } from '@/types';
 
 /**
@@ -44,22 +45,22 @@ export const userApi = {
  */
 export const productApi = {
   // 获取商品列表
-  getProducts: (params?: PaginationParams & { category?: string }) =>
-    http.get<PaginatedResponse<Product>>('/products', params),
+  getProducts: (params?: PaginationParams & { categoryId?: string }) =>
+    http.get<PaginatedResponse<Product>>('/v1/admin/treasure/list', params),
 
   // 获取商品详情
-  getProductById: (id: string) => http.get<Product>(`/products/${id}`),
+  getProductById: (id: string) => http.get<Product>(`/v1/admin/treasure/${id}`),
 
   // 创建商品
-  createProduct: (data: Partial<Product>) =>
-    http.post<Product>('/products', data),
+  createProduct: (data: CreateProduct) =>
+    http.post<Product>('/v1/admin/treasure/create', data),
 
   // 更新商品
-  updateProduct: (id: string, data: Partial<Product>) =>
-    http.put<Product>(`/products/${id}`, data),
+  updateProduct: (id: string, data: Partial<CreateProduct>) =>
+    http.put<Product>(`/v1/admin/treasure/${id}`, data),
 
   // 删除商品
-  deleteProduct: (id: string) => http.delete(`/products/${id}`),
+  deleteProduct: (id: string) => http.delete(`v1/admin/treasure/${id}`),
 
   // 更新商品状态
   updateProductStatus: (id: string, status: 'active' | 'draft' | 'ended') =>

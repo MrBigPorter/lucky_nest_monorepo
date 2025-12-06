@@ -53,24 +53,29 @@ export interface User {
 }
 
 export interface Product {
-  id: string;
-  seq: string;
-  name: string;
-  price: number;
-  cost: number;
-  totalShares: number;
-  soldShares: number;
-  category: string;
-  status: 'active' | 'draft' | 'ended';
-  image: string;
-  images?: string[]; // Gallery
-  description?: string; // Rich text or long text
-  lotteryMode: 1 | 2; // 1: Sold Out, 2: Timed
-  lotteryTime?: string;
-  sortOrder: number; // For drag and drop sorting
-  purchaseLimit?: number; // 0 for unlimited
-  tags?: string[]; // e.g. ['Hot', 'New']
-  autoRestart?: boolean; // Automatically start next round
+  treasureId: string;
+  treasureName: string;
+  productName: string;
+  costAmount: number;
+  unitAmount: number;
+  seqShelvesQuantity: number;
+  seqBuyQuantity: number;
+  buyQuantityRate: number;
+  treasureCoverImg: string;
+  state: number;
+  createdAt: number;
+  updatedAt: number;
+  categories: Pick<Category, 'id' | 'name'>[];
+}
+
+export interface CreateProduct {
+  treasureName: string; // 商品名称
+  costAmount: number; // 成本价
+  unitAmount: number; // 单价
+  seqShelvesQuantity: number; // 上架份数 / 库存数量
+  categoryIds: number[]; // 分类 ID 列表
+  treasureCoverImg: string; // 封面图片 URL
+  desc?: string; // 描述
 }
 
 export interface Category {
