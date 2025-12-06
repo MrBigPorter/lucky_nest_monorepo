@@ -17,7 +17,7 @@ import {
 import { MOCK_ORDERS } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
 import { useToastStore } from '@/store/useToastStore';
-import { Order } from '@/types';
+import { Order } from '@/type/types.ts';
 
 export const OrderManagement: React.FC = () => {
   const { data: orders, update } = useMockData<Order>(MOCK_ORDERS);

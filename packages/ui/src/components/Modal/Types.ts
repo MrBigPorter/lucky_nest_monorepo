@@ -1,5 +1,9 @@
 import React from "react";
 
+type RenderChildren =
+  | React.ReactNode
+  | ((helpers: { close: () => void }) => React.ReactNode);
+
 export interface ModalProps {
   title?: string | React.ReactNode;
   content?: string;
@@ -7,9 +11,9 @@ export interface ModalProps {
   cancelText?: string;
   onConfirm?: () => void;
   onCancel?: () => void;
-  renderChildren?: React.ReactNode;
+  renderChildren?: RenderChildren;
   onFinishClose?: () => void;
   showClose?: boolean;
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
 }

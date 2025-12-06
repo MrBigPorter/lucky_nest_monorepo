@@ -32,7 +32,7 @@ import {
   BettingRecord,
   LoginLog,
   ReferralUser,
-} from '@/types';
+} from '@/type/types.ts';
 import { userApi } from '@/api';
 import { useAntdTable } from 'ahooks';
 import {

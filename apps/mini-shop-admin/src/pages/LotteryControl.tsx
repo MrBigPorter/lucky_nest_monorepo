@@ -10,7 +10,7 @@ import {
 import { Card, Button, Badge } from '@/components/UIComponents';
 import { MOCK_LOTTERY_DRAWS } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
-import { LotteryDraw } from '@/types';
+import { LotteryDraw } from '@/type/types.ts';
 
 export const LotteryControl: React.FC = () => {
   const { data: draws, update } = useMockData<LotteryDraw>(MOCK_LOTTERY_DRAWS);

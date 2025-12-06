@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Theme, Language } from '../types';
+import { Theme, Language } from '../type/types.ts';
 
 interface AppState {
   theme: Theme;

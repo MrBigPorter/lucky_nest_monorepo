@@ -15,7 +15,7 @@ import {
   AdminCreateUser,
   AdminUpdateUser,
   CreateProduct,
-} from '@/types';
+} from '@/type/types.ts';
 
 /**
  * 用户相关 API
@@ -45,7 +45,7 @@ export const userApi = {
  */
 export const productApi = {
   // 获取商品列表
-  getProducts: (params?: PaginationParams & { categoryId?: string }) =>
+  getProducts: (params?: PaginationParams & { categoryId?: number }) =>
     http.get<PaginatedResponse<Product>>('/v1/admin/treasure/list', params),
 
   // 获取商品详情

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useRequest } from 'ahooks';
 import { Modal, Input, Button } from '@/components/UIComponents.tsx';
 import { useToastStore } from '@/store/useToastStore.ts';
-import { AdminUpdatePassword, AdminUser } from '@/types.ts';
+import { AdminUpdatePassword, AdminUser } from '@/type/types.ts';
 import { userApi } from '@/api';
 
 const editAdminPasswordSchema = z.object({

@@ -4,7 +4,7 @@ import { Card, Button, Badge } from '@/components/UIComponents';
 import { MOCK_GROUPS, TRANSLATIONS } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
 import { useAppStore } from '@/store/useAppStore';
-import { TreasureGroup } from '@/types';
+import { TreasureGroup } from '@/type/types.ts';
 
 export const GroupManagement: React.FC = () => {
   const { lang } = useAppStore();

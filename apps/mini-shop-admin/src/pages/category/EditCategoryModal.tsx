@@ -6,7 +6,7 @@ import { useToastStore } from '@/store/useToastStore.ts';
 import React, { useEffect } from 'react';
 import { useRequest } from 'ahooks';
 import { categoryApi } from '@/api';
-import { Category } from '@/types.ts';
+import { Category } from '@/type/types.ts';
 import { BaseSelect } from '@repo/ui';
 
 const editCategorySchema = z.object({

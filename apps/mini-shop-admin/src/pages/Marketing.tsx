@@ -29,7 +29,7 @@ import {
   MOCK_GROWTH_RULES,
 } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
-import { Coupon, ActivityZone, SignInRule, GrowthRule } from '@/types';
+import { Coupon, ActivityZone, SignInRule, GrowthRule } from '@/type/types.ts';
 
 // --- SUB-COMPONENT: COUPON LIST ---
 const CouponList: React.FC = () => {

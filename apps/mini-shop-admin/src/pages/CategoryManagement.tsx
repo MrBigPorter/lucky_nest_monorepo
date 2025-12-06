@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Edit2, Plus, Trash2 } from 'lucide-react';
 import { Button, Card } from '@/components/UIComponents';
-import { Category } from '@/types';
+import { Category } from '@/type/types.ts';
 import { useRequest } from 'ahooks';
 import { categoryApi } from '@/api';
 import { EditCategoryModal } from '@/pages/category/EditCategoryModal.tsx';

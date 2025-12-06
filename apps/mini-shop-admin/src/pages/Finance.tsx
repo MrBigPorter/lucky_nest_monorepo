@@ -30,7 +30,12 @@ import {
 } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
 import { useToastStore } from '@/store/useToastStore';
-import { RechargePlan, Withdrawal, RechargeOrder, Transaction } from '@/types';
+import {
+  RechargePlan,
+  Withdrawal,
+  RechargeOrder,
+  Transaction,
+} from '@/type/types.ts';
 
 // --- SUB-COMPONENT: RECHARGE PLANS ---
 const RechargeConfig: React.FC = () => {

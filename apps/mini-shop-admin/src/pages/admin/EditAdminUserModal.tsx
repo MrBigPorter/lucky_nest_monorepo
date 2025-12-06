@@ -11,7 +11,7 @@ import {
   Switch,
 } from '@/components/UIComponents.tsx';
 import { useToastStore } from '@/store/useToastStore.ts';
-import { AdminUpdateUser, AdminUser } from '@/types.ts';
+import { AdminUpdateUser, AdminUser } from '@/type/types.ts';
 import { userApi } from '@/api';
 
 const editAdminUserSchema = z.object({

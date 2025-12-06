@@ -30,7 +30,7 @@ import {
   BettingRecord,
   LoginLog,
   ReferralUser,
-} from '@/types.ts';
+} from '@/type/types.ts';
 
 export const MOCK_STATS: DashboardStats = {
   totalRevenue: 124500,

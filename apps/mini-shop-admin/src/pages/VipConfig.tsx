@@ -3,7 +3,7 @@ import { Crown, Edit2, Plus, Check } from 'lucide-react';
 import { Card, Button, Input, Modal } from '@/components/UIComponents';
 import { MOCK_VIP_TIERS } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
-import { VipTier } from '@/types';
+import { VipTier } from '@/type/types.ts';
 
 export const VipConfig: React.FC = () => {
   const { data: tiers, update } = useMockData<VipTier>(MOCK_VIP_TIERS);

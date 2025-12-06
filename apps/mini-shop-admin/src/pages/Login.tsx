@@ -10,7 +10,7 @@ import { Button, Input } from '../components/UIComponents';
 import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authApi } from '@/api';
-import { LoginResponse } from '@/types';
+import { LoginResponse } from '@/type/types.ts';
 
 // 1. 使用 Zod 定义数据结构和校验规则
 const loginSchema = z.object({

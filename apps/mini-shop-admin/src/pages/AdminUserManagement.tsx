@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { Card, Button, Badge, Input, Select } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
-import { AdminUser } from '@/types';
+import { AdminUser } from '@/type/types.ts';
 import { userApi } from '@/api';
 import { useAntdTable, useRequest } from 'ahooks';
 import {

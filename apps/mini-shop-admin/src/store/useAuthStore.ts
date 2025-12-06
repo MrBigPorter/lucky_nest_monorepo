@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { UserRole } from '@/types';
+import { UserRole } from '@/type/types.ts';
 import { authApi } from '@/api';
 
 interface AuthState {
