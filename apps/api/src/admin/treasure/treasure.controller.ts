@@ -10,7 +10,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { RolesGuard } from '@api/common/guards/roles.guard';
 import { TreasureService } from '@api/admin/treasure/treasure.service';
@@ -19,6 +24,9 @@ import { Role } from '@lucky/shared';
 import { CreateTreasureDto } from '@api/admin/treasure/dto/create-treasure.dto';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
+import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
+import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
+import { TreasureListResponseDto } from '@api/admin/treasure/dto/treasure-list-response.dto';
 
 @ApiTags('后台-产品管理')
 @ApiBearerAuth()
@@ -34,6 +42,7 @@ export class TreasureController {
    */
   @Post('create')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @ApiOkResponse({ type: TreasureResponseDto })
   async create(@Body() dto: CreateTreasureDto) {
     return this.treasureService.create(dto);
   }
@@ -44,6 +53,7 @@ export class TreasureController {
    */
   @Get('list')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER)
+  @ApiOkResponse({ type: TreasureListResponseDto })
   async findAll(@Query() dto: QueryTreasureDto) {
     return this.treasureService.findAll(dto);
   }
@@ -55,6 +65,7 @@ export class TreasureController {
    */
   @Get(':id')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER)
+  @ApiOkResponse({ type: TreasureResponseDto })
   async findOne(@Param('id') id: string) {
     return this.treasureService.findOne(id);
   }
@@ -67,6 +78,7 @@ export class TreasureController {
    */
   @Patch(':id')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @ApiOkResponse({ type: TreasureResponseDto })
   async update(@Param('id') id: string, @Body() dto: UpdateTreasureDto) {
     return this.treasureService.update(id, dto);
   }
@@ -78,6 +90,7 @@ export class TreasureController {
    */
   @Delete(':id')
   @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @ApiOkResponse({ type: TreasureResponseDto })
   async remove(@Param('id') id: string) {
     return this.treasureService.remove(id);
   }
