@@ -81,7 +81,9 @@ export function ModalFixed({
             )}
 
             <div className="p-6 overflow-y-auto custom-scrollbar">
-              {renderChildren || content}
+              {renderChildren && typeof renderChildren === "function"
+                ? renderChildren({ close: handleClose })
+                : (renderChildren ?? content)}
             </div>
 
             {(confirmText || cancelText) && (
