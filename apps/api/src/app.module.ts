@@ -11,6 +11,7 @@ import { ClientModule } from '@api/client/client.module';
 import { AdminModule } from '@api/admin/admin.module';
 import { APP_GUARD } from '@nestjs/core';
 import { OtpThrottlerGuard } from '@api/common/guards/otp-throttler.guard';
+import { UploadModule } from '@api/common/upload/upload.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -60,6 +61,7 @@ import { OtpThrottlerGuard } from '@api/common/guards/otp-throttler.guard';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 60 }]),
     //根模块，把业务模块“挂进来”。Nest 会读这些元数据，生成依赖图。
     PrismaModule,
+    UploadModule,
     ClientModule,
     AdminModule,
 
