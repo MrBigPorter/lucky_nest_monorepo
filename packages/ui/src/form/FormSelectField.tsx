@@ -1,28 +1,27 @@
-import { FormField } from "./FormField.tsx";
-import { FormItem } from "./FormItem.tsx";
-import { FormLabel } from "./FormLabel.tsx";
-import { FormMessage } from "./FormMessage.tsx";
+import clsx from "clsx";
+import { AnimatePresence } from "framer-motion";
 import type { FieldValues } from "react-hook-form";
-import { FormControl } from "./FormControl.tsx";
-import React from "react";
+
+import { FormField } from "./FormField";
+import { FormItem } from "./FormItem";
+import { FormLabel } from "./FormLabel";
+import { FormMessage } from "./FormMessage";
+import { FormControl } from "./FormControl";
 import {
   FormHelpTextVariants,
   FormLabelVariants,
   FormMessageVariants,
-} from "./constants.ts";
-import { HelpText } from "./HelpText.tsx";
+} from "./constants";
+import { HelpText } from "./HelpText";
 import { useFormTheme } from "./formTheme/FormThemeProvider";
-import { twMerge } from "tailwind-merge";
 import { getVariantClassNames } from "./formTheme";
-import clsx from "clsx";
-import { AnimatePresence } from "framer-motion";
-import type { BaseFieldProps } from "./types/baseFieldType.ts";
-import { BaseSelectProps } from "../components/BaseSelect/type";
+import type { BaseFieldProps } from "./types/baseFieldType";
+import type { BaseSelectProps } from "../components/BaseSelect/type";
 import { BaseSelect } from "../components";
+import { twMerge } from "tailwind-merge";
 
 /**
- * FormSelectFieldProps type combines BaseFieldProps (excluding some input-specific props)
- * with BaseSelectProps to create a comprehensive type for the select field component.
+ * 注意：不把 value / onChange 透传给外面，统一由 RHF 接管
  */
 type FormSelectFieldProps<TFieldValues extends FieldValues = FieldValues> =
   Omit<
@@ -34,32 +33,8 @@ type FormSelectFieldProps<TFieldValues extends FieldValues = FieldValues> =
     | "renderRight"
     | "readOnly"
   > &
-    BaseSelectProps;
+    Omit<BaseSelectProps, "value" | "onChange">;
 
-/**
- * FormSelectField is a fully controlled, theme-aware select dropdown component
- * built for seamless integration with react-hook-form.
- *
- * @component
- * @example
- * ```tsx
- * <FormSelectField
- *   name="country"
- *   label="Country"
- *   placeholder="Select a country"
- *   options={[
- *     {
- *       groupName: 'Popular',
- *       options: [
- *         { label: 'United States', value: 'us' },
- *         { label: 'United Kingdom', value: 'uk' },
- *       ],
- *     }
- *   ]}
- *   required
- * />
- * ```
- */
 export function FormSelectField<
   TFieldValues extends FieldValues = FieldValues,
 >({
@@ -77,18 +52,25 @@ export function FormSelectField<
   layout = "vertical",
   options,
   onOpenChange,
-  onChange,
   ...props
 }: Readonly<FormSelectFieldProps<TFieldValues>>) {
   const theme = useFormTheme();
+
   return (
     <FormField<TFieldValues, typeof name>
       name={name}
       renderAction={({ field, error }) => {
-        const finalvariant = error ? "error" : variant;
+        const finalVariant = error ? "error" : variant;
+
+        const selectValue =
+          field.value === undefined || field.value === null
+            ? undefined
+            : String(field.value);
+
         return (
           <FormItem>
             <div
+              data-testid={testId}
               className={clsx({
                 "flex items-center gap-[10px]": layout === "horizontal",
                 "flex flex-col gap-[5px]": layout !== "horizontal",
@@ -97,10 +79,10 @@ export function FormSelectField<
               {label && (
                 <FormLabel
                   className={twMerge(
-                    FormLabelVariants({ size, variant: finalvariant }),
+                    FormLabelVariants({ size, variant: finalVariant }),
                     getVariantClassNames(
                       theme,
-                      finalvariant,
+                      finalVariant,
                       classNames,
                       "label",
                     ),
@@ -111,51 +93,55 @@ export function FormSelectField<
                   {renderLabelRight?.()}
                 </FormLabel>
               )}
+
               <div
                 className={clsx({
                   "flex-1": layout === "horizontal",
                 })}
               >
-                <FormControl asChild={true}>
+                <FormControl asChild>
                   <BaseSelect
-                    onOpenChange={onOpenChange}
-                    onChange={(value) => {
-                      field.onChange(value);
-                      onChange?.(value);
-                    }}
                     options={options}
                     placeholder={placeholder}
-                    value={field.value}
                     disabled={disabled}
+                    value={selectValue}
+                    onOpenChange={onOpenChange}
+                    onChange={(val) => {
+                      const next =
+                        val === undefined || val === null || val === ""
+                          ? undefined
+                          : Number(val);
+                      field.onChange(next);
+                    }}
                     {...props}
                   />
                 </FormControl>
-                {/* Show help text if provided */}
+
                 {helpText && (
                   <HelpText
                     content={helpText}
                     className={twMerge(
-                      FormHelpTextVariants({ size, variant: finalvariant }),
+                      FormHelpTextVariants({ size, variant: finalVariant }),
                       getVariantClassNames(
                         theme,
-                        finalvariant,
+                        finalVariant,
                         classNames,
                         "helpText",
                       ),
                     )}
                   />
                 )}
-                {/* Show error message if present */}
+
                 <AnimatePresence mode="wait" initial={false}>
                   {error && (
                     <FormMessage
                       key={error}
                       error={error}
                       className={twMerge(
-                        FormMessageVariants({ variant: finalvariant }),
+                        FormMessageVariants({ variant: finalVariant }),
                         getVariantClassNames(
                           theme,
-                          finalvariant,
+                          finalVariant,
                           classNames,
                           "message",
                         ),
@@ -168,6 +154,6 @@ export function FormSelectField<
           </FormItem>
         );
       }}
-    ></FormField>
+    />
   );
 }

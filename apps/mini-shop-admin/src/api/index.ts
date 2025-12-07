@@ -57,7 +57,7 @@ export const productApi = {
 
   // 更新商品
   updateProduct: (id: string, data: Partial<CreateProduct>) =>
-    http.put<Product>(`/v1/admin/treasure/${id}`, data),
+    http.patch<Product>(`/v1/admin/treasure/${id}`, data),
 
   // 删除商品
   deleteProduct: (id: string) => http.delete(`v1/admin/treasure/${id}`),

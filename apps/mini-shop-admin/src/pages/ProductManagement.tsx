@@ -22,6 +22,7 @@ import {
   TableCell,
 } from '@repo/ui';
 import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.tsx';
+import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -114,7 +115,12 @@ export const ProductManagement: React.FC = () => {
   };
 
   const handleOpenEdit = (p: Product) => {
-    // TODO: 打开编辑弹窗
+    ModalManager.open({
+      title: 'Edit Product',
+      onConfirm: () => refresh(),
+      renderChildren: ({ close, confirm }) =>
+        EditProductFormModal(categories, close, confirm, p),
+    });
   };
 
   // 列定义
@@ -137,7 +143,7 @@ export const ProductManagement: React.FC = () => {
               {info.getValue()}
             </div>
             <div className="text-xs text-gray-500">
-              ID: {info.row.original.id}
+              ID: {info.row.original.treasureId}
             </div>
           </div>
         </div>

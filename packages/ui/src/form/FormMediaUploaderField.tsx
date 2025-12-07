@@ -122,6 +122,7 @@ export function FormMediaUploaderField<
               >
                 <FormControl asChild>
                   <MediaUploader.Root
+                    value={field.value}
                     maxFileCount={maxFileCount}
                     accept={accept}
                     onUpload={handleUpload}

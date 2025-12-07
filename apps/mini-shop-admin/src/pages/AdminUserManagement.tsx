@@ -7,7 +7,7 @@ import {
   Key,
   Plus,
 } from 'lucide-react';
-import { Card, Button, Badge, Input, Select } from '@/components/UIComponents';
+import { Card, Badge, Input } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { AdminUser } from '@/type/types.ts';
 import { userApi } from '@/api';
@@ -21,6 +21,7 @@ import {
 import { CreateAdminUserModal } from '@/pages/admin/CreateAdminUserModal.tsx';
 import { EditAdminUserModal } from '@/pages/admin/EditAdminUserModal.tsx';
 import { EditAdminPasswordModal } from '@/pages/admin/EditAdminPassowordModal.tsx';
+import { BaseSelect, Button } from '@repo/ui';
 
 type AdminUserSearchForm = {
   username?: string;
@@ -348,11 +349,11 @@ export const AdminUserManagement: React.FC = () => {
                 if (e.key === 'Enter') handleSearch();
               }}
             />
-            <Select
+            <BaseSelect
               label="Role"
               value={filters.role}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, role: e.target.value }))
+              onChange={(value) =>
+                setFilters((prev) => ({ ...prev, role: value }))
               }
               options={[
                 { label: 'All Roles', value: 'ALL' },
@@ -362,11 +363,11 @@ export const AdminUserManagement: React.FC = () => {
                 { label: 'Super Admin', value: 'SUPER_ADMIN' },
               ]}
             />
-            <Select
+            <BaseSelect
               label="Status"
               value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, status: e.target.value }))
+              onChange={(value) =>
+                setFilters((prev) => ({ ...prev, status: value }))
               }
               options={[
                 { label: 'All Status', value: 'ALL' },

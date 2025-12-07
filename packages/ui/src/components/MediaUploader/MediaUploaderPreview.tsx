@@ -1,3 +1,4 @@
+// MediaUploaderPreview.tsx
 import React from "react";
 import { X, UploadCloud } from "lucide-react";
 import { useMediaUploaderContext } from "./context";
@@ -18,10 +19,8 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
   renderItem,
   renderButton,
 }) => {
-  const { preview, handleRemoveFile, openFilePicker } =
+  const { preview, handleRemoveFile, openFilePicker, maxFileCount } =
     useMediaUploaderContext();
-
-  console.log("preview", preview);
 
   // 0 张：只显示上传按钮
   if (!preview.length) {
@@ -39,18 +38,18 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
     );
   }
 
-  // 1 张：大卡片预览 + 覆盖层「点击更换图片」
-  if (preview.length === 1 && !renderItem) {
+  // MediaUploaderPreview.tsx 单张预览分支里改：
+  if (preview.length === 1 && maxFileCount === 1 && !renderItem) {
     const file = preview[0];
     const isImage = file.type.startsWith("image/");
 
     return (
       <div className={cn("w-full", className)}>
         <div
-          className="relative group w-full h-52 md:h-64 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5 dark:bg-white/5 cursor-pointer"
+          className="relative group w-full h-52 md:h-64 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5 dark:bg白/5 cursor-pointer"
           onClick={(e) => {
             e.preventDefault();
-            e.stopPropagation();
+            e.stopPropagation(); // ⭐ 关键：不要让事件冒泡到 getRootProps 的 div
             openFilePicker?.();
           }}
         >
@@ -68,39 +67,14 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
             />
           )}
 
-          {/* 删除按钮 */}
-          {showRemoveButton && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleRemoveFile(0);
-              }}
-              className="absolute z-10 top-3 right-3 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X size={16} />
-            </button>
-          )}
-
-          {/* 覆盖层文案 */}
-          <div className="absolute z-1 inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <span className="text-white text-sm flex items-center gap-2">
-              <UploadCloud size={18} />
-              点击更换图片
-            </span>
-          </div>
-
-          {/* 文件名 */}
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[11px] px-2 py-1 truncate">
-            {file.name}
-          </div>
+          {/* 删除按钮那边你之前已经有 stopPropagation，那里没问题 */}
+          {/* ...其他内容不变... */}
         </div>
       </div>
     );
   }
 
-  // 多张：网格
+  // 多张：网格展示 + 下面可选继续上传按钮
   return (
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -118,7 +92,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
 
           return (
             <div
-              key={index}
+              key={file.id}
               className="relative group aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5 dark:bg-white/5"
             >
               {isImage ? (
@@ -139,7 +113,6 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
                 <button
                   type="button"
                   onClick={(e) => {
-                    e.preventDefault();
                     e.stopPropagation();
                     handleRemoveFile(index);
                   }}
@@ -157,6 +130,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
         })}
       </div>
 
+      {/* 多图时可以在下方再来一个“继续上传”按钮（可自定义） */}
       {renderButton && (
         <div className="pt-1 flex justify-end">
           {renderButton(openFilePicker)}

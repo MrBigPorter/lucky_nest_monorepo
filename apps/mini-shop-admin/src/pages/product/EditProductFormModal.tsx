@@ -4,7 +4,7 @@ import { useToastStore } from '@/store/useToastStore';
 import { productApi, uploadApi } from '@/api';
 import { z } from 'zod';
 import { createProductSchema } from '@/schema/productSchema.ts';
-import { Category, CreateProduct } from '@/type/types.ts';
+import { Category, CreateProduct, Product } from '@/type/types.ts';
 import {
   Button,
   Form,
@@ -17,30 +17,32 @@ import { useRequest } from 'ahooks';
 
 type ProductFormInputs = z.infer<typeof createProductSchema>;
 
-export const CreateProductFormModal = (
+export const EditProductFormModal = (
   categories: Category[],
   close: () => void,
+  confirm: () => void,
+  product: Product,
 ) => {
   const addToast = useToastStore((s) => s.addToast);
 
-  const { run: createProduct, loading } = useRequest(productApi.createProduct, {
+  const { run: updateProduct, loading } = useRequest(productApi.updateProduct, {
     manual: true,
     onSuccess: () => {
       addToast('success', 'Product created successfully');
-      close();
+      confirm();
     },
   });
 
   const form = useForm<ProductFormInputs>({
     resolver: zodResolver(createProductSchema),
     defaultValues: {
-      treasureName: '',
-      seqShelvesQuantity: 0,
-      unitAmount: 0,
-      costAmount: 0,
-      categoryIds: undefined,
-      desc: '',
-      treasureCoverImg: '',
+      treasureName: product.treasureName,
+      seqShelvesQuantity: product.seqShelvesQuantity,
+      unitAmount: product.unitAmount,
+      costAmount: product.costAmount,
+      categoryIds: product.categories?.[0]?.categoryId,
+      treasureCoverImg: product.treasureCoverImg,
+      desc: product.desc,
     },
   });
 
@@ -64,7 +66,7 @@ export const CreateProductFormModal = (
         desc: values.desc,
       };
 
-      createProduct(payload);
+      updateProduct(product.treasureId, payload);
     } catch (e) {
       addToast('error', 'Failed to save product');
     }
@@ -111,7 +113,7 @@ export const CreateProductFormModal = (
                 label="Categories"
                 options={categories.map((c) => ({
                   label: c.name,
-                  value: String(c.id),
+                  value: c.id.toString(),
                 }))}
               />
             </div>
@@ -133,7 +135,7 @@ export const CreateProductFormModal = (
             Cancel
           </Button>
           <Button isLoading={loading} type="submit">
-            Create Product
+            Confirm
           </Button>
         </div>
       </form>

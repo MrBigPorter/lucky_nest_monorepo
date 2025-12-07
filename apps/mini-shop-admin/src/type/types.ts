@@ -65,7 +65,10 @@ export interface Product {
   state: number;
   createdAt: number;
   updatedAt: number;
-  categories: Pick<Category, 'id' | 'name'>[];
+  desc: string;
+  categories: (Pick<Category, 'id' | 'name'> & {
+    categoryId: number;
+  })[];
 }
 
 export interface CreateProduct {
@@ -79,7 +82,7 @@ export interface CreateProduct {
 }
 
 export interface Category {
-  id: string;
+  id: number;
   name: string;
   nameEn: string;
   icon: string;
