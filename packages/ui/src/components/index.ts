@@ -4,3 +4,4 @@ export * from "./SwipeableList/SwipeableItem";
 export * from "./SwipeableList";
 export * from "./Modal/ModalFixed.tsx";
 export * from "./Modal/modal-manager.tsx";
+export * from "./ui/table.tsx";

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit3 } from 'lucide-react';
 import { Card, Badge, Input } from '@/components/UIComponents';
-import { useToastStore } from '@/store/useToastStore';
-import { useAppStore } from '@/store/useAppStore';
 import { useAntdTable, useRequest } from 'ahooks';
 import {
   createColumnHelper,
@@ -12,7 +10,17 @@ import {
 } from '@tanstack/react-table';
 import { productApi, categoryApi } from '@/api';
 import type { Product, Category } from '@/type/types.ts';
-import { Button, BaseSelect as Select, ModalManager } from '@repo/ui';
+import {
+  Button,
+  BaseSelect as Select,
+  ModalManager,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@repo/ui';
 import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.tsx';
 
 type ProductSearchForm = {
@@ -105,9 +113,11 @@ export const ProductManagement: React.FC = () => {
     });
   };
 
-  const handleOpenEdit = (p: Product) => {};
+  const handleOpenEdit = (p: Product) => {
+    // TODO: 打开编辑弹窗
+  };
 
-  // 列表列
+  // 列定义
   const columnHelper = createColumnHelper<Product>();
 
   const columns = [
@@ -167,7 +177,6 @@ export const ProductManagement: React.FC = () => {
           >
             <Edit3 size={16} />
           </Button>
-          {/* 这里以后可以加「上/下架」「删除」等按钮 */}
         </div>
       ),
     }),
@@ -221,11 +230,10 @@ export const ProductManagement: React.FC = () => {
                   ? 'ALL'
                   : String(filters.categoryId)
               }
-              onChange={(e) =>
+              onChange={(value) =>
                 setFilters((prev) => ({
                   ...prev,
-                  categoryId:
-                    e.target.value === 'ALL' ? 'ALL' : Number(e.target.value),
+                  categoryId: value === 'ALL' ? 'ALL' : Number(value),
                 }))
               }
               options={[
@@ -248,54 +256,56 @@ export const ProductManagement: React.FC = () => {
 
         {/* 表格 */}
         <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/5">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50/60 dark:bg-white/5">
+          <Table className="text-left">
+            <TableHeader className="bg-gray-50/60 dark:bg-white/5">
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr
+                <TableRow
                   key={headerGroup.id}
                   className="border-b border-gray-100 dark:border-white/5 text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider"
                 >
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="px-4 py-3">
+                    <TableHead key={header.id} className="px-4 py-3">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
+            </TableHeader>
+
+            <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
               {table.getRowModel().rows.map((row) => (
-                <tr
+                <TableRow
                   key={row.id}
                   className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-150"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm">
+                    <TableCell key={cell.id} className="px-4 py-3 text-sm">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
                       )}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
+
               {dataSource.length === 0 && (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={columns.length}
                     className="py-8 text-center text-gray-500"
                   >
                     No products found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* 分页 */}

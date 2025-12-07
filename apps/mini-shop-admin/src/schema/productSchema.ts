@@ -6,14 +6,13 @@ export const createProductSchema = z.object({
   seqShelvesQuantity: z.coerce
     .number()
     .min(1, 'Total shares must be at least 1'),
-  unitAmount: z.coerce.number().min(0, 'Unit price must be at least 0'),
+  unitAmount: z.coerce.number().min(0.01, 'Unit price must be at least 0.01'),
   costAmount: z.coerce.number().min(0, 'Total cost must be at least 0'),
-  categoryIds: z
-    .array(z.coerce.number())
-    .min(1, 'Please select at least 1 category'),
+  categoryIds: z.coerce.number({
+    required_error: 'Category is required',
+    invalid_type_error: 'Category must be a number',
+  }),
   desc: z.string().optional(),
-  treasureCoverImg: z.union([
-    z.string().min(1, 'Cover image is required').url('Invalid image URL'),
-    imageFileSchema,
-  ]),
+
+  treasureCoverImg: imageFileSchema,
 });

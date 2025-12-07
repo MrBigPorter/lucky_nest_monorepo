@@ -148,13 +148,9 @@ export const authApi = {
  * 文件上传 API
  */
 export const uploadApi = {
-  // 上传图片
-  uploadImage: (file: File, onProgress?: (percent: number) => void) =>
-    http.upload<{ url: string }>('/upload/image', file, onProgress),
-
   // 上传文件
-  uploadFile: (file: File, onProgress?: (percent: number) => void) =>
-    http.upload<{ url: string }>('/upload/file', file, onProgress),
+  uploadMedia: (file: File, onProgress?: (percent: number) => void) =>
+    http.upload<{ url: string }>('/v1/admin/upload/image', file, onProgress),
 
   // 批量上传
   uploadMultiple: (files: File[]) => {

@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToastStore } from '@/store/useToastStore';
-import { productApi } from '@/api';
+import { productApi, uploadApi } from '@/api';
 import { z } from 'zod';
 import { createProductSchema } from '@/schema/productSchema.ts';
 import { Category, CreateProduct } from '@/type/types.ts';
@@ -12,8 +12,8 @@ import {
   FormSelectField,
   FormTextField,
 } from '@repo/ui';
-import { FormTextarea } from '@repo/ui/form/FormTextarea.tsx';
 import { FormTextareaField } from '@repo/ui/form/FormTextareaField.tsx';
+import { useRequest } from 'ahooks';
 
 type ProductFormInputs = z.infer<typeof createProductSchema>;
 
@@ -23,6 +23,14 @@ export const CreateProductFormModal = (
 ) => {
   const addToast = useToastStore((s) => s.addToast);
 
+  const { run: createProduct, loading } = useRequest(productApi.createProduct, {
+    manual: true,
+    onSuccess: () => {
+      addToast('success', 'Product created successfully');
+      close();
+    },
+  });
+
   const form = useForm<ProductFormInputs>({
     resolver: zodResolver(createProductSchema),
     defaultValues: {
@@ -30,25 +38,18 @@ export const CreateProductFormModal = (
       seqShelvesQuantity: 0,
       unitAmount: 0,
       costAmount: 0,
-      categoryIds: [],
+      categoryIds: undefined,
       desc: '',
       treasureCoverImg: '',
     },
   });
 
-  /*const unitAmount = watch('unitAmount');
-  const seqShelvesQuantity = watch('seqShelvesQuantity');
-  const costAmount = watch('costAmount');*/
-
-  /*const totalRevenue = unitAmount * seqShelvesQuantity;
-  const profit = totalRevenue - costAmount;
-  const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;*/
-
   const onSubmit = async (values: ProductFormInputs) => {
     try {
       let coverUrl: string;
       if (values.treasureCoverImg instanceof File) {
-        coverUrl = '11111';
+        const { url } = await uploadApi.uploadMedia(values.treasureCoverImg);
+        coverUrl = url;
       } else {
         coverUrl = values.treasureCoverImg;
       }
@@ -58,13 +59,12 @@ export const CreateProductFormModal = (
         seqShelvesQuantity: values.seqShelvesQuantity,
         unitAmount: values.unitAmount,
         costAmount: values.costAmount,
-        categoryIds: values.categoryIds,
+        categoryIds: [values.categoryIds],
         treasureCoverImg: coverUrl,
         desc: values.desc,
       };
 
-      await productApi.createProduct(payload);
-      addToast('success', 'Product created successfully');
+      createProduct(payload);
     } catch (e) {
       addToast('error', e?.message || 'Failed to save product');
     }
@@ -77,6 +77,7 @@ export const CreateProductFormModal = (
           <div className="space-y-4">
             <FormTextField
               required
+              autoComplete="off"
               name="treasureName"
               label="Product Name"
               placeholder="e.g. iPhone 15 Pro Max"
@@ -127,12 +128,13 @@ export const CreateProductFormModal = (
           </div>
         </div>
 
-        {/* 底部按钮区域保持不变 */}
         <div className="mt-4 flex justify-end gap-3">
           <Button type="button" variant="ghost" onClick={close}>
             Cancel
           </Button>
-          <Button type="submit">Create Product</Button>
+          <Button isLoading={loading} type="submit">
+            Create Product
+          </Button>
         </div>
       </form>
     </Form>

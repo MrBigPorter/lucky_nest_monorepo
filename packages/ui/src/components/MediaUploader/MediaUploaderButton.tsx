@@ -10,27 +10,17 @@ interface MediaUploaderButtonProps {
 export const MediaUploaderButton: React.FC<MediaUploaderButtonProps> = ({
   className,
 }) => {
-  const { dropzone, maxFileSizeMB, maxFileCount, preview } =
-    useMediaUploaderContext();
+  const { dropzone, maxFileSizeMB, maxFileCount } = useMediaUploaderContext();
   const { isDragActive, open } = dropzone;
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    open();
-  };
-
-  const hasFile = preview.length > 0;
-  const isSingleMode = maxFileCount === 1;
-
-  if (isSingleMode && hasFile) {
-    return null;
-  }
 
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+      }}
       className={cn(
         "w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl transition-colors cursor-pointer",
         isDragActive

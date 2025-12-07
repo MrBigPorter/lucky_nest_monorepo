@@ -21,7 +21,9 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
   const { preview, handleRemoveFile, openFilePicker } =
     useMediaUploaderContext();
 
-  // 0 张：只显示按钮
+  console.log("preview", preview);
+
+  // 0 张：只显示上传按钮
   if (!preview.length) {
     if (renderButton) {
       return (
@@ -37,7 +39,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
     );
   }
 
-  // 1 张：大卡片，点击整块更换
+  // 1 张：大卡片预览 + 覆盖层「点击更换图片」
   if (preview.length === 1 && !renderItem) {
     const file = preview[0];
     const isImage = file.type.startsWith("image/");
@@ -49,7 +51,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            openFilePicker?.(); // ⭐ 第二个打开入口，但 root 不再响应 click，所以只会触发一次
+            openFilePicker?.();
           }}
         >
           {isImage ? (
@@ -66,6 +68,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
             />
           )}
 
+          {/* 删除按钮 */}
           {showRemoveButton && (
             <button
               type="button"
@@ -80,28 +83,24 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
             </button>
           )}
 
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          {/* 覆盖层文案 */}
+          <div className="absolute z-1 inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <span className="text-white text-sm flex items-center gap-2">
               <UploadCloud size={18} />
               点击更换图片
             </span>
           </div>
 
+          {/* 文件名 */}
           <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[11px] px-2 py-1 truncate">
             {file.name}
           </div>
         </div>
-
-        {renderButton && (
-          <div className="pt-2 flex justify-end">
-            {renderButton(openFilePicker)}
-          </div>
-        )}
       </div>
     );
   }
 
-  // 多张：网格展示
+  // 多张：网格
   return (
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
