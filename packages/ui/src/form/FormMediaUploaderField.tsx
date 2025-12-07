@@ -32,7 +32,7 @@ type FormMediaUploaderFieldProps<
   | "renderRight"
 > & {
   maxFileCount?: number;
-  accept?: string;
+  accept?: any; // 可以按需改成 react-dropzone 的 Accept 类型
   showRemoveButton?: boolean;
   previewClassName?: string;
   labelClassName?: string;
@@ -62,7 +62,7 @@ export function FormMediaUploaderField<
   buttonClassName,
   previewClassName,
   helpTextClassName,
-  accept = "image/*,video/*",
+  accept,
   maxFileCount,
 }: Readonly<FormMediaUploaderFieldProps<TFieldValues>>) {
   const theme = useFormTheme();
@@ -72,6 +72,20 @@ export function FormMediaUploaderField<
       name={name}
       renderAction={({ field, error }) => {
         const finalVariant = error ? "error" : variant;
+
+        const handleUpload = (files: File[]) => {
+          if (maxFileCount === 1) {
+            const file = files[0];
+
+            // 对应 schema: string | File
+            // - 如果是新建：这里会是 File
+            // - 如果删除了：传 ""，触发必填校验
+            field.onChange(file ?? "");
+          } else {
+            // 多图场景以后要用再说，这里可以直接放 File[]
+            field.onChange(files);
+          }
+        };
 
         return (
           <FormItem>
@@ -109,10 +123,8 @@ export function FormMediaUploaderField<
                 <FormControl asChild>
                   <MediaUploader.Root
                     maxFileCount={maxFileCount}
-                    accept={{
-                      ...(accept ? { "image/*": [], "video/*": [] } : {}),
-                    }}
-                    onUpload={field.onChange}
+                    accept={accept}
+                    onUpload={handleUpload}
                   >
                     <MediaUploader.Preview
                       className={previewClassName}
@@ -129,7 +141,6 @@ export function FormMediaUploaderField<
                   </MediaUploader.Root>
                 </FormControl>
 
-                {/* helpText */}
                 {helpText && (
                   <HelpText
                     content={helpText}
@@ -146,7 +157,6 @@ export function FormMediaUploaderField<
                   />
                 )}
 
-                {/* error message */}
                 <AnimatePresence mode="wait" initial={false}>
                   {error && (
                     <FormMessage
