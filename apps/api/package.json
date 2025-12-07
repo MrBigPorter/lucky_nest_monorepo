@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.946.0",
+    "@lucky/shared": "workspace:*",
     "@nestjs/cache-manager": "^2",
     "@nestjs/common": "^11.1.7",
     "@nestjs/config": "^4.0.2",

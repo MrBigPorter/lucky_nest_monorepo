@@ -8,7 +8,6 @@ import { CreateTreasureDto } from '@api/admin/treasure/dto/create-treasure.dto';
 import { TREASURE_STATE } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
-import { UpdateCategoryDto } from '@api/admin/category/dto/update-category.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
 
 @Injectable()
@@ -169,6 +168,30 @@ export class TreasureService {
             category: true,
           },
         },
+      },
+    });
+  }
+
+  /**
+   * Update treasure state
+   * @param id
+   * @param state
+   * @returns Promise<Treasure>
+   */
+  async updateState(id: string, state: number) {
+    const treasure = await this.findOne(id);
+    if (!treasure) {
+      throw new BadRequestException('Treasure not found');
+    }
+
+    if (treasure.state === state) {
+      return treasure;
+    }
+
+    return this.prisma.treasure.update({
+      where: { treasureId: id },
+      data: {
+        state,
       },
     });
   }
