@@ -81,6 +81,13 @@ export class TreasureService {
       };
     }
 
+    if (dto.treasureName) {
+      whereCondition.treasureName = {
+        contains: dto.treasureName, //包含字符串
+        mode: 'insensitive', // 忽略大小写
+      };
+    }
+
     const [list, total] = await this.prisma.$transaction([
       this.prisma.treasure.findMany({
         where: whereCondition,
