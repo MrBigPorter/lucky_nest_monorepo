@@ -34,4 +34,13 @@ export class QueryTreasureDto {
   @ToNumber()
   @IsInt()
   categoryId?: number;
+
+  @ApiPropertyOptional({
+    description: 'treasure name',
+    example: 'treasure',
+    type: 'string',
+  })
+  @IsOptional()
+  @IsString()
+  treasureName?: string;
 }

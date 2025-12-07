@@ -4,18 +4,12 @@ import {
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOkResponse,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { RolesGuard } from '@api/common/guards/roles.guard';
 import { TreasureService } from '@api/admin/treasure/treasure.service';
@@ -25,7 +19,6 @@ import { CreateTreasureDto } from '@api/admin/treasure/dto/create-treasure.dto';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
 import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
-import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 import { TreasureListResponseDto } from '@api/admin/treasure/dto/treasure-list-response.dto';
 import { UpdateTreasureStateDto } from '@api/admin/treasure/dto/update-treasure-state.dto';
 

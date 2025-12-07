@@ -6,7 +6,7 @@ import { useRequest } from 'ahooks';
 import { categoryApi } from '@/api';
 import { EditCategoryModal } from '@/pages/category/EditCategoryModal.tsx';
 import { CreateCategoryModal } from '@/pages/category/CreateCategoryModal.tsx';
-import { ModalManager } from '@repo/ui/components/Modal/modal-manager';
+import { ModalManager } from '@repo/ui';
 
 export const CategoryManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -91,7 +91,7 @@ export const CategoryManagement: React.FC = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      remove(cat.id);
+                      remove(cat.id.toString());
                     }}
                     className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded text-gray-400 hover:text-red-500"
                   >

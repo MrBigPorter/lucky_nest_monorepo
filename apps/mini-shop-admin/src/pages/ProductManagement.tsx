@@ -24,6 +24,7 @@ import {
 import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.tsx';
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 import { TREASURE_STATE } from '@lucky/shared';
+import { useToastStore } from '@/store/useToastStore.ts';
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -59,6 +60,7 @@ const getProductsTableData = async (
 };
 
 export const ProductManagement: React.FC = () => {
+  const addToast = useToastStore((state) => state.addToast);
   const [categories, setCategories] = useState<Category[]>([]);
 
   useRequest(categoryApi.getCategories, {
@@ -68,6 +70,14 @@ export const ProductManagement: React.FC = () => {
   const deleteProduct = useRequest(productApi.deleteProduct, {
     manual: true,
     onSuccess: () => {
+      refresh();
+    },
+  });
+
+  const updateProductState = useRequest(productApi.updateProductState, {
+    manual: true,
+    onSuccess: () => {
+      addToast('success', 'Product state updated.');
       refresh();
     },
   });
@@ -145,6 +155,10 @@ export const ProductManagement: React.FC = () => {
     });
   };
 
+  const handleTreasureState = (p: Product) => {
+    updateProductState.run(p.treasureId, p.state === 1 ? 0 : 1);
+  };
+
   // 列定义
   const columnHelper = createColumnHelper<Product>();
 
@@ -215,9 +229,10 @@ export const ProductManagement: React.FC = () => {
           </Button>
 
           <Button
+            isLoading={updateProductState.loading}
             variant="ghost"
             size="sm"
-            onClick={() => handleOpenEdit(info.row.original)}
+            onClick={() => handleTreasureState(info.row.original)}
           >
             {info.row.original.state === TREASURE_STATE.ACTIVE ? (
               <Ban size={16} />
