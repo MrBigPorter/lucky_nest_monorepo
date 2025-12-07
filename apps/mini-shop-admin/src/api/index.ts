@@ -63,8 +63,8 @@ export const productApi = {
   deleteProduct: (id: string) => http.delete(`v1/admin/treasure/${id}`),
 
   // 更新商品状态
-  updateProductStatus: (id: string, status: 'active' | 'draft' | 'ended') =>
-    http.patch<Product>(`/products/${id}/status`, { status }),
+  updateProductStatus: (id: string, state: number) =>
+    http.patch<Product>(`/v1/admin/category/${id}/state`, { state }),
 
   // 更新商品排序
   updateProductOrder: (id: string, sortOrder: number) =>

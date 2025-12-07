@@ -27,6 +27,7 @@ import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
 import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 import { TreasureListResponseDto } from '@api/admin/treasure/dto/treasure-list-response.dto';
+import { UpdateTreasureStateDto } from '@api/admin/treasure/dto/update-treasure-state.dto';
 
 @ApiTags('后台-产品管理')
 @ApiBearerAuth()
@@ -81,6 +82,22 @@ export class TreasureController {
   @ApiOkResponse({ type: TreasureResponseDto })
   async update(@Param('id') id: string, @Body() dto: UpdateTreasureDto) {
     return this.treasureService.update(id, dto);
+  }
+
+  /**
+   * update treasure state
+   * @param id
+   * @param dto
+   * @returns Promise<Treasure>
+   */
+  @Patch(':id/state')
+  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @ApiOkResponse({ type: TreasureResponseDto })
+  async updateState(
+    @Param('id') id: string,
+    @Body() dto: UpdateTreasureStateDto,
+  ) {
+    return this.treasureService.updateState(id, dto.state);
   }
 
   /**

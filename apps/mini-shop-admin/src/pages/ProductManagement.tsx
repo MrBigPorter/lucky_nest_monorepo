@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit3 } from 'lucide-react';
+import { Plus, Edit3, Trash2, Ban, CheckCircle } from 'lucide-react';
 import { Card, Badge, Input } from '@/components/UIComponents';
 import { useAntdTable, useRequest } from 'ahooks';
 import {
@@ -23,6 +23,7 @@ import {
 } from '@repo/ui';
 import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.tsx';
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
+import { TREASURE_STATE } from '@lucky/shared';
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -62,6 +63,13 @@ export const ProductManagement: React.FC = () => {
 
   useRequest(categoryApi.getCategories, {
     onSuccess: (data) => setCategories(data || []),
+  });
+
+  const deleteProduct = useRequest(productApi.deleteProduct, {
+    manual: true,
+    onSuccess: () => {
+      refresh();
+    },
   });
 
   const [filters, setFilters] = useState<ProductSearchForm>({
@@ -110,7 +118,9 @@ export const ProductManagement: React.FC = () => {
   const handleOpenCreate = () => {
     ModalManager.open({
       title: 'Create Product',
-      renderChildren: ({ close }) => CreateProductFormModal(categories, close),
+      onConfirm: () => refresh(),
+      renderChildren: ({ close, confirm }) =>
+        CreateProductFormModal(categories, close, confirm),
     });
   };
 
@@ -120,6 +130,18 @@ export const ProductManagement: React.FC = () => {
       onConfirm: () => refresh(),
       renderChildren: ({ close, confirm }) =>
         EditProductFormModal(categories, close, confirm, p),
+    });
+  };
+
+  const handleRemove = (p: Product) => {
+    ModalManager.open({
+      title: 'Are you sure?',
+      content: 'Product will be removed permanently!!',
+      confirmText: 'confirm',
+      cancelText: 'cancel',
+      onConfirm: () => {
+        deleteProduct.run(p.treasureId);
+      },
     });
   };
 
@@ -177,11 +199,31 @@ export const ProductManagement: React.FC = () => {
       cell: (info) => (
         <div className="flex justify-end gap-2">
           <Button
+            isLoading={deleteProduct.loading}
+            variant="ghost"
+            size="sm"
+            onClick={() => handleRemove(info.row.original)}
+          >
+            <Trash2 size={16} />
+          </Button>
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => handleOpenEdit(info.row.original)}
           >
             <Edit3 size={16} />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleOpenEdit(info.row.original)}
+          >
+            {info.row.original.state === TREASURE_STATE.ACTIVE ? (
+              <Ban size={16} />
+            ) : (
+              <CheckCircle size={16} />
+            )}
           </Button>
         </div>
       ),

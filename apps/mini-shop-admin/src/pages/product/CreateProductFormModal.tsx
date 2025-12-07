@@ -20,6 +20,7 @@ type ProductFormInputs = z.infer<typeof createProductSchema>;
 export const CreateProductFormModal = (
   categories: Category[],
   close: () => void,
+  confirm: () => void,
 ) => {
   const addToast = useToastStore((s) => s.addToast);
 
@@ -27,8 +28,12 @@ export const CreateProductFormModal = (
     manual: true,
     onSuccess: () => {
       addToast('success', 'Product created successfully');
-      close();
+      confirm();
     },
+  });
+
+  const upload = useRequest(uploadApi.uploadMedia, {
+    manual: true,
   });
 
   const form = useForm<ProductFormInputs>({
@@ -48,7 +53,7 @@ export const CreateProductFormModal = (
     try {
       let coverUrl: string;
       if (values.treasureCoverImg instanceof File) {
-        const { url } = await uploadApi.uploadMedia(values.treasureCoverImg);
+        const { url } = await upload.runAsync(values.treasureCoverImg);
         coverUrl = url;
       } else {
         coverUrl = values.treasureCoverImg;
@@ -132,7 +137,7 @@ export const CreateProductFormModal = (
           <Button type="button" variant="ghost" onClick={close}>
             Cancel
           </Button>
-          <Button isLoading={loading} type="submit">
+          <Button isLoading={loading || upload.loading} type="submit">
             Create Product
           </Button>
         </div>
