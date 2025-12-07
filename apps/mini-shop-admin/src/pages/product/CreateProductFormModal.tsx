@@ -1,19 +1,6 @@
-import {
-  useForm,
-  Controller,
-  ControllerRenderProps,
-  FieldValues,
-} from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Input,
-  Textarea,
-  Button,
-  Select,
-  ImageUpload,
-  Switch,
-  Badge,
-} from '@/components/UIComponents';
+import { Button } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { productApi } from '@/api';
 import { z } from 'zod';
@@ -121,7 +108,11 @@ export const CreateProductFormModal = (categories: Category[]) => {
             }))}
           />
 
-          <FormMediaUploaderField label="Cover Image" name="treasureCoverImg" />
+          <FormMediaUploaderField
+            label="Cover Image"
+            name="treasureCoverImg"
+            maxFileCount={1}
+          />
 
           <FormTextField label="Description" name="desc" type="textarea" />
         </div>

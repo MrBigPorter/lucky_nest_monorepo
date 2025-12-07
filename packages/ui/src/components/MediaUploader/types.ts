@@ -1,26 +1,38 @@
 import React from "react";
-// Import necessary types and hooks
-export type MediaUploaderProps = {
-  onUpload?: (file: File[]) => void;
+import type { Accept } from "react-dropzone";
+
+// 组件根节点的 props
+export interface MediaUploaderProps {
+  onUpload?: (files: File[]) => void;
   className?: string;
   maxFileSizeMB?: number;
-  accept?: string;
+  /**
+   * 和 react-dropzone 一致的 Accept 类型：
+   * { "image/*": [], "video/*": [] }
+   */
+  accept?: Accept;
   maxFileCount?: number;
-  children: React.ReactNode;
-};
-// Type definition for preview files
-export type PreviewFile = {
+  children?: React.ReactNode;
+}
+
+// 预览用的文件结构
+export interface PreviewFile {
   name: string;
-  path: string;
   size: number;
   type: string;
-  lastModified: number;
-  content: string;
-};
-// Type definition for the render item props used in MediaUploaderPreview
-export type RenderItemProps = {
+  /**
+   * 预览地址：URL.createObjectURL(file)
+   */
+  preview: string;
+  // 下面两个可选，要用可以填，不用就算了
+  path?: string;
+  lastModified?: number;
+}
+
+// Preview 里每一项 render 时的 props
+export interface RenderItemProps {
   file: PreviewFile;
   index: number;
   handleRemoveFile: (index: number) => void;
   showRemoveButton: boolean;
-};
+}
