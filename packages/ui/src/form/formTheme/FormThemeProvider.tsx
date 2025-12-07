@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from "react";
-import type { FormTheme } from "@ui-kit/form/types/themeType";
+import type { FormTheme } from "../types/themeType";
 
 /** * FormThemeProvider provides a context for theming form components.
  * * It allows you to define a custom theme for form components that can be accessed

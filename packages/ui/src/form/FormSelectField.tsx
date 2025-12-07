@@ -90,8 +90,8 @@ export function FormSelectField<
           <FormItem>
             <div
               className={clsx({
-                "flex items-center gap-[10rem]": layout === "horizontal",
-                "flex flex-col gap-[5rem]": layout !== "horizontal",
+                "flex items-center gap-[10px]": layout === "horizontal",
+                "flex flex-col gap-[5px]": layout !== "horizontal",
               })}
             >
               {label && (
@@ -118,7 +118,6 @@ export function FormSelectField<
               >
                 <FormControl asChild={true}>
                   <BaseSelect
-                    testId={testId}
                     onOpenChange={onOpenChange}
                     onChange={(value) => {
                       field.onChange(value);
@@ -128,8 +127,6 @@ export function FormSelectField<
                     placeholder={placeholder}
                     value={field.value}
                     disabled={disabled}
-                    variant={finalvariant}
-                    size={size}
                     {...props}
                   />
                 </FormControl>

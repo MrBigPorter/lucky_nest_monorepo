@@ -91,7 +91,7 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
           <SelectTrigger
             ref={ref}
             className={cn(
-              "w-full px-4 py-2.5 bg-gray-50 dark:bg-black/20 border rounded-lg outline-none transition-all text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500",
+              "w-full py-3 px-4 bg-gray-50 dark:bg-black/20 border rounded-lg outline-none transition-all text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 flex items-center focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500",
               hasError
                 ? "border-red-500"
                 : "border-gray-200 dark:border-white/10",
@@ -104,7 +104,6 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
               )}
               <SelectValue
                 placeholder={placeholder}
-                // 让 placeholder 也用灰色
                 className="text-gray-900 dark:text-white data-[placeholder]:text-gray-400 dark:data-[placeholder]:text-gray-600"
               />
             </div>
@@ -112,7 +111,7 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
 
           <SelectContent
             className={cn(
-              "w-full appearance-none px-4 py-2.5 bg-gray-50  border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-black",
+              "w-full appearance-none px-4 py-2.5 bg-gray-50 border border-gray-200 dark:border-white/10 rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-black",
               contentClassName,
             )}
             position="popper"
@@ -159,7 +158,7 @@ const RenderSelectItem = ({ item }: { item: SelectOption }) => {
     <SelectItem
       value={String(item.value)}
       disabled={item.disabled}
-      className="cursor-pointer text-sm text-gray-800  hover:bg-gray-100"
+      className="cursor-pointer text-sm text-gray-800 hover:bg-gray-100"
     >
       <div className="flex items-center gap-2">
         {item.icon && (

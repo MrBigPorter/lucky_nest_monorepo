@@ -75,8 +75,8 @@ export function FormTextField<TFieldValues extends FieldValues = FieldValues>({
             <div
               data-testid={`item-${testId}`}
               className={clsx({
-                "w-full flex items-center gap-[10rem]": layout === "horizontal",
-                "w-full flex flex-col gap-[10rem]": layout !== "horizontal",
+                "w-full flex items-center gap-[10px]": layout === "horizontal",
+                "w-full flex flex-col gap-[10px]": layout !== "horizontal",
               })}
             >
               {label && (
