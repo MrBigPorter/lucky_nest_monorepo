@@ -1,4 +1,3 @@
-
 import * as LabelPrimitive from "@radix-ui/react-label";
 import React from "react";
 import { useFormItemContext } from "./FormItem.tsx";
@@ -23,7 +22,7 @@ export const FormLabel = React.forwardRef<
       ref={ref}
       htmlFor={id}
       className={twMerge(
-        "text-[14rem] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex ",
+        "text-[14px] font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex ",
         className,
       )}
       {...props}

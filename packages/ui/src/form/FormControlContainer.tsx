@@ -44,7 +44,7 @@ export const FormControlContainer = ({
     <motion.div
       data-testid={testId}
       className={cn(
-        "w-full h-[40rem] flex items-center border rounded-md px-[10rem]  transition-colors duration-200",
+        "w-full h-[40px] flex items-center border rounded-md px-[10px]  transition-colors duration-200",
         disabled && "opacity-50 cursor-not-allowed",
         className,
       )}
@@ -52,7 +52,7 @@ export const FormControlContainer = ({
       onBlur={() => setIsFocused(false)}
       animate={{
         scale: isFocused ? 1.02 : 1,
-        boxShadow: isFocused ? "0 0 0 2px rgba(59, 130, 246, 0.5)" : "none",
+        boxShadow: isFocused ? "0 0 0 2px rgba(214, 138, 41, 0.45)" : "none",
       }}
       transition={{ duration: 0.15 }}
     >

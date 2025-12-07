@@ -123,8 +123,8 @@ export function FormMediaUploaderField<
           <FormItem>
             <div
               className={clsx({
-                "flex  gap-[10rem]": layout === "horizontal",
-                "flex flex-col gap-[10rem]": layout !== "horizontal",
+                "flex  gap-[10px]": layout === "horizontal",
+                "flex flex-col gap-[10px]": layout !== "horizontal",
               })}
             >
               {label && (

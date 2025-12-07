@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { useFormItemContext } from "./FormItem.tsx";
 import React from "react";
@@ -54,10 +53,7 @@ export const FormMessage = React.forwardRef<
       transition={{ duration: 0.2 }}
       ref={ref}
       id={`${id}-error`}
-      className={twMerge(
-        "w-full mt-[1rem] text-[14rem] text-red-500",
-        className,
-      )}
+      className={twMerge("w-full mt-[1px] text-[14px] text-red-500", className)}
     >
       {content}
     </motion.p>

@@ -1,21 +1,9 @@
 import React from "react";
-
-export type BaseSelectOptionProps = {
-  label: string;
-  value: string;
-  rightIcon?: React.ReactNode;
-  leftIcon?: React.ReactNode;
-};
-
-export type GroupSelectOptionProps = {
-  groupName?: string;
-  key?: string;
-  options: BaseSelectOptionProps[];
-};
+import { BaseSelectOptions } from "./index.tsx";
 
 export type BaseSelectProps = {
   value?: string;
-  options: GroupSelectOptionProps[];
+  options: BaseSelectOptions;
   onChange?: (value: string) => void;
   onOpenChange?: (open: boolean) => void;
   placeholder?: string;

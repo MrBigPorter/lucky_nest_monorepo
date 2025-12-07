@@ -16,7 +16,7 @@ export const HelpText = ({ content, className, testId }: HelpProps) => {
     return (
       <p
         data-testid={testId}
-        className={twMerge("w-full text-[14rem] text-gray-500", className)}
+        className={twMerge("w-full text-[14px] text-gray-500", className)}
       >
         {content}
       </p>

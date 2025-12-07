@@ -9,37 +9,37 @@ import { motion } from "framer-motion";
  * wraps the class names with conditional variants.
  */
 const wrapperVariants = cva(
-  "w-full h-[40rem] flex justify-between items-center relative transition ",
+  "w-full h-[40px] flex justify-between items-center relative transition ",
   {
     variants: {
       variant: {
-        splitBoxed: "gap-[10rem]",
+        splitBoxed: "gap-[10px]",
         softBoxed:
-          "rounded-[18rem] border border-gray-300 transition overflow-hidden [&>*:nth-child(2)]:border-l-1 [&>*:nth-child(2)]:border-r-1 [&>*:nth-child(2)]:border-gray-300",
+          "rounded-[18px] border border-gray-300 transition overflow-hidden [&>*:nth-child(2)]:border-l-1 [&>*:nth-child(2)]:border-r-1 [&>*:nth-child(2)]:border-gray-300",
       },
     },
   },
 );
 
 const buttonVariants = cva(
-  "w-[40rem] h-[40rem] text-[16rem] flex items-center justify-center disabled:opacity-50 transition hover:bg-gray-50 relative",
+  "w-[40px] h-[40px] text-[16px] flex items-center justify-center disabled:opacity-50 transition hover:bg-gray-50 relative",
   {
     variants: {
       variant: {
         splitBoxed:
-          "border border-gray-300 bg-white hover:bg-gray-50 rounded-[4rem] w-[40rem] h-[40rem]",
-        softBoxed: "w-[40rem] h-full border-0",
+          "border border-gray-300 bg-white hover:bg-gray-50 rounded-[4px] w-[40px] h-[40px]",
+        softBoxed: "w-[40px] h-full border-0",
       },
     },
   },
 );
 
 const inputContainerVariants = cva(
-  "flex items-center justify-center w-full h-[40rem] outline-none ring-0 ",
+  "flex items-center justify-center w-full h-[40px] outline-none ring-0 ",
   {
     variants: {
       variant: {
-        splitBoxed: "border border-gray-300 bg-white rounded-[4rem] pr-[10rem]",
+        splitBoxed: "border border-gray-300 bg-white rounded-[4px] pr-[10px]",
         softBoxed: "bg-transparent",
       },
     },
@@ -53,12 +53,12 @@ const inputContainerVariants = cva(
  * unitVariants defines the styles for the unit label next to the input.
  */
 const unitVariants = cva(
-  "h-full ml-[10rem] text-[14rem] text-gray-400 pr-[10rem]",
+  "h-full ml-[10px] text-[14px] text-gray-400 pr-[10px]",
   {
     variants: {
       variant: {
         splitBoxed: "text-gray-500 items-center flex justify-center",
-        softBoxed: "pr-[10rem]",
+        softBoxed: "pr-[10px]",
       },
     },
     defaultVariants: {
@@ -73,7 +73,7 @@ const unitVariants = cva(
  */
 
 const inputVariants = cva(
-  "w-full h-full px-[10rem] text-center text-[12rem] outline-none border-none bg-transparent appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+  "w-full h-full px-[10px] text-center text-[12px] outline-none border-none bg-transparent appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
   {
     variants: {
       variant: {
