@@ -6,7 +6,6 @@ import { FormMessage } from "./FormMessage.tsx";
 import type { FieldValues } from "react-hook-form";
 import { FormControl } from "./FormControl.tsx";
 import { FormControlContainer } from "./FormControlContainer.tsx";
-import React from "react";
 import {
   formContainerVariants,
   FormHelpTextVariants,

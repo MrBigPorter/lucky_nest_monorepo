@@ -49,10 +49,6 @@ const getProductsTableData = async (
 };
 
 export const ProductManagement: React.FC = () => {
-  const { lang } = useAppStore();
-  const addToast = useToastStore((s) => s.addToast);
-
-  // 分类选项（一次性拉取）
   const [categories, setCategories] = useState<Category[]>([]);
 
   useRequest(categoryApi.getCategories, {
@@ -63,9 +59,6 @@ export const ProductManagement: React.FC = () => {
     treasureName: '',
     categoryId: 'ALL',
   });
-
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const {
     tableProps,
@@ -106,19 +99,13 @@ export const ProductManagement: React.FC = () => {
   };
 
   const handleOpenCreate = () => {
-    setEditingProduct(null);
-    setIsFormOpen(true);
-
     ModalManager.open({
       title: 'Create Product',
-      renderChildren: () => CreateProductFormModal(categories),
+      renderChildren: ({ close }) => CreateProductFormModal(categories, close),
     });
   };
 
-  const handleOpenEdit = (p: Product) => {
-    setEditingProduct(p);
-    setIsFormOpen(true);
-  };
+  const handleOpenEdit = (p: Product) => {};
 
   // 列表列
   const columnHelper = createColumnHelper<Product>();

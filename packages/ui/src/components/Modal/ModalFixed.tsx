@@ -82,7 +82,7 @@ export function ModalFixed({
 
             <div className="p-6 overflow-y-auto custom-scrollbar">
               {renderChildren && typeof renderChildren === "function"
-                ? renderChildren({ close: handleClose })
+                ? renderChildren({ close: cancel })
                 : (renderChildren ?? content)}
             </div>
 

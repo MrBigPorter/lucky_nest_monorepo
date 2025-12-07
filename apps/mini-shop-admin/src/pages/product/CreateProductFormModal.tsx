@@ -1,21 +1,26 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { productApi } from '@/api';
 import { z } from 'zod';
-import { createProductSchema } from '@/pages/product/productSchema.ts';
+import { createProductSchema } from '@/schema/productSchema.ts';
 import { Category, CreateProduct } from '@/type/types.ts';
 import {
+  Button,
   Form,
   FormMediaUploaderField,
   FormSelectField,
   FormTextField,
 } from '@repo/ui';
+import { FormTextarea } from '@repo/ui/form/FormTextarea.tsx';
+import { FormTextareaField } from '@repo/ui/form/FormTextareaField.tsx';
 
 type ProductFormInputs = z.infer<typeof createProductSchema>;
 
-export const CreateProductFormModal = (categories: Category[]) => {
+export const CreateProductFormModal = (
+  categories: Category[],
+  close: () => void,
+) => {
   const addToast = useToastStore((s) => s.addToast);
 
   const form = useForm<ProductFormInputs>({
@@ -67,90 +72,64 @@ export const CreateProductFormModal = (categories: Category[]) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        {/* 基本信息 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormTextField
-            required
-            name="treasureName"
-            label="Product Name"
-            placeholder="e.g. iPhone 15 Pro Max"
-          />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-6">
+          <div className="space-y-4">
+            <FormTextField
+              required
+              name="treasureName"
+              label="Product Name"
+              placeholder="e.g. iPhone 15 Pro Max"
+            />
 
-          <FormTextField
-            required
-            name="seqShelvesQuantity"
-            label="Total Shares"
-            type="number"
-          />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormTextField
+                required
+                name="seqShelvesQuantity"
+                label="Total Shares"
+                type="number"
+              />
+              <FormTextField
+                required
+                name="unitAmount"
+                label="Unit Price"
+                type="number"
+              />
+            </div>
 
-          <FormTextField
-            name="unitAmount"
-            label="Unit Price"
-            type="number"
-            required
-          />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormTextField
+                required
+                name="costAmount"
+                label="Total Cost"
+                type="number"
+              />
+              <FormSelectField
+                required
+                name="categoryIds"
+                label="Categories"
+                options={categories.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+              />
+            </div>
 
-          <FormTextField
-            name="costAmount"
-            label="Total Cost"
-            type="number"
-            required
-          />
+            <FormTextareaField name="desc" label="Description" />
+          </div>
 
-          <FormSelectField
-            required
-            name="categories"
-            label="Categories"
-            options={categories.map((c) => ({
-              label: c.name,
-              value: String(c.id),
-            }))}
-          />
-
-          <FormMediaUploaderField
-            label="Cover Image"
-            name="treasureCoverImg"
-            maxFileCount={1}
-          />
-
-          <FormTextField label="Description" name="desc" type="textarea" />
+          <div className="flex flex-col">
+            <FormMediaUploaderField
+              name="treasureCoverImg"
+              label="Cover Image"
+              maxFileCount={1}
+            />
+          </div>
         </div>
 
-        {/* 状态 / 预览统计 */}
-        {/* <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
-          <Controller
-            name="state"
-            control={control}
-            render={({ field }) => (
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={field.value === 1}
-                  onChange={(checked) => field.onChange(checked ? 1 : 0)}
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {field.value === 1 ? 'Online / Active' : 'Offline'}
-                </span>
-              </div>
-            )}
-          />
-
-          <div className="flex gap-3 text-xs md:text-sm">
-            <Badge color={profit >= 0 ? 'green' : 'red'}>
-              Revenue: ₱{totalRevenue.toFixed(2)}
-            </Badge>
-            <Badge color={profit >= 0 ? 'green' : 'red'}>
-              Profit: ₱{profit.toFixed(2)}
-            </Badge>
-            <Badge color={profit >= 0 ? 'green' : 'red'}>
-              Margin: {margin.toFixed(1)}%
-            </Badge>
-          </div>
-        </div>*/}
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="ghost" type="button">
+        {/* 底部按钮区域保持不变 */}
+        <div className="mt-4 flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={close}>
             Cancel
           </Button>
           <Button type="submit">Create Product</Button>

@@ -1,13 +1,4 @@
 import { z } from 'zod';
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-];
-
 export const imageFileSchema = z.any().refine(
   (v) => {
     if (!v) return false;

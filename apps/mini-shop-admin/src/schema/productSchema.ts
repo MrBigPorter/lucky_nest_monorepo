@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { imageFileSchema } from '@/schema';
+import { imageFileSchema } from '@/schema/index.ts';
 
 export const createProductSchema = z.object({
   treasureName: z.string().min(1, 'Product name is required'),

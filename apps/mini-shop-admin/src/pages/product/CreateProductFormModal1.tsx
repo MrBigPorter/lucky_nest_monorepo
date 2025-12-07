@@ -12,7 +12,7 @@ import {
 import { useToastStore } from '@/store/useToastStore';
 import { productApi } from '@/api';
 import { z } from 'zod';
-import { createProductSchema } from '@/pages/product/productSchema.ts';
+import { createProductSchema } from '@/schema/productSchema.ts';
 import { Category, CreateProduct } from '@/type/types.ts';
 import { BaseSelect } from '@repo/ui';
 
