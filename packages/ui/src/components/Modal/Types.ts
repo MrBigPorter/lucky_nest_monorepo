@@ -2,7 +2,7 @@ import React from "react";
 
 type RenderChildren =
   | React.ReactNode
-  | ((helpers: { close: () => void }) => React.ReactNode);
+  | ((helpers: { close: () => void; confirm: () => void }) => React.ReactNode);
 
 export interface ModalProps {
   title?: string | React.ReactNode;

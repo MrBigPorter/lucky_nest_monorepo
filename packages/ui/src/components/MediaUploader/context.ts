@@ -1,15 +1,15 @@
 // context.ts
 import { createContext, useContext } from "react";
-import { DropzoneState } from "react-dropzone";
-import { PreviewFile } from "./types.ts";
+import type { DropzoneState } from "react-dropzone";
+import type { PreviewFile } from "./types";
 
 interface MediaUploaderContextType {
   dropzone: DropzoneState;
   preview: PreviewFile[];
   handleRemoveFile: (index: number) => void;
   maxFileSizeMB?: number;
-  openFilePicker?: () => void;
   maxFileCount?: number;
+  openFilePicker?: () => void;
 }
 
 export const MediaUploaderContext =
