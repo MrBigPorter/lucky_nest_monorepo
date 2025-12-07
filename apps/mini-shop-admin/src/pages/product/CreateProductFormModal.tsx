@@ -66,7 +66,7 @@ export const CreateProductFormModal = (
 
       createProduct(payload);
     } catch (e) {
-      addToast('error', e?.message || 'Failed to save product');
+      addToast('error', 'Failed to save product');
     }
   };
 
