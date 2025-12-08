@@ -4,5 +4,6 @@ export * from "./types/ad";
 export * from "./types/treasure";
 export * from "./types/wallet";
 export * from "./types/order";
+export * from "./types/actSection";
 
 export * from "./string/isNullOrEmpty";
