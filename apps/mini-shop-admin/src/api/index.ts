@@ -15,6 +15,10 @@ import {
   AdminCreateUser,
   AdminUpdateUser,
   CreateProduct,
+  actSectionWithProducts,
+  ActSection,
+  actSectionBindProducts,
+  createActSectionPayload,
 } from '@/type/types.ts';
 
 /**
@@ -45,8 +49,9 @@ export const userApi = {
  */
 export const productApi = {
   // 获取商品列表
-  getProducts: (params?: PaginationParams & { categoryId?: number }) =>
-    http.get<PaginatedResponse<Product>>('/v1/admin/treasure/list', params),
+  getProducts: (
+    params?: PaginationParams & { categoryId?: number; treasureName?: string },
+  ) => http.get<PaginatedResponse<Product>>('/v1/admin/treasure/list', params),
 
   // 获取商品详情
   getProductById: (id: string) => http.get<Product>(`/v1/admin/treasure/${id}`),
@@ -123,6 +128,55 @@ export const treasureApi = {
   // 开始/暂停夺宝
   toggleTreasureStatus: (id: string) =>
     http.post(`/treasure-groups/${id}/toggle`),
+};
+
+/**
+ * 活动专区管理列表页 API
+ */
+export const actSectionApi = {
+  // 获取列表
+  getList: (params: PaginationParams) => {
+    console.log('Fetching act section list with params:', params);
+    return http.get<PaginatedResponse<actSectionWithProducts>>(
+      '/v1/admin/act-sections/list',
+      params,
+    );
+  },
+
+  // 获取详情
+  getDetail: (id: string) => {
+    return http.get<actSectionWithProducts>(`/v1/admin/act-sections/${id}`);
+  },
+
+  // 创建
+  create: (data: createActSectionPayload) => {
+    return http.post('/v1/admin/act-sections/create', data);
+  },
+
+  // 更新
+  update: (id: string, data: Partial<ActSection>) => {
+    return http.patch(`/v1/admin/act-sections/${id}`, data);
+  },
+
+  // 删除
+  delete: (id: string) => {
+    return http.delete(`/v1/admin/act-sections/${id}`);
+  },
+
+  // 绑定商品到活动区域
+  bindProduct: (id: string, data: actSectionBindProducts) => {
+    return http.post(`/v1/admin/act-sections/${id}/bind`, data);
+  },
+
+  // 解绑定商品
+  unbindProduct: (id: string, treasureId: string) => {
+    return http.delete(`/v1/admin/act-sections/${id}/unbind/${treasureId}`);
+  },
+
+  // 更新排序
+  /* updateSortOrder: (data: UpdateSortOrderDto) => {
+    return request.post('/admin/act-section/sort-order', data);
+  },*/
 };
 
 /**

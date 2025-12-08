@@ -54,8 +54,51 @@ export class ActSectionController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: [ActSectionResponseDto] })
   async findAll(@Query() query: QueryActSectionDto) {
-    const data = await this.sectionService.findAll(query.page, query.pageSize);
-    return plainToInstance(ActSectionResponseDto, data);
+    const { list, pageSize, page, total } = await this.sectionService.findAll(
+      query.page,
+      query.pageSize,
+    );
+    const cleanList = list.map((section: any) => {
+      const cleanItems = section.items
+        .map((item: any) => {
+          const t = item.treasure;
+          if (!t) return null;
+          return {
+            treasureId: t.treasureId,
+            treasureName: t.treasureName,
+            productName: t.productName,
+            treasureCoverImg: t.treasureCoverImg,
+            state: t.state,
+
+            // --- 关键：Decimal 转 Number (解决报错的核心) ---
+            costAmount: t.costAmount ? Number(t.costAmount) : 0,
+            unitAmount: t.unitAmount ? Number(t.unitAmount) : 0,
+            seqShelvesQuantity: t.seqShelvesQuantity,
+            seqBuyQuantity: t.seqBuyQuantity,
+            buyQuantityRate: t.buyQuantityRate ? Number(t.buyQuantityRate) : 0,
+
+            // --- 时间处理 ---
+            createdAt: t.createdAt ? new Date(t.createdAt).getTime() : 0,
+            updatedAt: t.updatedAt ? new Date(t.updatedAt).getTime() : 0,
+            categories: t.categories || [],
+          };
+        })
+        .filter((i: any) => i !== null);
+
+      return {
+        ...section,
+        startAt: section.startAt ? new Date(section.startAt).getTime() : 0,
+        endAt: section.endAt ? new Date(section.endAt).getTime() : 0,
+        items: cleanItems || [],
+      };
+    });
+
+    return {
+      list: cleanList,
+      page,
+      pageSize,
+      total: total,
+    };
   }
 
   /**
@@ -66,9 +109,11 @@ export class ActSectionController {
   @Get(':id')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: ActSectionResponseDto })
-  async findOne(@Query('id') id: string) {
+  async findOne(@Param('id') id: string) {
     const data = await this.sectionService.findOne(id);
-    return plainToInstance(ActSectionResponseDto, data);
+    return plainToInstance(ActSectionResponseDto, data, {
+      excludeExtraneousValues: true,
+    });
   }
 
   /**

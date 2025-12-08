@@ -81,6 +81,34 @@ export interface CreateProduct {
   desc?: string; // 描述
 }
 
+export interface ActSection {
+  id: string; // "1"
+  key: string; // "home_new_arrival"
+  title: string; // "New Arrival"
+  imgStyleType: number; // 1
+  status: number; // 1
+  sortOrder: number; // 0
+  startAt: number; // 0 -> 时间戳（ms / s，看你的实现）
+  endAt: number; // 0 -> 时间戳（ms / s）
+}
+
+export type createActSectionPayload = Omit<
+  ActSection,
+  'id' | 'sortOrder' | 'endAt' | 'startAt'
+> & {
+  startAt?: Date;
+  endAt?: Date;
+};
+
+export interface actSectionWithProducts extends ActSection {
+  items: Partial<Product>[];
+  categories: Partial<Category>[];
+}
+
+export interface actSectionBindProducts {
+  treasureIds: string[];
+}
+
 export interface Category {
   id: number;
   name: string;

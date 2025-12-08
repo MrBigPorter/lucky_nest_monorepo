@@ -33,6 +33,7 @@ import { AdminSecurity } from '../pages/AdminSecurity';
 import { ContentCMS } from '../pages/ContentCMS';
 import { DataAnalytics } from '../pages/DataAnalytics';
 import { ServiceCenter } from '../pages/ServiceCenter';
+import { ActSectionManagement } from '@/pages/ActSectionManagement.tsx';
 
 export interface RouteConfig {
   path: string;
@@ -71,6 +72,13 @@ export const routes: RouteConfig[] = [
     path: '/products',
     name: 'products',
     component: ProductManagement,
+    icon: ShoppingBag,
+    group: 'Management',
+  },
+  {
+    path: '/act/section',
+    name: 'actSection',
+    component: ActSectionManagement,
     icon: ShoppingBag,
     group: 'Management',
   },

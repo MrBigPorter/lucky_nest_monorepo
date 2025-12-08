@@ -1,4 +1,10 @@
-import { Exclude, Expose, Transform } from 'class-transformer';
+import {
+  Exclude,
+  Expose,
+  plainToInstance,
+  Transform,
+  Type,
+} from 'class-transformer';
 import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -33,15 +39,23 @@ export class ActSectionResponseDto {
 
   @ApiProperty({ description: 'start time' })
   @Expose()
-  @Transform(({ value }) => (value instanceof Date ? value.getTime() : 0))
+  @Transform(({ value }) => {
+    if (!value) return 0;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  })
   startAt!: number;
 
   @ApiProperty({ description: 'end time' })
   @Expose()
-  @Transform(({ value }) => (value instanceof Date ? value.getTime() : 0))
+  @Transform(({ value }) => {
+    if (!value) return 0;
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  })
   endAt!: number;
 
-  @ApiProperty({ description: 'treasure items' })
+  @ApiProperty({ type: [TreasureResponseDto] })
   @Expose()
   items!: TreasureResponseDto[];
 }
