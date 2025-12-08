@@ -37,7 +37,6 @@ export class ActSectionService {
     return this.prisma.actSection.create({
       data: {
         ...dto,
-        status: ACT_SECTION_STATUS.ENABLE,
       },
     });
   }
@@ -65,6 +64,7 @@ export class ActSectionService {
       }),
       this.prisma.actSection.count(),
     ]);
+
     return { list, total, page, pageSize };
   }
 

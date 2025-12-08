@@ -1,6 +1,7 @@
 import {
   IsDate,
   IsDateString,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -57,4 +58,26 @@ export class CreateActSectionDto {
   @ToNumber()
   @IsInt()
   sortOrder?: number;
+
+  @ApiProperty({
+    description: 'status',
+    example: 1,
+    type: 'number',
+  })
+  @ToNumber()
+  @IsInt()
+  @IsNotEmpty()
+  @IsIn([0, 1], { message: 'status must be 0(INACTIVE) or 1(ACTIVE)' })
+  status!: number;
+
+  @ApiProperty({
+    description: 'limit',
+    example: 10,
+    type: 'number',
+  })
+  @ToNumber()
+  @IsInt()
+  @IsNotEmpty()
+  @Min(10, { message: 'limit must be at least 1' })
+  limit!: number;
 }
