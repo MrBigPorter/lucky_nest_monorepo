@@ -10,3 +10,5 @@ export const BANNER_CATE = { HOME: 1, ACTIVITY: 2, PRODUCT: 3 } as const;
 export const POSITION = { TOP: 0, MIDDLE: 1, BOTTOM: 2 } as const;
 
 export const SHOW_TYPE = { SINGLE: 1, CAROUSEL: 2 } as const;
+export const BANNER_STATE = { ACTIVE: 1, INACTIVE: 2 } as const;
+export const BANNER_VALID_STATE = { VALID: 1, INVALID: 2 } as const;

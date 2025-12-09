@@ -4,6 +4,7 @@ import { UserModule } from '@api/admin/user/user.module';
 import { CategoryModule } from '@api/admin/category/category.module';
 import { TreasureModule } from '@api/admin/treasure/treasure.module';
 import { ActSectionModule } from '@api/admin/act-section/act-section.module';
+import { BannerModule } from '@api/admin/banner/banner.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ActSectionModule } from '@api/admin/act-section/act-section.module';
     CategoryModule,
     TreasureModule,
     ActSectionModule,
+    BannerModule,
   ],
   providers: [],
   controllers: [],
