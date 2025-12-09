@@ -41,11 +41,13 @@ import {
   Ban,
   CheckCircle,
 } from 'lucide-react';
-import { Badge } from '@/components/UIComponents';
+import { Badge, Card } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { BannerFormModal } from '@/pages/banner/BannerFormModal.tsx';
 import { BANNER_CATE, JUMP_CATE } from '@lucky/shared';
-import { Banner } from '@/type/types.ts';
+import { Banner, BannerListParams } from '@/type/types.ts';
+import { SchemaSearchForm } from '@/components/SchemaSearchForm.tsx';
+import { SearchFieldSchema } from '@/type/search.ts';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({
@@ -99,21 +101,83 @@ const SortableRow = ({
   );
 };
 
+type BannerSearchForm = {
+  title: string;
+  bannerCate: string;
+};
+
 export const BannerManagement: React.FC = () => {
   const [activeTab] = useState<string>(String(BANNER_CATE.HOME));
   const addToast = useToastStore((s) => s.addToast);
 
-  const getTableData = async ({ current, pageSize }: any) => {
-    const res = await bannerApi.getList({
+  const searchSchema: SearchFieldSchema[] = useMemo(
+    () => [
+      {
+        type: 'input',
+        key: 'title',
+        label: 'Search Title',
+        placeholder: 'Enter keywords...',
+      },
+      {
+        type: 'select',
+        key: 'bannerCate',
+        label: 'Position',
+        defaultValue: 'ALL', // 支持默认值
+        options: [
+          { label: 'All', value: 'ALL' },
+          { label: 'Home', value: '1' },
+          { label: 'Product', value: '2' },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const getTableData = async (
+    {
+      current,
+      pageSize,
+    }: {
+      current: number;
+      pageSize: number;
+    },
+    formData: BannerSearchForm,
+  ) => {
+    const params: BannerListParams = {
       page: current,
       pageSize,
-    });
+    };
+    if (formData?.bannerCate && formData?.bannerCate !== 'ALL') {
+      params.bannerCate = Number(formData.bannerCate);
+    }
+    if (formData?.title) {
+      params.title = formData.title;
+    }
+    const res = await bannerApi.getList(params);
     return { list: res.list, total: res.total };
   };
 
-  const { tableProps, refresh } = useAntdTable(getTableData, {
-    defaultPageSize: 20, // Banner 一般不多，一页显示多点方便排序
+  const {
+    tableProps,
+    refresh,
+    run,
+    search: { reset },
+  } = useAntdTable(getTableData, {
+    defaultPageSize: 20,
+    defaultParams: [
+      { current: 1, pageSize: 10 },
+      {
+        title: '',
+        bannerCate: 'ALL',
+      },
+    ],
   });
+
+  // 搜索回调：直接拿到所有值
+  const handleSearch = (values: any) => {
+    // 自动重置到第一页，并带上所有条件
+    run({ current: 1, pageSize: 10 }, values);
+  };
 
   const dataSource = useMemo(
     () => tableProps.dataSource || [],
@@ -307,59 +371,71 @@ export const BannerManagement: React.FC = () => {
         <Button onClick={() => handleOpenModal()}>+ New Banner</Button>
       </div>
 
-      <div className="bg-white dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden">
+      <Card>
+        <div className="space-y-3 mb-6">
+          <SchemaSearchForm
+            schema={searchSchema}
+            onSearch={handleSearch}
+            onReset={reset}
+          />
+        </div>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((hg) => (
-                <TableRow key={hg.id}>
-                  {hg.headers.map((h) => (
-                    <TableHead key={h.id}>
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              <SortableContext
-                items={items}
-                strategy={verticalListSortingStrategy}
-              >
-                {table.getRowModel().rows.map((row) => (
-                  <SortableRow key={row.id} row={row}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {React.cloneElement(
-                          flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          ) as React.ReactElement,
-                          { cell },
-                        )}
-                      </TableCell>
+          <div className="overflow-x-auto rounded-xl ">
+            <Table>
+              <TableHeader className="bg-gray-50/60 dark:bg-white/5">
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id}>
+                    {hg.headers.map((h) => (
+                      <TableHead
+                        key={h.id}
+                        className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase"
+                      >
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                      </TableHead>
                     ))}
-                  </SortableRow>
+                  </TableRow>
                 ))}
-              </SortableContext>
-              {dataSource.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center text-gray-500"
-                  >
-                    No banners in this section.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
+                <SortableContext
+                  items={items}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {table.getRowModel().rows.map((row) => (
+                    <SortableRow key={row.id} row={row}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {React.cloneElement(
+                            flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            ) as React.ReactElement,
+                            { cell },
+                          )}
+                        </TableCell>
+                      ))}
+                    </SortableRow>
+                  ))}
+                </SortableContext>
+                {dataSource.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-gray-500"
+                    >
+                      No banners in this section.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </DndContext>
-      </div>
+      </Card>
     </div>
   );
 };

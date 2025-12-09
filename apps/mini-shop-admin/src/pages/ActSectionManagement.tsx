@@ -46,6 +46,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  BaseSelect,
 } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
 import { ActSectionListParams, actSectionWithProducts } from '@/type/types.ts';
@@ -438,7 +439,7 @@ export const ActSectionManagement: React.FC = () => {
                 e.key === 'Enter' && run({ current: 1, pageSize: 10 }, filters)
               }
             />
-            <Select
+            <BaseSelect
               label="Status"
               value={String(filters.status)}
               onChange={(val) =>
@@ -469,7 +470,7 @@ export const ActSectionManagement: React.FC = () => {
           collisionDetection={closestCenter}
           // onDragEnd={handleDragEnd}
         >
-          <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/5">
+          <div className="overflow-x-auto rounded-xl ">
             <Table className="text-left">
               <TableHeader className="bg-gray-50/60 dark:bg-white/5">
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -499,7 +500,6 @@ export const ActSectionManagement: React.FC = () => {
                     <SortableRow key={row.id} row={row}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="px-4 py-3 text-sm">
-                          {/* 将 listeners 传递给 cell，以便 dragHandle 可以接收 */}
                           {React.cloneElement(
                             flexRender(
                               cell.column.columnDef.cell,
@@ -530,7 +530,6 @@ export const ActSectionManagement: React.FC = () => {
 
         {/* Pagination (Copy from your existing code) */}
         <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-          {/* ... standard pagination code ... */}
           <div>Total {tableProps.pagination.total} items</div>
           <div className="flex gap-2">
             <Button

@@ -47,12 +47,16 @@ export class BannerService {
    * @returns {Promise<{list: any[], pageSize: number, page: number, total: number}>}
    */
   async findAll(dto: QueryBannerDto) {
-    const { page, pageSize, bannerCate } = dto;
+    const { page, pageSize, bannerCate, title } = dto;
     const skip = (page - 1) * pageSize;
 
     const whereCondition: Prisma.BannerWhereInput = {};
     if (bannerCate) {
       whereCondition.bannerCate = bannerCate;
+    }
+
+    if (title) {
+      whereCondition.title = { contains: title };
     }
 
     const [total, list] = await this.prisma.$transaction([
