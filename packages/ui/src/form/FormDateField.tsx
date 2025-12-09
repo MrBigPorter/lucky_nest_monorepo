@@ -62,6 +62,7 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
       renderAction={({ field, error }) => {
         const finalVariant = error ? "error" : variant;
         const value = field.value as Date | undefined;
+
         const display =
           (value &&
             (formatValue ? formatValue(value) : value.toLocaleDateString())) ||
@@ -109,21 +110,27 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
                         disabled={disabled}
                         data-testid={`date-trigger-${testId}`}
                         className={cn(
-                          "w-full justify-between px-4 py-2.5 bg-gray-50 dark:bg-black/20 border rounded-lg text-left font-normal text-sm text-gray-900 dark:text-white hover:bg-gray-100/40 dark:hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:border-primary-500",
-                          value
-                            ? "border-gray-200 dark:border-white/10"
-                            : "border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500",
+                          "w-full justify-between px-4 py-2.5 text-left text-sm font-normal",
+                          "bg-gray-50 dark:bg-black/20",
+                          "border border-gray-200 dark:border-white/10",
+                          "text-gray-900 dark:text-white",
+                          "hover:bg-gray-100/60 dark:hover:bg-white/5",
+                          "focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:border-primary-500",
+                          !value &&
+                            "text-gray-400 dark:text-gray-500 placeholder:text-gray-400",
                           error && "border-red-500",
                           classNames?.input,
                         )}
                       >
                         <span className="truncate">{display}</span>
-                        <CalendarIcon className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
+                        <CalendarIcon className="ml-2 h-4 w-4 shrink-0 text-gray-400" />
                       </Button>
                     </PopoverTrigger>
+
+                    {/* 这里让 Popover 自己透明，真正的白卡片在 Calendar 里 */}
                     <PopoverContent
                       align="start"
-                      className="w-auto p-0 bg-popover"
+                      className="w-auto p-0 border-none bg-transparent shadow-none"
                     >
                       <Calendar
                         mode="single"
