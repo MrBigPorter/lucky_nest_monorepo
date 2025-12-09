@@ -121,7 +121,7 @@ export interface actSectionBindProducts {
 // Banner 广告位
 export interface Banner {
   /** 唯一 ID */
-  id: number;
+  id: string;
 
   /** 标题，如：Summer Sale */
   title: string;
@@ -155,6 +155,9 @@ export interface Banner {
 
   /** 创建时间，Unix 时间戳（秒） */
   createdAt: number;
+
+  /** 关联的标题 ID（如果有的话） */
+  relatedTitleId?: string;
 }
 
 export type CreateBannerPayload = Omit<Banner, 'id' | 'createdAt' | 'state'>;

@@ -45,7 +45,7 @@ import { Badge } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { BannerFormModal } from '@/pages/banner/BannerFormModal.tsx';
 import { BANNER_CATE, JUMP_CATE } from '@lucky/shared';
-import { actSectionWithProducts } from '@/type/types.ts';
+import { Banner } from '@/type/types.ts';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({
@@ -53,7 +53,7 @@ const SortableRow = ({
   row,
 }: {
   children: React.ReactNode;
-  row: Row<actSectionWithProducts>;
+  row: Row<Banner>;
 }) => {
   const {
     attributes,
@@ -100,25 +100,25 @@ const SortableRow = ({
 };
 
 export const BannerManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>(String(BANNER_CATE.HOME));
+  const [activeTab] = useState<string>(String(BANNER_CATE.HOME));
   const addToast = useToastStore((s) => s.addToast);
 
-  // 1. 获取数据 (依赖 activeTab)
   const getTableData = async ({ current, pageSize }: any) => {
     const res = await bannerApi.getList({
       page: current,
       pageSize,
-      //bannerCate: Number(activeTab), // 🌟 核心：只查当前 Tab 的数据
     });
     return { list: res.list, total: res.total };
   };
 
-  const { tableProps, run, refresh } = useAntdTable(getTableData, {
+  const { tableProps, refresh } = useAntdTable(getTableData, {
     defaultPageSize: 20, // Banner 一般不多，一页显示多点方便排序
-    refreshDeps: [activeTab], // 切换 Tab 自动刷新
   });
 
-  const dataSource = (tableProps.dataSource || []) as any[];
+  const dataSource = useMemo(
+    () => tableProps.dataSource || [],
+    [tableProps.dataSource],
+  );
   const items = useMemo(() => dataSource.map((x) => x.id), [dataSource]);
 
   // --- Actions ---
@@ -172,7 +172,7 @@ export const BannerManagement: React.FC = () => {
   };
 
   // --- Columns ---
-  const columnHelper = createColumnHelper<any>();
+  const columnHelper = createColumnHelper<Banner>();
   const columns = [
     columnHelper.display({
       id: 'dragHandle',
@@ -190,7 +190,6 @@ export const BannerManagement: React.FC = () => {
     columnHelper.accessor('bannerImgUrl', {
       header: 'Visual',
       cell: (info) => (
-        // 🌟 视觉优化：宽图预览
         <div className="w-32 h-16 bg-gray-100 rounded-md overflow-hidden border border-gray-200 relative group">
           <img src={info.getValue()} className="w-full h-full object-cover" />
           {info.row.original.fileType === 2 && (
@@ -307,21 +306,6 @@ export const BannerManagement: React.FC = () => {
         </div>
         <Button onClick={() => handleOpenModal()}>+ New Banner</Button>
       </div>
-
-      {/* 顶部 Tabs 导航 */}
-      {/*<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value={String(BANNER_CATE.HOME)}>
-            🏠 Home Page
-          </TabsTrigger>
-          <TabsTrigger value={String(BANNER_CATE.ACTIVITY)}>
-            🎉 Activity Page
-          </TabsTrigger>
-          <TabsTrigger value={String(BANNER_CATE.PRODUCT)}>
-            📦 Product Page
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>*/}
 
       <div className="bg-white dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden">
         <DndContext

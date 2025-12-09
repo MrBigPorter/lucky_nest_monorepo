@@ -1,27 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import React, { useEffect } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRequest } from 'ahooks';
-import { bannerApi, productApi, uploadApi } from '@/api'; // 假设你有这些API
+import { bannerApi, uploadApi } from '@/api'; // 假设你有这些API
 import {
   Button,
   Form,
   FormTextField,
   FormSelectField,
   FormDateField,
-  FormCheckboxField,
   FormMediaUploaderField,
 } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
-import { JUMP_CATE, BANNER_CATE } from '@lucky/shared';
-import { Link, Package, X } from 'lucide-react';
-import { Product } from '@/type/types';
+import { JUMP_CATE } from '@lucky/shared';
+import { Link } from 'lucide-react';
 import { BannerFormInputs, BannerShema } from '@/schema/bannerShema.ts';
+import { BannerBindProduct } from '@/pages/banner/BannerBindProduct.tsx';
+import { Banner } from '@/type/types.ts';
 
 interface Props {
   close: () => void;
   confirm: () => void;
-  editingData?: any; // 实际是 Banner 类型
+  editingData?: Banner;
   defaultCate?: number; // 当前所在的 Tab
 }
 
@@ -31,9 +31,6 @@ export const BannerFormModal: React.FC<Props> = ({
   editingData,
 }) => {
   const addToast = useToastStore((s) => s.addToast);
-  const [showProductSelector, setShowProductSelector] = useState(false);
-  // 用来展示已选产品的详情（因为表单里只存了 ID）
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const form = useForm<BannerFormInputs>({
     resolver: zodResolver(BannerShema),
@@ -46,29 +43,13 @@ export const BannerFormModal: React.FC<Props> = ({
       sortOrder: 0,
       activityAtStart: undefined,
       activityAtEnd: undefined,
+      relatedTitleId: undefined,
     },
   });
 
   // 👀 监听跳转类型变化，实现联动
   const jumpCate = useWatch({ control: form.control, name: 'jumpCate' });
   const bannerCate = useWatch({ control: form.control, name: 'bannerCate' });
-  const relatedId = useWatch({ control: form.control, name: 'relatedTitleId' });
-
-  // 如果是编辑模式，且有关联产品ID，查一下产品详情用于回显
-  useRequest(
-    async () => {
-      if (
-        editingData?.relatedTitleId &&
-        editingData.jumpCate === JUMP_CATE.TREASURE
-      ) {
-        return productApi.getDetail(editingData.relatedTitleId);
-      }
-    },
-    {
-      ready: !!editingData,
-      onSuccess: (data) => setSelectedProduct(data),
-    },
-  );
 
   const { run: submit, loading } = useRequest(
     async (values) => {
@@ -87,7 +68,6 @@ export const BannerFormModal: React.FC<Props> = ({
       };
 
       if (editingData) {
-        console.log(payload);
         return bannerApi.update(editingData.id, payload);
       }
       return bannerApi.create(payload);
@@ -106,7 +86,6 @@ export const BannerFormModal: React.FC<Props> = ({
 
   useEffect(() => {
     if (editingData) {
-      console.log('editingData:', editingData);
       form.reset({
         ...editingData,
         activityAtStart: editingData.activityAtStart
@@ -116,7 +95,9 @@ export const BannerFormModal: React.FC<Props> = ({
           ? new Date(editingData.activityAtEnd)
           : undefined,
         jumpCate: editingData.jumpCate,
+        jumpUrl: editingData.jumpUrl || '',
         bannerCate: editingData.bannerCate,
+        relatedTitleId: editingData.relatedTitleId || undefined,
       });
     }
   }, [editingData, form, form.reset]);
@@ -204,45 +185,22 @@ export const BannerFormModal: React.FC<Props> = ({
 
             {/* 条件渲染：产品选择器 */}
             {Number(jumpCate) === JUMP_CATE.TREASURE && (
-              <div className="animate-in fade-in slide-in-from-top-2 space-y-2">
-                <label className="text-sm font-medium">Target Product</label>
-                {selectedProduct || relatedId ? (
-                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-black/20 rounded border border-blue-200">
-                    <img
-                      src={selectedProduct?.treasureCoverImg}
-                      className="w-10 h-10 rounded bg-gray-100"
+              <Controller
+                name="relatedTitleId"
+                render={({ field, fieldState }) => (
+                  <div>
+                    <BannerBindProduct
+                      value={field.value}
+                      onChange={field.onChange}
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {selectedProduct?.treasureName || relatedId}
+                    {fieldState.error && (
+                      <div className="mt-1 text-sm text-red-500">
+                        {fieldState.error.message}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        ID: {relatedId}
-                      </div>
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        form.setValue('relatedTitleId', '');
-                        setSelectedProduct(null);
-                      }}
-                    >
-                      <X size={16} />
-                    </Button>
+                    )}
                   </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-dashed"
-                    onClick={() => setShowProductSelector(true)}
-                  >
-                    <Package size={16} className="mr-2" /> Select a Product
-                  </Button>
                 )}
-                <input type="hidden" {...form.register('relatedTitleId')} />
-              </div>
+              />
             )}
           </div>
 
