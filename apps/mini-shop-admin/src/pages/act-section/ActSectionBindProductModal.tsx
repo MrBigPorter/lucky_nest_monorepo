@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
-import { actSectionApi, productApi } from '@/api'; // 复用你现有的 productApi
-import { actSectionWithProducts, Product } from '@/type/types'; // 复用现有的类型
+import { actSectionApi, productApi } from '@/api';
+import { actSectionWithProducts, Product } from '@/type/types';
 import {
   Button,
   Table,
@@ -10,6 +10,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
+  ModalManager,
 } from '@repo/ui';
 import { Input } from '@/components/UIComponents.tsx';
 import {
@@ -18,7 +19,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { Search } from 'lucide-react';
+import { Link2Off, Search } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore.ts';
 
 interface Props {
@@ -27,32 +28,55 @@ interface Props {
   editingData: actSectionWithProducts;
 }
 
-export const ActSectionEditorModal: React.FC<Props> = ({
+interface TableMeta {
+  selectedRows: Record<string, Product>;
+  toggleSelection: (product: Product) => void;
+  existingIds: string[];
+}
+
+export const ActSectionBindProductModal: React.FC<Props> = ({
   onClose,
   onConfirm,
   editingData,
 }) => {
   const [selectedRows, setSelectedRows] = useState<Record<string, Product>>({});
+  const [existingSelectedRows, setExistingSelectedRows] = useState<string[]>(
+    [],
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const addToast = useToastStore((s) => s.addToast);
 
-  const getTableData = async (
-    { current, pageSize }: { current: number; pageSize: number },
-    formData: { name: string },
-  ) => {
-    const res = await productApi.getProducts({
-      page: current,
-      pageSize,
-      treasureName: formData.name,
-    });
-    return { list: res.list ?? [], total: res.total ?? 0 };
-  };
+  const getTableData = useCallback(
+    async (
+      { current, pageSize }: { current: number; pageSize: number },
+      formData: { name: string },
+    ) => {
+      const res = await productApi.getProducts({
+        page: current,
+        pageSize,
+        treasureName: formData.name,
+      });
+      return { list: res.list ?? [], total: res.total ?? 0 };
+    },
+    [],
+  );
 
   const { tableProps, run } = useAntdTable(getTableData, {
     manual: true,
     defaultPageSize: 5, // 弹窗里显示少一点
     defaultParams: [{ current: 1, pageSize: 5 }, { name: '' }],
   });
+
+  const { run: getDetail } = useRequest(actSectionApi.getDetail, {
+    manual: true,
+    onSuccess: (data) => {
+      if (data?.items) {
+        const ids = data.items.map((item) => item.treasureId);
+        setExistingSelectedRows(ids as string[]);
+      }
+    },
+  });
+
   const { run: bindProduct, loading } = useRequest(actSectionApi.bindProduct, {
     manual: true,
     onSuccess: () => {
@@ -61,19 +85,35 @@ export const ActSectionEditorModal: React.FC<Props> = ({
     },
   });
 
+  const { run: unbindProduct, loading: unbindLoading } = useRequest(
+    actSectionApi.unbindProduct,
+    {
+      manual: true,
+      onSuccess: () => {
+        addToast('success', 'Product unbound successfully');
+        getDetail(editingData.id);
+      },
+    },
+  );
+
   useEffect(() => {
+    getDetail(editingData.id);
     run({ current: 1, pageSize: 5 }, { name: '' });
-  }, [run]);
+  }, [editingData.id, getDetail, run]);
 
   const confirm = () => {
     const products = Object.values(selectedRows).map(
       (product) => product.treasureId,
     );
+    if (products.length === 0) {
+      addToast('error', 'Please select at least one product');
+      return;
+    }
     bindProduct(editingData.id, { treasureIds: products });
   };
 
   // 2. 处理多选逻辑
-  const toggleSelection = (product: Product) => {
+  const toggleSelection = useCallback((product: Product) => {
     setSelectedRows((prev) => {
       const next = { ...prev };
       if (next[product.treasureId]) {
@@ -83,58 +123,100 @@ export const ActSectionEditorModal: React.FC<Props> = ({
       }
       return next;
     });
+  }, []);
+
+  const unbind = (product: Product) => {
+    ModalManager.open({
+      title: 'Confirm Unbind',
+      content: `Are you sure you want to unbind "${product.treasureName}" from this activity section?`,
+      confirmText: 'Unbind',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        if (unbindLoading) return;
+        unbindProduct(editingData.id, product.treasureId);
+      },
+    });
   };
 
   // 3. 表格列定义
-  const columnHelper = createColumnHelper<Product>();
-  const columns = [
-    columnHelper.display({
-      id: 'select',
-      header: 'Select',
-      cell: (info) => {
-        const existingIds = editingData.items.map((item) => item.treasureId);
-        const id = info.row.original.treasureId;
-        const isDisabled = existingIds.includes(id);
-        const isChecked = !!selectedRows[id];
+  const columns = useMemo(() => {
+    const columnHelper = createColumnHelper<Product>();
+    return [
+      columnHelper.display({
+        id: 'select',
+        header: 'Select',
+        cell: (info) => {
+          const meta = info.table.options.meta as TableMeta;
+          const { selectedRows, toggleSelection, existingIds } = meta;
+          const id = info.row.original.treasureId;
+          const isDisabled = existingIds.includes(id);
+          const isChecked = !!selectedRows[id];
 
-        return (
-          <input
-            type="checkbox"
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            disabled={isDisabled}
-            checked={isChecked || isDisabled} // 如果已存在，强制显示选中或禁用
-            onChange={() => !isDisabled && toggleSelection(info.row.original)}
-          />
-        );
-      },
-    }),
-    columnHelper.accessor('treasureName', {
-      header: 'Product Info',
-      cell: (info) => (
-        <div className="flex items-center gap-3">
-          <img
-            src={info.row.original.treasureCoverImg}
-            className="w-10 h-10 rounded object-cover bg-gray-100"
-            alt=""
-          />
-          <div className="text-sm font-medium line-clamp-1">
-            {info.getValue()}
+          return (
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              disabled={isDisabled}
+              checked={isChecked || isDisabled}
+              onChange={() => !isDisabled && toggleSelection(info.row.original)}
+            />
+          );
+        },
+      }),
+      columnHelper.accessor('treasureName', {
+        header: 'Product Info',
+        cell: (info) => (
+          <div className="flex items-center gap-3">
+            <img
+              src={info.row.original.treasureCoverImg}
+              className="w-10 h-10 rounded object-cover bg-gray-100"
+              alt=""
+              loading="lazy"
+            />
+            <div className="text-sm font-medium line-clamp-1">
+              {info.getValue()}
+            </div>
           </div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor('unitAmount', {
-      header: 'Price',
-      cell: (info) => (
-        <span className="font-mono text-xs">₱{info.getValue()}</span>
-      ),
-    }),
-  ];
+        ),
+      }),
+      columnHelper.accessor('unitAmount', {
+        header: 'Price',
+        cell: (info) => (
+          <span className="font-mono text-xs">₱{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: 'Actions',
+        cell: (info) => {
+          const { existingIds } = info.table.options.meta as TableMeta;
+          const isBinding = existingIds.includes(info.row.original.treasureId);
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => unbind(info.row.original)}
+            >
+              {isBinding ? <Link2Off size={16} /> : null}
+            </Button>
+          );
+        },
+      }),
+    ];
+  }, []);
 
   const table = useReactTable({
     data: (tableProps.dataSource || []) as Product[],
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.treasureId,
+    // 核心修改 3: 把动态数据通过 meta 传进去
+    // 当 selectedRows 变化时，meta 更新，但 Table 不会彻底销毁重来
+    meta: {
+      selectedRows,
+      toggleSelection,
+      existingIds: existingSelectedRows,
+    } as TableMeta,
   });
 
   return (

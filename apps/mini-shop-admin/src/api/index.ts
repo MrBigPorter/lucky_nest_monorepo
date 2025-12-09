@@ -154,7 +154,7 @@ export const actSectionApi = {
   },
 
   // 更新
-  update: (id: string, data: Partial<ActSection>) => {
+  update: (id: string, data: Partial<createActSectionPayload>) => {
     return http.patch(`/v1/admin/act-sections/${id}`, data);
   },
 
@@ -235,15 +235,4 @@ export const statsApi = {
       '/stats/sales-trend',
       params,
     ),
-};
-
-// 导出所有 API
-export default {
-  user: userApi,
-  product: productApi,
-  category: categoryApi,
-  treasure: treasureApi,
-  auth: authApi,
-  upload: uploadApi,
-  stats: statsApi,
 };

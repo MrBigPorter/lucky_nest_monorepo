@@ -84,7 +84,25 @@ export class ActSectionService {
       },
     });
     if (!section) throw new NotFoundException('Act section not found');
-    return section;
+
+    return {
+      ...section,
+      items: section.items.map((item) => ({
+        ...item.treasure,
+        costAmount: item.treasure.costAmount
+          ? Number(item.treasure.costAmount)
+          : 0,
+        unitAmount: item.treasure.unitAmount
+          ? Number(item.treasure.unitAmount)
+          : 0,
+        createdAt: item.treasure.createdAt
+          ? new Date(item.treasure.createdAt).getTime()
+          : 0,
+        updatedAt: item.treasure.updatedAt
+          ? new Date(item.treasure.updatedAt).getTime()
+          : 0,
+      })),
+    };
   }
 
   /**

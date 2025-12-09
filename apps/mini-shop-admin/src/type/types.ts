@@ -90,6 +90,7 @@ export interface ActSection {
   sortOrder: number; // 0
   startAt: number; // 0 -> 时间戳（ms / s，看你的实现）
   endAt: number; // 0 -> 时间戳（ms / s）
+  limit: number; // 10
 }
 
 export type createActSectionPayload = Omit<

@@ -51,9 +51,9 @@ import {
   TableCell,
 } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
-import { ActSection } from '@/type/types.ts';
+import { ActSection, actSectionWithProducts } from '@/type/types.ts';
 import { actSectionApi } from '@/api';
-import { ActSectionEditorModal } from '@/pages/act-section/ActSectionEditorModal.tsx';
+import { ActSectionBindProductModal } from '@/pages/act-section/ActSectionBindProductModal.tsx';
 import { ProductSelectorModal } from '@/pages/act-section/ProductSelectorModal.tsx';
 
 // --- 组件：可排序的行 (Draggable Row) ---
@@ -215,16 +215,29 @@ export const ActSectionManagement: React.FC = () => {
       title: 'Delete Section?',
       content: `Are you sure you want to delete "${record.title}"?`,
       confirmText: 'Delete',
-      confirmButtonProps: { danger: true },
       onConfirm: () => deleteSection.run(record.id),
     });
   };
 
   const handleEdit = async (record: ActSection) => {
     ModalManager.open({
-      title: 'Select Products for Section',
+      title: 'Edit Product Section',
       renderChildren: ({ close, confirm }) => (
-        <ActSectionEditorModal
+        <ProductSelectorModal
+          close={close}
+          confirm={confirm}
+          editingData={record}
+        />
+      ),
+      onConfirm: refresh,
+    });
+  };
+
+  const handleBindProduct = async (record: actSectionWithProducts) => {
+    ModalManager.open({
+      title: 'Bind Products',
+      renderChildren: ({ close, confirm }) => (
+        <ActSectionBindProductModal
           onClose={close}
           onConfirm={confirm}
           editingData={record}
@@ -237,8 +250,9 @@ export const ActSectionManagement: React.FC = () => {
   const handleCreate = () => {
     ModalManager.open({
       title: 'Create New Section',
-      renderChildren: ({ close, confirm }) =>
-        ProductSelectorModal(close, confirm),
+      renderChildren: ({ close, confirm }) => (
+        <ProductSelectorModal close={close} confirm={confirm} />
+      ),
       onConfirm: refresh,
     });
   };
@@ -345,7 +359,7 @@ export const ActSectionManagement: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleEdit(info.row.original)}
+            onClick={() => handleBindProduct(info.row.original)}
           >
             <ArrowBigDownDash size={16} />
           </Button>

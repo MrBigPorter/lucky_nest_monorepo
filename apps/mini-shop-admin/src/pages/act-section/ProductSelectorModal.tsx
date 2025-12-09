@@ -13,13 +13,22 @@ import {
 } from '@repo/ui';
 import { useRequest } from 'ahooks';
 import { ActSectionSchema } from '@/schema/ActSectionSchema.ts';
+import { ActSection } from '@/type/types.ts';
+import React, { useEffect } from 'react';
 
 type ActSectionFormInputs = z.infer<typeof ActSectionSchema>;
 
-export const ProductSelectorModal = (
-  close: () => void,
-  confirm: () => void,
-) => {
+interface Props {
+  close: () => void;
+  confirm: () => void;
+  editingData?: ActSection | null;
+}
+
+export const ProductSelectorModal: React.FC<Props> = ({
+  close,
+  confirm,
+  editingData,
+}) => {
   const addToast = useToastStore((s) => s.addToast);
 
   const { run: creatActSection, loading } = useRequest(actSectionApi.create, {
@@ -29,6 +38,17 @@ export const ProductSelectorModal = (
       confirm();
     },
   });
+
+  const { run: updateActSection, loading: updateLoading } = useRequest(
+    actSectionApi.update,
+    {
+      manual: true,
+      onSuccess: () => {
+        addToast('success', 'Section updated successfully');
+        confirm();
+      },
+    },
+  );
 
   const form = useForm<ActSectionFormInputs>({
     resolver: zodResolver(ActSectionSchema),
@@ -45,11 +65,38 @@ export const ProductSelectorModal = (
 
   const onSubmit = async (values: ActSectionFormInputs) => {
     try {
+      if (editingData) {
+        updateActSection(editingData.id, values);
+        return;
+      }
       creatActSection(values);
     } catch (e) {
       addToast('error', 'Failed to save product');
     }
   };
+
+  useEffect(() => {
+    if (editingData) {
+      form.reset(
+        {
+          title: editingData.title,
+          key: editingData.key,
+          imgStyleType: editingData.imgStyleType,
+          limit: editingData.limit,
+          startAt: editingData.startAt
+            ? new Date(editingData.startAt)
+            : undefined,
+          endAt: editingData.endAt ? new Date(editingData.endAt) : undefined,
+          status: editingData.status,
+        },
+        {
+          keepDirtyValues: false,
+          keepTouched: false,
+          keepErrors: false,
+        },
+      );
+    }
+  }, [editingData, form]);
 
   return (
     <Form {...form}>
@@ -98,8 +145,8 @@ export const ProductSelectorModal = (
             <Button type="button" variant="ghost" onClick={close}>
               Cancel
             </Button>
-            <Button isLoading={loading} type="submit">
-              Confirm Add
+            <Button isLoading={loading || updateLoading} type="submit">
+              {editingData ? 'Update Section' : 'Create Section'}
             </Button>
           </div>
         </div>
