@@ -110,10 +110,7 @@ export class ActSectionController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async findOne(@Param('id') id: string) {
-    const data = await this.sectionService.findOne(id);
-    return plainToInstance(ActSectionResponseDto, data, {
-      excludeExtraneousValues: true,
-    });
+    return await this.sectionService.findOne(id);
   }
 
   /**
