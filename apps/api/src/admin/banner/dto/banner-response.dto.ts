@@ -63,7 +63,9 @@ export class BannerResponseDto {
     example: 1625097600,
   })
   @Expose()
-  @Transform(({ value }) => (value instanceof Date ? value.getTime() : 0))
+  @Transform(({ value }) => {
+    return value instanceof Date ? value.getTime() : value;
+  })
   activityAtStart?: number;
 
   @ApiProperty({
@@ -71,7 +73,9 @@ export class BannerResponseDto {
     example: 1627689600,
   })
   @Expose()
-  @Transform(({ value }) => (value instanceof Date ? value.getTime() : 0))
+  @Transform(({ value }) => {
+    return value instanceof Date ? value.getTime() : value;
+  })
   activityAtEnd?: number;
 
   @ApiProperty({
@@ -79,6 +83,8 @@ export class BannerResponseDto {
     example: 1622505600,
   })
   @Expose()
-  @Transform(({ value }) => (value instanceof Date ? value.getTime() : 0))
+  @Transform(({ value }) => {
+    return value instanceof Date ? value.getTime() : value;
+  })
   createdAt!: number;
 }

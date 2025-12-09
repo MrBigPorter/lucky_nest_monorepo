@@ -33,7 +33,10 @@ type FormSelectFieldProps<TFieldValues extends FieldValues = FieldValues> =
     | "renderRight"
     | "readOnly"
   > &
-    Omit<BaseSelectProps, "value" | "onChange">;
+    Omit<BaseSelectProps, "value" | "onChange"> & {
+      /** 是否把选中的值当作数字来处理 */
+      numeric?: boolean;
+    };
 
 export function FormSelectField<
   TFieldValues extends FieldValues = FieldValues,
@@ -52,6 +55,7 @@ export function FormSelectField<
   layout = "vertical",
   options,
   onOpenChange,
+  numeric = false,
   ...props
 }: Readonly<FormSelectFieldProps<TFieldValues>>) {
   const theme = useFormTheme();
@@ -107,11 +111,13 @@ export function FormSelectField<
                     value={selectValue}
                     onOpenChange={onOpenChange}
                     onChange={(val) => {
-                      const next =
-                        val === undefined || val === null || val === ""
-                          ? undefined
-                          : Number(val);
-                      field.onChange(next);
+                      let nextValue: string | number | undefined = val;
+                      if (val === "" || val === undefined || val === null) {
+                        nextValue = undefined; // 清空
+                      } else if (numeric) {
+                        nextValue = Number(val); // 强转回数字
+                      }
+                      field.onChange(nextValue);
                     }}
                     {...props}
                   />

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { CreateBannerDto } from '@api/admin/banner/dto/create-banner.dto';
-import { BANNER_STATE, BANNER_VALID_STATE } from '@lucky/shared';
+import { BANNER_STATE, BANNER_VALID_STATE, JUMP_CATE } from '@lucky/shared';
 import { QueryBannerDto } from '@api/admin/banner/dto/query-banner.dto';
 import { Prisma } from '@prisma/client';
 import { UpdateBannerDto } from '@api/admin/banner/dto/update-banner.dto';
@@ -20,6 +20,18 @@ export class BannerService {
    * @returns {Promise<any>}
    */
   async create(dto: CreateBannerDto) {
+    if (dto.jumpCate === JUMP_CATE.TREASURE && !dto.relatedTitleId) {
+      throw new BadRequestException(
+        'Related title ID must be provided when jump category is TREASURE',
+      );
+    }
+
+    if (dto.jumpCate === JUMP_CATE.EXTERNAL && !dto.jumpUrl) {
+      throw new BadRequestException(
+        'Jump URL must be provided when jump category is EXTERNAL LINK',
+      );
+    }
+
     return this.prisma.banner.create({
       data: {
         ...dto,
@@ -97,6 +109,26 @@ export class BannerService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Update banner state
+   * @param id
+   * @param state
+   */
+  async updateState(id: string, state: number) {
+    const banner = await this.findOne(id);
+
+    if (!banner) {
+      throw new NotFoundException(`Banner with id ${id} not found`);
+    }
+
+    return this.prisma.banner.update({
+      where: { id },
+      data: {
+        state,
+      },
+    });
   }
 
   /**

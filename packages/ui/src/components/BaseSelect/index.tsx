@@ -69,7 +69,7 @@ export const BaseSelect = React.forwardRef<HTMLButtonElement, BaseSelectProps>(
     ref,
   ) => {
     const safeValue =
-      value !== undefined && value !== null ? String(value) : undefined;
+      value !== undefined && value !== null ? String(value) : "";
 
     const hasError = !!error;
 

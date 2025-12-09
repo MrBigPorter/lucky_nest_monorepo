@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -20,6 +21,8 @@ import { CreateBannerDto } from '@api/admin/banner/dto/create-banner.dto';
 import { plainToInstance } from 'class-transformer';
 import { Role } from '@lucky/shared';
 import { QueryBannerDto } from '@api/admin/banner/dto/query-banner.dto';
+import { UpdateBannerDto } from '@api/admin/banner/dto/update-banner.dto';
+import { UpdateBannerStateDto } from '@api/admin/banner/dto/update-banner-state.dto';
 
 @ApiTags('后台-轮播图管理')
 @ApiBearerAuth()
@@ -34,6 +37,14 @@ export class BannerController {
   @ApiOkResponse({ type: BannerResponseDto })
   async create(@Body() dto: CreateBannerDto) {
     const data = await this.bannerService.create(dto);
+    return plainToInstance(BannerResponseDto, data);
+  }
+
+  @Patch(':id')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOkResponse({ type: BannerResponseDto })
+  async update(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
+    const data = await this.bannerService.update(id, dto);
     return plainToInstance(BannerResponseDto, data);
   }
 
@@ -54,6 +65,17 @@ export class BannerController {
   @ApiOkResponse({ type: BannerResponseDto })
   async findOne(@Param('id') id: string) {
     const data = await this.bannerService.findOne(id);
+    return plainToInstance(BannerResponseDto, data);
+  }
+
+  @Patch(':id/state')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOkResponse({ type: BannerResponseDto })
+  async updateState(
+    @Param('id') id: string,
+    @Body() dto: UpdateBannerStateDto,
+  ) {
+    const data = await this.bannerService.updateState(id, dto.state);
     return plainToInstance(BannerResponseDto, data);
   }
 
