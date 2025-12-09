@@ -1,3 +1,5 @@
+import { PaginationParams } from '@/api/types.ts';
+
 export type Language = 'en' | 'zh';
 export type Theme = 'light' | 'dark';
 
@@ -100,6 +102,12 @@ export type createActSectionPayload = Omit<
   startAt?: Date;
   endAt?: Date;
 };
+
+export interface ActSectionListParams extends PaginationParams {
+  title?: string;
+  key?: string;
+  status?: number;
+}
 
 export interface actSectionWithProducts extends ActSection {
   items: Partial<Product>[];

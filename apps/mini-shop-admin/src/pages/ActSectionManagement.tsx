@@ -8,7 +8,6 @@ import {
   GripVertical,
   LayoutGrid,
   Image as ImageIcon,
-  BadgeIndianRupee,
   ArrowBigDownDash,
 } from 'lucide-react';
 import { Card, Badge, Input } from '@/components/UIComponents';
@@ -28,10 +27,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -51,7 +48,7 @@ import {
   TableCell,
 } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
-import { ActSection, actSectionWithProducts } from '@/type/types.ts';
+import { ActSectionListParams, actSectionWithProducts } from '@/type/types.ts';
 import { actSectionApi } from '@/api';
 import { ActSectionBindProductModal } from '@/pages/act-section/ActSectionBindProductModal.tsx';
 import { ProductSelectorModal } from '@/pages/act-section/ProductSelectorModal.tsx';
@@ -62,7 +59,7 @@ const SortableRow = ({
   row,
 }: {
   children: React.ReactNode;
-  row: Row<ActSection>;
+  row: Row<actSectionWithProducts>;
 }) => {
   const {
     attributes,
@@ -110,33 +107,41 @@ const SortableRow = ({
 // --- 主页面组件 ---
 export const ActSectionManagement: React.FC = () => {
   const addToast = useToastStore((state) => state.addToast);
-
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingSection, setEditingSection] = useState<ActSection | null>(null);
-
   // 筛选状态
   const [filters, setFilters] = useState<{
     title: string;
-    status: string | number;
+    status: string;
   }>({
     title: '',
     status: 'ALL',
   });
 
   // 获取数据 (useAntdTable 模式)
-  const getTableData = async ({
-    current,
-    pageSize,
-  }: {
-    current: number;
-    pageSize: number;
-  }) => {
-    const res = await actSectionApi.getList({
-      page: current,
+  const getTableData = async (
+    {
+      current,
       pageSize,
-      //title: formData.title,
-      //status: formData.status === 'ALL' ? undefined : Number(formData.status),
-    });
+    }: {
+      current: number;
+      pageSize: number;
+    },
+    formData: {
+      title: string;
+      status: string;
+    },
+  ) => {
+    const params: ActSectionListParams = {
+      pageSize,
+      page: current,
+    };
+    if (formData?.status && formData.status !== 'ALL') {
+      params.status = Number(formData.status);
+    }
+
+    if (formData?.title) {
+      params.title = formData.title;
+    }
+    const res = await actSectionApi.getList(params);
     return { list: res.list, total: res.total };
   };
 
@@ -153,7 +158,10 @@ export const ActSectionManagement: React.FC = () => {
     ],
   });
 
-  const dataSource = (tableProps.dataSource || []) as ActSection[];
+  const dataSource = useMemo(
+    () => tableProps.dataSource as actSectionWithProducts[],
+    [tableProps.dataSource],
+  );
 
   // 乐观更新：为了拖拽流畅，我们需要维护一个本地的 data state，虽然 useAntdTable 也有，但我们需要实时修改顺序
   // 注意：实际开发中，可以直接修改 dataSource，但 readonly 可能会报错，最好 copy 一份
@@ -177,18 +185,18 @@ export const ActSectionManagement: React.FC = () => {
     },
   });
 
-  const updateSortOrder = useRequest(actSectionApi.updateSortOrder, {
+  /*  const updateSortOrder = useRequest(actSectionApi.updateSortOrder, {
     manual: true,
     onSuccess: () => {
       addToast('success', 'Order saved');
       // 排序后最好刷新一下，确保后端返回的顺序一致
       refresh();
     },
-  });
+  });*/
 
   // --- Handlers ---
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  /*  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
       const oldIndex = dataSource.findIndex((item) => item.id === active.id);
@@ -197,20 +205,20 @@ export const ActSectionManagement: React.FC = () => {
       // 1. 前端UI立刻更新 (通过直接修改 cache 或者重新触发渲染，这里我们简单处理，依赖 refresh)
       // 在复杂场景下，你应该先 setData(arrayMove(...)) 实现无闪烁
 
-      const newOrderIds = arrayMove(dataSource, oldIndex, newIndex).map(
+      /!* const newOrderIds = arrayMove(dataSource, oldIndex, newIndex).map(
         (item) => item.id,
-      );
+      );*!/
 
       // 2. 发送请求给后端
-      updateSortOrder.run({ ids: newOrderIds });
+      // updateSortOrder.run({ ids: newOrderIds });
     }
-  };
+  };*/
 
-  const handleToggleStatus = (record: ActSection) => {
+  const handleToggleStatus = (record: actSectionWithProducts) => {
     updateStatus.run(record.id, { status: record.status === 1 ? 0 : 1 });
   };
 
-  const handleDelete = (record: ActSection) => {
+  const handleDelete = (record: actSectionWithProducts) => {
     ModalManager.open({
       title: 'Delete Section?',
       content: `Are you sure you want to delete "${record.title}"?`,
@@ -219,7 +227,7 @@ export const ActSectionManagement: React.FC = () => {
     });
   };
 
-  const handleEdit = async (record: ActSection) => {
+  const handleEdit = async (record: actSectionWithProducts) => {
     ModalManager.open({
       title: 'Edit Product Section',
       renderChildren: ({ close, confirm }) => (
@@ -266,14 +274,14 @@ export const ActSectionManagement: React.FC = () => {
   );
 
   // --- Table Columns ---
-  const columnHelper = createColumnHelper<ActSection>();
+  const columnHelper = createColumnHelper<actSectionWithProducts>();
 
   const columns = [
     // 1. 拖拽手柄列
     columnHelper.display({
       id: 'dragHandle',
       header: '',
-      cell: ({ row, listeners }: any) => (
+      cell: ({ listeners }: any) => (
         <div
           {...listeners}
           className="cursor-move text-gray-400 hover:text-gray-600 flex items-center justify-center"
@@ -312,8 +320,9 @@ export const ActSectionManagement: React.FC = () => {
         );
       },
     }),
-    columnHelper.accessor('_count.items', {
-      header: 'Items',
+    columnHelper.display({
+      id: 'countProducts',
+      header: 'Products',
       cell: (info) => (
         <Badge color="gray">
           {info.row.original.items?.length || 0} Products
@@ -441,7 +450,10 @@ export const ActSectionManagement: React.FC = () => {
                 { label: 'Disabled', value: '0' },
               ]}
             />
-            <div className="flex items-end">
+            <div className="flex items-end gap-2.5">
+              <Button variant="outline" onClick={reset}>
+                Reset
+              </Button>
               <Button
                 onClick={() => run({ current: 1, pageSize: 10 }, filters)}
               >
@@ -455,7 +467,7 @@ export const ActSectionManagement: React.FC = () => {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
+          // onDragEnd={handleDragEnd}
         >
           <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/5">
             <Table className="text-left">

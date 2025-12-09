@@ -16,7 +16,6 @@ import {
   AdminUpdateUser,
   CreateProduct,
   actSectionWithProducts,
-  ActSection,
   actSectionBindProducts,
   createActSectionPayload,
 } from '@/type/types.ts';

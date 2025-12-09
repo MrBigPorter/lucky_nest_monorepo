@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, Max } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+} from 'class-validator';
 import { ToNumber } from '@api/common/dto/transforms';
 
 export class QueryActSectionDto {
@@ -15,4 +22,26 @@ export class QueryActSectionDto {
   @IsInt()
   @Max(100, { message: 'pageSize must not be greater than 100' })
   pageSize!: number;
+
+  @ApiProperty({
+    description: 'section title',
+    example: 'Summer Sale',
+    type: 'string',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiProperty({
+    description: 'section status',
+    example: 1,
+    type: 'number',
+    required: false,
+  })
+  @IsOptional()
+  @ToNumber()
+  @IsInt()
+  @IsIn([0, 1])
+  status?: number;
 }

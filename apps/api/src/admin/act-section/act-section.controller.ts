@@ -54,10 +54,8 @@ export class ActSectionController {
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: [ActSectionResponseDto] })
   async findAll(@Query() query: QueryActSectionDto) {
-    const { list, pageSize, page, total } = await this.sectionService.findAll(
-      query.page,
-      query.pageSize,
-    );
+    const { list, pageSize, page, total } =
+      await this.sectionService.findAll(query);
     const cleanList = list.map((section: any) => {
       const cleanItems = section.items
         .map((item: any) => {
