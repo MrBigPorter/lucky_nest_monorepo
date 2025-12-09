@@ -1,4 +1,3 @@
-// schema/imageFileSchema.ts
 import { z } from 'zod';
 
 export const imageFileSchema = z

@@ -118,6 +118,53 @@ export interface actSectionBindProducts {
   treasureIds: string[];
 }
 
+// Banner 广告位
+export interface Banner {
+  /** 唯一 ID */
+  id: number;
+
+  /** 标题，如：Summer Sale */
+  title: string;
+
+  /** banner 图片地址 */
+  bannerImgUrl: string;
+
+  /** 文件类型：1 = 图片，2 = 视频（具体按你后端约定） */
+  fileType: number;
+
+  /** Banner 分类：比如 首页、活动页等（枚举值） */
+  bannerCate: number;
+
+  /** 跳转类型：1 = H5 链接，2 = 原生页 等 */
+  jumpCate: number;
+
+  /** 跳转链接或路由 */
+  jumpUrl: string;
+
+  /** 排序值，越小越靠前 */
+  sortOrder: number;
+
+  /** 状态：1 = 启用，0 = 禁用 等 */
+  state: number;
+
+  /** 活动开始时间，Unix 时间戳（秒） */
+  activityAtStart: number;
+
+  /** 活动结束时间，Unix 时间戳（秒） */
+  activityAtEnd: number;
+
+  /** 创建时间，Unix 时间戳（秒） */
+  createdAt: number;
+}
+
+export type CreateBannerPayload = Omit<Banner, 'id' | 'createdAt' | 'state'>;
+
+export type BannerListParams = PaginationParams & {
+  title?: string;
+  bannerCate?: number;
+  state?: number;
+};
+
 export interface Category {
   id: number;
   name: string;

@@ -1,6 +1,6 @@
 // MediaUploaderPreview.tsx
 import React from "react";
-import { X, UploadCloud } from "lucide-react";
+import { X } from "lucide-react";
 import { useMediaUploaderContext } from "./context";
 import type { RenderItemProps } from "./types";
 import { MediaUploaderButton } from "./MediaUploaderButton";
@@ -66,9 +66,6 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
               className="w-full h-full object-cover"
             />
           )}
-
-          {/* 删除按钮那边你之前已经有 stopPropagation，那里没问题 */}
-          {/* ...其他内容不变... */}
         </div>
       </div>
     );

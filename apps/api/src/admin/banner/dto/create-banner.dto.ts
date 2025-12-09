@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsIn,
   IsInt,
@@ -9,7 +9,6 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ToNumber } from '@api/common/dto/transforms';
-import { Transform } from 'class-transformer';
 
 export class CreateBannerDto {
   @ApiProperty({ description: 'Banner title', example: 'Summer Sale' })
@@ -27,6 +26,14 @@ export class CreateBannerDto {
   @MaxLength(255)
   @IsString()
   bannerImgUrl!: string;
+
+  @ApiPropertyOptional({
+    description: 'Related title ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsString()
+  relatedTitleId?: string;
 
   @ApiProperty({ description: 'File type', example: 1 })
   @IsNotEmpty({ message: 'File type must not be empty' })
@@ -47,36 +54,44 @@ export class CreateBannerDto {
   })
   bannerCate!: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Jump category, 1 no, 2 inner 3 external',
     example: 1,
   })
   @IsNotEmpty({ message: 'Jump category must not be empty' })
   @ToNumber()
   @IsInt({ message: 'Jump category must be an integer' })
-  @IsIn([1, 2, 3], {
+  @IsIn([1, 2, 3, 5], {
     message: 'Jump category must be either 1 or 2',
   })
   jumpCate?: number;
 
-  @ApiProperty({ description: 'Jump URL', example: 'https://example.com' })
+  @ApiPropertyOptional({
+    description: 'Jump URL',
+    example: 'https://example.com',
+  })
   @IsOptional()
-  @IsUrl({}, { message: 'Jump URL must be a valid URL' })
   @MaxLength(255)
   @IsString()
   jumpUrl?: string;
 
-  @ApiProperty({ description: 'Sort order', example: 1 })
+  @ApiPropertyOptional({ description: 'Sort order', example: 1 })
   @IsOptional()
   @ToNumber()
   @IsInt({ message: 'Sort order must be an integer' })
   sortOrder?: number;
 
-  @ApiProperty({ description: ' Active start time', example: '177786786867' })
+  @ApiPropertyOptional({
+    description: ' Active start time',
+    example: '177786786867',
+  })
   @IsOptional()
   activityAtStart?: Date;
 
-  @ApiProperty({ description: 'Active end time', example: '177786786867' })
+  @ApiPropertyOptional({
+    description: 'Active end time',
+    example: '177786786867',
+  })
   @IsOptional()
   activityAtEnd?: Date;
 }

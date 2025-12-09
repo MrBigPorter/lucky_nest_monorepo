@@ -18,6 +18,9 @@ import {
   actSectionWithProducts,
   actSectionBindProducts,
   createActSectionPayload,
+  Banner,
+  BannerListParams,
+  CreateBannerPayload,
 } from '@/type/types.ts';
 
 /**
@@ -73,6 +76,33 @@ export const productApi = {
   // 更新商品排序
   updateProductOrder: (id: string, sortOrder: number) =>
     http.patch<Product>(`/products/${id}/order`, { sortOrder }),
+};
+
+/**
+ * banner API
+ */
+export const bannerApi = {
+  // 获取 banner 列表
+  getList: (params?: BannerListParams) =>
+    http.get<PaginatedResponse<Banner>>('/v1/admin/banners/list', params),
+
+  //获取 banner 详情
+  getBannerById: (id: string) => http.get<Banner>(`/v1/admin/banners/${id}`),
+
+  // 创建banner
+  create: (data: CreateBannerPayload) =>
+    http.post<Banner>('/v1/admin/banners/create', data),
+
+  // 更新banner信息
+  update: (id: string, data: Partial<CreateBannerPayload>) =>
+    http.patch<Banner>(`/v1/admin/banners/${id}`, data),
+
+  // 更新banner状态
+  updateState: (id: string, state: number) =>
+    http.patch<Banner>(`/v1/admin/banners/${id}/state`, { state }),
+
+  // 删除banner
+  delete: (id: string) => http.delete<Banner>(`/v1/admin/banners/${id}`),
 };
 
 /**
