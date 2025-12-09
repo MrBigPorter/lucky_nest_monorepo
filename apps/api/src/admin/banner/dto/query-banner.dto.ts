@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { ToNumber } from '@api/common/dto/transforms';
 
 export class QueryBannerDto {
@@ -27,4 +34,9 @@ export class QueryBannerDto {
   @IsInt()
   @ToNumber()
   bannerCate?: number;
+
+  @ApiPropertyOptional({ description: 'title', example: 'Summer Sale' })
+  @IsOptional()
+  @IsString()
+  title?: string;
 }
