@@ -8,6 +8,8 @@ import { CreateActSectionDto } from '@api/admin/act-section/dto/create-act-secti
 import { UpdateActSectionDto } from '@api/admin/act-section/dto/update-act-section.dto';
 import { BindSectionItemDto } from '@api/admin/act-section/dto/bind-section-item.dto';
 import { ACT_SECTION_STATUS } from '@lucky/shared';
+import { QueryActSectionDto } from '@api/admin/act-section/dto/query-act-section.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ActSectionService {
@@ -43,14 +45,25 @@ export class ActSectionService {
 
   /**
    * 获取活动专区列表
-   * @param page
-   * @param pageSize
+   * @param dto
    */
-  async findAll(page: number, pageSize: number) {
+  async findAll(dto: QueryActSectionDto) {
+    const { page, pageSize, status, title } = dto;
     const skip = (page - 1) * pageSize;
+
+    const whereCondition: Prisma.ActSectionWhereInput = {};
+
+    if (title) {
+      whereCondition.title = { contains: title, mode: 'insensitive' };
+    }
+
+    if (status !== undefined) {
+      whereCondition.status = status;
+    }
 
     const [list, total] = await this.prisma.$transaction([
       this.prisma.actSection.findMany({
+        where: whereCondition,
         skip: skip,
         take: pageSize,
         orderBy: { sortOrder: 'asc' }, // 展台按顺序排
