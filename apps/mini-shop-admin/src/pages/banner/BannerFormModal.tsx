@@ -47,9 +47,8 @@ export const BannerFormModal: React.FC<Props> = ({
     },
   });
 
-  // 👀 监听跳转类型变化，实现联动
+  //  监听跳转类型变化，实现联动
   const jumpCate = useWatch({ control: form.control, name: 'jumpCate' });
-  const bannerCate = useWatch({ control: form.control, name: 'bannerCate' });
 
   const { run: submit, loading } = useRequest(
     async (values) => {

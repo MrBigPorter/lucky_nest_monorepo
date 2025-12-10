@@ -7,8 +7,8 @@ export const BannerShema = z
     title: z.string().min(1, 'Title is required').max(200),
     bannerImgUrl: imageFileSchema,
     fileType: z.coerce.number().int().default(1), // 1 image 2 video
-    bannerCate: z.string(), // 1 home 2 activity 3 product 4 custom
-    jumpCate: z.string(), // 0 none 1 treasure 2 category 3 external link
+    bannerCate: z.number().min(1), // 1 home 2 activity 3 product 4 custom
+    jumpCate: z.number(), // 0 none 1 treasure 2 category 3 external link
     jumpUrl: z.string().optional().or(z.literal('')),
 
     //relatedTitleId: z.string().optional(),
