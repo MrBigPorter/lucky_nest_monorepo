@@ -80,6 +80,7 @@ const SortableRow = ({
       style={style}
       className={cn(
         className,
+        'bg-white dark:bg-gray-950',
         isDragging && 'bg-blue-50 dark:bg-blue-900/20 shadow-lg',
       )}
       onClick={onClick}
@@ -305,8 +306,8 @@ export const BaseTable = <T extends Record<string, any>>({
 
   const content = (
     <div className="overflow-x-auto rounded-xl">
-      <Table>
-        <TableHeader className="bg-gray-50/60 dark:bg-white/5">
+      <Table className="border-separate border-spacing-0">
+        <TableHeader className="bg-gray-50/60 dark:bg-white/5 [&_tr]:border-0">
           {table.getHeaderGroups().map((hg) => (
             <TableRow key={hg.id} className="border-0">
               {hg.headers.map((h) => {
@@ -330,7 +331,7 @@ export const BaseTable = <T extends Record<string, any>>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20 [&_tr:last-child]:border-0">
+        <TableBody className="dark:divide-white/5 bg-white dark:bg-black/20 [&_tr:last-child_td]:border-b-0">
           {renderTableBody()}
         </TableBody>
       </Table>
@@ -411,7 +412,10 @@ const MemoizedCell = memo(
       cell.column.id === 'dragHandle' && React.isValidElement(content);
 
     return (
-      <TableCell style={{ width: cell.column.getSize() }}>
+      <TableCell
+        style={{ width: cell.column.getSize() }}
+        className="border-b border-gray-100 dark:border-white/5"
+      >
         {isDragHandle
           ? React.cloneElement(
               content as React.ReactElement,
