@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useMediaUploaderContext } from "./context";
 import type { RenderItemProps } from "./types";
 import { MediaUploaderButton } from "./MediaUploaderButton";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../lib/utils";
 
 interface MediaUploaderPreviewProps {
   className?: string;

@@ -3,7 +3,7 @@ import type {
   FormThemeVariantsClass,
   VariantKey,
 } from "../types/themeType";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../lib/utils";
 
 /**
  * Creates a form theme by merging the default theme with custom properties.

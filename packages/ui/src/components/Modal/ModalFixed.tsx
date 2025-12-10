@@ -1,7 +1,7 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { cn } from "../../../lib/utils.ts";
+import { cn } from "../../lib/utils.ts";
 import { Button } from "../../button.tsx";
 import { ModalProps } from "./Types.ts";
 

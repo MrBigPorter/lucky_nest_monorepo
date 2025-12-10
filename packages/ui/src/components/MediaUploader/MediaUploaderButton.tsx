@@ -2,7 +2,7 @@
 import React from "react";
 import { UploadCloud } from "lucide-react";
 import { useMediaUploaderContext } from "./context";
-import { cn } from "../../../lib/utils";
+import { cn } from "../../lib/utils";
 
 interface MediaUploaderButtonProps {
   className?: string;
