@@ -48,6 +48,7 @@ import { JUMP_CATE } from '@lucky/shared';
 import { Banner, BannerListParams } from '@/type/types.ts';
 import { SchemaSearchForm } from '@/components/SchemaSearchForm.tsx';
 import { Pagination } from '@/components/Pagination.tsx';
+import { BaseTable } from '@/components/BaseTable.tsx';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({
@@ -373,69 +374,20 @@ export const BannerManagement: React.FC = () => {
             onReset={reset}
           />
         </div>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="overflow-x-auto rounded-xl ">
-            <Table>
-              <TableHeader className="bg-gray-50/60 dark:bg-white/5">
-                {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id}>
-                    {hg.headers.map((h) => (
-                      <TableHead
-                        key={h.id}
-                        className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase"
-                      >
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
-                <SortableContext
-                  items={items}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {table.getRowModel().rows.map((row) => (
-                    <SortableRow key={row.id} row={row}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {React.cloneElement(
-                            flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            ) as React.ReactElement,
-                            { cell },
-                          )}
-                        </TableCell>
-                      ))}
-                    </SortableRow>
-                  ))}
-                </SortableContext>
-                {dataSource.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center text-gray-500"
-                    >
-                      No banners in this section.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </DndContext>
-        <Pagination
-          current={tableProps.pagination.current}
-          pageSize={10}
-          total={tableProps.pagination.total}
-          onChange={(page, pageSize) =>
-            tableProps.pagination.onChange(page, pageSize)
-          }
+        {tableProps.current}
+        {tableProps.total}
+        {tableProps.pageSize}
+        <BaseTable
+          data={dataSource}
+          columns={columns}
+          pagination={{
+            current: tableProps.current,
+            total: tableProps.total,
+            pageSize: tableProps.pageSize,
+            onChange: (page, pageSize) => {
+              tableProps.onChange?.(page, pageSize);
+            },
+          }}
         />
       </Card>
     </div>
