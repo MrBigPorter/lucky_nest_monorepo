@@ -123,6 +123,7 @@ export const ProductSelectorModal: React.FC<Props> = ({
               required
               name="imgStyleType"
               label="Style Type"
+              numeric={true}
               options={[
                 { label: 'Carousel (0)', value: '0' },
                 { label: 'Grid 2 Columns (1)', value: '1' },

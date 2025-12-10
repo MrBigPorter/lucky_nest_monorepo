@@ -67,7 +67,10 @@ export function FormSelectField<
         const finalVariant = error ? "error" : variant;
 
         const selectValue =
-          field.value === undefined || field.value === null
+          field.value === undefined ||
+          field.value === null ||
+          field.value === "" ||
+          field.value === 0
             ? undefined
             : String(field.value);
 
@@ -105,6 +108,7 @@ export function FormSelectField<
               >
                 <FormControl asChild>
                   <BaseSelect
+                    key={String(selectValue)}
                     options={options}
                     placeholder={placeholder}
                     disabled={disabled}

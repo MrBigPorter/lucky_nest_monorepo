@@ -209,18 +209,18 @@ export const BannerManagement: React.FC = () => {
   };
 
   // --- Handlers ---
-  const handleOpenModal = (record?: any) => {
+  const handleOpenModal = (record?: Banner) => {
     ModalManager.open({
       title: record ? 'Edit Banner' : 'Create Banner',
       renderChildren: ({ close, confirm }) => (
         <BannerFormModal
+          key={record ? `edit-${record.id}` : 'create-banner'}
           close={close}
           confirm={() => {
             confirm();
             refresh();
           }}
           editingData={record}
-          defaultCate={Number(activeTab)}
         />
       ),
     });

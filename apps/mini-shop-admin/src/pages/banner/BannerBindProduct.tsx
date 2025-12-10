@@ -68,7 +68,6 @@ export const BannerBindProduct: React.FC<Props> = ({ value, onChange }) => {
         cell: (info) => {
           const meta = info.table.options.meta as TableMeta;
           const { relatedTitleId, setRelatedTitleId } = meta;
-          console.log('relatedTitleId in cell:', relatedTitleId);
           const id = info.row.original.treasureId;
           // 选中状态：要么在 selectedRows 里，要么是当前关联的那个
           const isChecked = relatedTitleId === id;

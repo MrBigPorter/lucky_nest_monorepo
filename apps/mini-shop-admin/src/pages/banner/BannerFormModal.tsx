@@ -124,7 +124,6 @@ export const BannerFormModal: React.FC<Props> = ({
           {/* 2. 位置与排期 */}
           <div className="grid grid-cols-2 gap-4">
             <FormSelectField
-              key={bannerCate} // 强制刷新，避免编辑时位置错误
               name="bannerCate"
               label="Display Position"
               numeric={true}
@@ -149,7 +148,6 @@ export const BannerFormModal: React.FC<Props> = ({
             </div>
 
             <FormSelectField
-              key={jumpCate}
               name="jumpCate"
               label="Navigation Type"
               numeric={true}
