@@ -38,7 +38,6 @@ import { CSS } from '@dnd-kit/utilities';
 
 import {
   Button,
-  BaseSelect as Select,
   ModalManager,
   Table,
   TableHeader,
@@ -53,6 +52,7 @@ import { ActSectionListParams, actSectionWithProducts } from '@/type/types.ts';
 import { actSectionApi } from '@/api';
 import { ActSectionBindProductModal } from '@/pages/act-section/ActSectionBindProductModal.tsx';
 import { ProductSelectorModal } from '@/pages/act-section/ProductSelectorModal.tsx';
+import { Pagination } from '@/components/Pagination.tsx';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({
@@ -528,41 +528,14 @@ export const ActSectionManagement: React.FC = () => {
           </div>
         </DndContext>
 
-        {/* Pagination (Copy from your existing code) */}
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-          <div>Total {tableProps.pagination.total} items</div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={tableProps.pagination.current === 1}
-              onClick={() =>
-                tableProps.pagination.onChange(
-                  tableProps.pagination.current - 1,
-                  10,
-                )
-              }
-            >
-              Prev
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                tableProps.pagination.current * 10 >=
-                tableProps.pagination.total
-              }
-              onClick={() =>
-                tableProps.pagination.onChange(
-                  tableProps.pagination.current + 1,
-                  10,
-                )
-              }
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          current={tableProps.pagination.current}
+          pageSize={10}
+          total={tableProps.pagination.total}
+          onChange={(page, pageSize) =>
+            tableProps.pagination.onChange(page, pageSize)
+          }
+        />
       </Card>
     </div>
   );

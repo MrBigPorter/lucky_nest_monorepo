@@ -47,6 +47,7 @@ import { BannerFormModal } from '@/pages/banner/BannerFormModal.tsx';
 import { JUMP_CATE } from '@lucky/shared';
 import { Banner, BannerListParams } from '@/type/types.ts';
 import { SchemaSearchForm } from '@/components/SchemaSearchForm.tsx';
+import { Pagination } from '@/components/Pagination.tsx';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({
@@ -428,6 +429,14 @@ export const BannerManagement: React.FC = () => {
             </Table>
           </div>
         </DndContext>
+        <Pagination
+          current={tableProps.pagination.current}
+          pageSize={10}
+          total={tableProps.pagination.total}
+          onChange={(page, pageSize) =>
+            tableProps.pagination.onChange(page, pageSize)
+          }
+        />
       </Card>
     </div>
   );

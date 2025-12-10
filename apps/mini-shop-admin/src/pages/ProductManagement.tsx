@@ -25,6 +25,7 @@ import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.t
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 import { TREASURE_STATE } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore.ts';
+import { Pagination } from '@/components/Pagination.tsx';
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -101,10 +102,7 @@ export const ProductManagement: React.FC = () => {
   });
 
   const pagination = tableProps.pagination || {};
-  const current = pagination.current ?? 1;
   const pageSize = pagination.pageSize ?? 10;
-  const total = pagination.total ?? 0;
-  const totalPage = Math.max(1, Math.ceil(total / pageSize));
 
   const dataSource = (tableProps.dataSource || []) as Product[];
 
@@ -371,40 +369,14 @@ export const ProductManagement: React.FC = () => {
           </Table>
         </div>
 
-        {/* 分页 */}
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-          <div>
-            Total{' '}
-            <span className="font-semibold text-gray-800 dark:text-gray-100">
-              {total}
-            </span>{' '}
-            items
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pagination.onChange?.(current - 1, pageSize)}
-              disabled={current <= 1}
-            >
-              Previous
-            </Button>
-            <span>
-              Page{' '}
-              <span className="font-semibold">
-                {current} / {totalPage}
-              </span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pagination.onChange?.(current + 1, pageSize)}
-              disabled={current >= totalPage}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          current={tableProps.pagination.current}
+          pageSize={10}
+          total={tableProps.pagination.total}
+          onChange={(page, pageSize) =>
+            tableProps.pagination.onChange(page, pageSize)
+          }
+        />
       </Card>
     </div>
   );

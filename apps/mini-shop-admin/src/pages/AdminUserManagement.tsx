@@ -22,6 +22,7 @@ import { CreateAdminUserModal } from '@/pages/admin/CreateAdminUserModal.tsx';
 import { EditAdminUserModal } from '@/pages/admin/EditAdminUserModal.tsx';
 import { EditAdminPasswordModal } from '@/pages/admin/EditAdminPassowordModal.tsx';
 import { BaseSelect, Button } from '@repo/ui';
+import { Pagination } from '@/components/Pagination.tsx';
 
 type AdminUserSearchForm = {
   username?: string;
@@ -120,8 +121,7 @@ export const AdminUserManagement: React.FC = () => {
   const current = pagination.current ?? 1;
   const pageSize = pagination.pageSize ?? 10;
   const total = pagination.total ?? 0;
-  const totalPage = Math.max(1, Math.ceil(total / pageSize));
-
+  Math.max(1, Math.ceil(total / pageSize));
   const dataSource = (tableProps.dataSource || []) as AdminUser[];
 
   // -------------------- 列表操作 --------------------
@@ -438,39 +438,12 @@ export const AdminUserManagement: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-          <div>
-            Total{' '}
-            <span className="font-semibold text-gray-800 dark:text-gray-100">
-              {total}
-            </span>{' '}
-            items
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pagination.onChange?.(current - 1, pageSize)}
-              disabled={current <= 1}
-            >
-              Previous
-            </Button>
-            <span>
-              Page{' '}
-              <span className="font-semibold">
-                {current} / {totalPage}
-              </span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => pagination.onChange?.(current + 1, pageSize)}
-              disabled={current >= totalPage}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <Pagination
+          current={current}
+          pageSize={pageSize}
+          total={total}
+          onChange={(page, size) => pagination.onChange?.(page, size)}
+        />
       </Card>
 
       <CreateAdminUserModal

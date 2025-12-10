@@ -19,7 +19,7 @@ import type { BaseFieldProps } from "./types/baseFieldType";
 import { useFormTheme } from "./formTheme/FormThemeProvider";
 import { getVariantClassNames } from "./formTheme";
 import { twMerge } from "tailwind-merge";
-import { cn } from "../../lib/utils";
+import { cn } from "../lib/utils";
 
 import { Calendar } from "../components/ui/calendar";
 import {

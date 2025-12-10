@@ -20,7 +20,7 @@ import { getVariantClassNames } from "./formTheme";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import type { BaseFieldProps } from "./types/baseFieldType.ts";
-import { cn } from "../../lib/utils.ts";
+import { cn } from "../lib/utils.ts";
 
 /**
  * `FormTextField` is a reusable form component that wraps

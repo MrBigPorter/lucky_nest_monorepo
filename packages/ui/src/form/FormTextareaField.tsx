@@ -18,7 +18,7 @@ import {
 import type { BaseFieldProps } from "./types/baseFieldType";
 import { useFormTheme } from "./formTheme/FormThemeProvider";
 import { getVariantClassNames } from "./formTheme";
-import { cn } from "../../lib/utils";
+import { cn } from "../lib/utils";
 import { FormTextarea } from "./FormTextarea";
 
 export function FormTextareaField<
