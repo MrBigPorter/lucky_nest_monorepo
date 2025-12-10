@@ -18,6 +18,7 @@ import {
   getSortedRowModel,
   getExpandedRowModel,
   RowSelectionState,
+  Cell,
 } from '@tanstack/react-table';
 import {
   DndContext,
@@ -268,28 +269,9 @@ export const BaseTable = <T extends Record<string, any>>({
     }
 
     const tableRows = table.getRowModel().rows.map((row) => {
-      const cells = row.getVisibleCells().map((cell) => {
-        //  先计算 content，再判断是否是 Element，最后 clone
-        const content = flexRender(
-          cell.column.columnDef.cell,
-          cell.getContext(),
-        );
-
-        return (
-          <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-            {cell.column.id === 'dragHandle' && React.isValidElement(content)
-              ? React.cloneElement(
-                  content as React.ReactElement,
-                  {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    'data-drag-handle': true,
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  } as any,
-                )
-              : content}
-          </TableCell>
-        );
-      });
+      const cells = row
+        .getVisibleCells()
+        .map((cell) => <MemoizedCell key={cell.id} cell={cell} />);
 
       return (
         <React.Fragment key={row.id}>
@@ -326,7 +308,7 @@ export const BaseTable = <T extends Record<string, any>>({
       <Table>
         <TableHeader className="bg-gray-50/60 dark:bg-white/5">
           {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id}>
+            <TableRow key={hg.id} className="border-0">
               {hg.headers.map((h) => {
                 return (
                   <TableHead key={h.id} style={{ width: h.getSize() }}>
@@ -348,7 +330,7 @@ export const BaseTable = <T extends Record<string, any>>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
+        <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20 [&_tr:last-child]:border-0">
           {renderTableBody()}
         </TableBody>
       </Table>
@@ -418,3 +400,52 @@ const TableRowComponent = memo(
 );
 
 TableRowComponent.displayName = 'TableRowComponent';
+
+// 只有当 cell 的值变化，或者它是“操作列”(没有值)时，才更新
+const MemoizedCell = memo(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ({ cell }: { cell: Cell<any, any> }) => {
+    // 渲染逻辑移到这里
+    const content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    const isDragHandle =
+      cell.column.id === 'dragHandle' && React.isValidElement(content);
+
+    return (
+      <TableCell style={{ width: cell.column.getSize() }}>
+        {isDragHandle
+          ? React.cloneElement(
+              content as React.ReactElement,
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                'data-drag-handle': true,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any,
+            )
+          : content}
+      </TableCell>
+    );
+  },
+  (prev, next) => {
+    // 1. 如果行数据没变，单元格肯定不用变 (继承 Row 的优化)
+    if (prev.cell.row.original === next.cell.row.original) return true;
+
+    // 2. 如果行数据变了（比如 updateStatus 导致 row.original 变了），
+    //    我们进一步检查：当前这个单元格的值(getValue)有没有变？
+    const prevValue = prev.cell.getValue();
+    const nextValue = next.cell.getValue();
+
+    // 如果值是基本类型且相等 (比如 'image_url' 字符串没变)，则跳过渲染！
+    if (
+      prevValue === nextValue &&
+      typeof prevValue !== 'object' &&
+      prevValue !== undefined
+    ) {
+      return true;
+    }
+
+    // 注意：对于 'Actions' 列，getValue() 通常是 undefined/null，
+    // 或者它依赖 row.original 的多个字段，这种情况下我们让它正常更新。
+    return false; // 其他情况（值变了，或者是复杂对象），允许更新
+  },
+);
+MemoizedCell.displayName = 'MemoizedCell';

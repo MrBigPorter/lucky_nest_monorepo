@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { bannerApi } from '@/api';
 import { Button, ModalManager } from '@repo/ui';
@@ -58,6 +58,7 @@ export const BannerManagement: React.FC = () => {
     refresh,
     run,
     search: { reset },
+    mutate,
   } = useAntdTable(getTableData, {
     defaultPageSize: 20,
     defaultParams: [
@@ -68,8 +69,6 @@ export const BannerManagement: React.FC = () => {
       },
     ],
   });
-
-  console.log('tableProps', tableProps);
 
   // 搜索回调：直接拿到所有值
   const handleSearch = (values: BannerSearchForm) => {
@@ -92,153 +91,176 @@ export const BannerManagement: React.FC = () => {
 
   const { run: updateStatus } = useRequest(bannerApi.updateState, {
     manual: true,
+    onBefore: ([id, state]) => {
+      mutate((old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          list: old.list.map((item) =>
+            item.id === id ? { ...item, state } : item,
+          ),
+        };
+      });
+    },
     onSuccess: () => {
       addToast('success', 'Status updated');
+    },
+    onError: () => {
+      // Revert on error
       refresh();
     },
   });
 
   // --- Handlers ---
-  const handleOpenModal = (record?: Banner) => {
-    ModalManager.open({
-      title: record ? 'Edit Banner' : 'Create Banner',
-      renderChildren: ({ close, confirm }) => (
-        <BannerFormModal
-          key={record ? `edit-${record.id}` : 'create-banner'}
-          close={close}
-          confirm={() => {
-            confirm();
-            refresh();
-          }}
-          editingData={record}
-        />
-      ),
-    });
-  };
+  const handleOpenModal = useCallback(
+    (record?: Banner) => {
+      ModalManager.open({
+        title: record ? 'Edit Banner' : 'Create Banner',
+        renderChildren: ({ close, confirm }) => (
+          <BannerFormModal
+            key={record ? `edit-${record.id}` : 'create-banner'}
+            close={close}
+            confirm={() => {
+              confirm();
+              refresh();
+            }}
+            editingData={record}
+          />
+        ),
+      });
+    },
+    [refresh],
+  );
 
-  const handleDelete = (record: Banner) => {
-    ModalManager.open({
-      title: 'Delete Banner?',
-      content: 'This action cannot be undone.',
-      confirmText: 'Delete',
-      onConfirm: () => deleteBanner(record.id),
-    });
-  };
+  const handleDelete = useCallback(
+    (record: Banner) => {
+      ModalManager.open({
+        title: 'Delete Banner?',
+        content: 'This action cannot be undone.',
+        confirmText: 'Delete',
+        onConfirm: () => deleteBanner(record.id),
+      });
+    },
+    [deleteBanner],
+  );
 
   // --- Columns ---
   const columnHelper = createColumnHelper<Banner>();
-  const columns = [
-    columnHelper.display({
-      id: 'dragHandle',
-      header: '',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      cell: ({ listeners }: any) => (
-        <div
-          {...listeners}
-          className="cursor-move text-gray-400 hover:text-blue-500"
-        >
-          <GripVertical size={16} />
-        </div>
-      ),
-      size: 40,
-    }),
-    columnHelper.accessor('bannerImgUrl', {
-      header: 'Visual',
-      cell: (info) => (
-        <div className="w-32 h-16 bg-gray-100 rounded-md overflow-hidden border border-gray-200 relative group">
-          <img
-            src={info.getValue()}
-            className="w-full h-full object-cover"
-            alt=""
-          />
-          {info.row.original.fileType === 2 && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-white text-xs">
-              Video
-            </div>
-          )}
-        </div>
-      ),
-    }),
-    columnHelper.accessor('title', {
-      header: 'Info',
-      cell: (info) => (
-        <div>
-          <div className="font-medium">{info.getValue()}</div>
-          <div className="text-xs text-gray-500 mt-1">
-            {/* 智能排期展示 */}
-            {info.row.original.activityAtStart
-              ? `${new Date(info.row.original.activityAtStart).toLocaleDateString()} - ${new Date(info.row.original.activityAtEnd).toLocaleDateString()}`
-              : 'Permanent (No expiry)'}
+
+  const columns = useMemo(() => {
+    return [
+      columnHelper.display({
+        id: 'dragHandle',
+        header: '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cell: ({ listeners }: any) => (
+          <div
+            {...listeners}
+            className="cursor-move text-gray-400 hover:text-blue-500"
+          >
+            <GripVertical size={16} />
           </div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor('jumpCate', {
-      header: 'Target',
-      cell: (info) => {
-        const type = info.getValue();
-        if (type === JUMP_CATE.EXTERNAL)
-          return (
-            <div className="flex items-center gap-1 text-blue-600 text-xs">
-              <ExternalLink size={12} /> Web Link
-            </div>
-          );
-        if (type === JUMP_CATE.TREASURE)
-          return (
-            <div className="flex items-center gap-1 text-purple-600 text-xs">
-              <Box size={12} /> Product
-            </div>
-          );
-        return <span className="text-gray-400 text-xs">No Action</span>;
-      },
-    }),
-    columnHelper.accessor('state', {
-      header: 'Status',
-      cell: (info) => (
-        <Badge color={info.getValue() === 1 ? 'green' : 'gray'}>
-          {info.getValue() === 1 ? 'Active' : 'Disabled'}
-        </Badge>
-      ),
-    }),
-    columnHelper.display({
-      id: 'actions',
-      header: 'Actions',
-      cell: (info) => (
-        <div className="flex  gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() =>
-              updateStatus(
-                info.row.original.id,
-                info.row.original.state === 1 ? 0 : 1,
-              )
-            }
-          >
-            {info.row.original.state === 1 ? (
-              <Ban size={14} />
-            ) : (
-              <CheckCircle size={14} />
+        ),
+        size: 40,
+      }),
+      columnHelper.accessor('bannerImgUrl', {
+        header: 'Visual',
+        cell: (info) => (
+          <div className="w-32 h-16 bg-gray-100 rounded-md overflow-hidden border border-gray-200 relative group">
+            <img
+              src={info.getValue()}
+              className="w-full h-full object-cover"
+              alt=""
+            />
+            {info.row.original.fileType === 2 && (
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-white text-xs">
+                Video
+              </div>
             )}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleOpenModal(info.row.original)}
-          >
-            <Edit3 size={14} />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleDelete(info.row.original)}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      ),
-    }),
-  ];
+          </div>
+        ),
+      }),
+      columnHelper.accessor('title', {
+        header: 'Info',
+        cell: (info) => (
+          <div>
+            <div className="font-medium">{info.getValue()}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {/* 智能排期展示 */}
+              {info.row.original.activityAtStart
+                ? `${new Date(info.row.original.activityAtStart).toLocaleDateString()} - ${new Date(info.row.original.activityAtEnd).toLocaleDateString()}`
+                : 'Permanent (No expiry)'}
+            </div>
+          </div>
+        ),
+      }),
+      columnHelper.accessor('jumpCate', {
+        header: 'Target',
+        cell: (info) => {
+          const type = info.getValue();
+          if (type === JUMP_CATE.EXTERNAL)
+            return (
+              <div className="flex items-center gap-1 text-blue-600 text-xs">
+                <ExternalLink size={12} /> Web Link
+              </div>
+            );
+          if (type === JUMP_CATE.TREASURE)
+            return (
+              <div className="flex items-center gap-1 text-purple-600 text-xs">
+                <Box size={12} /> Product
+              </div>
+            );
+          return <span className="text-gray-400 text-xs">No Action</span>;
+        },
+      }),
+      columnHelper.accessor('state', {
+        header: 'Status',
+        cell: (info) => (
+          <Badge color={info.getValue() === 1 ? 'green' : 'gray'}>
+            {info.getValue() === 1 ? 'Active' : 'Disabled'}
+          </Badge>
+        ),
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: 'Actions',
+        cell: (info) => (
+          <div className="flex  gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                updateStatus(
+                  info.row.original.id,
+                  info.row.original.state === 1 ? 0 : 1,
+                )
+              }
+            >
+              {info.row.original.state === 1 ? (
+                <Ban size={14} />
+              ) : (
+                <CheckCircle size={14} />
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleOpenModal(info.row.original)}
+            >
+              <Edit3 size={14} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleDelete(info.row.original)}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ),
+      }),
+    ];
+  }, [columnHelper, handleDelete, handleOpenModal, updateStatus]);
 
   return (
     <div className="space-y-6">
