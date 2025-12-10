@@ -19,6 +19,7 @@ import { JUMP_CATE } from '@lucky/shared';
 import { Banner, BannerListParams } from '@/type/types.ts';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
+import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 
 type BannerSearchForm = {
   title: string;
@@ -241,15 +242,12 @@ export const BannerManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Banner Management</h1>
-          <p className="text-gray-500 text-sm">
-            Manage carousels and ad spaces
-          </p>
-        </div>
-        <Button onClick={() => handleOpenModal()}>+ New Banner</Button>
-      </div>
+      <PageHeader
+        title="Banner Management"
+        description="Manage the banners displayed in the mini shop."
+        buttonText="Create Banner"
+        buttonOnClick={() => handleOpenModal()}
+      />
 
       <Card>
         <div className="space-y-3 mb-6">
