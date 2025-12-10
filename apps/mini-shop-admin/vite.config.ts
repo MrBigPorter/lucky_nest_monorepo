@@ -10,6 +10,15 @@ export default defineConfig({
     watch: {
       ignored: ['!**/node_modules/@lucky/shared/**'],
     },
+    proxy: {
+      // 只要遇到以 /cdn-cgi 开头的请求
+      '/cdn-cgi': {
+        // 偷偷转发到你的真实线上域名
+        target: 'https://img.joyminis.com',
+        // 必须加这个，欺骗 Cloudflare 说是从它自己域名发来的
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [tailwindcss(), react()],
   resolve: {

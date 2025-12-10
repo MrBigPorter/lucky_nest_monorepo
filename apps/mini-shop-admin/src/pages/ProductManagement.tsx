@@ -26,6 +26,7 @@ import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 import { TREASURE_STATE } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore.ts';
 import { Pagination } from '@/components/scaffold/Pagination.tsx';
+import { SmartImage } from '@/components/ui/SmartImage..tsx';
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -166,8 +167,10 @@ export const ProductManagement: React.FC = () => {
       cell: (info) => (
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
-            <img
+            <SmartImage
               src={info.row.original.treasureCoverImg}
+              width={46}
+              height={46}
               alt={info.getValue()}
               className="w-full h-full object-cover"
             />

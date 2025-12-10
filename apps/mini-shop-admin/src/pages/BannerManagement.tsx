@@ -20,6 +20,7 @@ import { Banner, BannerListParams } from '@/type/types.ts';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
+import { SmartImage } from '@/components/ui/SmartImage..tsx';
 
 type BannerSearchForm = {
   title: string;
@@ -164,9 +165,11 @@ export const BannerManagement: React.FC = () => {
       columnHelper.accessor('bannerImgUrl', {
         header: 'Visual',
         cell: (info) => (
-          <div className="w-32 h-16 bg-gray-100 rounded-md overflow-hidden border border-gray-200 relative group">
-            <img
+          <div className="w-32 h-16 bg-gray-100 rounded-md overflow-hidden  relative group">
+            <SmartImage
               src={info.getValue()}
+              width={128}
+              height={64}
               className="w-full h-full object-cover"
               alt=""
             />

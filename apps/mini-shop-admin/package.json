@@ -17,6 +17,7 @@
     "@lucky/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.11",
     "@tanstack/react-table": "^8.21.3",
+    "@unpic/react": "^1.0.2",
     "ahooks": "^3.8.0",
     "axios": "^1.13.2",
     "framer-motion": "^11.0.8",
