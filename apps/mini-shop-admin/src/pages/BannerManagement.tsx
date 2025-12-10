@@ -144,10 +144,8 @@ export const BannerManagement: React.FC = () => {
     [deleteBanner],
   );
 
-  // --- Columns ---
-  const columnHelper = createColumnHelper<Banner>();
-
   const columns = useMemo(() => {
+    const columnHelper = createColumnHelper<Banner>();
     return [
       columnHelper.display({
         id: 'dragHandle',
@@ -260,7 +258,7 @@ export const BannerManagement: React.FC = () => {
         ),
       }),
     ];
-  }, [columnHelper, handleDelete, handleOpenModal, updateStatus]);
+  }, [handleDelete, handleOpenModal, updateStatus]);
 
   return (
     <div className="space-y-6">
