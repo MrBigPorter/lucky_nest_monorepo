@@ -4,13 +4,13 @@ export type FieldType = 'input' | 'select' | 'date';
 // 定义下拉选项
 export interface Option {
   label: string;
-  value: string | number;
+  value: string;
 }
 
 // 🔥 核心：单个字段的配置结构
-export interface SearchFieldSchema {
+export interface SearchFieldSchema<T> {
   /** 字段对应后端接口的 key (例如 'title', 'status') */
-  key: string;
+  key: keyof T;
   /** 显示的标签 (例如 '搜索标题') */
   label: string;
   /** 表单类型 */
@@ -18,7 +18,7 @@ export interface SearchFieldSchema {
   /** 占位符 */
   placeholder?: string;
   /** 初始默认值 */
-  defaultValue?: any;
+  defaultValue?: T[keyof T];
   /** 仅对 select 有效：选项列表 */
   options?: Option[];
   /** 额外的样式类名 (用于控制宽度等) */

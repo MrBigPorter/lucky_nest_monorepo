@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { bannerApi } from '@/api';
 import {
@@ -44,10 +44,9 @@ import {
 import { Badge, Card } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { BannerFormModal } from '@/pages/banner/BannerFormModal.tsx';
-import { BANNER_CATE, JUMP_CATE } from '@lucky/shared';
+import { JUMP_CATE } from '@lucky/shared';
 import { Banner, BannerListParams } from '@/type/types.ts';
 import { SchemaSearchForm } from '@/components/SchemaSearchForm.tsx';
-import { SearchFieldSchema } from '@/type/search.ts';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({
@@ -107,31 +106,7 @@ type BannerSearchForm = {
 };
 
 export const BannerManagement: React.FC = () => {
-  const [activeTab] = useState<string>(String(BANNER_CATE.HOME));
   const addToast = useToastStore((s) => s.addToast);
-
-  const searchSchema: SearchFieldSchema[] = useMemo(
-    () => [
-      {
-        type: 'input',
-        key: 'title',
-        label: 'Search Title',
-        placeholder: 'Enter keywords...',
-      },
-      {
-        type: 'select',
-        key: 'bannerCate',
-        label: 'Position',
-        defaultValue: 'ALL', // 支持默认值
-        options: [
-          { label: 'All', value: 'ALL' },
-          { label: 'Home', value: '1' },
-          { label: 'Product', value: '2' },
-        ],
-      },
-    ],
-    [],
-  );
 
   const getTableData = async (
     {
@@ -373,8 +348,26 @@ export const BannerManagement: React.FC = () => {
 
       <Card>
         <div className="space-y-3 mb-6">
-          <SchemaSearchForm
-            schema={searchSchema}
+          <SchemaSearchForm<BannerSearchForm>
+            schema={[
+              {
+                type: 'input',
+                key: 'title',
+                label: 'Search Title',
+                placeholder: 'Enter keywords...',
+              },
+              {
+                type: 'select',
+                key: 'bannerCate',
+                label: 'Position',
+                defaultValue: 'ALL', // 支持默认值
+                options: [
+                  { label: 'All', value: 'ALL' },
+                  { label: 'Home', value: '1' },
+                  { label: 'Product', value: '2' },
+                ],
+              },
+            ]}
             onSearch={handleSearch}
             onReset={reset}
           />

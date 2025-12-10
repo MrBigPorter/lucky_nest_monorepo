@@ -1,87 +1,100 @@
 import React, { useState } from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { Button, BaseSelect } from '@repo/ui';
-import { SearchFieldSchema } from '@/type/search.ts';
+import { SearchFieldSchema } from '@/type/search';
 import { Input } from '@/components/UIComponents.tsx';
 
-interface Props {
-  /** 配置数组：告诉组件你要渲染什么 */
-  schema: SearchFieldSchema[];
-  /** 父组件传入的初始值（用于回显 URL 参数等） */
-  initialValues?: Record<string, any>;
-  /** 点击搜索的回调 */
-  onSearch: (values: Record<string, any>) => void;
-  /** 点击重置的回调 */
+//  泛型 T 限制为对象，且值通常是 string 或 number
+interface Props<T extends Record<string, string | number | undefined>> {
+  schema: SearchFieldSchema<T>[];
+  initialValues?: Partial<T>;
+  onSearch: (values: T) => void;
   onReset?: () => void;
-  /** 搜索按钮的加载状态 */
   loading?: boolean;
 }
 
-export const SchemaSearchForm: React.FC<Props> = ({
+export const SchemaSearchForm = <
+  T extends Record<string, string | number | undefined>,
+>({
   schema,
   initialValues = {},
   onSearch,
   onReset,
   loading,
-}) => {
-  // 1. 动态生成初始状态
-  const generateInitialState = () => {
-    const state: Record<string, any> = { ...initialValues };
+}: Props<T>) => {
+  // 1. 初始化状态
+  const generateInitialState = (): T => {
+    // 这里用 as T 强制断言，因为动态构建对象 TS 很难推断
+    const state = { ...initialValues } as T;
+
     schema.forEach((field) => {
-      // 如果父组件没传值，就用 schema 里的默认值，或者空
-      if (state[field.key] === undefined) {
-        state[field.key] = field.defaultValue ?? '';
+      const key = field.key;
+      // 只有当值不存在时才使用默认值
+      if (state[key] === undefined) {
+        // 使用类型断言告诉 TS，defaultValue 是安全的
+        state[key] = (field.defaultValue ?? '') as T[keyof T];
       }
     });
     return state;
   };
 
-  const [values, setValues] = useState(generateInitialState);
+  const [values, setValues] = useState<T>(generateInitialState);
 
-  // 2. 通用变更处理
-  const handleChange = (key: string, val: any) => {
+  // 2. 变更处理
+  const handleChange = <K extends keyof T>(key: K, val: T[K]) => {
     setValues((prev) => ({ ...prev, [key]: val }));
   };
 
-  // 3. 搜索与重置
+  // 3. 触发与重置
   const handleTrigger = () => onSearch(values);
 
   const handleReset = () => {
-    const resetState: Record<string, any> = {};
+    const resetState = {} as T;
     schema.forEach((field) => {
-      // 重置时，如果有默认值（比如状态默认查全部），要恢复默认值
-      resetState[field.key] = field.defaultValue ?? '';
+      // 同样断言 defaultValue
+      resetState[field.key] = (field.defaultValue ?? '') as T[keyof T];
     });
     setValues(resetState);
-    onReset && onReset();
+    onReset?.();
+    // 通常重置后也希望自动触发一次搜索
+    onSearch(resetState);
   };
 
-  // 4. 渲染工厂函数：根据 type 渲染不同组件
-  const renderField = (field: SearchFieldSchema) => {
+  // 4. 渲染字段
+  const renderField = (field: SearchFieldSchema<T>) => {
+    // 获取当前值，处理 undefined 情况
+    const currentValue = values[field.key] ?? '';
+
     switch (field.type) {
       case 'input':
         return (
           <Input
-            key={field.key}
+            key={String(field.key)}
             label={field.label}
             placeholder={field.placeholder}
-            value={values[field.key]}
-            onChange={(e) => handleChange(field.key, e.target.value)}
-            onKeyDown={(e: any) => e.key === 'Enter' && handleTrigger()}
+            // 强制转 string，因为 Input 组件 value 只收 string
+            value={String(currentValue)}
+            onChange={(e) =>
+              handleChange(field.key, e.target.value as T[keyof T])
+            }
+            onKeyDown={(e: React.KeyboardEvent) =>
+              e.key === 'Enter' && handleTrigger()
+            }
           />
         );
       case 'select':
         return (
           <BaseSelect
-            key={field.key}
+            key={String(field.key)}
             label={field.label}
             placeholder={field.placeholder}
+            // 这里不再报错，因为我们在 type 定义里统一了
             options={field.options || []}
-            value={values[field.key]}
-            onChange={(val) => handleChange(field.key, val)}
+            // BaseSelect 要求 value 是 string
+            value={String(currentValue)}
+            onChange={(val) => handleChange(field.key, val as T[keyof T])}
           />
         );
-      // 将来可以在这里加 case 'date-picker' ...
       default:
         return null;
     }
@@ -89,11 +102,9 @@ export const SchemaSearchForm: React.FC<Props> = ({
 
   return (
     <div className="bg-white dark:bg-white/5 p-4 rounded-lg border border-gray-100 dark:border-white/10 mb-4">
-      {/* 自动响应式布局：PC端一行3个或4个 */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
-        {/* 循环渲染所有字段 */}
         {schema.map((field) => (
-          <div key={field.key} className={field.className}>
+          <div key={String(field.key)} className={field.className}>
             {renderField(field)}
           </div>
         ))}
