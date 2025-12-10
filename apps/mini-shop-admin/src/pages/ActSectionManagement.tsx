@@ -52,7 +52,7 @@ import { ActSectionListParams, actSectionWithProducts } from '@/type/types.ts';
 import { actSectionApi } from '@/api';
 import { ActSectionBindProductModal } from '@/pages/act-section/ActSectionBindProductModal.tsx';
 import { ProductSelectorModal } from '@/pages/act-section/ProductSelectorModal.tsx';
-import { Pagination } from '@/components/Pagination.tsx';
+import { Pagination } from '@/components/scaffold/Pagination.tsx';
 
 // --- 组件：可排序的行 (Draggable Row) ---
 const SortableRow = ({

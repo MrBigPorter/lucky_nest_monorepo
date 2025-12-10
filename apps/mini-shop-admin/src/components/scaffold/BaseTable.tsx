@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import {
   Table,
   TableHeader,
@@ -34,7 +34,7 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
 } from '@dnd-kit/sortable';
-import { Pagination } from '@/components/Pagination';
+import { Pagination } from '@/components/scaffold/Pagination';
 import { Loader2, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@repo/ui';
 
@@ -45,6 +45,7 @@ const SortableRow = ({
   className,
   onClick,
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   row: Row<any>;
   children: React.ReactNode;
   className?: string;
@@ -57,7 +58,10 @@ const SortableRow = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: row.original.id });
+  } = useSortable({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    id: (row.original as any).id,
+  });
 
   const style = {
     transform: transform
@@ -81,8 +85,13 @@ const SortableRow = ({
       {...attributes}
     >
       {React.Children.map(children, (child) => {
-        if (React.isValidElement(child) && child.props['data-drag-handle']) {
-          return React.cloneElement(child, { listeners } as any);
+        if (React.isValidElement(child)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const childProps = child.props as Record<string, any>;
+          if (childProps['data-drag-handle']) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return React.cloneElement(child, { listeners } as any);
+          }
         }
         return child;
       })}
@@ -91,14 +100,14 @@ const SortableRow = ({
 };
 
 // --- BaseTable Props ---
-interface BaseTableProps<T> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface BaseTableProps<T extends Record<string, any>> {
   data: T[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: ColumnDef<T, any>[];
   loading?: boolean;
-  /** 唯一主键字段名，默认 'id' */
   rowKey?: keyof T;
 
-  // 分页
   pagination?: {
     current: number;
     pageSize: number;
@@ -106,19 +115,19 @@ interface BaseTableProps<T> {
     onChange: (page: number, pageSize: number) => void;
   };
 
-  // 功能开关
-  enableDrag?: boolean; // 开启拖拽
+  enableDrag?: boolean;
   onDragEnd?: (event: DragEndEvent) => void;
 
-  selectable?: boolean; // 开启多选
-  onSelectionChange?: (selectedRows: T[]) => void; // 多选回调
+  selectable?: boolean;
+  onSelectionChange?: (selectedRows: T[]) => void;
 
-  expandable?: boolean; // 开启展开
-  renderSubComponent?: (row: Row<T>) => React.ReactNode; // 展开的内容
+  expandable?: boolean;
+  renderSubComponent?: (row: Row<T>) => React.ReactNode;
 
-  onRowClick?: (row: T) => void; // 行点击
+  onRowClick?: (row: T) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const BaseTable = <T extends Record<string, any>>({
   data,
   columns: propColumns,
@@ -136,11 +145,10 @@ export const BaseTable = <T extends Record<string, any>>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  // 1. 动态注入 Select 列和 Expand 列
   const columns = useMemo(() => {
-    const cols = [...propColumns];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cols = [...propColumns] as ColumnDef<T, any>[];
 
-    // 如果开启多选，在最前面插入 Checkbox 列
     if (selectable) {
       cols.unshift({
         id: 'select',
@@ -167,7 +175,6 @@ export const BaseTable = <T extends Record<string, any>>({
       });
     }
 
-    // 如果开启展开，在最前面插入箭头列 (或者合并到 Select 后面)
     if (expandable) {
       cols.unshift({
         id: 'expander',
@@ -176,7 +183,7 @@ export const BaseTable = <T extends Record<string, any>>({
           return row.getCanExpand() ? (
             <button
               onClick={(e) => {
-                e.stopPropagation(); // 防止触发 onRowClick
+                e.stopPropagation();
                 row.toggleExpanded();
               }}
               className="p-1 hover:bg-gray-100 rounded"
@@ -200,9 +207,9 @@ export const BaseTable = <T extends Record<string, any>>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(), // 开启排序
-    getExpandedRowModel: getExpandedRowModel(), // 开启展开
-    getRowId: (row) => String(row[rowKey]), // 自定义主键
+    getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowId: (row) => String(row[rowKey]),
     state: {
       sorting,
       rowSelection,
@@ -210,13 +217,10 @@ export const BaseTable = <T extends Record<string, any>>({
     onSortingChange: setSorting,
     onRowSelectionChange: (updater) => {
       setRowSelection(updater);
-      // Hack: React Table 的 updater 可能是函数，我们需要在下一次 render 拿到值
-      // 这里建议使用 useEffect 监听 rowSelection 来触发外部回调，或者简单处理
     },
     enableRowSelection: true,
   });
 
-  // 监听多选变化，通知父组件
   React.useEffect(() => {
     if (onSelectionChange) {
       const selectedData = table
@@ -226,7 +230,11 @@ export const BaseTable = <T extends Record<string, any>>({
     }
   }, [rowSelection, table, onSelectionChange]);
 
-  const items = useMemo(() => data.map((item) => item[rowKey]), [data, rowKey]);
+  const items = useMemo(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    () => data.map((item) => String((item as any)[rowKey])),
+    [data, rowKey],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -235,7 +243,6 @@ export const BaseTable = <T extends Record<string, any>>({
     }),
   );
 
-  // 渲染逻辑
   const renderTableBody = () => {
     if (loading && data.length === 0) {
       return (
@@ -260,41 +267,39 @@ export const BaseTable = <T extends Record<string, any>>({
       );
     }
 
-    const rows = table.getRowModel().rows.map((row) => {
-      const cells = row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-          {React.cloneElement(
-            // 标记 DragHandle 列
-            flexRender(
-              cell.column.columnDef.cell,
-              cell.getContext(),
-            ) as React.ReactElement,
-            { 'data-drag-handle': cell.column.id === 'dragHandle' }, // 标记
-          )}
-        </TableCell>
-      ));
+    const tableRows = table.getRowModel().rows.map((row) => {
+      const cells = row.getVisibleCells().map((cell) => {
+        //  先计算 content，再判断是否是 Element，最后 clone
+        const content = flexRender(
+          cell.column.columnDef.cell,
+          cell.getContext(),
+        );
 
-      const rowProps = {
-        key: row.id,
-        className: cn(
-          'group hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer',
-          row.getIsSelected() && 'bg-blue-50/50 dark:bg-blue-900/10',
-        ),
-        onClick: () => onRowClick?.(row.original),
-      };
-
-      const RowComponent = enableDrag ? (
-        <SortableRow row={row} {...rowProps}>
-          {cells}
-        </SortableRow>
-      ) : (
-        <TableRow {...rowProps}>{cells}</TableRow>
-      );
+        return (
+          <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+            {cell.column.id === 'dragHandle' && React.isValidElement(content)
+              ? React.cloneElement(
+                  content as React.ReactElement,
+                  {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    'data-drag-handle': true,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  } as any,
+                )
+              : content}
+          </TableCell>
+        );
+      });
 
       return (
         <React.Fragment key={row.id}>
-          {RowComponent}
-          {/* 渲染展开的内容 */}
+          <TableRowComponent
+            row={row}
+            enableDrag={enableDrag}
+            onClick={() => onRowClick?.(row.original)}
+          >
+            {cells}
+          </TableRowComponent>
           {row.getIsExpanded() && renderSubComponent && (
             <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
               <TableCell colSpan={columns.length}>
@@ -309,15 +314,15 @@ export const BaseTable = <T extends Record<string, any>>({
     if (enableDrag) {
       return (
         <SortableContext items={items} strategy={verticalListSortingStrategy}>
-          {rows}
+          {tableRows}
         </SortableContext>
       );
     }
-    return rows;
+    return tableRows;
   };
 
   const content = (
-    <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/10">
+    <div className="overflow-x-auto rounded-xl">
       <Table>
         <TableHeader className="bg-gray-50/60 dark:bg-white/5">
           {table.getHeaderGroups().map((hg) => (
@@ -333,7 +338,6 @@ export const BaseTable = <T extends Record<string, any>>({
                       onClick={h.column.getToggleSortingHandler()}
                     >
                       {flexRender(h.column.columnDef.header, h.getContext())}
-                      {/* 排序图标 */}
                       {h.column.getCanSort() && (
                         <ArrowUpDown size={14} className="text-gray-400" />
                       )}
@@ -368,3 +372,49 @@ export const BaseTable = <T extends Record<string, any>>({
     </div>
   );
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TableRowComponent = memo(
+  ({
+    row,
+    onClick,
+    enableDrag,
+    children,
+  }: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    row: Row<any>;
+    onClick?: () => void;
+    enableDrag?: boolean;
+    children: React.ReactNode;
+  }) => {
+    if (enableDrag) {
+      return (
+        <SortableRow row={row} onClick={onClick}>
+          {children}
+        </SortableRow>
+      );
+    }
+
+    return (
+      <TableRow
+        className={cn(
+          'group hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer',
+          row.getIsSelected() && 'bg-blue-50/50 dark:bg-blue-900/10',
+        )}
+        onClick={onClick}
+      >
+        {children}
+      </TableRow>
+    );
+  },
+  (prev, next) => {
+    const dataChanged = prev.row.original !== next.row.original;
+    const selectionChanged =
+      prev.row.getIsSelected() !== next.row.getIsSelected();
+    const expandedChanged =
+      prev.row.getIsExpanded() !== next.row.getIsExpanded();
+    return !(dataChanged || selectionChanged || expandedChanged);
+  },
+);
+
+TableRowComponent.displayName = 'TableRowComponent';

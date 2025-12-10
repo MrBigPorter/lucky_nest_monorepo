@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 import { Button, BaseSelect } from '@repo/ui';
-import { SearchFieldSchema } from '@/type/search';
+import { SearchFieldSchema } from '@/type/search.ts';
 import { Input } from '@/components/UIComponents.tsx';
 
 //  泛型 T 限制为对象，且值通常是 string 或 number

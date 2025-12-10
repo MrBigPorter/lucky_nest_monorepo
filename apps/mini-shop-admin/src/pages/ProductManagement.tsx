@@ -25,7 +25,7 @@ import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.t
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 import { TREASURE_STATE } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore.ts';
-import { Pagination } from '@/components/Pagination.tsx';
+import { Pagination } from '@/components/scaffold/Pagination.tsx';
 
 type ProductSearchForm = {
   treasureName?: string;

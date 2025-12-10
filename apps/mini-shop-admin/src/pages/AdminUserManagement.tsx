@@ -22,7 +22,7 @@ import { CreateAdminUserModal } from '@/pages/admin/CreateAdminUserModal.tsx';
 import { EditAdminUserModal } from '@/pages/admin/EditAdminUserModal.tsx';
 import { EditAdminPasswordModal } from '@/pages/admin/EditAdminPassowordModal.tsx';
 import { BaseSelect, Button } from '@repo/ui';
-import { Pagination } from '@/components/Pagination.tsx';
+import { Pagination } from '@/components/scaffold/Pagination.tsx';
 
 type AdminUserSearchForm = {
   username?: string;

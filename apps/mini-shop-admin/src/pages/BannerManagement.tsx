@@ -1,37 +1,8 @@
 import React, { useMemo } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { bannerApi } from '@/api';
-import {
-  Button,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  ModalManager,
-} from '@repo/ui';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  Row,
-  useReactTable,
-} from '@tanstack/react-table';
-import {
-  DndContext,
-  closestCenter,
-  useSensor,
-  useSensors,
-  PointerSensor,
-  KeyboardSensor,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
-  useSortable,
-} from '@dnd-kit/sortable';
+import { Button, ModalManager } from '@repo/ui';
+import { createColumnHelper } from '@tanstack/react-table';
 import {
   Edit3,
   Trash2,
@@ -46,61 +17,8 @@ import { useToastStore } from '@/store/useToastStore';
 import { BannerFormModal } from '@/pages/banner/BannerFormModal.tsx';
 import { JUMP_CATE } from '@lucky/shared';
 import { Banner, BannerListParams } from '@/type/types.ts';
-import { SchemaSearchForm } from '@/components/SchemaSearchForm.tsx';
-import { Pagination } from '@/components/Pagination.tsx';
-import { BaseTable } from '@/components/BaseTable.tsx';
-
-// --- 组件：可排序的行 (Draggable Row) ---
-const SortableRow = ({
-  children,
-  row,
-}: {
-  children: React.ReactNode;
-  row: Row<Banner>;
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: row.original.id });
-
-  const style = {
-    // transform: CSS.Transform.toString(transform),
-    transform: transform,
-    transition,
-    zIndex: isDragging ? 10 : 'auto', // 拖拽时层级提高
-    position: 'relative' as const,
-    opacity: isDragging ? 0.8 : 1,
-  };
-
-  return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      className={`group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-150 ${
-        isDragging ? 'bg-blue-50 dark:bg-blue-900/20 shadow-lg' : ''
-      }`}
-      {...attributes} // 将属性应用到行
-    >
-      {/* 这里我们不把 listeners 加到 tr 上，
-         而是通过 Context 传给具体的 DragHandle 单元格，
-         这样用户只能通过拖拽手柄排序，不影响复制文字
-      */}
-      {React.Children.map(children, (child) => {
-        if (
-          React.isValidElement(child) &&
-          child.props.cell?.column?.id === 'dragHandle'
-        ) {
-          return React.cloneElement(child, { listeners } as any);
-        }
-        return child;
-      })}
-    </tr>
-  );
-};
+import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
+import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 
 type BannerSearchForm = {
   title: string;
@@ -150,8 +68,10 @@ export const BannerManagement: React.FC = () => {
     ],
   });
 
+  console.log('tableProps', tableProps);
+
   // 搜索回调：直接拿到所有值
-  const handleSearch = (values: any) => {
+  const handleSearch = (values: BannerSearchForm) => {
     // 自动重置到第一页，并带上所有条件
     run({ current: 1, pageSize: 10 }, values);
   };
@@ -160,8 +80,6 @@ export const BannerManagement: React.FC = () => {
     () => tableProps.dataSource || [],
     [tableProps.dataSource],
   );
-  const items = useMemo(() => dataSource.map((x) => x.id), [dataSource]);
-
   // --- Actions ---
   const { run: deleteBanner } = useRequest(bannerApi.delete, {
     manual: true,
@@ -178,12 +96,6 @@ export const BannerManagement: React.FC = () => {
       refresh();
     },
   });
-
-  // 排序逻辑 (这里简化，实际需要调 updateSortOrder 接口)
-  const handleDragEnd = (event: any) => {
-    // ... 复用 ActSection 的排序逻辑，调用后端 sort 接口
-    console.log('Sort changed', event);
-  };
 
   // --- Handlers ---
   const handleOpenModal = (record?: Banner) => {
@@ -203,7 +115,7 @@ export const BannerManagement: React.FC = () => {
     });
   };
 
-  const handleDelete = (record: any) => {
+  const handleDelete = (record: Banner) => {
     ModalManager.open({
       title: 'Delete Banner?',
       content: 'This action cannot be undone.',
@@ -218,6 +130,7 @@ export const BannerManagement: React.FC = () => {
     columnHelper.display({
       id: 'dragHandle',
       header: '',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       cell: ({ listeners }: any) => (
         <div
           {...listeners}
@@ -232,7 +145,11 @@ export const BannerManagement: React.FC = () => {
       header: 'Visual',
       cell: (info) => (
         <div className="w-32 h-16 bg-gray-100 rounded-md overflow-hidden border border-gray-200 relative group">
-          <img src={info.getValue()} className="w-full h-full object-cover" />
+          <img
+            src={info.getValue()}
+            className="w-full h-full object-cover"
+            alt=""
+          />
           {info.row.original.fileType === 2 && (
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-white text-xs">
               Video
@@ -322,20 +239,6 @@ export const BannerManagement: React.FC = () => {
     }),
   ];
 
-  const table = useReactTable({
-    data: dataSource,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.id,
-  });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -374,16 +277,11 @@ export const BannerManagement: React.FC = () => {
             onReset={reset}
           />
         </div>
-        {tableProps.current}
-        {tableProps.total}
-        {tableProps.pageSize}
         <BaseTable
           data={dataSource}
           columns={columns}
           pagination={{
-            current: tableProps.current,
-            total: tableProps.total,
-            pageSize: tableProps.pageSize,
+            ...tableProps.pagination,
             onChange: (page, pageSize) => {
               tableProps.onChange?.(page, pageSize);
             },
