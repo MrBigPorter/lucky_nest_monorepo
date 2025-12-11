@@ -24,7 +24,7 @@ import { QueryActSectionDto } from '@api/admin/act-section/dto/query-act-section
 import { UpdateActSectionDto } from '@api/admin/act-section/dto/update-act-section.dto';
 import { BindSectionItemDto } from '@api/admin/act-section/dto/bind-section-item.dto';
 
-@ApiTags('后台-首页板块管理')
+@ApiTags('admin Act Section Management')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @UseInterceptors(ClassSerializerInterceptor)

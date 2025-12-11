@@ -24,7 +24,7 @@ import { QueryBannerDto } from '@api/admin/banner/dto/query-banner.dto';
 import { UpdateBannerDto } from '@api/admin/banner/dto/update-banner.dto';
 import { UpdateBannerStateDto } from '@api/admin/banner/dto/update-banner-state.dto';
 
-@ApiTags('后台-轮播图管理')
+@ApiTags('admin Banner Management')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @UseInterceptors(ClassSerializerInterceptor)
@@ -32,6 +32,10 @@ import { UpdateBannerStateDto } from '@api/admin/banner/dto/update-banner-state.
 export class BannerController {
   constructor(private readonly bannerService: BannerService) {}
 
+  /**
+   * Create a new banner
+   * @param dto
+   */
   @Post('create')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: BannerResponseDto })
@@ -40,6 +44,11 @@ export class BannerController {
     return plainToInstance(BannerResponseDto, data);
   }
 
+  /**
+   * Update an existing banner
+   * @param id
+   * @param dto
+   */
   @Patch(':id')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: BannerResponseDto })
@@ -48,6 +57,10 @@ export class BannerController {
     return plainToInstance(BannerResponseDto, data);
   }
 
+  /**
+   * Get banner list
+   * @param query
+   */
   @Get('list')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: [BannerResponseDto] })
@@ -60,6 +73,10 @@ export class BannerController {
     return { list: cleanList, pageSize, page, total };
   }
 
+  /**
+   * Get banner details by ID
+   * @param id
+   */
   @Get(':id')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: BannerResponseDto })
@@ -68,6 +85,11 @@ export class BannerController {
     return plainToInstance(BannerResponseDto, data);
   }
 
+  /**
+   * Update banner state
+   * @param id
+   * @param dto
+   */
   @Patch(':id/state')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: BannerResponseDto })
@@ -79,6 +101,10 @@ export class BannerController {
     return plainToInstance(BannerResponseDto, data);
   }
 
+  /**
+   * Delete a banner by ID
+   * @param id
+   */
   @Delete(':id')
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiOkResponse({ type: Boolean })
