@@ -22,11 +22,17 @@ import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { AdminLoginDto } from '@api/client/auth/dto/admin-login.dto';
 import { ReaIp, UserAgent } from '@api/common/decorators/http.decorators';
 
-@ApiTags('管理员登录')
+@ApiTags('admin Auth Management')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  /**
+   * Admin login
+   * @param dto
+   * @param ip
+   * @param ua
+   */
   @Post('admin/login')
   @HttpCode(HttpStatus.OK)
   async loginAdmin(
@@ -37,6 +43,12 @@ export class AuthController {
     return this.auth.adminLogin(dto, ip, ua);
   }
 
+  /**
+   * Admin logout
+   * @param userId
+   * @param ip
+   * @param ua
+   */
   @Post('admin/logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()

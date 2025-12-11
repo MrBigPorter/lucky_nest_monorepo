@@ -68,6 +68,7 @@ export enum Role {
   ADMIN = "ADMIN", // 普通管理员
   EDITOR = "EDITOR", // 编辑
   VIEWER = "VIEWER", // 观察者
+  FINANCE = "FINANCE", // 财务
 }
 
 export const ADMIN_USER_STATUS = {

@@ -22,7 +22,7 @@ import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.d
 import { TreasureListResponseDto } from '@api/admin/treasure/dto/treasure-list-response.dto';
 import { UpdateTreasureStateDto } from '@api/admin/treasure/dto/update-treasure-state.dto';
 
-@ApiTags('后台-产品管理')
+@ApiTags('admin Treasure Management')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('admin/treasure')
