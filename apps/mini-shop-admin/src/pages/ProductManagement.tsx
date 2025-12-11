@@ -1,32 +1,19 @@
-import React, { useState } from 'react';
-import { Plus, Edit3, Trash2, Ban, CheckCircle } from 'lucide-react';
-import { Card, Badge, Input } from '@/components/UIComponents';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Edit3, Trash2, Ban, CheckCircle } from 'lucide-react';
+import { Card, Badge } from '@/components/UIComponents';
 import { useAntdTable, useRequest } from 'ahooks';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 import { productApi, categoryApi } from '@/api';
 import type { Product, Category } from '@/type/types.ts';
-import {
-  Button,
-  BaseSelect as Select,
-  ModalManager,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@repo/ui';
+import { Button, ModalManager } from '@repo/ui';
 import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.tsx';
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 import { TREASURE_STATE } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore.ts';
-import { Pagination } from '@/components/scaffold/Pagination.tsx';
 import { SmartImage } from '@/components/ui/SmartImage..tsx';
+import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
+import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
+import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -84,11 +71,6 @@ export const ProductManagement: React.FC = () => {
     },
   });
 
-  const [filters, setFilters] = useState<ProductSearchForm>({
-    treasureName: '',
-    categoryId: 'ALL',
-  });
-
   const {
     tableProps,
     run,
@@ -108,20 +90,9 @@ export const ProductManagement: React.FC = () => {
   const dataSource = (tableProps.dataSource || []) as Product[];
 
   // 搜索
-  const handleSearch = () => {
-    run(
-      { current: 1, pageSize },
-      {
-        treasureName: filters.treasureName?.trim() ?? '',
-        categoryId: filters.categoryId,
-      },
-    );
-  };
-
-  const handleResetFilters = () => {
-    const init = { treasureName: '', categoryId: 'ALL' as const };
-    setFilters(init);
-    reset();
+  const handleSearch = (values: ProductSearchForm) => {
+    // 自动重置到第一页，并带上所有条件
+    run({ current: 1, pageSize: pageSize }, values);
   };
 
   const handleOpenCreate = () => {
@@ -133,252 +104,184 @@ export const ProductManagement: React.FC = () => {
     });
   };
 
-  const handleOpenEdit = (p: Product) => {
-    ModalManager.open({
-      title: 'Edit Product',
-      onConfirm: () => refresh(),
-      renderChildren: ({ close, confirm }) =>
-        EditProductFormModal(categories, close, confirm, p),
-    });
-  };
+  const handleOpenEdit = useCallback(
+    (p: Product) => {
+      ModalManager.open({
+        title: 'Edit Product',
+        onConfirm: () => refresh(),
+        renderChildren: ({ close, confirm }) =>
+          EditProductFormModal(categories, close, confirm, p),
+      });
+    },
+    [categories, refresh],
+  );
 
-  const handleRemove = (p: Product) => {
-    ModalManager.open({
-      title: 'Are you sure?',
-      content: 'Product will be removed permanently!!',
-      confirmText: 'confirm',
-      cancelText: 'cancel',
-      onConfirm: () => {
-        deleteProduct.run(p.treasureId);
-      },
-    });
-  };
+  const handleRemove = useCallback(
+    (p: Product) => {
+      ModalManager.open({
+        title: 'Are you sure?',
+        content: 'Product will be removed permanently!!',
+        confirmText: 'confirm',
+        cancelText: 'cancel',
+        onConfirm: () => {
+          deleteProduct.run(p.treasureId);
+        },
+      });
+    },
+    [deleteProduct],
+  );
 
-  const handleTreasureState = (p: Product) => {
-    updateProductState.run(p.treasureId, p.state === 1 ? 0 : 1);
-  };
+  const handleTreasureState = useCallback(
+    (p: Product) => {
+      updateProductState.run(p.treasureId, p.state === 1 ? 0 : 1);
+    },
+    [updateProductState],
+  );
 
-  // 列定义
-  const columnHelper = createColumnHelper<Product>();
+  const columns = useMemo(() => {
+    // 列定义
+    const columnHelper = createColumnHelper<Product>();
 
-  const columns = [
-    columnHelper.accessor('treasureName', {
-      header: 'Product',
-      cell: (info) => (
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
-            <SmartImage
-              src={info.row.original.treasureCoverImg}
-              width={46}
-              height={46}
-              alt={info.getValue()}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div>
-            <div className="font-medium text-gray-900 dark:text-white">
-              {info.getValue()}
+    return [
+      columnHelper.accessor('treasureName', {
+        header: 'Product',
+        cell: (info) => (
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
+              <SmartImage
+                src={info.row.original.treasureCoverImg}
+                width={46}
+                height={46}
+                alt={info.getValue()}
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="text-xs text-gray-500">
-              ID: {info.row.original.treasureId}
+            <div>
+              <div className="font-medium text-gray-900 dark:text-white">
+                {info.getValue()}
+              </div>
+              <div className="text-xs text-gray-500">
+                ID: {info.row.original.treasureId}
+              </div>
             </div>
           </div>
-        </div>
-      ),
-    }),
-    columnHelper.accessor('seqShelvesQuantity', {
-      header: 'Shares',
-      cell: (info) => (
-        <span className="font-mono text-sm">
-          {info.row.original.seqBuyQuantity}/{info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('unitAmount', {
-      header: 'Unit Price',
-      cell: (info) => (
-        <span className="font-mono text-sm">₱{info.getValue()}</span>
-      ),
-    }),
-    columnHelper.accessor('state', {
-      header: 'Status',
-      cell: (info) => (
-        <Badge color={info.getValue() === 1 ? 'green' : 'gray'}>
-          {info.getValue() === 1 ? 'Online' : 'Offline'}
-        </Badge>
-      ),
-    }),
-    columnHelper.display({
-      id: 'actions',
-      header: 'Actions',
-      cell: (info) => (
-        <div className="flex justify-end gap-2">
-          <Button
-            isLoading={deleteProduct.loading}
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRemove(info.row.original)}
-          >
-            <Trash2 size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleOpenEdit(info.row.original)}
-          >
-            <Edit3 size={16} />
-          </Button>
+        ),
+      }),
+      columnHelper.accessor('seqShelvesQuantity', {
+        header: 'Shares',
+        cell: (info) => (
+          <span className="font-mono text-sm">
+            {info.row.original.seqBuyQuantity}/{info.getValue()}
+          </span>
+        ),
+      }),
+      columnHelper.accessor('unitAmount', {
+        header: 'Unit Price',
+        cell: (info) => (
+          <span className="font-mono text-sm">₱{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('state', {
+        header: 'Status',
+        cell: (info) => (
+          <Badge color={info.getValue() === 1 ? 'green' : 'gray'}>
+            {info.getValue() === 1 ? 'Online' : 'Offline'}
+          </Badge>
+        ),
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: 'Actions',
+        cell: (info) => (
+          <div className="flex justify-end gap-2">
+            <Button
+              isLoading={deleteProduct.loading}
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRemove(info.row.original)}
+            >
+              <Trash2 size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenEdit(info.row.original)}
+            >
+              <Edit3 size={16} />
+            </Button>
 
-          <Button
-            isLoading={updateProductState.loading}
-            variant="ghost"
-            size="sm"
-            onClick={() => handleTreasureState(info.row.original)}
-          >
-            {info.row.original.state === TREASURE_STATE.ACTIVE ? (
-              <Ban size={16} />
-            ) : (
-              <CheckCircle size={16} />
-            )}
-          </Button>
-        </div>
-      ),
-    }),
-  ];
-
-  const table = useReactTable({
-    data: dataSource,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+            <Button
+              isLoading={updateProductState.loading}
+              variant="ghost"
+              size="sm"
+              onClick={() => handleTreasureState(info.row.original)}
+            >
+              {info.row.original.state === TREASURE_STATE.ACTIVE ? (
+                <Ban size={16} />
+              ) : (
+                <CheckCircle size={16} />
+              )}
+            </Button>
+          </div>
+        ),
+      }),
+    ];
+  }, [
+    deleteProduct.loading,
+    handleOpenEdit,
+    handleRemove,
+    handleTreasureState,
+    updateProductState.loading,
+  ]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Products
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Manage treasure hunt items & inventory
-          </p>
-        </div>
-        <Button onClick={handleOpenCreate} className="gap-2">
-          <Plus size={18} /> Add Product
-        </Button>
-      </div>
-
+      <PageHeader
+        title="Products"
+        description="Manage treasure hunt items & inventory"
+        buttonText="Add Product"
+        buttonOnClick={handleOpenCreate}
+      />
       <Card>
         {/* 筛选区 */}
         <div className="space-y-3 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Input
-              label="Product Name"
-              placeholder="Search product"
-              value={filters.treasureName}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  treasureName: e.target.value,
-                }))
-              }
-              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                if (e.key === 'Enter') handleSearch();
-              }}
-            />
-            <Select
-              label="Category"
-              value={
-                filters.categoryId === 'ALL'
-                  ? 'ALL'
-                  : String(filters.categoryId)
-              }
-              onChange={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  categoryId: value === 'ALL' ? 'ALL' : Number(value),
-                }))
-              }
-              options={[
-                { label: 'All Categories', value: 'ALL' },
-                ...categories.map((c) => ({
-                  label: c.name,
-                  value: String(c.id),
-                })),
-              ]}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={handleResetFilters}>
-              Reset
-            </Button>
-            <Button onClick={handleSearch}>Search</Button>
-          </div>
+          <SchemaSearchForm<ProductSearchForm>
+            schema={[
+              {
+                type: 'input',
+                key: 'treasureName',
+                label: 'Product Name',
+                placeholder: 'Search product...',
+              },
+              {
+                type: 'select',
+                key: 'categoryId',
+                label: 'Category',
+                defaultValue: 'ALL', // 支持默认值
+                options: [
+                  { label: 'All Categories', value: 'ALL' },
+                  ...categories.map((c) => ({
+                    label: c.name,
+                    value: String(c.id),
+                  })),
+                ],
+              },
+            ]}
+            onSearch={handleSearch}
+            onReset={reset}
+          />
         </div>
 
-        {/* 表格 */}
-        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/5">
-          <Table className="text-left">
-            <TableHeader className="bg-gray-50/60 dark:bg-white/5">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  className="border-b border-gray-100 dark:border-white/5 text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider"
-                >
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="px-4 py-3">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-
-            <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
-              {table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-150"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-3 text-sm">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-
-              {dataSource.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="py-8 text-center text-gray-500"
-                  >
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <Pagination
-          current={tableProps.pagination.current}
-          pageSize={10}
-          total={tableProps.pagination.total}
-          onChange={(page, pageSize) =>
-            tableProps.pagination.onChange(page, pageSize)
-          }
+        <BaseTable
+          data={dataSource}
+          columns={columns}
+          rowKey="treasureId"
+          pagination={{
+            ...tableProps.pagination,
+            onChange: (page, pageSize) => {
+              tableProps.onChange?.(page, pageSize);
+            },
+          }}
         />
       </Card>
     </div>

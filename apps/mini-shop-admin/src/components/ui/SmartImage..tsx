@@ -29,6 +29,8 @@ export const SmartImage: React.FC<SmartImageProps> = ({
     'loading',
   );
 
+  const imgRef = React.useRef<HTMLImageElement | null>(null);
+
   // 1. 计算最终是否开启 CDN
   // 优先级: Props传入 > 环境变量 > 默认 false
   const useCdn =
@@ -38,6 +40,19 @@ export const SmartImage: React.FC<SmartImageProps> = ({
   // 监听 src 变化，重置状态 (防止表格复用组件时状态不更新)
   useEffect(() => {
     setStatus('loading');
+
+    // 检查 ref 是否存在，以及图片是否已经“完成”了 (cached)
+    if (imgRef.current && imgRef.current.complete) {
+      // 如果浏览器说“我早就加载完了”，那我们手动触发 loaded
+      // 这里的 .complete 是原生 DOM 属性，非常可靠
+      if (imgRef.current.naturalWidth === 0) {
+        // 加载完了但宽度是0，说明是张烂图 (Error)
+        setStatus('error');
+      } else {
+        // 宽度正常，说明加载成功 (Loaded)
+        setStatus('loaded');
+      }
+    }
   }, [src]);
 
   return (
@@ -72,6 +87,7 @@ export const SmartImage: React.FC<SmartImageProps> = ({
       {/* --- 3. 正常图片 (@unpic) --- */}
       {src && (
         <Image
+          ref={imgRef}
           src={src}
           // 智能开关：开启传 'cloudflare'，关闭传 undefined (加载原图)
           cdn={useCdn ? 'cloudflare' : undefined}

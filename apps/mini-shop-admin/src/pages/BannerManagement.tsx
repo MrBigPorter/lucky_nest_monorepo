@@ -300,6 +300,7 @@ export const BannerManagement: React.FC = () => {
         </div>
         <BaseTable
           data={dataSource}
+          rowKey="id"
           columns={columns}
           pagination={{
             ...tableProps.pagination,
