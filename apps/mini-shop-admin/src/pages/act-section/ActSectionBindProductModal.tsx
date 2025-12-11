@@ -5,9 +5,10 @@ import { actSectionWithProducts, Product } from '@/type/types';
 import { Button, ModalManager } from '@repo/ui';
 import { Input } from '@/components/UIComponents.tsx';
 import { createColumnHelper } from '@tanstack/react-table';
-import { Link2Off, Search } from 'lucide-react';
+import { Link, Link2Off, Search } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore.ts';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
+import { SmartImage } from '@/components/ui/SmartImage.tsx';
 
 interface Props {
   onClose: () => void;
@@ -24,7 +25,7 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const addToast = useToastStore((s) => s.addToast);
 
-  const getTableData = useCallback(
+  const getTableData1 = useCallback(
     async (
       { current, pageSize }: { current: number; pageSize: number },
       formData: { name: string },
@@ -39,7 +40,7 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
     [],
   );
 
-  const { tableProps, run } = useAntdTable(getTableData, {
+  const { tableProps, run } = useAntdTable(getTableData1, {
     manual: true,
     defaultPageSize: 5, // 弹窗里显示少一点
     defaultParams: [{ current: 1, pageSize: 5 }, { name: '' }],
@@ -62,6 +63,15 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
       onConfirm();
     },
   });
+
+  const { run: bindProductByColum, loading: bindProductByColumLoading } =
+    useRequest(actSectionApi.bindProduct, {
+      manual: true,
+      onSuccess: () => {
+        addToast('success', 'Products added to activity section successfully');
+        getDetail(editingData.id);
+      },
+    });
 
   const { run: unbindProduct, loading: unbindLoading } = useRequest(
     actSectionApi.unbindProduct,
@@ -123,7 +133,10 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
         header: 'Product Info',
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <img
+            <SmartImage
+              width={40}
+              height={40}
+              layout="constrained"
               src={info.row.original.treasureCoverImg}
               className="w-10 h-10 rounded object-cover bg-gray-100"
               alt=""
@@ -146,21 +159,41 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
         header: 'Actions',
         enableSorting: false,
         cell: (info) => {
-          console.log('existingIds', existingIds);
           const isBinding = existingIds.includes(info.row.original.treasureId);
-          return (
+          return isBinding ? (
             <Button
+              isLoading={loading}
               variant="ghost"
               size="sm"
               onClick={() => unbind(info.row.original)}
             >
-              {isBinding ? <Link2Off size={16} /> : null}
+              <Link2Off size={16} />
+            </Button>
+          ) : (
+            <Button
+              isLoading={bindProductByColumLoading}
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                bindProductByColum(editingData.id, {
+                  treasureIds: [info.row.original.treasureId],
+                })
+              }
+            >
+              <Link size={16} />
             </Button>
           );
         },
       }),
     ];
-  }, [existingIds, unbind]);
+  }, [
+    bindProductByColum,
+    bindProductByColumLoading,
+    editingData.id,
+    existingIds,
+    loading,
+    unbind,
+  ]);
 
   return (
     <div className="rounded-xl shadow-2xl w-[600px] max-w-[90vw] flex flex-col max-h-[85vh]">
