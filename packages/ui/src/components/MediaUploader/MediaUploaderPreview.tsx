@@ -1,8 +1,7 @@
-// MediaUploaderPreview.tsx
 import React from "react";
 import { X } from "lucide-react";
 import { useMediaUploaderContext } from "./context";
-import type { RenderItemProps } from "./types";
+import type { PreviewFile, RenderImageProps, RenderItemProps } from "./types";
 import { MediaUploaderButton } from "./MediaUploaderButton";
 import { cn } from "../../lib/utils";
 
@@ -11,6 +10,7 @@ interface MediaUploaderPreviewProps {
   showRemoveButton?: boolean;
   renderItem?: (props: RenderItemProps) => React.ReactNode;
   renderButton?: (openFilePicker?: () => void) => React.ReactNode;
+  renderImage?: (props: RenderImageProps) => React.ReactNode;
 }
 
 export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
@@ -18,9 +18,25 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
   showRemoveButton = true,
   renderItem,
   renderButton,
+  renderImage,
 }) => {
   const { preview, handleRemoveFile, openFilePicker, maxFileCount } =
     useMediaUploaderContext();
+
+  // --- 辅助函数：统一处理图片渲染逻辑 ---
+  const renderTheImage = (file: PreviewFile) => {
+    const commonProps = {
+      src: file.preview,
+      alt: file.name,
+      className: "w-full h-full object-cover",
+    };
+
+    // 如果外部传了 renderImage，就用外部的；否则用默认 img
+    if (renderImage) {
+      return renderImage({ ...commonProps, file });
+    }
+    return <img {...commonProps} alt={file.name} />;
+  };
 
   // 0 张：只显示上传按钮
   if (!preview.length) {
@@ -54,11 +70,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
           }}
         >
           {isImage ? (
-            <img
-              src={file.preview}
-              alt={file.name}
-              className="w-full h-full object-cover"
-            />
+            renderTheImage(file)
           ) : (
             <video
               src={file.preview}
@@ -93,11 +105,7 @@ export const MediaUploaderPreview: React.FC<MediaUploaderPreviewProps> = ({
               className="relative group aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5 dark:bg-white/5"
             >
               {isImage ? (
-                <img
-                  src={file.preview}
-                  alt={file.name}
-                  className="w-full h-full object-cover"
-                />
+                renderTheImage(file)
               ) : (
                 <video
                   src={file.preview}

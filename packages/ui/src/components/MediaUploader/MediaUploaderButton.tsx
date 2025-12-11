@@ -1,4 +1,3 @@
-// MediaUploaderButton.tsx
 import React from "react";
 import { UploadCloud } from "lucide-react";
 import { useMediaUploaderContext } from "./context";

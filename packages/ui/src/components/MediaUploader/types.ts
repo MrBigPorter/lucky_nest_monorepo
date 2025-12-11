@@ -33,3 +33,10 @@ export type RenderItemProps = {
   handleRemoveFile: (index: number) => void;
   showRemoveButton: boolean;
 };
+
+export interface RenderImageProps {
+  src: string;
+  alt?: string;
+  className?: string;
+  file: PreviewFile; // 把原始 file 对象也传出去，方便外部做判断
+}

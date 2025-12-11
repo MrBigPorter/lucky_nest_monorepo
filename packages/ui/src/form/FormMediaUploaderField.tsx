@@ -19,6 +19,7 @@ import { useFormTheme } from "./formTheme/FormThemeProvider";
 import { getVariantClassNames } from "./formTheme";
 import { twMerge } from "tailwind-merge";
 import * as MediaUploader from "../components/MediaUploader";
+import { RenderImageProps } from "../components/MediaUploader/types.ts";
 
 type FormMediaUploaderFieldProps<
   TFieldValues extends FieldValues = FieldValues,
@@ -40,6 +41,7 @@ type FormMediaUploaderFieldProps<
   helpTextClassName?: string;
   renderItem?: (props: MediaUploader.RenderItemProps) => React.ReactNode;
   renderButton?: (openFilePicker?: () => void) => ReactNode;
+  renderImage?: (props: RenderImageProps) => React.ReactNode;
 };
 
 export function FormMediaUploaderField<
@@ -64,6 +66,7 @@ export function FormMediaUploaderField<
   helpTextClassName,
   accept,
   maxFileCount,
+  renderImage,
 }: Readonly<FormMediaUploaderFieldProps<TFieldValues>>) {
   const theme = useFormTheme();
 
@@ -131,6 +134,7 @@ export function FormMediaUploaderField<
                       className={previewClassName}
                       showRemoveButton={showRemoveButton}
                       renderItem={renderItem}
+                      renderImage={renderImage}
                       renderButton={(openFilePicker) =>
                         renderButton ? (
                           renderButton(openFilePicker)
