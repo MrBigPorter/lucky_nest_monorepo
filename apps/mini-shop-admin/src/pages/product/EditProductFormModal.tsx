@@ -14,6 +14,7 @@ import {
 } from '@repo/ui';
 import { FormTextareaField } from '@repo/ui/form/FormTextareaField.tsx';
 import { useRequest } from 'ahooks';
+import { SmartImage } from '@/components/ui/SmartImage.tsx';
 
 type ProductFormInputs = z.infer<typeof createProductSchema>;
 
@@ -126,6 +127,17 @@ export const EditProductFormModal = (
               name="treasureCoverImg"
               label="Cover Image"
               maxFileCount={1}
+              renderImage={({ src, alt, className }) => (
+                <SmartImage
+                  src={src}
+                  alt={alt}
+                  width={400}
+                  height={400}
+                  className={className}
+                  imgClassName="w-64 h-64 rounded-md object-cover"
+                  layout="constrained"
+                />
+              )}
             />
           </div>
         </div>

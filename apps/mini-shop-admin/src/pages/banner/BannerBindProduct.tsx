@@ -19,6 +19,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Search } from 'lucide-react';
+import { Image } from '@unpic/react';
 
 interface TableMeta {
   relatedTitleId: string | null;
@@ -93,8 +94,12 @@ export const BannerBindProduct: React.FC<Props> = ({ value, onChange }) => {
         header: 'Product Info',
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <img
+            <Image
+              cdn="cloudflare"
               src={info.row.original.treasureCoverImg}
+              width={40}
+              height={40}
+              layout="constrained"
               className="w-10 h-10 rounded object-cover bg-gray-100"
               alt=""
               loading="lazy"

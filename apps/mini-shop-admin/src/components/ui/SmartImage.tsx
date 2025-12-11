@@ -31,11 +31,15 @@ export const SmartImage: React.FC<SmartImageProps> = ({
 
   const imgRef = React.useRef<HTMLImageElement | null>(null);
 
-  // 1. 计算最终是否开启 CDN
-  // 优先级: Props传入 > 环境变量 > 默认 false
-  const useCdn =
-    enableOptimization ??
-    import.meta.env.VITE_ENABLE_IMAGE_OPTIMIZATION === 'true';
+  // 1. 判断是否为本地图片 (Blob URL 或 Base64)
+  const isLocalImage = src?.startsWith('blob:') || src?.startsWith('data:');
+
+  // 2. 计算是否使用 CDN
+  // 规则：如果不强制指定，且不是本地图片，且环境变量开启，则使用 Cloudflare
+  const shouldEnableCdn =
+    !isLocalImage &&
+    (enableOptimization ??
+      import.meta.env.VITE_ENABLE_IMAGE_OPTIMIZATION === 'true');
 
   // 监听 src 变化，重置状态 (防止表格复用组件时状态不更新)
   useEffect(() => {
@@ -90,7 +94,7 @@ export const SmartImage: React.FC<SmartImageProps> = ({
           ref={imgRef}
           src={src}
           // 智能开关：开启传 'cloudflare'，关闭传 undefined (加载原图)
-          cdn={useCdn ? 'cloudflare' : undefined}
+          cdn={shouldEnableCdn ? 'cloudflare' : undefined}
           layout={layout}
           alt={alt}
           loading={loading}

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRequest } from 'ahooks';
-import { bannerApi, uploadApi } from '@/api'; // 假设你有这些API
+import { bannerApi, uploadApi } from '@/api';
 import {
   Button,
   Form,
@@ -17,6 +17,7 @@ import { Link } from 'lucide-react';
 import { BannerFormInputs, BannerShema } from '@/schema/bannerShema.ts';
 import { BannerBindProduct } from '@/pages/banner/BannerBindProduct.tsx';
 import { Banner } from '@/type/types.ts';
+import { SmartImage } from '@/components/ui/SmartImage.tsx';
 
 interface Props {
   close: () => void;
@@ -95,6 +96,7 @@ export const BannerFormModal: React.FC<Props> = ({
           : undefined,
         jumpCate: editingData.jumpCate,
         jumpUrl: editingData.jumpUrl || '',
+        bannerImgUrl: editingData.bannerImgUrl,
         bannerCate: editingData.bannerCate,
         relatedTitleId: editingData.relatedTitleId || undefined,
       });
@@ -114,9 +116,21 @@ export const BannerFormModal: React.FC<Props> = ({
               required
             />
             <FormMediaUploaderField
+              required
               maxFileCount={1}
               name="bannerImgUrl"
               label="Creative Asset (16:9)"
+              renderImage={({ src, alt, className }) => (
+                <SmartImage
+                  src={src}
+                  alt={alt}
+                  width={614}
+                  height={300}
+                  className={className}
+                  imgClassName="w-[614px] h-[300px] rounded-md object-cover"
+                  layout="constrained"
+                />
+              )}
             />
           </div>
 

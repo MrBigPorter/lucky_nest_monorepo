@@ -20,7 +20,7 @@ import { Banner, BannerListParams } from '@/type/types.ts';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
-import { SmartImage } from '@/components/ui/SmartImage..tsx';
+import { SmartImage } from '@/components/ui/SmartImage.tsx';
 
 type BannerSearchForm = {
   title: string;

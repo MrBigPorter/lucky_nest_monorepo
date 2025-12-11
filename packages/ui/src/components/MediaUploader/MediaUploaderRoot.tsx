@@ -1,11 +1,10 @@
-// MediaUploaderRoot.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDropzone, type Accept } from "react-dropzone";
 import { MediaUploaderContext } from "./context";
 import type { MediaUploaderProps, PreviewFile } from "./types";
 
 export const MediaUploaderRoot: React.FC<MediaUploaderProps> = ({
-  value, // ⭐ 用于表单回显
+  value,
   onUpload,
   maxFileSizeMB = 5,
   maxFileCount,
@@ -15,9 +14,8 @@ export const MediaUploaderRoot: React.FC<MediaUploaderProps> = ({
   const [preview, setPreview] = useState<PreviewFile[]>([]);
   const [files, setFiles] = useState<File[]>([]);
 
-  /** -------- 1. 把默认值（URL / File）转成 preview，用于编辑回显 -------- */
+  /** -------- 1. 初始化回显 (保持不变) -------- */
   useEffect(() => {
-    // 没值：清空
     if (!value) {
       setPreview([]);
       setFiles([]);
@@ -38,7 +36,7 @@ export const MediaUploaderRoot: React.FC<MediaUploaderProps> = ({
       urlList.push(value);
     }
 
-    // 已经有用户交互产生的 preview，就不强制覆盖，避免闪动
+    // 防止死循环：只有当本地状态为空，且有初始值时才初始化
     if (!urlList.length && !fileList.length) return;
     if (preview.length > 0) return;
 
@@ -75,11 +73,12 @@ export const MediaUploaderRoot: React.FC<MediaUploaderProps> = ({
       ? { "image/*": [], "video/*": [] }
       : accept;
 
-  /** -------- 3. 拖拽 / 选择文件 -------- */
+  /** -------- 3. 拖拽 / 选择文件 (🔥 核心修复) -------- */
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (!acceptedFiles?.length) return;
 
+      // 1. 生成预览对象
       const newPreview: PreviewFile[] = acceptedFiles.map((file, index) => ({
         id: `local-${Date.now()}-${index}`,
         name: file.name,
@@ -89,41 +88,43 @@ export const MediaUploaderRoot: React.FC<MediaUploaderProps> = ({
         fromServer: false,
       }));
 
-      setPreview((prev) => {
-        // 选中新的图片时，把旧的 server 回显也可以保留或不保留
-        // 这里我选择保留旧的 + 新的，再按 maxFileCount 截断
-        const merged = [...prev, ...newPreview];
-        if (maxFileCount && maxFileCount > 0) {
-          return merged.slice(-maxFileCount);
-        }
-        return merged;
-      });
+      // 2. 计算新的 preview 列表 (依赖当前的 preview 状态)
+      const mergedPreview = [...preview, ...newPreview];
+      const finalPreview =
+        maxFileCount && maxFileCount > 0
+          ? mergedPreview.slice(-maxFileCount)
+          : mergedPreview;
 
-      setFiles((prev) => {
-        const merged = [...prev, ...acceptedFiles];
-        const limited =
-          maxFileCount && maxFileCount > 0
-            ? merged.slice(-maxFileCount)
-            : merged;
-        // ⭐ 只在这里调用 onUpload -> 只在用户操作时更新 RHF，不在 render 期间调用
-        onUpload?.(limited);
-        return limited;
-      });
+      // 3. 计算新的 files 列表 (依赖当前的 files 状态)
+      const mergedFiles = [...files, ...acceptedFiles];
+      const finalFiles =
+        maxFileCount && maxFileCount > 0
+          ? mergedFiles.slice(-maxFileCount)
+          : mergedFiles;
+
+      // 4. 更新状态 (不再使用回调函数形式 setFiles(prev => ...))
+      setPreview(finalPreview);
+      setFiles(finalFiles);
+
+      onUpload?.(finalFiles);
     },
-    [onUpload, maxFileCount],
+    // 🔥 必须把 preview, files 加到依赖里
+    [onUpload, maxFileCount, preview, files],
   );
 
-  /** -------- 4. 删除某一张 -------- */
   const handleRemoveFile = useCallback(
     (index: number) => {
-      setPreview((prev) => prev.filter((_, i) => i !== index));
-      setFiles((prev) => {
-        const next = prev.filter((_, i) => i !== index);
-        onUpload?.(next);
-        return next;
-      });
+      // 1. 计算删除后的列表
+      const nextPreview = preview.filter((_, i) => i !== index);
+      const nextFiles = files.filter((_, i) => i !== index);
+
+      // 2. 更新本地状态
+      setPreview(nextPreview);
+      setFiles(nextFiles);
+
+      onUpload?.(nextFiles);
     },
-    [onUpload],
+    [onUpload, preview, files],
   );
 
   const dropzone = useDropzone({
@@ -148,7 +149,6 @@ export const MediaUploaderRoot: React.FC<MediaUploaderProps> = ({
 
   return (
     <MediaUploaderContext.Provider value={contextValue}>
-      {/* 这里只负责绑定 dropzone 的 root/input，样式交给 Preview/Button */}
       <div {...dropzone.getRootProps()}>
         <input {...dropzone.getInputProps()} />
         {children}

@@ -10,7 +10,7 @@ import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.t
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
 import { TREASURE_STATE } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore.ts';
-import { SmartImage } from '@/components/ui/SmartImage..tsx';
+import { SmartImage } from '@/components/ui/SmartImage.tsx';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
