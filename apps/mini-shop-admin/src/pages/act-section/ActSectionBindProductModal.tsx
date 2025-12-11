@@ -2,25 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { actSectionApi, productApi } from '@/api';
 import { actSectionWithProducts, Product } from '@/type/types';
-import {
-  Button,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  ModalManager,
-} from '@repo/ui';
+import { Button, ModalManager } from '@repo/ui';
 import { Input } from '@/components/UIComponents.tsx';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 import { Link2Off, Search } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore.ts';
+import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 
 interface Props {
   onClose: () => void;
@@ -28,21 +15,12 @@ interface Props {
   editingData: actSectionWithProducts;
 }
 
-interface TableMeta {
-  selectedRows: Record<string, Product>;
-  toggleSelection: (product: Product) => void;
-  existingIds: string[];
-}
-
 export const ActSectionBindProductModal: React.FC<Props> = ({
-  onClose,
   onConfirm,
   editingData,
 }) => {
-  const [selectedRows, setSelectedRows] = useState<Record<string, Product>>({});
-  const [existingSelectedRows, setExistingSelectedRows] = useState<string[]>(
-    [],
-  );
+  const [selectedRows, setSelectedRows] = useState<Product[]>([]);
+  const [existingIds, setExistingSelectedRows] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const addToast = useToastStore((s) => s.addToast);
 
@@ -112,57 +90,35 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
     bindProduct(editingData.id, { treasureIds: products });
   };
 
-  // 2. 处理多选逻辑
-  const toggleSelection = useCallback((product: Product) => {
-    setSelectedRows((prev) => {
-      const next = { ...prev };
-      if (next[product.treasureId]) {
-        delete next[product.treasureId];
-      } else {
-        next[product.treasureId] = product;
-      }
-      return next;
-    });
-  }, []);
+  const unbind = useCallback(
+    (product: Product) => {
+      ModalManager.open({
+        title: 'Confirm Unbind',
+        content: `Are you sure you want to unbind "${product.treasureName}" from this activity section?`,
+        confirmText: 'Unbind',
+        cancelText: 'Cancel',
+        onConfirm: () => {
+          if (unbindLoading) return;
+          unbindProduct(editingData.id, product.treasureId);
+        },
+      });
+    },
+    [editingData.id, unbindLoading, unbindProduct],
+  );
 
-  const unbind = (product: Product) => {
-    ModalManager.open({
-      title: 'Confirm Unbind',
-      content: `Are you sure you want to unbind "${product.treasureName}" from this activity section?`,
-      confirmText: 'Unbind',
-      cancelText: 'Cancel',
-      onConfirm: () => {
-        if (unbindLoading) return;
-        unbindProduct(editingData.id, product.treasureId);
-      },
-    });
-  };
+  // baseTable 检测到选中了行或者onSelectionChange:handleSelectionChange发生变化，会调用onSelectionChange
+  // 父组件通过handleSelectionChange获取选中的行数据，用setState保存,父组件re-render
+  //如果handleSelectionChange不做处理，会创建一个新的handleSelectionChange引用
+  // baseTable 会收到一个新的props onSelectionChange，认为onSelectionChange变化了
+  // baseTable 依赖onSelectionChange变化，重新渲染，形成死循环
+  const handleSelectionChange = useCallback((data: Product[]) => {
+    setSelectedRows(data);
+  }, []);
 
   // 3. 表格列定义
   const columns = useMemo(() => {
     const columnHelper = createColumnHelper<Product>();
     return [
-      columnHelper.display({
-        id: 'select',
-        header: 'Select',
-        cell: (info) => {
-          const meta = info.table.options.meta as TableMeta;
-          const { selectedRows, toggleSelection, existingIds } = meta;
-          const id = info.row.original.treasureId;
-          const isDisabled = existingIds.includes(id);
-          const isChecked = !!selectedRows[id];
-
-          return (
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              disabled={isDisabled}
-              checked={isChecked || isDisabled}
-              onChange={() => !isDisabled && toggleSelection(info.row.original)}
-            />
-          );
-        },
-      }),
       columnHelper.accessor('treasureName', {
         header: 'Product Info',
         cell: (info) => (
@@ -185,11 +141,12 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
           <span className="font-mono text-xs">₱{info.getValue()}</span>
         ),
       }),
-      columnHelper.display({
+      columnHelper.accessor((row) => existingIds.includes(row.treasureId), {
         id: 'actions',
         header: 'Actions',
+        enableSorting: false,
         cell: (info) => {
-          const { existingIds } = info.table.options.meta as TableMeta;
+          console.log('existingIds', existingIds);
           const isBinding = existingIds.includes(info.row.original.treasureId);
           return (
             <Button
@@ -203,21 +160,7 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
         },
       }),
     ];
-  }, []);
-
-  const table = useReactTable({
-    data: (tableProps.dataSource || []) as Product[],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.treasureId,
-    // 核心修改 3: 把动态数据通过 meta 传进去
-    // 当 selectedRows 变化时，meta 更新，但 Table 不会彻底销毁重来
-    meta: {
-      selectedRows,
-      toggleSelection,
-      existingIds: existingSelectedRows,
-    } as TableMeta,
-  });
+  }, [existingIds, unbind]);
 
   return (
     <div className="rounded-xl shadow-2xl w-[600px] max-w-[90vw] flex flex-col max-h-[85vh]">
@@ -241,89 +184,29 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
           </Button>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/5">
-          <Table>
-            <TableHeader className="bg-gray-50/60 dark:bg-white/5">
-              {table.getHeaderGroups().map((hg) => (
-                <TableRow className="border-0" key={hg.id}>
-                  {hg.headers.map((h) => (
-                    <TableHead
-                      key={h.id}
-                      className="border-b border-gray-100 dark:border-white/5 text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider"
-                    >
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-black/20">
-              {table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-150"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-2 px-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination (Simplified) */}
-        <div className="flex justify-between items-center text-xs text-gray-500">
-          <span>Total: {tableProps.pagination.total}</span>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={tableProps.pagination.current === 1}
-              onClick={() =>
-                tableProps.pagination.onChange(
-                  tableProps.pagination.current - 1,
-                  5,
-                )
-              }
-            >
-              Prev
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={
-                tableProps.pagination.current * 5 >= tableProps.pagination.total
-              }
-              onClick={() =>
-                tableProps.pagination.onChange(
-                  tableProps.pagination.current + 1,
-                  5,
-                )
-              }
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <BaseTable
+          rowKey="treasureId"
+          data={tableProps.dataSource}
+          columns={columns}
+          selectable={true}
+          defaultSelectedRowKeys={existingIds}
+          disabledRowKeys={existingIds}
+          onSelectionChange={handleSelectionChange}
+          pagination={{
+            ...tableProps.pagination,
+            onChange: (page, pageSize) => {
+              tableProps.onChange?.(page, pageSize);
+            },
+          }}
+        />
       </div>
 
       <div className="p-4  flex justify-end gap-3 ">
         <div className="flex-1 content-center text-sm text-gray-500">
-          Selected:{' '}
-          <span className="font-bold text-blue-600">
-            {Object.keys(selectedRows).length}
-          </span>{' '}
+          <span className="font-bold text-blue-600">{selectedRows.length}</span>
           items
         </div>
-        <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
+        <Button variant="ghost">Cancel</Button>
         <Button isLoading={loading} onClick={confirm}>
           Confirm Add
         </Button>

@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useMemo, useRef, useState } from 'react';
 import {
   Table,
   TableHeader,
@@ -101,7 +101,13 @@ const SortableRow = ({
   );
 };
 
-// --- BaseTable Props ---
+/**
+ * 基础表格组件，支持排序、分页、行选择、可展开行和拖拽排序等功能。
+ * @template T - 表格数据的类型
+ * @param {BaseTableProps<T>} props - 组件属性
+ * @returns {JSX.Element} 渲染的表格组件
+ *
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface BaseTableProps<T extends Record<string, any>> {
   data: T[];
@@ -127,8 +133,30 @@ interface BaseTableProps<T extends Record<string, any>> {
   renderSubComponent?: (row: Row<T>) => React.ReactNode;
 
   onRowClick?: (row: T) => void;
+
+  defaultSelectedRowKeys?: string[];
+  disabledRowKeys?: string[];
 }
 
+/**
+ * 基础表格组件
+ * @param data - 表格数据
+ * @param propColumns - 列定义
+ * @param loading - 加载状态
+ * @param rowKey - 唯一行标识字段
+ * @param pagination - 分页配置
+ * @param enableDrag - 是否启用拖拽排序
+ * @param onDragEnd - 拖拽结束回调
+ * @param selectable - 是否启用行选择
+ * @param onSelectionChange  - 选择变化回调
+ * @param expandable - 是否启用可展开行
+ * @param renderSubComponent - 渲染子组件函数
+ * @param onRowClick - 行点击回调
+ * @param defaultSelectedRowKeys - 默认选中的行键
+ * @param disabledRowKeys - 禁用选择的行键
+ * @returns 渲染的表格组件
+ * @constructor
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const BaseTable = <T extends Record<string, any>>({
   data,
@@ -143,10 +171,12 @@ export const BaseTable = <T extends Record<string, any>>({
   expandable = false,
   renderSubComponent,
   onRowClick,
+  defaultSelectedRowKeys,
+  disabledRowKeys,
 }: BaseTableProps<T>) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-
+  const prevSelectionRef = useRef<string>('');
   const columns = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cols = [...propColumns] as ColumnDef<T, any>[];
@@ -154,18 +184,55 @@ export const BaseTable = <T extends Record<string, any>>({
     if (selectable) {
       cols.unshift({
         id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
+        header: ({ table }) => {
+          const isAllSelected = table.getIsAllPageRowsSelected();
+          const isSomeSelected = table.getIsSomePageRowsSelected();
+          const checked = isAllSelected
+            ? true
+            : isSomeSelected
+              ? 'indeterminate'
+              : false;
+
+          const handleToggleAll = (val: boolean) => {
+            // 拿到当前的选中状态副本
+            const newSelection = { ...table.getState().rowSelection };
+
+            // 获取当前页的所有行
+            const pageRows = table.getRowModel().rows;
+
+            pageRows.forEach((row) => {
+              // 关键点：row.getCanSelect() 会根据你之前写的 enableRowSelection 逻辑返回结果
+              // 如果 ID 在 disabledRowKeys 里，getCanSelect() 就是 false
+
+              // 只有“允许被选”的行，我们才去修改它的状态
+              // 这样“禁用”的行（locked rows）就会保持原样，不会被选中，也不会被取消
+              if (row.getCanSelect()) {
+                if (val) {
+                  // 全选：把当前页所有可选行设为 true
+                  newSelection[row.id] = true;
+                } else {
+                  // 取消全选：把当前页所有可选行删掉 (delete)
+                  delete newSelection[row.id];
+                }
+              }
+            });
+
+            // 更新表格状态
+            table.setRowSelection(newSelection);
+          };
+
+          return (
+            <Checkbox
+              checked={checked}
+              onCheckedChange={(value) => handleToggleAll(!!value)}
+              aria-label="Select all"
+            />
+          );
+        },
         cell: ({ row }) => (
           <div onClick={(e) => e.stopPropagation()}>
             <Checkbox
+              disabled={!row.getCanSelect()}
               checked={row.getIsSelected()}
               onCheckedChange={(value) => row.toggleSelected(!!value)}
               aria-label="Select row"
@@ -220,11 +287,37 @@ export const BaseTable = <T extends Record<string, any>>({
     onRowSelectionChange: (updater) => {
       setRowSelection(updater);
     },
-    enableRowSelection: true,
+    enableRowSelection: (row) => {
+      const id = String(row.original[rowKey]);
+      // 如果 disabledRowKeys 存在，且当前行的 id 在其中，则禁用选择
+      return !(disabledRowKeys && disabledRowKeys.includes(id));
+    },
   });
 
   React.useEffect(() => {
+    // 初始化默认选中行
+    if (defaultSelectedRowKeys && defaultSelectedRowKeys.length > 0) {
+      const initialSelection: RowSelectionState = {};
+      defaultSelectedRowKeys.forEach((key) => {
+        initialSelection[key] = true;
+      });
+      setRowSelection(initialSelection);
+    }
+  }, [defaultSelectedRowKeys]);
+
+  React.useEffect(() => {
     if (onSelectionChange) {
+      // 简单粗暴但有效：把选中的 ID 拼成字符串进行比对
+      // 假设 rowKey 是 'id' 或 'productId'，这里用 map 提取一下
+      const currentSelectionIds = Object.keys(rowSelection).sort().join(',');
+
+      // 如果当前的选中状态 ID 组合，和上一次通知父组件的一样，就直接 return，不回调！
+      if (currentSelectionIds === prevSelectionRef.current) {
+        return;
+      }
+      // 记录这一次的 ID 组合
+      prevSelectionRef.current = currentSelectionIds;
+
       const selectedData = table
         .getFilteredSelectedRowModel()
         .rows.map((row) => row.original);
@@ -270,9 +363,16 @@ export const BaseTable = <T extends Record<string, any>>({
     }
 
     const tableRows = table.getRowModel().rows.map((row) => {
-      const cells = row
-        .getVisibleCells()
-        .map((cell) => <MemoizedCell key={cell.id} cell={cell} />);
+      const cells = row.getVisibleCells().map((cell) => {
+        return (
+          <MemoizedCell
+            key={cell.id}
+            cell={cell}
+            isSelected={row.getIsSelected()}
+            isDisabled={!row.getCanSelect()}
+          />
+        );
+      });
 
       return (
         <React.Fragment key={row.id}>
@@ -357,55 +457,49 @@ export const BaseTable = <T extends Record<string, any>>({
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TableRowComponent = memo(
-  ({
-    row,
-    onClick,
-    enableDrag,
-    children,
-  }: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    row: Row<any>;
-    onClick?: () => void;
-    enableDrag?: boolean;
-    children: React.ReactNode;
-  }) => {
-    if (enableDrag) {
-      return (
-        <SortableRow row={row} onClick={onClick}>
-          {children}
-        </SortableRow>
-      );
-    }
-
+const TableRowComponent = ({
+  row,
+  onClick,
+  enableDrag,
+  children,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  row: Row<any>;
+  onClick?: () => void;
+  enableDrag?: boolean;
+  children: React.ReactNode;
+}) => {
+  if (enableDrag) {
     return (
-      <TableRow
-        className={cn(
-          'group hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer',
-          row.getIsSelected() && 'bg-blue-50/50 dark:bg-blue-900/10',
-        )}
-        onClick={onClick}
-      >
+      <SortableRow row={row} onClick={onClick}>
         {children}
-      </TableRow>
+      </SortableRow>
     );
-  },
-  (prev, next) => {
-    const dataChanged = prev.row.original !== next.row.original;
-    const selectionChanged =
-      prev.row.getIsSelected() !== next.row.getIsSelected();
-    const expandedChanged =
-      prev.row.getIsExpanded() !== next.row.getIsExpanded();
-    return !(dataChanged || selectionChanged || expandedChanged);
-  },
-);
+  }
 
-TableRowComponent.displayName = 'TableRowComponent';
+  return (
+    <TableRow
+      className={cn(
+        'group hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer',
+        row.getIsSelected() && 'bg-blue-50/50 dark:bg-blue-900/10',
+      )}
+      onClick={onClick}
+    >
+      {children}
+    </TableRow>
+  );
+};
 
 // 只有当 cell 的值变化，或者它是“操作列”(没有值)时，才更新
 const MemoizedCell = memo(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ({ cell }: { cell: Cell<any, any> }) => {
+  ({
+    cell,
+  }: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    cell: Cell<any, any>;
+    isSelected: boolean;
+    isDisabled: boolean;
+  }) => {
     // 渲染逻辑移到这里
     const content = flexRender(cell.column.columnDef.cell, cell.getContext());
     const isDragHandle =
@@ -430,26 +524,32 @@ const MemoizedCell = memo(
     );
   },
   (prev, next) => {
-    // 1. 如果行数据没变，单元格肯定不用变 (继承 Row 的优化)
+    // 1. 如果是 Select 列，直接对比传入的 boolean 值
+    // 因为 boolean 是基础类型，不涉及引用问题，绝对准确
+
+    if (next.cell.column.id === 'actions') {
+      return false; // 强制返回 false，允许重渲染
+    }
+
+    if (next.cell.column.id === 'select') {
+      return (
+        prev.isSelected === next.isSelected &&
+        prev.isDisabled === next.isDisabled
+      );
+    }
+
+    // 3. 如果行数据没变，单元格肯定不用变 (继承 Row 的优化)
     if (prev.cell.row.original === next.cell.row.original) return true;
 
-    // 2. 如果行数据变了（比如 updateStatus 导致 row.original 变了），
-    //    我们进一步检查：当前这个单元格的值(getValue)有没有变？
+    // 4. 检查单元格的值(getValue)有没有变
     const prevValue = prev.cell.getValue();
     const nextValue = next.cell.getValue();
 
-    // 如果值是基本类型且相等 (比如 'image_url' 字符串没变)，则跳过渲染！
-    if (
+    return (
       prevValue === nextValue &&
       typeof prevValue !== 'object' &&
       prevValue !== undefined
-    ) {
-      return true;
-    }
-
-    // 注意：对于 'Actions' 列，getValue() 通常是 undefined/null，
-    // 或者它依赖 row.original 的多个字段，这种情况下我们让它正常更新。
-    return false; // 其他情况（值变了，或者是复杂对象），允许更新
+    );
   },
 );
 MemoizedCell.displayName = 'MemoizedCell';
