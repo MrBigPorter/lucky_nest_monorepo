@@ -21,6 +21,8 @@ import {
   Banner,
   BannerListParams,
   CreateBannerPayload,
+  OrderListParams,
+  Order,
 } from '@/type/types.ts';
 
 /**
@@ -103,6 +105,25 @@ export const bannerApi = {
 
   // 删除banner
   delete: (id: string) => http.delete<Banner>(`/v1/admin/banners/${id}`),
+};
+
+/**
+ * 订单相关 API
+ */
+export const orderApi = {
+  // 获取订单列表
+  getList: (params?: OrderListParams) =>
+    http.get<PaginatedResponse<Order>>('/v1/admin/order/list', params),
+
+  // 获取订单详情
+  getOrderDetailById: (id: string) => http.get<Order>(`/v1/admin/order/${id}`),
+
+  // 更新订单状态
+  updateState: (id: string, state: number) =>
+    http.patch<Order>(`/v1/admin/order/${id}/status`, { state }),
+
+  // 删除order
+  delete: (id: string) => http.delete<Order>(`/v1/admin/order/${id}`),
 };
 
 /**

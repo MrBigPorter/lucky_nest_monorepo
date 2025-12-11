@@ -240,18 +240,45 @@ export interface Transaction {
 }
 
 export interface Order {
-  id: string;
+  orderId: string;
   orderNo: string;
-  user: { id: string; name: string };
-  product: { id: string; name: string; image: string };
-  amount: number;
-  shares: number;
-  status: 'paid' | 'pending' | 'refunded';
-  isWinning: boolean;
-  luckyCode?: string;
-  deliveryStatus?: 'pending' | 'shipped' | 'delivered';
-  date: string;
+  originalAmount: number;
+  finalAmount: number;
+  couponAmount: number;
+  coinAmount: number;
+  buyQuantity: number;
+  unitPrice: number;
+  orderStatus: number;
+  paidAt: number;
+  createdAt: number;
+  user: OrderUser;
+  treasure: OrderTreasure;
 }
+
+export interface OrderUser {
+  id: string;
+  nickname: string;
+  phone: string;
+}
+
+export interface OrderTreasure {
+  treasureId: string;
+  treasureName: string;
+  treasureCoverImg: string;
+}
+
+// output to API query parameters
+export interface OrderListParams extends PaginationParams {
+  keyword?: string;
+  // Order status filter: 1 - Pending payment; 2 - Paid; 3 - Cancelled; 4 - Refunded
+  orderStatus?: number;
+}
+
+// input to search form component
+export type OrderSearchForm = {
+  keyword?: string;
+  orderStatus?: string;
+};
 
 export interface Banner {
   id: string;

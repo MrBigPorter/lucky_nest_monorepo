@@ -220,7 +220,7 @@ export const AdminUserManagement: React.FC = () => {
         id: 'actions',
         header: 'Actions',
         cell: (info) => (
-          <div className="flex items-center gap-2">
+          <div className="flex  gap-2">
             <Button
               variant="ghost"
               size="sm"

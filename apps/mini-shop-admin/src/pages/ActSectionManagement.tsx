@@ -252,7 +252,7 @@ export const ActSectionManagement: React.FC = () => {
         id: 'actions',
         header: 'Actions',
         cell: (info) => (
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-2 ">
             <Button
               variant="ghost"
               size="sm"

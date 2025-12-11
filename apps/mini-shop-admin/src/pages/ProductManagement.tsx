@@ -193,7 +193,7 @@ export const ProductManagement: React.FC = () => {
         id: 'actions',
         header: 'Actions',
         cell: (info) => (
-          <div className="flex justify-end gap-2">
+          <div className="flex  gap-2">
             <Button
               isLoading={deleteProduct.loading}
               variant="ghost"
