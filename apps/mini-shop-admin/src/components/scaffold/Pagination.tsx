@@ -28,6 +28,8 @@ export const Pagination: React.FC<PaginationProps> = ({
   const isFirstPage = current <= 1;
   const isLastPage = current >= totalPage;
 
+  console.log('Pagination Render:', { current, pageSize, total, totalPage });
+
   return (
     <div
       className={cn(

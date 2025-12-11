@@ -228,7 +228,10 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
           pagination={{
             ...tableProps.pagination,
             onChange: (page, pageSize) => {
-              tableProps.onChange?.(page, pageSize);
+              tableProps.onChange?.({
+                current: page,
+                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+              });
             },
           }}
         />

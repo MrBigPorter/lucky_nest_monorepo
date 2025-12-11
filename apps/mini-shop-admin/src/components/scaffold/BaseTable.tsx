@@ -294,6 +294,8 @@ export const BaseTable = <T extends Record<string, any>>({
     },
   });
 
+  console.log('table rowSelection:', table);
+
   React.useEffect(() => {
     // 初始化默认选中行
     if (defaultSelectedRowKeys && defaultSelectedRowKeys.length > 0) {

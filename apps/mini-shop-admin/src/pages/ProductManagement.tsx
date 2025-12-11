@@ -279,7 +279,10 @@ export const ProductManagement: React.FC = () => {
           pagination={{
             ...tableProps.pagination,
             onChange: (page, pageSize) => {
-              tableProps.onChange?.(page, pageSize);
+              tableProps.onChange?.({
+                current: page,
+                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+              });
             },
           }}
         />

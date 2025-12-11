@@ -61,7 +61,7 @@ export const BannerManagement: React.FC = () => {
     search: { reset },
     mutate,
   } = useAntdTable(getTableData, {
-    defaultPageSize: 20,
+    defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
       {
@@ -305,7 +305,10 @@ export const BannerManagement: React.FC = () => {
           pagination={{
             ...tableProps.pagination,
             onChange: (page, pageSize) => {
-              tableProps.onChange?.(page, pageSize);
+              tableProps.onChange?.({
+                current: page,
+                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+              });
             },
           }}
         />
