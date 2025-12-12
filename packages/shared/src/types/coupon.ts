@@ -17,9 +17,9 @@ export type CouponType = (typeof COUPON_TYPE)[keyof typeof COUPON_TYPE];
 export const COUPON_TYPE_VALUES: CouponType[] = Object.values(COUPON_TYPE);
 
 export const COUPON_TYPE_LABEL: Record<CouponType, string> = {
-  [COUPON_TYPE.FULL_REDUCTION]: 'Full reduction',
-  [COUPON_TYPE.DISCOUNT]: 'Discount',
-  [COUPON_TYPE.NO_THRESHOLD]: 'No threshold',
+  [COUPON_TYPE.FULL_REDUCTION]: "Full reduction",
+  [COUPON_TYPE.DISCOUNT]: "Discount",
+  [COUPON_TYPE.NO_THRESHOLD]: "No threshold",
 };
 
 export const COUPON_TYPE_OPTIONS: EnumOption<CouponType>[] =
@@ -33,14 +33,13 @@ export const DISCOUNT_TYPE = {
   PERCENTAGE: 2,
 } as const;
 
-export type DiscountType =
-  (typeof DISCOUNT_TYPE)[keyof typeof DISCOUNT_TYPE];
+export type DiscountType = (typeof DISCOUNT_TYPE)[keyof typeof DISCOUNT_TYPE];
 export const DISCOUNT_TYPE_VALUES: DiscountType[] =
   Object.values(DISCOUNT_TYPE);
 
 export const DISCOUNT_TYPE_LABEL: Record<DiscountType, string> = {
-  [DISCOUNT_TYPE.FIXED_AMOUNT]: 'Fixed amount',
-  [DISCOUNT_TYPE.PERCENTAGE]: 'Percentage',
+  [DISCOUNT_TYPE.FIXED_AMOUNT]: "Fixed amount",
+  [DISCOUNT_TYPE.PERCENTAGE]: "Percentage",
 };
 
 export const DISCOUNT_TYPE_OPTIONS: EnumOption<DiscountType>[] =
@@ -62,10 +61,10 @@ export type IssueType = (typeof ISSUE_TYPE)[keyof typeof ISSUE_TYPE];
 export const ISSUE_TYPE_VALUES: IssueType[] = Object.values(ISSUE_TYPE);
 
 export const ISSUE_TYPE_LABEL: Record<IssueType, string> = {
-  [ISSUE_TYPE.SYSTEM]: 'System',
-  [ISSUE_TYPE.CLAIM]: 'Claim',
-  [ISSUE_TYPE.REDEEM_CODE]: 'Redeem code',
-  [ISSUE_TYPE.INVITE]: 'Invite',
+  [ISSUE_TYPE.SYSTEM]: "System",
+  [ISSUE_TYPE.CLAIM]: "Claim",
+  [ISSUE_TYPE.REDEEM_CODE]: "Redeem code",
+  [ISSUE_TYPE.INVITE]: "Invite",
 };
 
 export const ISSUE_TYPE_OPTIONS: EnumOption<IssueType>[] =
@@ -83,9 +82,18 @@ export type ValidType = (typeof VALID_TYPE)[keyof typeof VALID_TYPE];
 export const VALID_TYPE_VALUES: ValidType[] = Object.values(VALID_TYPE);
 
 export const VALID_TYPE_LABEL: Record<ValidType, string> = {
-  [VALID_TYPE.RANGE]: 'Fixed date range',
-  [VALID_TYPE.DAYS_AFTER_RECEIVE]: 'Days after receive',
+  [VALID_TYPE.RANGE]: "Fixed date range",
+  [VALID_TYPE.DAYS_AFTER_RECEIVE]: "Days after receive",
 };
 
 export const VALID_TYPE_OPTIONS: EnumOption<ValidType>[] =
   buildOptionsFromLabelMap(VALID_TYPE_LABEL);
+
+/**
+ * 优惠券状态
+ * 1-启用 2-禁用
+ */
+export const COUPON_STATUS = {
+  ACTIVE: 1,
+  INACTIVE: 2,
+};

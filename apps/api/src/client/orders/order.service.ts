@@ -240,7 +240,6 @@ export class OrderService {
             refundStatus: REFUND_STATUS.NO_REFUND,
             paidAt: new Date(),
             coinUsed,
-            couponId: null,
             groupId: null,
             isGroupOwner: 0,
           },
