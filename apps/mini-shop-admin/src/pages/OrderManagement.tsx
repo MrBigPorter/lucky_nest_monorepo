@@ -329,7 +329,7 @@ export const OrderManagement: React.FC = () => {
                 type: 'input',
                 key: 'keyword',
                 label: 'Search',
-                placeholder: 'Order No, Customer...',
+                placeholder: 'Order No, Nickname, Phone',
               },
               {
                 type: 'select',
