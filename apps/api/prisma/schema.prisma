@@ -698,6 +698,10 @@ model Coupon {
   /// 状态: 0-禁用/结束 1-进行中
   status          Int      @default(1) @map("status") @db.SmallInt
 
+  description     String?  @map("description") @db.VarChar(500)
+
+  subTitle        String?  @map("sub_title") @db.VarChar(200)
+  ruleDesc        String?  @map("rule_desc") @db.Text
   // 关系
   userCoupons     UserCoupon[]
 

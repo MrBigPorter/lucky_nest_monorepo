@@ -180,15 +180,34 @@ export interface Category {
 
 export interface Coupon {
   id: string;
-  code: string;
-  discount: number;
-  type: 'percent' | 'fixed';
-  category: 'general' | 'new_user' | 'referral' | 'threshold';
-  minPurchase?: number;
-  expiryDate: string;
-  usageLimit: number;
-  usedCount: number;
+  couponName: string;
+  couponCode: string;
+  couponType: number;
+  discountType: number;
+
+  discountValue: string;
+  minPurchase: string;
+
+  issuedQuantity: number;
+  totalQuantity: number;
+  status: number;
+
+  validStartAt: number;
+  validEndAt: number;
+  createdAt: number;
 }
+
+export interface CreateCouponPayload extends Omit<
+  Coupon,
+  'discountValue' | 'minPurchase'
+> {
+  discountValue: number;
+  minPurchase: number;
+}
+
+export type UpdateCouponPayload = Partial<
+  Pick<CreateCouponPayload, 'couponName' | 'validEndAt' | 'totalQuantity'>
+>;
 
 export interface ActivityZone {
   id: string;

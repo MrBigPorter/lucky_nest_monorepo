@@ -23,6 +23,9 @@ import {
   CreateBannerPayload,
   OrderListParams,
   Order,
+  Coupon,
+  CreateCouponPayload,
+  UpdateCouponPayload,
 } from '@/type/types.ts';
 
 /**
@@ -227,6 +230,39 @@ export const actSectionApi = {
   /* updateSortOrder: (data: UpdateSortOrderDto) => {
     return request.post('/admin/act-section/sort-order', data);
   },*/
+};
+
+/**
+ * 优惠券专区 管理列表页 API
+ */
+export const couponApi = {
+  // 获取列表
+  getList: (params: PaginationParams) => {
+    return http.get<PaginatedResponse<Coupon>>(
+      '/v1/admin/coupons/list',
+      params,
+    );
+  },
+
+  // 获取详情
+  getDetail: (id: string) => {
+    return http.get<Coupon>(`/v1/admin/coupons/${id}`);
+  },
+
+  // 创建
+  create: (data: CreateCouponPayload) => {
+    return http.post('/v1/admin/coupons/create', data);
+  },
+
+  // 更新
+  update: (id: string, data: UpdateCouponPayload) => {
+    return http.patch(`v1/admin/coupons/${id}`, data);
+  },
+
+  // 删除
+  delete: (id: string) => {
+    return http.delete(`/v1/admin/coupons/${id}`);
+  },
 };
 
 /**

@@ -30,7 +30,221 @@ import {
 } from '@/constants';
 import { useMockData } from '@/hooks/useMockData';
 import { Coupon, ActivityZone, SignInRule, GrowthRule } from '@/type/types.ts';
-import { CouponList } from '@/pages/Marketing/Coupon.tsx';
+
+// --- SUB-COMPONENT: COUPON LIST ---
+const CouponList: React.FC = () => {
+  const { data, add, remove, update } = useMockData<Coupon>(MOCK_COUPONS);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Partial<Coupon> | null>(null);
+
+  const defaultCoupon: Partial<Coupon> = {
+    code: '',
+    discount: 0,
+    type: 'percent',
+    category: 'general',
+    expiryDate: '',
+    usageLimit: 100,
+    usedCount: 0,
+  };
+  const [formData, setFormData] = useState<Partial<Coupon>>(defaultCoupon);
+
+  const handleOpenModal = (coupon?: Coupon) => {
+    if (coupon) {
+      setEditingItem(coupon);
+      setFormData(coupon);
+    } else {
+      setEditingItem(null);
+      setFormData(defaultCoupon);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (editingItem && editingItem.id) {
+      update(editingItem.id, formData);
+    } else {
+      add({ ...formData, id: Date.now().toString() } as Coupon);
+    }
+    setIsModalOpen(false);
+  };
+
+  const getCategoryBadge = (cat: string) => {
+    switch (cat) {
+      case 'new_user':
+        return <Badge color="green">New User</Badge>;
+      case 'referral':
+        return <Badge color="blue">Referral</Badge>;
+      case 'threshold':
+        return <Badge color="purple">Threshold</Badge>;
+      default:
+        return <Badge color="gray">General</Badge>;
+    }
+  };
+
+  return (
+    <>
+      <Card
+        title="Active Coupons"
+        action={
+          <Button size="sm" variant="outline" onClick={() => handleOpenModal()}>
+            <Plus size={14} /> New
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          {data.map((coupon) => (
+            <div
+              key={coupon.id}
+              className="group flex flex-col sm:flex-row justify-between items-center p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-primary-500/30 transition-all"
+            >
+              <div className="flex items-center gap-4 mb-3 sm:mb-0 w-full sm:w-auto">
+                <div className="w-12 h-12 rounded-full bg-pink-100 dark:bg-pink-500/20 flex items-center justify-center text-pink-600 dark:text-pink-400 flex-shrink-0">
+                  <Tag size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span className="font-mono">{coupon.code}</span>
+                    <Badge color="purple">
+                      {coupon.type === 'percent'
+                        ? `-${coupon.discount}%`
+                        : `-$${coupon.discount}`}
+                    </Badge>
+                    {getCategoryBadge(coupon.category)}
+                  </h4>
+                  {coupon.minPurchase && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Min. purchase: ${coupon.minPurchase}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={12} /> {coupon.expiryDate}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Percent size={12} /> {coupon.usedCount}/
+                      {coupon.usageLimit}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto sm:opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleOpenModal(coupon)}
+                >
+                  <Edit2 size={14} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-600"
+                  onClick={() => remove(coupon.id)}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingItem ? 'Edit Coupon' : 'Create Coupon'}
+      >
+        <div className="space-y-4">
+          <Input
+            label="Coupon Code"
+            value={formData.code}
+            onChange={(e) =>
+              setFormData({ ...formData, code: e.target.value.toUpperCase() })
+            }
+            placeholder="e.g. SUMMER2024"
+          />
+
+          <Select
+            label="Category"
+            value={formData.category}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value as any })
+            }
+            options={[
+              { label: 'General', value: 'general' },
+              { label: 'New User Bonus', value: 'new_user' },
+              { label: 'Referral Reward', value: 'referral' },
+              { label: 'Threshold (Man Jian)', value: 'threshold' },
+            ]}
+          />
+
+          {formData.category === 'threshold' && (
+            <Input
+              label="Minimum Purchase Amount ($)"
+              type="number"
+              value={formData.minPurchase}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  minPurchase: Number(e.target.value),
+                })
+              }
+            />
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Discount Type"
+              value={formData.type}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  type: e.target.value as 'percent' | 'fixed',
+                })
+              }
+              options={[
+                { label: 'Percentage (%)', value: 'percent' },
+                { label: 'Fixed Amount ($)', value: 'fixed' },
+              ]}
+            />
+            <Input
+              label="Value"
+              type="number"
+              value={formData.discount}
+              onChange={(e) =>
+                setFormData({ ...formData, discount: Number(e.target.value) })
+              }
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Expiry Date"
+              type="date"
+              value={formData.expiryDate}
+              onChange={(e) =>
+                setFormData({ ...formData, expiryDate: e.target.value })
+              }
+            />
+            <Input
+              label="Usage Limit"
+              type="number"
+              value={formData.usageLimit}
+              onChange={(e) =>
+                setFormData({ ...formData, usageLimit: Number(e.target.value) })
+              }
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save Coupon</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+};
 
 // --- SUB-COMPONENT: ACTIVITY ZONES ---
 const ActivityZones: React.FC = () => {
