@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { Truck, CheckCircle, XCircle, Trash2, Eye } from 'lucide-react';
+import { Truck, XCircle, Trash2, Eye } from 'lucide-react';
 import { Card, Button, Badge, Input } from '@/components/UIComponents'; // Assuming Input exists
 import { useToastStore } from '@/store/useToastStore';
 import { Order, OrderListParams, OrderSearchForm } from '@/type/types.ts';
