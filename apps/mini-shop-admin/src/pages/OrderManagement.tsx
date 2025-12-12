@@ -186,7 +186,7 @@ export const OrderManagement: React.FC = () => {
                 type: 'select',
                 key: 'orderStatus',
                 label: 'Order Status',
-                defaultValue: 'ALL',
+                defaultValue: 'All',
                 options: [
                   { label: 'All Status', value: 'All' },
                   { label: 'Pending', value: '1' },

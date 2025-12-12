@@ -26,6 +26,8 @@ export class BannersService {
       ],
     };
 
+    console.log('Banner query where conditions:', where);
+
     return this.prisma.banner.findMany({
       where,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],

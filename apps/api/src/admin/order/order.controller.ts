@@ -27,11 +27,11 @@ import { OrderResponseDto } from '@api/admin/order/dto/order-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 import { UpdateOrderStatusDto } from '@api/admin/order/dto/update-order-status.dto';
+import 'reflect-metadata';
 
 @ApiTags('Admin Order Management')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('admin/order')
 export class OrderController {
   constructor(private readonly OrderService: OrderService) {}
@@ -48,9 +48,12 @@ export class OrderController {
   @ApiExtraModels(PaginatedResponseDto, OrderResponseDto)
   async findAll(@Query() query: QueryOrderDto) {
     const result = await this.OrderService.findAll(query);
+
     return {
       ...result,
-      list: plainToInstance(OrderResponseDto, result.list),
+      list: plainToInstance(OrderResponseDto, result.list, {
+        excludeExtraneousValues: true,
+      }),
     };
   }
 

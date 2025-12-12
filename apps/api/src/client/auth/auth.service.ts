@@ -155,7 +155,7 @@ export class AuthService {
           loginMethod: LOGIN_METHOD.OTP,
           loginStatus: LOGIN_STATUS.SUCCESS,
           tokenIssued: TOKEN_ISSUED.YES,
-          loginTime: Date.now().toString(),
+          loginTime: new Date(),
           loginIp: meta?.ip ?? null,
           userAgent: meta?.ua ?? null,
           countryCode: meta?.countryCode ? String(meta.countryCode) : null,

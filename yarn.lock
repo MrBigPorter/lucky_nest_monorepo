@@ -2595,6 +2595,7 @@ __metadata:
     class-validator: "npm:^0.14.2"
     cookie-parser: "npm:^1.4.7"
     date-fns: "npm:^4.1.0"
+    decimal.js: "npm:^10.6.0"
     express: "npm:^5.1.0"
     helmet: "npm:^8.1.0"
     joi: "npm:^18.0.1"
@@ -7477,6 +7478,13 @@ __metadata:
   version: 2.5.1
   resolution: "decimal.js-light@npm:2.5.1"
   checksum: 10c0/4fd33f535aac9e5bd832796831b65d9ec7914ad129c7437b3ab991b0c2eaaa5a57e654e6174c4a17f1b3895ea366f0c1ab4955cdcdf7cfdcf3ad5a58b456c020
+  languageName: node
+  linkType: hard
+
+"decimal.js@npm:^10.6.0":
+  version: 10.6.0
+  resolution: "decimal.js@npm:10.6.0"
+  checksum: 10c0/07d69fbcc54167a340d2d97de95f546f9ff1f69d2b45a02fd7a5292412df3cd9eb7e23065e532a318f5474a2e1bccf8392fdf0443ef467f97f3bf8cb0477e5aa
   languageName: node
   linkType: hard
 
