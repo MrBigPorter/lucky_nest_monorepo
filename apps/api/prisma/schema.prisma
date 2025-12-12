@@ -53,6 +53,8 @@ model User {
   transactions          WalletTransaction[]
   /// 订单
   orders                Order[]
+  /// user coupons
+  userCoupons           UserCoupon[]
 
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
@@ -625,7 +627,7 @@ model Order {
   groupId     String?  @map("group_id") @db.VarChar(32)
   isGroupOwner Int      @default(0) @map("is_group_owner") @db.SmallInt
 
-  couponId   String?  @map("coupon_id") @db.VarChar(32)
+  userCouponId String? @unique  @map("user_coupon_id") @db.VarChar(32)
   coinUsed    Decimal  @default(0) @map("coin_used") @db.Decimal(10, 2)
 
   paidAt     DateTime? @map("paid_at")
@@ -635,6 +637,8 @@ model Order {
   user       User    @relation(fields: [userId],references: [id], onDelete: Cascade)
   treasure   Treasure @relation(fields: [treasureId],references: [treasureId], onDelete: Restrict)
   group      TreasureGroup? @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
+
+  userCoupon UserCoupon?    @relation(fields: [userCouponId], references: [id])
 
   @@index([userId], map: "idx_user_id_order")
   @@index([treasureId], map: "idx_treasure_id_order")
@@ -648,4 +652,93 @@ model SystemConfig {
   value     String   @map("config_value") @db.VarChar(255)
 
   @@map("system_configs")
+}
+
+// ========= Marketing: Coupon System =========
+
+/// 优惠券模板表 (印钞模板)
+model Coupon {
+  id              String   @id @default(cuid()) @map("coupon_id") @db.VarChar(32)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  /// 优惠券名称
+  couponName      String   @map("coupon_name") @db.VarChar(200)
+  /// 优惠券代码 (兑换码用)
+  couponCode      String?  @unique @map("coupon_code") @db.VarChar(50)
+
+  /// 类型: 1-满减券 2-折扣券 3-无门槛现金券
+  couponType      Int      @map("coupon_type") @db.SmallInt
+  /// 折扣类型: 1-固定金额(减10块) 2-百分比(打9折)
+  discountType    Int      @default(1) @map("discount_type") @db.SmallInt
+
+  /// 面额/折扣值 (如 10.00 或 0.90)
+  discountValue   Decimal  @map("discount_value") @db.Decimal(10, 2)
+  /// 最低消费门槛 (0代表无门槛)
+  minPurchase     Decimal  @default(0) @map("min_purchase_amount") @db.Decimal(10, 2)
+  /// 最高抵扣金额 (防止9折券买游艇亏死)
+  maxDiscount     Decimal? @map("max_discount_amount") @db.Decimal(10, 2)
+
+  /// 发放类型: 1-系统发放 2-用户领取 3-兑换码 4-邀请奖励
+  issueType       Int      @default(2) @map("issue_type") @db.SmallInt
+
+  /// 发行总量 (-1代表不限量)
+  totalQuantity   Int      @default(-1) @map("total_quantity")
+  /// 已发放数量
+  issuedQuantity  Int      @default(0) @map("issued_quantity")
+  /// 每人限领 (-1代表不限)
+  perUserLimit    Int      @default(1) @map("per_user_limit")
+
+  /// 有效期类型: 1-固定日期范围 2-领券后N天有效
+  validType       Int      @default(1) @map("valid_type") @db.SmallInt
+  validDays       Int?     @map("valid_days") // 领券后几天
+  validStartAt    DateTime? @map("valid_start_time")
+  validEndAt      DateTime? @map("valid_end_time")
+
+  /// 状态: 0-禁用/结束 1-进行中
+  status          Int      @default(1) @map("status") @db.SmallInt
+
+  // 关系
+  userCoupons     UserCoupon[]
+
+  @@index([status])
+  @@index([issueType])
+  @@index([validStartAt, validEndAt])
+  @@map("coupons")
+}
+
+/// 用户优惠券实例表 (用户手里的券)
+model UserCoupon {
+  id              String   @id @default(cuid()) @map("user_coupon_id") @db.VarChar(32)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  userId          String   @map("user_id") @db.VarChar(32)
+  couponId        String   @map("coupon_id") @db.VarChar(32)
+
+  /// 领取方式: 1-系统 2-主动 3-兑换 4-邀请
+  receiveType     Int      @default(2) @map("receive_type") @db.SmallInt
+
+  /// 使用状态: 0-未使用 1-已使用 2-已过期 3-作废
+  status          Int      @default(0) @map("use_status") @db.SmallInt
+
+  /// 实际抵扣金额
+  discountAmount  Decimal? @map("discount_amount") @db.Decimal(10, 2)
+
+  /// 使用时间
+  usedAt          DateTime? @map("used_at")
+
+
+  /// 有效期 (领取时计算固化下来，方便查询)
+  validStartAt    DateTime  @map("valid_start_time")
+  validEndAt      DateTime  @map("valid_end_time")
+
+  // 关系
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon  Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order  Order?
+
+  @@index([userId, status]) // 查"我的可用优惠券"最常用
+  @@index([validEndAt])     // 查过期券
+  @@map("user_coupons")
 }
