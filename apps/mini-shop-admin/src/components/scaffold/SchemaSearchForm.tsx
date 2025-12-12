@@ -101,7 +101,7 @@ export const SchemaSearchForm = <
   };
 
   return (
-    <div className="bg-white dark:bg-white/5 p-4 rounded-lg border border-gray-100 dark:border-white/10 mb-4">
+    <div className="p-4  mb-4">
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
         {schema.map((field) => (
           <div key={String(field.key)} className={field.className}>

@@ -73,9 +73,36 @@ export const OrderManagement: React.FC = () => {
   const handleDelete = useCallback(
     async (orderId: string) => {
       if (
-        !confirm(
-          'Are you sure you want to delete this order? This cannot be undone.',
-        )
+        ModalManager.open({
+          title: 'Confirm Deletion',
+          renderChildren: ({ close }) => (
+            <div className="space-y-4">
+              <p>
+                Are you sure you want to delete this order? This action cannot
+                be undone.
+              </p>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="ghost" onClick={close}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      await deleteOrderApi(orderId);
+                      addToast('success', 'Order deleted successfully');
+                      refresh();
+                      close();
+                    } catch (error) {
+                      addToast('error', 'Failed to delete order');
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          ),
+        })
       )
         return;
       try {

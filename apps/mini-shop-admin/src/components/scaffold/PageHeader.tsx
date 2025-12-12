@@ -7,6 +7,8 @@ interface PageHeaderProps {
   title: string;
   /** 页面描述/副标题 */
   description?: string;
+  /** 中间区域 (搜索框/输入框)，会自动占据剩余空间 */
+  searchBar?: React.ReactNode;
   /** 右侧操作区 (通常放按钮) */
   action?: React.ReactNode;
   /** 额外的容器样式 */
@@ -24,6 +26,7 @@ interface PageHeaderProps {
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   description,
+  searchBar, // 新增
   action,
   className,
   buttonText,
@@ -32,8 +35,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   showButtonIcon = true,
 }) => {
   return (
-    <div className={cn('flex justify-between items-center mb-6', className)}>
-      <div>
+    // 1. 移除了 justify-between，改用 gap-4 控制间距
+    <div className={cn('flex items-center gap-4 mb-6', className)}>
+      {/* 2. 左侧标题区：添加 shrink-0 防止被压缩 */}
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
           {title}
         </h1>
@@ -42,14 +47,21 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         )}
       </div>
 
-      {/* 只有传入了 action 才渲染右侧区域 */}
-      {action && <div className="flex items-center gap-2">{action}</div>}
-      {buttonText && buttonOnClick && (
-        <Button onClick={buttonOnClick} className="gap-2.5">
-          {showButtonIcon && buttonPrefixIcon}
-          {buttonText}
-        </Button>
-      )}
+      {/* 3. 中间区域：flex-1 是关键，它会吃掉所有剩余空间 */}
+      {/* 如果没有 searchBar，这个空 div 配合 flex-1 依然会把左右两边推到边缘 */}
+      <div className="flex-1">{searchBar}</div>
+
+      {/* 4. 右侧操作区：添加 shrink-0 防止被压缩，并保持右对齐 */}
+      <div className="flex items-center gap-2 shrink-0">
+        {action}
+
+        {buttonText && buttonOnClick && (
+          <Button onClick={buttonOnClick} className="gap-2.5">
+            {showButtonIcon && buttonPrefixIcon}
+            {buttonText}
+          </Button>
+        )}
+      </div>
     </div>
   );
 };
