@@ -276,8 +276,8 @@ export interface OrderListParams extends PaginationParams {
 
 // input to search form component
 export type OrderSearchForm = {
-  keyword?: string;
-  orderStatus?: string;
+  keyword: string;
+  orderStatus: string;
 };
 
 export interface Banner {

@@ -21,3 +21,24 @@ export const REFUND_STATUS = {
   REFUNDED: 2,
   REFUND_FAILED: 3,
 };
+
+export const ORDER_STATUS_LABEL: Record<number, string> = {
+  [ORDER_STATUS.PENDING_PAYMENT]: "Pending",
+  [ORDER_STATUS.PROCESSING_PAYMENT]: "Processing",
+  [ORDER_STATUS.PAID]: "Paid",
+  [ORDER_STATUS.CANCELED]: "Cancelled",
+  [ORDER_STATUS.REFUNDED]: "Refunded",
+};
+
+export const PAY_STATUS_LABEL: Record<number, string> = {
+  [PAY_STATUS.UNPAID]: "Unpaid",
+  [PAY_STATUS.PAID]: "Paid",
+  [PAY_STATUS.FAILED]: "Failed",
+};
+
+export const REFUND_STATUS_LABEL: Record<number, string> = {
+  [REFUND_STATUS.NO_REFUND]: "No refund",
+  [REFUND_STATUS.REFUNDING]: "Refunding",
+  [REFUND_STATUS.REFUNDED]: "Refunded",
+  [REFUND_STATUS.REFUND_FAILED]: "Refund failed",
+};

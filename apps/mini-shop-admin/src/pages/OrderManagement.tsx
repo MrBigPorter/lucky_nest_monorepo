@@ -8,11 +8,20 @@ import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { useAntdTable, useRequest } from 'ahooks';
 import { orderApi } from '@/api';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ORDER_STATUS } from '@lucky/shared';
+import { ORDER_STATUS, ORDER_STATUS_LABEL } from '@lucky/shared';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 import { ModalManager } from '@repo/ui';
 
 export const OrderManagement: React.FC = () => {
+  const OrderStatusOptions = useMemo(() => {
+    return [
+      { label: 'All Status', value: 'All' },
+      ...Object.entries(ORDER_STATUS_LABEL).map(([key, label]) => ({
+        label,
+        value: key,
+      })),
+    ];
+  }, []);
   const addToast = useToastStore((state) => state.addToast);
 
   const handleUpdateStatus = (status: 'shipped' | 'delivered') => {};
@@ -82,7 +91,7 @@ export const OrderManagement: React.FC = () => {
     ],
   });
 
-  const handleSearch = (values: OrderSearchParams) => {
+  const handleSearch = (values: OrderSearchForm) => {
     run({ current: 1, pageSize: 10 }, values);
   };
 
@@ -98,6 +107,16 @@ export const OrderManagement: React.FC = () => {
     () => tableProps.dataSource || [],
     [tableProps.dataSource],
   );
+
+  const orderStatusColors: Record<number, 'green' | 'yellow' | 'red'> =
+    useMemo(() => {
+      return {
+        [ORDER_STATUS.PAID]: 'green',
+        [ORDER_STATUS.CANCELED]: 'yellow',
+        [ORDER_STATUS.PENDING_PAYMENT]: 'yellow',
+        [ORDER_STATUS.REFUNDED]: 'red',
+      };
+    }, []);
 
   const columns = useMemo(() => {
     const columnsHelper = createColumnHelper<Order>();
@@ -138,14 +157,8 @@ export const OrderManagement: React.FC = () => {
         header: 'Status',
         cell: (info) => {
           const status = info.getValue();
-          const color =
-            status === ORDER_STATUS.PAID
-              ? 'green'
-              : status === ORDER_STATUS.CANCELED ||
-                  status === ORDER_STATUS.PENDING_PAYMENT
-                ? 'yellow'
-                : 'red';
-          return <Badge color={color}>{status}</Badge>;
+          const color = orderStatusColors[status] || 'yellow';
+          return <Badge color={color}>{ORDER_STATUS_LABEL[status]}</Badge>;
         },
       }),
       columnsHelper.display({
@@ -164,7 +177,7 @@ export const OrderManagement: React.FC = () => {
         ),
       }),
     ];
-  }, [handleOrder]);
+  }, [handleOrder, orderStatusColors]);
 
   return (
     <div className="space-y-6">
@@ -187,13 +200,7 @@ export const OrderManagement: React.FC = () => {
                 key: 'orderStatus',
                 label: 'Order Status',
                 defaultValue: 'All',
-                options: [
-                  { label: 'All Status', value: 'All' },
-                  { label: 'Pending', value: '1' },
-                  { label: 'Paid', value: '2' },
-                  { label: 'Cancelled', value: '3' },
-                  { label: 'Refunded', value: '4' },
-                ],
+                options: OrderStatusOptions,
               },
             ]}
             onSearch={handleSearch}
