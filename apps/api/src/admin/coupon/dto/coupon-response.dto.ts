@@ -1,5 +1,5 @@
 import { Exclude, Expose } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 
@@ -65,6 +65,21 @@ export class CouponResponseDto {
   @Expose()
   @DateToTimestamp()
   createdAt!: number;
+
+  @ApiPropertyOptional({ description: 'Description', required: false })
+  @Expose()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Subtitle', required: false })
+  @Expose()
+  subTitle?: string;
+
+  @ApiPropertyOptional({
+    description: 'Usage Rule Description',
+    required: false,
+  })
+  @Expose()
+  ruleDesc?: string;
 }
 
 export class CouponListResponseDto extends PaginatedResponseDto<CouponResponseDto> {

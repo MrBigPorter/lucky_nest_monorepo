@@ -156,4 +156,37 @@ export class CreateCouponDto {
   @ToDate()
   @IsDateString()
   validEndAt?: string;
+
+  @ApiPropertyOptional({
+    description: '描述',
+    example: '这是一个新人专享优惠券',
+    maxLength: 500,
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: '副标题',
+    example: '限时使用',
+    maxLength: 200,
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  subTitle?: string;
+
+  @ApiPropertyOptional({
+    description: '使用规则说明',
+    example: '仅限新用户使用，满100元可用',
+    maxLength: 1000,
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  ruleDesc?: string;
 }
