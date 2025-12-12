@@ -6,6 +6,7 @@ import { TreasureModule } from '@api/admin/treasure/treasure.module';
 import { ActSectionModule } from '@api/admin/act-section/act-section.module';
 import { BannerModule } from '@api/admin/banner/banner.module';
 import { OrderModule } from '@api/admin/order/order.module';
+import { CouponModule } from '@api/admin/coupon/coupon.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OrderModule } from '@api/admin/order/order.module';
     ActSectionModule,
     BannerModule,
     OrderModule,
+    CouponModule,
   ],
   providers: [],
   controllers: [],
