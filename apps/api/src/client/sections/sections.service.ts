@@ -15,6 +15,8 @@ export class SectionsService {
 
     const out: any[] = [];
 
+    console.log('Fetched sections:', sections);
+
     for (const s of sections) {
       let rows: any[] = [];
       const take = Number(s.limit ?? limit);

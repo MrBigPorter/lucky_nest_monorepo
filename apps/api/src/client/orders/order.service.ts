@@ -238,7 +238,7 @@ export class OrderService {
             orderStatus: ORDER_STATUS.PAID,
             payStatus: PAY_STATUS.PAID,
             refundStatus: REFUND_STATUS.NO_REFUND,
-            paidAt: Date.now().toString(),
+            paidAt: new Date(),
             coinUsed,
             couponId: null,
             groupId: null,
