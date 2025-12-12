@@ -20,9 +20,14 @@ export const CreateCouponSchema = z.object({
       message: 'Discount type must be one of: 1 (Amount), 2 (Percentage)',
     }),
   }),
-  discountValue: z.number().min(0.01, 'Discount value must be at least 0.01'),
-  minPurchase: z.number().min(0, 'Minimum purchase must be at least 0'),
-  maxDiscount: z.number().min(0, 'Max discount must be at least 0').optional(),
+  discountValue: z.coerce
+    .number()
+    .min(0.01, 'Discount value must be at least 0.01'),
+  minPurchase: z.coerce.number().min(0, 'Minimum purchase must be at least 0'),
+  maxDiscount: z.coerce
+    .number()
+    .min(0, 'Max discount must be at least 0')
+    .optional(),
   issueType: z.enum(['1', '2', '3', '4'], {
     errorMap: () => ({
       message:

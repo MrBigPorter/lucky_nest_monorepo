@@ -44,7 +44,7 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
       discountValue: 0,
       minPurchase: 0,
       maxDiscount: undefined,
-      totalQuantity: 1000,
+      totalQuantity: 0,
       perUserLimit: 1,
       validType: '1',
       validDays: 7,
