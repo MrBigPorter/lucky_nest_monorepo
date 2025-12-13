@@ -15,5 +15,9 @@
   "devDependencies": {
     "rimraf": "^6.0.1",
     "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0",
+    "numbro": "^2.5.0"
   }
 }

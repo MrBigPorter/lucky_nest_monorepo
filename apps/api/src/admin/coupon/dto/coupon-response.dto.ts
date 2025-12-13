@@ -51,6 +51,18 @@ export class CouponResponseDto {
   @Expose()
   status!: number;
 
+  @ApiProperty({
+    description: 'Valid Type: 1-Fixed Date Range; 2-Days After Claim',
+  })
+  @Expose()
+  validType!: number;
+
+  @ApiProperty({
+    description: 'Issue Type: 1-System; 2-Claim; 3-Redeem Code; 4-Invite',
+  })
+  @Expose()
+  issueType!: number;
+
   @ApiProperty({ description: 'Valid From (timestamp)' })
   @Expose()
   @DateToTimestamp()
