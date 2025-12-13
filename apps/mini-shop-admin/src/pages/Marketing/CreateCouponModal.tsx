@@ -23,6 +23,7 @@ import {
 import { useRequest } from 'ahooks';
 import { couponApi } from '@/api';
 import { CreateCouponPayload } from '@/type/types.ts';
+import { FormTextareaField } from '@repo/ui/form/FormTextareaField.tsx';
 
 interface CreateCouponModalProps {
   close: () => void;
@@ -50,6 +51,8 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
       validDays: 7,
       validStartAt: undefined,
       validEndAt: undefined,
+      subTitle: '',
+      description: '',
     },
   });
 
@@ -136,6 +139,7 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
 
             {discountTypeNum === DISCOUNT_TYPE.PERCENTAGE && (
               <FormTextField
+                required
                 label="Max discount (₱)"
                 type="number"
                 name="maxDiscount"
@@ -176,10 +180,30 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
 
             {validTypeNum === VALID_TYPE.RANGE && (
               <>
-                <FormDateField label="Valid start date" name="validStartAt" />
-                <FormDateField label="Valid end date" name="validEndAt" />
+                <FormDateField
+                  required
+                  label="Valid start date"
+                  name="validStartAt"
+                />
+                <FormDateField
+                  required
+                  label="Valid end date"
+                  name="validEndAt"
+                />
               </>
             )}
+
+            <FormTextareaField
+              name="subTitle"
+              label="Subtitle (optional)"
+              placeholder="e.g. Valid on orders over ₱100"
+            />
+
+            <FormTextareaField
+              name="description"
+              label="Description (optional)"
+              placeholder="e.g. This is a coupon for new users only"
+            />
           </div>
 
           {/* ========= 底部按钮 ========= */}

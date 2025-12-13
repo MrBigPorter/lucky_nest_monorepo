@@ -12,7 +12,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ToDate, ToInt, ToNumber } from '@api/common/dto/transforms';
+import { ToDate, ToInt, ToNull, ToNumber } from '@api/common/dto/transforms';
 
 export class CreateCouponDto {
   @ApiProperty({
@@ -34,6 +34,7 @@ export class CreateCouponDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
+  @ToNull()
   couponCode?: string;
 
   @ApiProperty({
@@ -104,7 +105,7 @@ export class CreateCouponDto {
   @IsNotEmpty()
   @ToInt()
   @IsInt()
-  @Min(1)
+  @Min(-1)
   totalQuantity!: number;
 
   @ApiProperty({
@@ -132,7 +133,7 @@ export class CreateCouponDto {
     example: 30,
     required: false,
   })
-  @ValidateIf((o) => o.validType === 2)
+  @ValidateIf((o) => Number(o.validType) === 2)
   @ToInt()
   @IsInt()
   validDays?: number;
@@ -142,8 +143,7 @@ export class CreateCouponDto {
     example: '2024-01-01T00:00:00Z',
     required: false,
   })
-  @ValidateIf((o) => o.validType === 1)
-  @ToDate()
+  @ValidateIf((o) => Number(o.validType) === 1)
   @IsDateString()
   validStartAt?: string;
 
@@ -152,8 +152,7 @@ export class CreateCouponDto {
     example: '2024-12-31T23:59:59Z',
     required: false,
   })
-  @ValidateIf((o) => o.validType === 1)
-  @ToDate()
+  @ValidateIf((o) => Number(o.validType) === 1)
   @IsDateString()
   validEndAt?: string;
 

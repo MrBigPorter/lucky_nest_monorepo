@@ -14,6 +14,7 @@ export interface ModalProps {
   renderChildren?: RenderChildren;
   onFinishClose?: () => void;
   showClose?: boolean;
+  enableClickOutsideClose?: boolean;
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
 }
