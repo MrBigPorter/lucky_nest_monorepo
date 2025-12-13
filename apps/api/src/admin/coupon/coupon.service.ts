@@ -41,13 +41,17 @@ export class CouponService {
    *
    */
   async findAll(dto: QueryCouponDto) {
-    const { page = 1, pageSize = 10, keyword, status } = dto;
+    const { page = 1, pageSize = 10, keyword, status, couponType } = dto;
     const skip = (page - 1) * pageSize;
 
     const whereConditions: Prisma.CouponWhereInput = {};
 
     if (status) {
       whereConditions.status = status;
+    }
+
+    if (couponType) {
+      whereConditions.couponType = couponType;
     }
 
     if (keyword) {
@@ -68,7 +72,6 @@ export class CouponService {
         orderBy: { createdAt: 'desc' },
       }),
     ]);
-
     return { total, list, page, pageSize };
   }
 
@@ -97,6 +100,45 @@ export class CouponService {
   async update(id: string, dto: UpdateCouponDto) {
     // Ensure the coupon exists
     const coupon = await this.finOne(id);
+
+    // If the coupon has already been issued, restrict updates to certain fields
+    const isIssued = coupon.issuedQuantity > 0;
+
+    // Restrict updates to sensitive fields if the coupon has been issued
+    if (isIssued) {
+      // List of fields that cannot be updated once the coupon is issued
+      const sensitiveFields = [
+        'couponType',
+        'discountType',
+        'discountValue',
+        'minPurchase',
+        'validType',
+        'validDays',
+        'validStartAt',
+      ] as const;
+
+      for (const field of sensitiveFields) {
+        if (dto[field] !== undefined && dto[field] !== coupon[field]) {
+          throw new BadRequestException(
+            `Cannot update field ${field} for issued coupons`,
+          );
+        }
+      }
+    }
+
+    // Validate totalQuantity if it's being updated
+    if (dto.totalQuantity) {
+      // totalQuantity cannot be less than issuedQuantity unless it's -1 (unlimited)
+      if (
+        dto.totalQuantity !== -1 &&
+        dto.totalQuantity < coupon.issuedQuantity
+      ) {
+        throw new BadRequestException(
+          `Total quantity cannot be less than issued quantity (${coupon.issuedQuantity})`,
+        );
+      }
+    }
+
     return this.prisma.coupon.update({
       where: { id },
       data: {

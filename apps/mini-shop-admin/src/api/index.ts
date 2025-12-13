@@ -26,6 +26,7 @@ import {
   Coupon,
   CreateCouponPayload,
   UpdateCouponPayload,
+  CouponListParams,
 } from '@/type/types.ts';
 
 /**
@@ -237,7 +238,7 @@ export const actSectionApi = {
  */
 export const couponApi = {
   // 获取列表
-  getList: (params: PaginationParams) => {
+  getList: (params: CouponListParams) => {
     return http.get<PaginatedResponse<Coupon>>(
       '/v1/admin/coupons/list',
       params,
@@ -255,7 +256,7 @@ export const couponApi = {
   },
 
   // 更新
-  update: (id: string, data: UpdateCouponPayload) => {
+  update: (id: string, data: Partial<CreateCouponPayload>) => {
     return http.patch(`v1/admin/coupons/${id}`, data);
   },
 

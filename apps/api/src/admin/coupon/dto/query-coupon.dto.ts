@@ -8,7 +8,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { ToNumber } from '@api/common/dto/transforms';
+import { ToInt, ToNumber } from '@api/common/dto/transforms';
 import { Type } from 'class-transformer';
 
 export class QueryCouponDto {
@@ -45,18 +45,21 @@ export class QueryCouponDto {
     example: 1,
   })
   @IsOptional()
+  @ToInt()
   @Type(() => Number)
   @IsInt()
   @IsIn([1, 2])
   status?: number;
 
   @ApiPropertyOptional({
-    description: 'Discount type filter: 1 - Amount; 2 - Percentage; ',
+    description:
+      'Coupon Type filter: 1-full reduction coupon; 2-discount coupon,3-no threshold coupon',
     example: 1,
   })
   @IsOptional()
+  @ToInt()
   @Type(() => Number)
   @IsInt()
-  @IsIn([1, 2])
-  discountType?: number;
+  @IsIn([1, 2, 3])
+  couponType?: number;
 }

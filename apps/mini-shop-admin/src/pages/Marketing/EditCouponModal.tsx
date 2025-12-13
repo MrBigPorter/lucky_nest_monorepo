@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useRequest } from 'ahooks';
 import {
   CreateCouponSchema,
   CreateCouponSchemaFormInput,
 } from '@/schema/couponSchema.ts';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Button,
   Form,
@@ -13,7 +12,6 @@ import {
   FormSelectField,
   FormTextField,
 } from '@repo/ui';
-import { FormTextareaField } from '@repo/ui/form/FormTextareaField.tsx';
 import {
   DISCOUNT_TYPE_OPTIONS,
   ISSUE_TYPE_OPTIONS,
@@ -22,91 +20,37 @@ import {
   DISCOUNT_TYPE,
   VALID_TYPE,
 } from '@lucky/shared';
+import { useRequest } from 'ahooks';
 import { couponApi } from '@/api';
-import { Coupon, CreateCouponPayload } from '@/type/types.ts'; // 假设你的完整 Coupon 类型在这里
+import { CreateCouponPayload } from '@/type/types.ts';
+import { FormTextareaField } from '@repo/ui/form/FormTextareaField.tsx';
 
-interface CouponFormModalProps {
+interface CreateCouponModalProps {
   close: () => void;
   confirm: () => void;
-  editingData?: Coupon;
 }
 
-export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
+export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
   close,
   confirm,
-  editingData,
 }) => {
-  const isEditMode = !!editingData;
-
-  const isCriticalDisabled = isEditMode;
-
   const form = useForm<CreateCouponSchemaFormInput>({
     resolver: zodResolver(CreateCouponSchema),
     defaultValues: {
       couponName: '',
-      couponCode: '',
-      issueType: 1,
-      couponType: 1,
-      discountType: 1,
-      discountValue: 0,
-      minPurchase: 0,
-      maxDiscount: undefined,
+      issueType: '1',
       totalQuantity: 0,
-      perUserLimit: 1,
-      validType: 1,
-      validDays: 7,
-      validStartAt: undefined,
       validEndAt: undefined,
-      subTitle: '',
-      description: '',
     },
   });
 
-  useEffect(() => {
-    if (!editingData) return;
-    form.reset({
-      ...editingData,
-      couponType: editingData.couponType,
-      discountType: editingData.discountType,
-      issueType: editingData.issueType,
-      validType: editingData.validType,
-      discountValue: Number(editingData.discountValue),
-      minPurchase: Number(editingData.minPurchase),
-      totalQuantity: Number(editingData.totalQuantity),
-      perUserLimit: Number(editingData.perUserLimit),
-      validDays: editingData.validDays
-        ? Number(editingData.validDays)
-        : undefined,
-      validStartAt: editingData.validStartAt
-        ? new Date(editingData.validStartAt)
-        : undefined,
-      validEndAt: editingData.validEndAt
-        ? new Date(editingData.validEndAt)
-        : undefined,
-    });
-  }, [editingData, form]);
-
-  // 核心改动：统一处理提交逻辑
-  const { run, loading } = useRequest(
-    async (values: CreateCouponSchemaFormInput) => {
-      const data = values;
-      if (isEditMode && editingData) {
-        // 编辑接口
-        return couponApi.update(editingData.id, values);
-      } else {
-        // 创建接口
-        return couponApi.create(values);
-      }
+  const { run, loading } = useRequest(couponApi.create, {
+    manual: true,
+    onSuccess: () => {
+      console.log('Coupon created successfully');
+      confirm();
     },
-    {
-      manual: true,
-      onSuccess: () => {
-        // 可以根据模式不同显示不同的 toast
-        console.log(isEditMode ? 'Updated' : 'Created');
-        confirm();
-      },
-    },
-  );
+  });
 
   const discountType = form.watch('discountType');
   const validType = form.watch('validType');
@@ -114,17 +58,12 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
   const discountTypeNum = Number(discountType || DISCOUNT_TYPE.FIXED_AMOUNT);
   const validTypeNum = Number(validType || VALID_TYPE.RANGE);
 
-  const onSubmit = (values: CreateCouponSchemaFormInput) => {
+  const onSubmit = async (values: CreateCouponPayload) => {
     run(values);
   };
 
   return (
     <div className="space-y-6">
-      {/* 可以在这里加个标题区分 */}
-      <div className="text-lg font-semibold">
-        {isEditMode ? 'Edit Coupon' : 'Create Coupon'}
-      </div>
-
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -134,32 +73,24 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
               label="Coupon name"
               placeholder="e.g. New user ₱100-₱10"
             />
-
-            {/* Coupon Code 通常创建后也不建议随便改，看你业务需求，这里假设可以改 */}
             <FormTextField
               name="couponCode"
               label="Coupon code (optional)"
               placeholder="VIP666"
             />
-
             <FormSelectField
               required
               label="Issue type"
               name="issueType"
-              // 假设 IssueType 也是关键字段，不能改
-              disabled={isCriticalDisabled}
               options={ISSUE_TYPE_OPTIONS.map((option) => ({
                 label: option.label,
                 value: option.value.toString(),
               }))}
             />
-
-            {/* 🔥 关键字段开始锁定 */}
             <FormSelectField
               required
               label="Coupon type"
               name="couponType"
-              disabled={isCriticalDisabled}
               options={COUPON_TYPE_OPTIONS.map((option) => ({
                 label: option.label,
                 value: option.value.toString(),
@@ -170,7 +101,6 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
               required
               label="Discount type"
               name="discountType"
-              disabled={isCriticalDisabled}
               options={DISCOUNT_TYPE_OPTIONS.map((option) => ({
                 label: option.label,
                 value: option.value.toString(),
@@ -181,7 +111,6 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
               required
               name="discountValue"
               type="number"
-              disabled={isCriticalDisabled}
               label={
                 discountTypeNum === DISCOUNT_TYPE.PERCENTAGE
                   ? 'Discount (%)'
@@ -194,7 +123,6 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
               label="Min. purchase (₱)"
               name="minPurchase"
               type="number"
-              disabled={isCriticalDisabled}
             />
 
             {discountTypeNum === DISCOUNT_TYPE.PERCENTAGE && (
@@ -203,20 +131,15 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
                 label="Max discount (₱)"
                 type="number"
                 name="maxDiscount"
-                // Max discount 通常也属于关键金额信息
-                disabled={isCriticalDisabled}
               />
             )}
-            {/* 🔥 关键字段锁定结束 */}
 
-            {/* Total Quantity 通常可以增加，但不建议减少，这里先不做特殊处理，或者允许修改 */}
             <FormTextField
               required
               label="Total quantity (-1 = unlimited)"
               type="number"
               name="totalQuantity"
             />
-
             <FormTextField
               required
               label="Per user limit"
@@ -224,12 +147,10 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
               name="perUserLimit"
             />
 
-            {/* Valid Type 也是关键字段 */}
             <FormSelectField
               required
               label="Valid type"
               name="validType"
-              disabled={isCriticalDisabled}
               options={VALID_TYPE_OPTIONS.map((option) => ({
                 label: option.label,
                 value: option.value.toString(),
@@ -242,7 +163,6 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
                 label="Valid days after claim"
                 type="number"
                 name="validDays"
-                disabled={isCriticalDisabled}
               />
             )}
 
@@ -252,41 +172,35 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
                   required
                   label="Valid start date"
                   name="validStartAt"
-                  // 日期范围通常也不让大改，看业务
-                  disabled={isCriticalDisabled}
                 />
                 <FormDateField
                   required
                   label="Valid end date"
                   name="validEndAt"
-                  disabled={isCriticalDisabled}
                 />
               </>
             )}
 
-            <div className="sm:col-span-2">
-              <FormTextareaField
-                name="subTitle"
-                label="Subtitle (optional)"
-                placeholder="e.g. Valid on orders over ₱100"
-              />
-            </div>
+            <FormTextareaField
+              name="subTitle"
+              label="Subtitle (optional)"
+              placeholder="e.g. Valid on orders over ₱100"
+            />
 
-            <div className="sm:col-span-2">
-              <FormTextareaField
-                name="description"
-                label="Description (optional)"
-                placeholder="e.g. This is a coupon for new users only"
-              />
-            </div>
+            <FormTextareaField
+              name="description"
+              label="Description (optional)"
+              placeholder="e.g. This is a coupon for new users only"
+            />
           </div>
 
+          {/* ========= 底部按钮 ========= */}
           <div className="flex justify-end gap-3 pt-6">
             <Button type="button" variant="ghost" onClick={close}>
               Cancel
             </Button>
             <Button isLoading={loading} type="submit" variant="primary">
-              {isEditMode ? 'Save changes' : 'Create coupon'}
+              Create coupon
             </Button>
           </div>
         </form>

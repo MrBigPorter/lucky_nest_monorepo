@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Table,
   TableHeader,
@@ -18,7 +18,6 @@ import {
   getSortedRowModel,
   getExpandedRowModel,
   RowSelectionState,
-  Cell,
 } from '@tanstack/react-table';
 import {
   DndContext,
@@ -39,18 +38,21 @@ import { Pagination } from '@/components/scaffold/Pagination';
 import { Loader2, ArrowUpDown, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@repo/ui';
 
-// --- 内部组件：可排序行 ---
-const SortableRow = ({
-  row,
+// ----------------------------------------------------------------------------
+// 1. 内部组件：可排序行包装器 (DnD Logic Wrapper)
+// ----------------------------------------------------------------------------
+const SortableRowWrapper = ({
+  rowId,
   children,
   className,
   onClick,
+  isDragging: isDraggingProp, // 假如外部想控制样式
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  row: Row<any>;
+  rowId: string;
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  isDragging?: boolean;
 }) => {
   const {
     attributes,
@@ -59,10 +61,7 @@ const SortableRow = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    id: (row.original as any).id,
-  });
+  } = useSortable({ id: rowId });
 
   const style = {
     transform: transform
@@ -81,7 +80,8 @@ const SortableRow = ({
       className={cn(
         className,
         'bg-white dark:bg-gray-950',
-        isDragging && 'bg-blue-50 dark:bg-blue-900/20 shadow-lg',
+        (isDragging || isDraggingProp) &&
+          'bg-blue-50 dark:bg-blue-900/20 shadow-lg relative z-10',
       )}
       onClick={onClick}
       {...attributes}
@@ -90,6 +90,7 @@ const SortableRow = ({
         if (React.isValidElement(child)) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const childProps = child.props as Record<string, any>;
+          // 只有标记了 data-drag-handle 的单元格才绑定 listeners
           if (childProps['data-drag-handle']) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return React.cloneElement(child, { listeners } as any);
@@ -101,13 +102,147 @@ const SortableRow = ({
   );
 };
 
-/**
- * 基础表格组件，支持排序、分页、行选择、可展开行和拖拽排序等功能。
- * @template T - 表格数据的类型
- * @param {BaseTableProps<T>} props - 组件属性
- * @returns {JSX.Element} 渲染的表格组件
- *
- */
+// ----------------------------------------------------------------------------
+// 2. 内部组件：表头 (Header) - 只有排序变化时才刷新
+// ----------------------------------------------------------------------------
+const TableHeaderComponent = React.memo(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ({ table }: { table: any }) => {
+    return (
+      <TableHeader className="bg-gray-50/80 dark:bg-white/5 backdrop-blur-sm [&_tr]:border-0">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {table.getHeaderGroups().map((hg: any) => (
+          <TableRow key={hg.id} className="border-0">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {hg.headers.map((h: any) => {
+              return (
+                <TableHead
+                  key={h.id}
+                  style={{ width: h.getSize() }}
+                  className="h-11 font-medium text-gray-500 dark:text-gray-400"
+                >
+                  <div
+                    className={cn(
+                      'flex items-center gap-2',
+                      h.column.getCanSort() &&
+                        'cursor-pointer select-none hover:text-gray-900 dark:hover:text-white transition-colors',
+                    )}
+                    onClick={h.column.getToggleSortingHandler()}
+                  >
+                    {flexRender(h.column.columnDef.header, h.getContext())}
+                    {h.column.getCanSort() && (
+                      <ArrowUpDown size={13} className="opacity-50" />
+                    )}
+                  </div>
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        ))}
+      </TableHeader>
+    );
+  },
+  (prev, next) => {
+    // 比较 Sorting 状态，如果没变，就不刷新表头
+    return (
+      prev.table.getState().sorting === next.table.getState().sorting &&
+      prev.table.options.columns === next.table.options.columns
+    );
+  },
+);
+TableHeaderComponent.displayName = 'TableHeaderComponent';
+
+// ----------------------------------------------------------------------------
+// 3. 内部组件：行实现 (Row Implementation)
+// ----------------------------------------------------------------------------
+const TableRowImpl = ({
+  row,
+  enableDrag,
+  onClick,
+  renderSubComponent,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  row: Row<any>;
+  enableDrag?: boolean;
+  onClick?: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  renderSubComponent?: (row: Row<any>) => React.ReactNode;
+}) => {
+  // 1. 渲染当前行的 Cells
+  const cells = row.getVisibleCells().map((cell) => {
+    const content = flexRender(cell.column.columnDef.cell, cell.getContext());
+    const isDragHandle =
+      cell.column.id === 'dragHandle' && React.isValidElement(content);
+
+    return (
+      <TableCell
+        key={cell.id}
+        style={{ width: cell.column.getSize() }}
+        className="border-b border-gray-100 dark:border-white/5 py-3 transition-colors"
+      >
+        {isDragHandle
+          ? React.cloneElement(
+              content as React.ReactElement,
+              {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                'data-drag-handle': true,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } as any,
+            )
+          : content}
+      </TableCell>
+    );
+  });
+
+  // 2. 包装逻辑 (修复：已移除多余的 content 变量)
+  return (
+    <>
+      {enableDrag ? (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        <SortableRowWrapper rowId={(row.original as any).id} onClick={onClick}>
+          {cells}
+        </SortableRowWrapper>
+      ) : (
+        <TableRow
+          className={cn(
+            'group hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer transition-colors',
+            row.getIsSelected() && 'bg-blue-50/50 dark:bg-blue-900/10',
+          )}
+          onClick={onClick}
+        >
+          {cells}
+        </TableRow>
+      )}
+
+      {/* 3. 展开行逻辑 (如果展开了，这一行肯定需要重绘，不需要 memo) */}
+      {row.getIsExpanded() && renderSubComponent && (
+        <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+          <TableCell
+            colSpan={row.getVisibleCells().length}
+            className="p-0 border-b"
+          >
+            {renderSubComponent(row)}
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+};
+
+// 🔥 核心优化：加上 memo，切断“全表刷新”的传染链
+const MemoizedTableRow = React.memo(TableRowImpl, (prev, next) => {
+  // 只有这三个状态变了，才允许重渲染这一行
+  const isDataSame = prev.row.original === next.row.original;
+  const isSelectionSame = prev.row.getIsSelected() === next.row.getIsSelected();
+  const isExpandedSame = prev.row.getIsExpanded() === next.row.getIsExpanded();
+
+  return isDataSame && isSelectionSame && isExpandedSame;
+});
+MemoizedTableRow.displayName = 'MemoizedTableRow';
+
+// ----------------------------------------------------------------------------
+// 4. 主组件：BaseTable
+// ----------------------------------------------------------------------------
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface BaseTableProps<T extends Record<string, any>> {
   data: T[];
@@ -138,25 +273,6 @@ interface BaseTableProps<T extends Record<string, any>> {
   disabledRowKeys?: string[];
 }
 
-/**
- * 基础表格组件
- * @param data - 表格数据
- * @param propColumns - 列定义
- * @param loading - 加载状态
- * @param rowKey - 唯一行标识字段
- * @param pagination - 分页配置
- * @param enableDrag - 是否启用拖拽排序
- * @param onDragEnd - 拖拽结束回调
- * @param selectable - 是否启用行选择
- * @param onSelectionChange  - 选择变化回调
- * @param expandable - 是否启用可展开行
- * @param renderSubComponent - 渲染子组件函数
- * @param onRowClick - 行点击回调
- * @param defaultSelectedRowKeys - 默认选中的行键
- * @param disabledRowKeys - 禁用选择的行键
- * @returns 渲染的表格组件
- * @constructor
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const BaseTable = <T extends Record<string, any>>({
   data,
@@ -177,10 +293,13 @@ export const BaseTable = <T extends Record<string, any>>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const prevSelectionRef = useRef<string>('');
+
+  // --- 构造 Columns ---
   const columns = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cols = [...propColumns] as ColumnDef<T, any>[];
 
+    // 插入 Select 列
     if (selectable) {
       cols.unshift({
         id: 'select',
@@ -194,30 +313,18 @@ export const BaseTable = <T extends Record<string, any>>({
               : false;
 
           const handleToggleAll = (val: boolean) => {
-            // 拿到当前的选中状态副本
             const newSelection = { ...table.getState().rowSelection };
-
-            // 获取当前页的所有行
             const pageRows = table.getRowModel().rows;
 
             pageRows.forEach((row) => {
-              // 关键点：row.getCanSelect() 会根据你之前写的 enableRowSelection 逻辑返回结果
-              // 如果 ID 在 disabledRowKeys 里，getCanSelect() 就是 false
-
-              // 只有“允许被选”的行，我们才去修改它的状态
-              // 这样“禁用”的行（locked rows）就会保持原样，不会被选中，也不会被取消
               if (row.getCanSelect()) {
                 if (val) {
-                  // 全选：把当前页所有可选行设为 true
                   newSelection[row.id] = true;
                 } else {
-                  // 取消全选：把当前页所有可选行删掉 (delete)
                   delete newSelection[row.id];
                 }
               }
             });
-
-            // 更新表格状态
             table.setRowSelection(newSelection);
           };
 
@@ -244,6 +351,7 @@ export const BaseTable = <T extends Record<string, any>>({
       });
     }
 
+    // 插入 Expand 列
     if (expandable) {
       cols.unshift({
         id: 'expander',
@@ -255,7 +363,7 @@ export const BaseTable = <T extends Record<string, any>>({
                 e.stopPropagation();
                 row.toggleExpanded();
               }}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 hover:bg-gray-100 rounded text-gray-500 transition-colors"
             >
               {row.getIsExpanded() ? (
                 <ChevronDown size={16} />
@@ -284,20 +392,15 @@ export const BaseTable = <T extends Record<string, any>>({
       rowSelection,
     },
     onSortingChange: setSorting,
-    onRowSelectionChange: (updater) => {
-      setRowSelection(updater);
-    },
+    onRowSelectionChange: setRowSelection,
     enableRowSelection: (row) => {
       const id = String(row.original[rowKey]);
-      // 如果 disabledRowKeys 存在，且当前行的 id 在其中，则禁用选择
       return !(disabledRowKeys && disabledRowKeys.includes(id));
     },
   });
 
-  console.log('table rowSelection:', table);
-
+  // --- Side Effects ---
   React.useEffect(() => {
-    // 初始化默认选中行
     if (defaultSelectedRowKeys && defaultSelectedRowKeys.length > 0) {
       const initialSelection: RowSelectionState = {};
       defaultSelectedRowKeys.forEach((key) => {
@@ -309,15 +412,10 @@ export const BaseTable = <T extends Record<string, any>>({
 
   React.useEffect(() => {
     if (onSelectionChange) {
-      // 简单粗暴但有效：把选中的 ID 拼成字符串进行比对
-      // 假设 rowKey 是 'id' 或 'productId'，这里用 map 提取一下
       const currentSelectionIds = Object.keys(rowSelection).sort().join(',');
-
-      // 如果当前的选中状态 ID 组合，和上一次通知父组件的一样，就直接 return，不回调！
       if (currentSelectionIds === prevSelectionRef.current) {
         return;
       }
-      // 记录这一次的 ID 组合
       prevSelectionRef.current = currentSelectionIds;
 
       const selectedData = table
@@ -340,6 +438,7 @@ export const BaseTable = <T extends Record<string, any>>({
     }),
   );
 
+  // --- Render Body ---
   const renderTableBody = () => {
     if (loading && data.length === 0) {
       return (
@@ -364,75 +463,34 @@ export const BaseTable = <T extends Record<string, any>>({
       );
     }
 
-    const tableRows = table.getRowModel().rows.map((row) => {
-      const cells = row.getVisibleCells().map((cell) => {
-        return (
-          <MemoizedCell
-            key={cell.id}
-            cell={cell}
-            isSelected={row.getIsSelected()}
-            isDisabled={!row.getCanSelect()}
-          />
-        );
-      });
-
-      return (
-        <React.Fragment key={row.id}>
-          <TableRowComponent
-            row={row}
-            enableDrag={enableDrag}
-            onClick={() => onRowClick?.(row.original)}
-          >
-            {cells}
-          </TableRowComponent>
-          {row.getIsExpanded() && renderSubComponent && (
-            <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-              <TableCell colSpan={columns.length}>
-                {renderSubComponent(row)}
-              </TableCell>
-            </TableRow>
-          )}
-        </React.Fragment>
-      );
-    });
+    const rows = table
+      .getRowModel()
+      .rows.map((row) => (
+        <MemoizedTableRow
+          key={row.id}
+          row={row}
+          enableDrag={enableDrag}
+          onClick={() => onRowClick?.(row.original)}
+          renderSubComponent={renderSubComponent}
+        />
+      ));
 
     if (enableDrag) {
       return (
         <SortableContext items={items} strategy={verticalListSortingStrategy}>
-          {tableRows}
+          {rows}
         </SortableContext>
       );
     }
-    return tableRows;
+    return rows;
   };
 
   const content = (
-    <div className="overflow-x-auto rounded-xl">
-      <Table className="border-separate border-spacing-0">
-        <TableHeader className="bg-gray-50/60 dark:bg-white/5 [&_tr]:border-0">
-          {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id} className="border-0">
-              {hg.headers.map((h) => {
-                return (
-                  <TableHead key={h.id} style={{ width: h.getSize() }}>
-                    <div
-                      className={cn(
-                        'flex items-center gap-2',
-                        h.column.getCanSort() && 'cursor-pointer select-none',
-                      )}
-                      onClick={h.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(h.column.columnDef.header, h.getContext())}
-                      {h.column.getCanSort() && (
-                        <ArrowUpDown size={14} className="text-gray-400" />
-                      )}
-                    </div>
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
+    <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-white/10">
+      <Table className="border-separate border-spacing-0 w-full">
+        {/* 使用 MemoizedTableHeader */}
+        <TableHeaderComponent table={table} />
+
         <TableBody className="dark:divide-white/5 bg-white dark:bg-black/20 [&_tr:last-child_td]:border-b-0">
           {renderTableBody()}
         </TableBody>
@@ -453,105 +511,11 @@ export const BaseTable = <T extends Record<string, any>>({
       ) : (
         content
       )}
-      {pagination && <Pagination {...pagination} />}
+      {pagination && (
+        <div className="py-2">
+          <Pagination {...pagination} />
+        </div>
+      )}
     </div>
   );
 };
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TableRowComponent = ({
-  row,
-  onClick,
-  enableDrag,
-  children,
-}: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  row: Row<any>;
-  onClick?: () => void;
-  enableDrag?: boolean;
-  children: React.ReactNode;
-}) => {
-  if (enableDrag) {
-    return (
-      <SortableRow row={row} onClick={onClick}>
-        {children}
-      </SortableRow>
-    );
-  }
-
-  return (
-    <TableRow
-      className={cn(
-        'group hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer',
-        row.getIsSelected() && 'bg-blue-50/50 dark:bg-blue-900/10',
-      )}
-      onClick={onClick}
-    >
-      {children}
-    </TableRow>
-  );
-};
-
-// 只有当 cell 的值变化，或者它是“操作列”(没有值)时，才更新
-const MemoizedCell = memo(
-  ({
-    cell,
-  }: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cell: Cell<any, any>;
-    isSelected: boolean;
-    isDisabled: boolean;
-  }) => {
-    // 渲染逻辑移到这里
-    const content = flexRender(cell.column.columnDef.cell, cell.getContext());
-    const isDragHandle =
-      cell.column.id === 'dragHandle' && React.isValidElement(content);
-
-    return (
-      <TableCell
-        style={{ width: cell.column.getSize() }}
-        className="border-b border-gray-100 dark:border-white/5"
-      >
-        {isDragHandle
-          ? React.cloneElement(
-              content as React.ReactElement,
-              {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                'data-drag-handle': true,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              } as any,
-            )
-          : content}
-      </TableCell>
-    );
-  },
-  (prev, next) => {
-    // 1. 如果是 Select 列，直接对比传入的 boolean 值
-    // 因为 boolean 是基础类型，不涉及引用问题，绝对准确
-
-    if (next.cell.column.id === 'actions') {
-      return false; // 强制返回 false，允许重渲染
-    }
-
-    if (next.cell.column.id === 'select') {
-      return (
-        prev.isSelected === next.isSelected &&
-        prev.isDisabled === next.isDisabled
-      );
-    }
-
-    // 3. 如果行数据没变，单元格肯定不用变 (继承 Row 的优化)
-    if (prev.cell.row.original === next.cell.row.original) return true;
-
-    // 4. 检查单元格的值(getValue)有没有变
-    const prevValue = prev.cell.getValue();
-    const nextValue = next.cell.getValue();
-
-    return (
-      prevValue === nextValue &&
-      typeof prevValue !== 'object' &&
-      prevValue !== undefined
-    );
-  },
-);
-MemoizedCell.displayName = 'MemoizedCell';

@@ -1,16 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { createColumnHelper } from '@tanstack/react-table';
-import {
-  Edit3,
-  Trash2,
-  Tag,
-  Calendar,
-  Percent,
-  Hash,
-  Copy,
-  Plus,
-} from 'lucide-react';
+import { Edit3, Trash2, Calendar, Hash } from 'lucide-react';
 
 import { Button, ModalManager } from '@repo/ui';
 import { Badge, Card } from '@/components/UIComponents';
@@ -25,59 +16,17 @@ import {
 } from './CreateCouponModal'; // 请确保路径正确
 
 import {
+  CalcHelper,
   COUPON_STATUS,
-  COUPON_TYPE,
   COUPON_TYPE_OPTIONS,
   DISCOUNT_TYPE,
   ISSUE_TYPE,
+  NumHelper,
   VALID_TYPE,
 } from '@lucky/shared';
-import { Coupon } from '@/type/types.ts';
+import { Coupon, CouponListParams } from '@/type/types.ts';
 import { couponApi } from '@/api';
-
-// 这里模拟一个 API，实际项目中替换为 import { couponApi } from '@/api';
-const mockCouponApi = {
-  getList: async (params: any) => {
-    console.log('Fetching coupons with params:', params);
-    // 模拟网络延迟
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // 模拟返回数据
-    return {
-      list: Array(10)
-        .fill(null)
-        .map((_, i) => ({
-          id: `coupon-${i}`,
-          couponName: `New User Promo ${i}`,
-          couponCode: i % 2 === 0 ? `VIP${i}00` : null,
-          couponType:
-            i % 3 === 0 ? COUPON_TYPE.FULL_REDUCTION : COUPON_TYPE.DISCOUNT,
-          discountType:
-            i % 2 === 0 ? DISCOUNT_TYPE.FIXED_AMOUNT : DISCOUNT_TYPE.PERCENTAGE,
-          discountValue: i % 2 === 0 ? 100 : 0.15,
-          minPurchase: 500,
-          issueType: ISSUE_TYPE.CLAIM,
-          totalQuantity: 1000,
-          usedCount: 50 * i,
-          perUserLimit: 1,
-          validType: VALID_TYPE.RANGE,
-          validStartAt: new Date().toISOString(),
-          validEndAt: new Date(Date.now() + 86400000 * 7).toISOString(),
-          status: i % 4 === 0 ? 0 : 1, // 0 disabled, 1 active
-          createdAt: new Date().toISOString(),
-        })),
-      total: 100,
-    };
-  },
-  delete: async (id: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log('Deleted', id);
-    return true;
-  },
-  updateStatus: async (id: string, status: number) => {
-    console.log('Updated status', id, status);
-    return true;
-  },
-};
+import { PaginationParams } from '@/api/types.ts';
 
 // 搜索表单类型定义
 type CouponSearchForm = {
@@ -90,12 +39,9 @@ type CouponSearchForm = {
 
 const StatusBadge: React.FC<{ status: number }> = ({ status }) => (
   <Badge color={status === 1 ? 'green' : 'gray'}>
-    {status === 1 ? 'Active' : 'Disabled'}
+    {status === 1 ? `Active` : 'Disabled'}
   </Badge>
 );
-
-const formatCurrency = (n?: number | null) =>
-  typeof n === 'number' ? `₱${n.toFixed(2)}` : '-';
 
 const formatDate = (s?: string | null) =>
   s ? new Date(s).toLocaleDateString() : '-';
@@ -109,11 +55,13 @@ export const CouponList: React.FC = () => {
     formData: CouponSearchForm,
   ) => {
     // 组装 API 参数
-    const params: any = {
+    const params: CouponListParams = {
       page: current,
       pageSize,
-      keyword: formData.keyword,
     };
+    if (formData.keyword.trim()) {
+      params.keyword = formData.keyword;
+    }
     if (formData.status && formData.status !== 'ALL') {
       params.status = Number(formData.status);
     }
@@ -129,6 +77,7 @@ export const CouponList: React.FC = () => {
     tableProps,
     refresh,
     run,
+    mutate,
     search: { reset },
   } = useAntdTable(getTableData, {
     defaultPageSize: 10,
@@ -173,8 +122,6 @@ export const CouponList: React.FC = () => {
                 record ? 'Updated successfully' : 'Created successfully',
               );
             }}
-            // 注意：CreateCouponModal 需要支持 initialValues 或者 editingData 才能做编辑回显
-            // editingData={record}
           />
         ),
       });
@@ -230,14 +177,14 @@ export const CouponList: React.FC = () => {
           const { discountType, minPurchase } = info.row.original;
           const isPercent = discountType === DISCOUNT_TYPE.PERCENTAGE;
           const valueStr = isPercent
-            ? `${(info.getValue() * 100).toFixed(0)}% OFF`
-            : `-${formatCurrency(info.getValue())}`;
+            ? `${NumHelper.formatRate(info.getValue())}OFF`
+            : `-${NumHelper.formatMoney(info.getValue())}`;
 
           return (
             <div className="flex flex-col">
               <span className="font-semibold text-pink-600">{valueStr}</span>
               <span className="text-xs text-gray-500">
-                Min: {formatCurrency(minPurchase)}
+                Min: {NumHelper.formatMoney(minPurchase)}
               </span>
             </div>
           );
@@ -247,25 +194,40 @@ export const CouponList: React.FC = () => {
         id: 'usage',
         header: 'Usage',
         cell: (info) => {
-          const { usedCount, totalQuantity } = info.row.original;
-          const percent =
-            totalQuantity > 0
-              ? Math.round((usedCount / totalQuantity) * 100)
-              : 0;
+          const { usedCount = 0, totalQuantity } = info.row.original;
+          const isUnlimited = totalQuantity === -1;
+
+          let percent = 0;
+          if (!isUnlimited && totalQuantity > 0) {
+            const ratio = CalcHelper.div(usedCount, totalQuantity);
+            const rawPercent = CalcHelper.mul(ratio, 100);
+            percent = CalcHelper.round(rawPercent, 0);
+            if (percent > 100) {
+              percent = 100;
+            }
+          }
           return (
             <div className="w-24">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-gray-500">Used</span>
-                <span>{percent}%</span>
+                <span className="font-medium">
+                  {isUnlimited ? 'Unlimited' : `${percent}%`}
+                </span>
               </div>
               <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-500"
-                  style={{ width: `${percent}%` }}
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    isUnlimited ? 'bg-green-500' : 'bg-blue-500'
+                  }`}
+                  style={{
+                    // 无限库存时给一个固定极小宽度或者满宽（看设计偏好），这里设为 100% 绿色表示畅通
+                    width: isUnlimited ? '100%' : `${percent}%`,
+                  }}
                 />
               </div>
               <div className="text-[10px] text-gray-400 mt-1">
-                {usedCount} / {totalQuantity === -1 ? '∞' : totalQuantity}
+                {NumHelper.formatNumber(usedCount)} /{' '}
+                {isUnlimited ? '∞' : NumHelper.formatNumber(totalQuantity)}
               </div>
             </div>
           );

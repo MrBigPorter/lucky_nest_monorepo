@@ -11,17 +11,19 @@ export const CreateCouponSchema = z
       .string()
       .max(50, 'Coupon code must be at most 50 characters')
       .optional(),
-    couponType: z.enum(['1', '2', '3'], {
-      errorMap: () => ({
+    couponType: z.coerce
+      .number()
+      .int()
+      .refine((v) => [1, 2, 3].includes(v), {
         message:
           'Coupon type must be one of: 1 (Full Reduction), 2 (Discount), 3 (No Threshold)',
       }),
-    }),
-    discountType: z.enum(['1', '2'], {
-      errorMap: () => ({
+    discountType: z.coerce
+      .number()
+      .int()
+      .refine((v) => [1, 2].includes(v), {
         message: 'Discount type must be one of: 1 (Amount), 2 (Percentage)',
       }),
-    }),
     discountValue: z.coerce
       .number()
       .min(0.01, 'Discount value must be at least 0.01'),
@@ -32,12 +34,13 @@ export const CreateCouponSchema = z
       .number()
       .min(0, 'Max discount must be at least 0')
       .optional(),
-    issueType: z.enum(['1', '2', '3', '4'], {
-      errorMap: () => ({
+    issueType: z.coerce
+      .number()
+      .int()
+      .refine((v) => [1, 2, 3, 4].includes(v), {
         message:
           'Issue type must be one of: 1 (System), 2 (Claim), 3 (Redeem Code), 4 (Invite)',
       }),
-    }),
     totalQuantity: z.coerce
       .number()
       .int()
@@ -46,12 +49,13 @@ export const CreateCouponSchema = z
       .number()
       .int()
       .min(1, 'Per user limit must be at least 1'),
-    validType: z.enum(['1', '2'], {
-      errorMap: () => ({
+    validType: z.coerce
+      .number()
+      .int()
+      .refine((v) => [1, 2].includes(v), {
         message:
           'Valid type must be one of: 1 (Fixed Date Range), 2 (Days After Claim)',
       }),
-    }),
     validDays: z.coerce
       .number()
       .int()

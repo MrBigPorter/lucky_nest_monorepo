@@ -181,25 +181,40 @@ export interface Category {
 export interface Coupon {
   id: string;
   couponName: string;
-  couponCode: string;
-  couponType: number;
-  discountType: number;
+  couponCode?: string;
+  couponType: 1 | 2 | 3;
+  discountType: 1 | 2;
 
   discountValue: string;
   minPurchase: string;
 
-  issuedQuantity: number;
+  issuedQuantity?: number;
   totalQuantity: number;
   status: number;
+  validType: 1 | 2;
+  issueType: 1 | 2 | 3 | 4;
+  perUserLimit: number;
+  validDays: number;
 
   validStartAt: number;
   validEndAt: number;
   createdAt: number;
 }
 
+export type CouponListParams = PaginationParams & {
+  keyword?: string;
+  status?: number;
+  couponType?: number;
+};
+
 export interface CreateCouponPayload extends Omit<
   Coupon,
-  'discountValue' | 'minPurchase'
+  | 'discountValue'
+  | 'minPurchase'
+  | 'id'
+  | 'status'
+  | 'issuedQuantity'
+  | 'createdAt'
 > {
   discountValue: number;
   minPurchase: number;
