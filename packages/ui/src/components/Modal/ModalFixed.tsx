@@ -16,6 +16,7 @@ export function ModalFixed({
   onFinishClose,
   showClose = true,
   className,
+  enableClickOutsideClose = false,
   size = "lg",
 }: Readonly<ModalProps>): React.JSX.Element {
   const [visible, setVisible] = React.useState<boolean>(true);
@@ -48,7 +49,7 @@ export function ModalFixed({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={handleClose}
+          onClick={enableClickOutsideClose ? handleClose : undefined}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}

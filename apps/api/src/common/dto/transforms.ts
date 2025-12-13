@@ -55,6 +55,36 @@ export function ToBool() {
   );
 }
 
+/**
+ * 将空字符串 ''、纯空格 '   ' 或字符串 'null' 转换为真正的 null
+ * 用于 DTO 清洗，特别是 Unique 字段
+ */
+export function ToNull() {
+  return applyDecorators(
+    Transform(
+      ({ value }) => {
+        // 1. 如果本来就是 null 或 undefined，统一返回 null (或者保持原样，视业务需求定)
+        if (value === undefined || value === null) {
+          return null;
+        }
+
+        // 2. 如果是字符串，进行清洗
+        if (typeof value === 'string') {
+          const v = value.trim();
+          // 如果是空字符串，或者是字符串 "null" (忽略大小写)
+          if (v === '' || v.toLowerCase() === 'null') {
+            return null;
+          }
+        }
+
+        // 3. 其他情况保持原值 (比如传的是数字或其他有效值)
+        return value;
+      },
+      { toClassOnly: true },
+    ),
+  );
+}
+
 /** 字符串清洗：去除首尾空格，空字符串转 undefined */
 export function ToTrimmedString() {
   return applyDecorators(

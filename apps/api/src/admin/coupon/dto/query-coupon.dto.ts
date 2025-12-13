@@ -49,4 +49,14 @@ export class QueryCouponDto {
   @IsInt()
   @IsIn([1, 2])
   status?: number;
+
+  @ApiPropertyOptional({
+    description: 'Discount type filter: 1 - Amount; 2 - Percentage; ',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([1, 2])
+  discountType?: number;
 }
