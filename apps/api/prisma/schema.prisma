@@ -53,6 +53,12 @@ model User {
   transactions          WalletTransaction[]
   /// 订单
   orders                Order[]
+
+  /// 存款单
+  rechargeOrders      RechargeOrder[]
+
+  /// 提现单
+  withdrawOrders      WithdrawOrder[]
   /// user coupons
   userCoupons           UserCoupon[]
 
@@ -745,4 +751,86 @@ model UserCoupon {
   @@index([userId, status]) // 查"我的可用优惠券"最常用
   @@index([validEndAt])     // 查过期券
   @@map("user_coupons")
+}
+// ========= Finance: Recharge & Withdraw (Missing Tables) =========
+
+/// 21. 充值订单表
+model RechargeOrder {
+  rechargeId     String   @id @default(cuid()) @map("recharge_id") @db.VarChar(32)
+  rechargeNo     String   @unique @map("recharge_no") @db.VarChar(50)
+  userId         String   @map("user_id") @db.VarChar(32)
+
+  // 金额
+  rechargeAmount Decimal  @map("recharge_amount") @db.Decimal(10, 2)
+  bonusAmount    Decimal  @default(0.00) @map("bonus_amount") @db.Decimal(10, 2)
+  actualAmount   Decimal  @map("actual_amount") @db.Decimal(10, 2)
+
+  // 支付
+  paymentMethod  Int      @map("payment_method") @db.SmallInt // 1-GCash 2-PayMaya...
+  paymentChannel String?  @map("payment_channel") @db.VarChar(50)
+  paymentId      String?  @map("payment_id") @db.VarChar(32)
+
+  // 状态: 1-待支付 2-支付中 3-充值成功 4-充值失败 5-已取消
+  rechargeStatus Int      @default(1) @map("recharge_status") @db.SmallInt
+
+  // 营销
+  activityId     String?  @map("activity_id") @db.VarChar(32)
+  firstRecharge  Int      @default(0) @map("first_recharge") @db.SmallInt
+
+  // 数据
+  thirdPartyOrderNo String? @map("third_party_order_no") @db.VarChar(100)
+  callbackData      Json?   @map("callback_data")
+
+  paidAt        DateTime? @map("paid_at")
+  completedAt   DateTime? @map("completed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([rechargeNo])
+  @@index([rechargeStatus])
+  @@map("recharge_orders")
+}
+
+/// 22. 提现订单表
+model WithdrawOrder {
+  withdrawId     String   @id @default(cuid()) @map("withdraw_id") @db.VarChar(32)
+  withdrawNo     String   @unique @map("withdraw_no") @db.VarChar(50)
+  userId         String   @map("user_id") @db.VarChar(32)
+
+  // 金额
+  withdrawAmount Decimal  @map("withdraw_amount") @db.Decimal(10, 2)
+  feeAmount      Decimal  @default(0.00) @map("fee_amount") @db.Decimal(10, 2)
+  actualAmount   Decimal  @map("actual_amount") @db.Decimal(10, 2)
+
+  // 方式
+  withdrawMethod Int      @map("withdraw_method") @db.SmallInt
+  withdrawAccount String  @map("withdraw_account") @db.VarChar(100)
+  accountName     String? @map("account_name") @db.VarChar(100)
+  bankName        String? @map("bank_name") @db.VarChar(100)
+
+  // 状态: 1-待审核 2-审核通过 3-处理中 4-提现成功 5-审核拒绝 6-提现失败
+  withdrawStatus  Int     @default(1) @map("withdraw_status") @db.SmallInt
+
+  auditResult     String? @map("audit_result") @db.VarChar(500)
+  rejectReason    String? @map("reject_reason") @db.VarChar(500)
+  auditorId       String? @map("auditor_id") @db.VarChar(32)
+
+  thirdPartyOrderNo String? @map("third_party_order_no") @db.VarChar(100)
+  transferVoucher   String? @map("transfer_voucher") @db.VarChar(255)
+
+  appliedAt   DateTime  @default(now()) @map("applied_at") // 设置默认值方便
+  auditedAt   DateTime? @map("audited_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([withdrawNo])
+  @@index([withdrawStatus])
+  @@map("withdraw_orders")
 }

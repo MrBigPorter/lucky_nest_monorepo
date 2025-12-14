@@ -71,6 +71,8 @@ export enum Role {
   FINANCE = "FINANCE", // 财务
 }
 
+export type RoleKey = keyof typeof Role;
+
 export const ADMIN_USER_STATUS = {
   ACTIVE: 1, // 启用
   INACTIVE: 0, //禁用

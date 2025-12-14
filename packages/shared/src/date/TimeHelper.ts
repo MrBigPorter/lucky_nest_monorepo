@@ -1,100 +1,220 @@
-import dayjs from "dayjs";
-import "./dayjs-setup"; // 确保插件已加载
+import dayjs, { OpUnitType, QUnitType, Dayjs } from "dayjs";
+import "./dayjs-setup"; //  必须引入配置
 
-// 定义常用格式常量，方便以后全局统一修改
-const FORMATS = {
-  DATETIME: "YYYY-MM-DD HH:mm:ss", // 标准时间: 2025-12-14 14:30:00
-  DATE: "YYYY-MM-DD", // 仅日期: 2025-12-14
-  TIME: "HH:mm:ss", // 仅时间: 14:30:00
-  MONTH: "YYYY-MM", // 月份报表: 2025-12
-  COMPACT: "MMM D, YYYY", // 紧凑/美式: Dec 14, 2025
+//  环境检测
+const IS_SERVER = typeof window === "undefined";
+
+//  格式常量池
+export const DATE_FORMATS = {
+  DATETIME: "YYYY-MM-DD HH:mm:ss", // 2025-12-14 14:30:00
+  DATE: "YYYY-MM-DD", // 2025-12-14
+  TIME: "HH:mm:ss", // 14:30:00
+  MONTH: "YYYY-MM", // 2025-12
+  NO_YEAR: "MM-DD HH:mm", // 12-14 14:30
+  FILE_SAFE: "YYYYMMDD_HHmmss", // 20251214_143000
+  TRANSACTION: "YYYYMMDDHHmmssSSS", // 20251214143000123
 };
 
-type TimeOptions = {
-  placeholder?: string; // 空值占位符
-  format?: string; // 允许覆盖默认格式
-};
+export type TimeRangeType =
+  | "today"
+  | "yesterday"
+  | "week"
+  | "last7days"
+  | "last30days"
+  | "month"
+  | "quarter"
+  | "year";
 
 export class TimeHelper {
+  // ==========================================
+  //  国际化控制 (Client Only)
+  // ==========================================
+
   /**
-   * 标准日期时间 (表格/详情页专用)
-   * 场景：创建时间、更新时间、日志时间
-   * Example: "2025-12-14 14:30:05"
+   * 设置全局语言 (仅限客户端/浏览器)
+   *  在 Next.js/NestJS 服务端调用会被自动忽略，防止污染全局
    */
-  static formatDateTime(
-    val: string | number | Date | undefined | null,
-    opts: TimeOptions = {},
-  ) {
-    return this._format(val, opts.format || FORMATS.DATETIME, opts.placeholder);
+  static setLocale(lang: string) {
+    if (IS_SERVER) {
+      // 服务端静默忽略，或者打印 warn
+      return;
+    }
+    dayjs.locale(lang);
+  }
+
+  // ==========================================
+  // A. [展示类] 格式化 (String)
+  // ==========================================
+
+  static formatDateTime(val: any, placeholder = "-"): string {
+    return this._format(val, DATE_FORMATS.DATETIME, placeholder);
+  }
+
+  static formatDate(val: any, placeholder = "-"): string {
+    return this._format(val, DATE_FORMATS.DATE, placeholder);
+  }
+
+  static formatShort(val: any): string {
+    return this._format(val, DATE_FORMATS.NO_YEAR);
   }
 
   /**
-   * 仅日期 (Date Only)
-   * 场景：出生日期、开始/结束日期、筛选器
-   * Example: "2025-12-14"
+   * 相对时间 (智能环境判断)
+   * @param val 时间
+   * @param lang (可选) 强制指定语言。
+   * - 后端/Server Component: 必须传 lang (否则默认英文)
+   * - 前端/Client Component: 可不传 (跟随 setLocale)
    */
-  static formatDate(
-    val: string | number | Date | undefined | null,
-    opts: TimeOptions = {},
-  ) {
-    return this._format(val, opts.format || FORMATS.DATE, opts.placeholder);
+  static formatRelative(val: any, lang?: string): string {
+    const d = this._toDayjs(val);
+    if (!d) return "-";
+
+    // 1. 显式传参 (最高优)
+    if (lang) return d.locale(lang).fromNow();
+
+    // 2. 服务端兜底 (防止并发污染，强制英文或默认)
+    if (IS_SERVER) return d.locale("en").fromNow();
+
+    // 3. 客户端跟随全局
+    return d.fromNow();
   }
 
-  /**
-   * 相对时间 (Relative Time)
-   * 场景：操作日志、消息通知 (Message Center)
-   * Example: "3 hours ago", "in 5 days", "a few seconds ago"
-   */
-  static formatRelative(val: string | number | Date | undefined | null) {
-    if (!this._isValid(val)) return "-";
-    return dayjs(val).fromNow();
+  static formatDuration(seconds: number): string {
+    if (!seconds || seconds < 0) return "00:00:00";
+    const d = dayjs.duration(seconds, "seconds");
+    const H = Math.floor(d.asHours()).toString().padStart(2, "0");
+    const m = d.minutes().toString().padStart(2, "0");
+    const s = d.seconds().toString().padStart(2, "0");
+    return `${H}:${m}:${s}`;
   }
 
-  /**
-   * 月份格式化 (Month)
-   * 场景：财务报表、月度统计
-   * Example: "2025-12"
-   */
-  static formatMonth(val: string | number | Date | undefined | null) {
-    return this._format(val, FORMATS.MONTH);
+  static formatForTransaction(): string {
+    return dayjs().format(DATE_FORMATS.TRANSACTION);
   }
 
-  /**
-   * 提交给后端的 ISO 格式 (API Payload)
-   * 场景：表单提交前，把 Date 对象转为字符串
-   * Example: "2025-12-14T06:30:00.000Z"
-   */
-  static toISO(val: string | number | Date | undefined | null) {
-    if (!this._isValid(val)) return undefined; // 表单提交通常 undefined 会被过滤
-    return dayjs(val).toISOString();
+  // ==========================================
+  // B. [数据类] Prisma/Database
+  // ==========================================
+
+  static toDate(val: any): Date | undefined {
+    return this._toDayjs(val)?.toDate();
   }
 
-  /**
-   * 获取时间戳 (毫秒)
-   * 场景：需要进行时间比对或计算时
-   */
-  static toTimestamp(val: string | number | Date | undefined | null): number {
-    if (!this._isValid(val)) return 0;
-    return dayjs(val).valueOf();
+  static getStartOfDay(val?: any): Date {
+    return (this._toDayjs(val) || dayjs()).startOf("day").toDate();
   }
 
-  // ================= 私有辅助方法 =================
-
-  /**
-   * 统一格式化核心逻辑
-   */
-  private static _format(val: any, formatTemplate: string, placeholder = "-") {
-    if (!this._isValid(val)) return placeholder;
-    return dayjs(val).format(formatTemplate);
+  static getEndOfDay(val?: any): Date {
+    return (this._toDayjs(val) || dayjs()).endOf("day").toDate();
   }
 
-  /**
-   * 校验是否为有效时间
-   * dayjs(null).isValid() 是 false，但 dayjs(undefined) 会变成当前时间，必须特判
-   */
-  private static _isValid(val: any): boolean {
-    if (val === null || val === undefined || val === "") return false;
+  static getStartOf(unit: OpUnitType | QUnitType, val?: any): Date {
+    return (this._toDayjs(val) || dayjs()).startOf(unit).toDate();
+  }
+
+  static getEndOf(unit: OpUnitType | QUnitType, val?: any): Date {
+    return (this._toDayjs(val) || dayjs()).endOf(unit).toDate();
+  }
+
+  // ==========================================
+  // C. [业务逻辑] 日历/签到
+  // ==========================================
+
+  static getDaysInMonth(val: any): number {
+    return (this._toDayjs(val) || dayjs()).daysInMonth();
+  }
+
+  static getFirstWeekDay(val: any): number {
+    return (this._toDayjs(val) || dayjs()).startOf("month").day();
+  }
+
+  static isToday(val: any): boolean {
+    const d = this._toDayjs(val);
+    return d ? d.isSame(dayjs(), "day") : false;
+  }
+
+  static isYesterday(val: any): boolean {
+    const d = this._toDayjs(val);
+    return d ? d.isSame(dayjs().subtract(1, "day"), "day") : false;
+  }
+
+  static diffDays(from: any, to: any = new Date()): number {
+    const d1 = this._toDayjs(from);
+    const d2 = this._toDayjs(to);
+    if (!d1 || !d2) return 0;
+    return d2.startOf("day").diff(d1.startOf("day"), "day");
+  }
+
+  // ==========================================
+  // D. [后台快捷查询]
+  // ==========================================
+
+  static getRange(type: TimeRangeType) {
+    const now = dayjs();
+    let start, end;
+    switch (type) {
+      case "today":
+        start = now.startOf("day");
+        end = now.endOf("day");
+        break;
+      case "yesterday":
+        start = now.subtract(1, "day").startOf("day");
+        end = now.subtract(1, "day").endOf("day");
+        break;
+      case "week":
+        start = now.startOf("isoWeek");
+        end = now.endOf("isoWeek");
+        break;
+      case "last7days":
+        start = now.subtract(6, "day").startOf("day");
+        end = now.endOf("day");
+        break;
+      case "last30days":
+        start = now.subtract(29, "day").startOf("day");
+        end = now.endOf("day");
+        break;
+      case "month":
+        start = now.startOf("month");
+        end = now.endOf("month");
+        break;
+      case "quarter":
+        start = now.startOf("quarter");
+        end = now.endOf("quarter");
+        break;
+      case "year":
+        start = now.startOf("year");
+        end = now.endOf("year");
+        break;
+      default:
+        start = now.startOf("day");
+        end = now.endOf("day");
+    }
+    return { gte: start.toDate(), lte: end.toDate() };
+  }
+
+  // ==========================================
+  //  核心兼容 (iOS Safety Valve)
+  // ==========================================
+
+  private static _toDayjs(val: any): Dayjs | null {
+    if (val === null || val === undefined || val === "") return null;
+    // 🍎 iOS Safari 补丁: 2025-12-14 12:00:00 -> 2025/12/14 12:00:00
+    if (typeof val === "string" && val.includes("-") && !val.includes("T")) {
+      const d = dayjs(val);
+      if (d.isValid()) return d;
+      return dayjs(val.replace(/-/g, "/"));
+    }
     const d = dayjs(val);
-    return d.isValid();
+    return d.isValid() ? d : null;
+  }
+
+  private static _format(
+    val: any,
+    template: string,
+    placeholder = "-",
+  ): string {
+    const d = this._toDayjs(val);
+    if (!d) return placeholder;
+    return d.format(template);
   }
 }

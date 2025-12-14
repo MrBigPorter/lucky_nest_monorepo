@@ -7,6 +7,7 @@ export const TRANSACTION_TYPE = {
   WITHDRAWAL: 5,
   COIN_EXCHANGE: 6,
   INVITE_REWARD: 7,
+  SYSTEM_DEDUCT: 8,
 } as const;
 
 export const BALANCE_TYPE = {

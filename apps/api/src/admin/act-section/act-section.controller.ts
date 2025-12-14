@@ -13,9 +13,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
-import { RolesGuard } from '@api/common/guards/roles.guard';
-import { Roles } from '@api/common/decorators/roles.decorator';
-import { Role } from '@lucky/shared';
+import { PermissionsGuard } from '@api/common/guards/permissions.guard';
+import { OpAction, OpModule, Role } from '@lucky/shared';
 import { ActSectionResponseDto } from '@api/admin/act-section/dto/act-section-response.dto';
 import { CreateActSectionDto } from '@api/admin/act-section/dto/create-act-section.dto';
 import { ActSectionService } from '@api/admin/act-section/act-section.service';
@@ -23,10 +22,11 @@ import { plainToInstance } from 'class-transformer';
 import { QueryActSectionDto } from '@api/admin/act-section/dto/query-act-section.dto';
 import { UpdateActSectionDto } from '@api/admin/act-section/dto/update-act-section.dto';
 import { BindSectionItemDto } from '@api/admin/act-section/dto/bind-section-item.dto';
+import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 
 @ApiTags('admin Act Section Management')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('admin/act-sections')
 export class ActSectionController {
@@ -38,7 +38,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto>}
    */
   @Post('create')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.CREATE)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async create(@Body() dto: CreateActSectionDto) {
     const data = await this.sectionService.create(dto);
@@ -51,7 +51,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto[]>}
    */
   @Get('list')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.VIEW)
   @ApiOkResponse({ type: [ActSectionResponseDto] })
   async findAll(@Query() query: QueryActSectionDto) {
     const { list, pageSize, page, total } =
@@ -105,7 +105,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto>}
    */
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.VIEW)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async findOne(@Param('id') id: string) {
     return await this.sectionService.findOne(id);
@@ -118,7 +118,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto>}
    */
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.UPDATE)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async update(@Param('id') id: string, @Body() dto: UpdateActSectionDto) {
     const data = await this.sectionService.update(id, dto);
@@ -131,7 +131,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto>}
    */
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.DELETE)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async remove(@Param('id') id: string) {
     const data = await this.sectionService.remove(id);
@@ -145,7 +145,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto>}
    */
   @Post(':id/bind')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.UPDATE)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async bindTreasures(
     @Param('id') id: string,
@@ -162,7 +162,7 @@ export class ActSectionController {
    * @returns {Promise<ActSectionResponseDto>}
    */
   @Delete(':id/unbind/:treasureId')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.UPDATE)
   @ApiOkResponse({ type: ActSectionResponseDto })
   async unbindTreasure(
     @Param('id') id: string,

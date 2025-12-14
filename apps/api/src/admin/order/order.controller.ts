@@ -18,20 +18,20 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
-import { RolesGuard } from '@api/common/guards/roles.guard';
+import { PermissionsGuard } from '@api/common/guards/permissions.guard';
 import { OrderService } from '@api/admin/order/order.service';
-import { Roles } from '@api/common/decorators/roles.decorator';
-import { Role } from '@lucky/shared';
+import { OpAction, OpModule, Role } from '@lucky/shared';
 import { QueryOrderDto } from '@api/admin/order/dto/query-order.dto';
 import { OrderResponseDto } from '@api/admin/order/dto/order-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 import { UpdateOrderStatusDto } from '@api/admin/order/dto/update-order-status.dto';
 import 'reflect-metadata';
+import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 
 @ApiTags('Admin Order Management')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('admin/order')
 export class OrderController {
   constructor(private readonly OrderService: OrderService) {}
@@ -43,7 +43,7 @@ export class OrderController {
    *
    */
   @Get('list')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.FINANCE, Role.VIEWER)
+  @RequirePermission(OpModule.ORDER, OpAction.ORDER.VIEW)
   @ApiOkResponse({ type: OrderResponseDto })
   @ApiExtraModels(PaginatedResponseDto, OrderResponseDto)
   async findAll(@Query() query: QueryOrderDto) {
@@ -63,7 +63,7 @@ export class OrderController {
    * @returns Order details
    */
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.FINANCE, Role.VIEWER)
+  @RequirePermission(OpModule.ORDER, OpAction.ORDER.VIEW)
   @ApiOkResponse({ type: OrderResponseDto })
   async findOne(@Param('id') id: string) {
     const order = await this.OrderService.finOne(id);
@@ -77,7 +77,7 @@ export class OrderController {
    * @returns Updated order
    */
   @Patch(':id/status')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.ORDER, OpAction.ORDER.UPDATE)
   @ApiOkResponse({ type: OrderResponseDto })
   async updateStatus(
     @Param('id') id: string,
@@ -93,7 +93,7 @@ export class OrderController {
    * @return Deleted order
    */
   @Delete(':id')
-  @Roles(Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.ORDER, OpAction.ORDER.DELETE)
   async remove(@Param('id') id: string) {
     return this.OrderService.remove(id);
   }
