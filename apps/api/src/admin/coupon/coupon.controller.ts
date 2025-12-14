@@ -98,7 +98,7 @@ export class CouponController {
    * @returns Updated coupon
    */
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.ADMIN)
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @ApiResponse({ type: CouponResponseDto })
   async updateCoupon(@Param('id') id: string, @Body() dto: UpdateCouponDto) {
     const coupon = await this.couponService.update(id, dto);
