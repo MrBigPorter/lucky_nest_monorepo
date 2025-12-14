@@ -13,6 +13,7 @@ import {
   OpAction,
   OpModule,
   OrderNoHelper,
+  RelatedType,
   TimeHelper,
   TRANSACTION_STATUS,
   WITHDRAW_STATUS,
@@ -314,21 +315,17 @@ export class FinanceService {
         }
 
         // 记录提现成功流水, 记账为支出
-        await ctx.walletTransaction.create({
-          data: {
-            transactionNo: OrderNoHelper.generate(BizPrefix.WITHDRAW),
-            userId: order.userId,
-            walletId: wallet.id,
-            transactionType: TRANSACTION_TYPE.REFUND, // 提现
-            balanceType: BALANCE_TYPE.CASH, // 现金余额
-            amount: amount.negated(), // 支出记负数
-            beforeBalance: wallet.realBalance, // 变动前余额
-            afterBalance: wallet.realBalance.plus(amount),
-            description: 'wallet withdrawal success',
-            status: TRANSACTION_STATUS.SUCCESS,
+        await ctx.walletTransaction.updateMany({
+          where: {
             relatedId: order.withdrawId,
-            relatedType: 'WITHDRAWAL',
-            remark: `Audit Pass by ${adminId}`,
+            relatedType: RelatedType.WITHDRAWAL,
+            status: TRANSACTION_STATUS.PROCESSING,
+          },
+          data: {
+            status: TRANSACTION_STATUS.SUCCESS,
+            description: 'wallet withdrawal approved and completed',
+            remark: `Audit Approved by ${adminId}`,
+            updatedAt: new Date(),
           },
         });
       } else {
@@ -356,6 +353,24 @@ export class FinanceService {
           }
           throw error;
         }
+
+        await ctx.walletTransaction.create({
+          data: {
+            transactionNo: OrderNoHelper.generate(BizPrefix.WITHDRAW),
+            userId: order.userId,
+            walletId: wallet.id,
+            transactionType: TRANSACTION_TYPE.REFUND, // 提现拒绝
+            balanceType: BALANCE_TYPE.CASH, // 现金余额
+            amount: amount, // 返还记正数
+            beforeBalance: wallet.realBalance, // 变动前余额
+            afterBalance: wallet.realBalance.plus(amount), // 变动后余额
+            description: 'wallet withdrawal rejected, funds returned',
+            status: TRANSACTION_STATUS.SUCCESS,
+            relatedId: order.withdrawId,
+            relatedType: RelatedType.WITHDRAWAL,
+            remark: `Audit Rejected by ${adminId}`,
+          },
+        });
       }
 
       // 5. 更新提现订单状态
