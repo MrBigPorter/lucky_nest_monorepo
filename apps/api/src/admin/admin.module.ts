@@ -7,6 +7,7 @@ import { ActSectionModule } from '@api/admin/act-section/act-section.module';
 import { BannerModule } from '@api/admin/banner/banner.module';
 import { OrderModule } from '@api/admin/order/order.module';
 import { CouponModule } from '@api/admin/coupon/coupon.module';
+import { FinanceModule } from '@api/admin/finance/finance.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CouponModule } from '@api/admin/coupon/coupon.module';
     BannerModule,
     OrderModule,
     CouponModule,
+    FinanceModule,
   ],
   providers: [],
   controllers: [],

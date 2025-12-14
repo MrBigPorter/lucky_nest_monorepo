@@ -25,6 +25,7 @@ import { plainToInstance } from 'class-transformer';
 import { TransactionResponseDto } from '@api/admin/finance/dto/transaction-response.dto';
 import { WithdrawListResponseDto } from '@api/admin/finance/dto/withdraw-list-response.dto';
 import { ReaIp } from '@api/common/decorators/http.decorators';
+import { WithdrawResponseDto } from '@api/admin/finance/dto/withdraw-response.dto';
 
 @ApiTags('Admin Finance Management')
 @ApiBearerAuth()
@@ -51,6 +52,7 @@ export class FinanceController {
 
   @Post('adjust')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.MANUAL_ADJUST)
+  @ApiOkResponse({ type: TransactionResponseDto })
   async manualAdjust(
     @Body() dto: ManualAdjustmentDto,
     @CurrentUserId() userId: string,
@@ -59,6 +61,9 @@ export class FinanceController {
     const data = await this.financeService.manualAdjust(dto, {
       adminId: userId,
       ip,
+    });
+    return plainToInstance(TransactionResponseDto, data, {
+      excludeExtraneousValues: true,
     });
   }
 
@@ -79,11 +84,14 @@ export class FinanceController {
 
   @Post('withdrawals/audit')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.WITHDRAW_AUDIT)
+  @ApiOkResponse({ type: WithdrawResponseDto })
   async auditWithdrawal(
     @Body() dto: AuditWithdrawDto,
     @CurrentUserId() userId: string,
   ) {
     const data = await this.financeService.auditWithdraw(dto, userId);
-    return data;
+    return plainToInstance(WithdrawResponseDto, data, {
+      excludeExtraneousValues: true,
+    });
   }
 }
