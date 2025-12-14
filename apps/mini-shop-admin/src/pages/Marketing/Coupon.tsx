@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { Edit3, Trash2, Calendar, Hash } from 'lucide-react';
@@ -76,6 +76,7 @@ export const CouponList: React.FC = () => {
     run,
     search: { reset },
   } = useAntdTable(getTableData, {
+    manual: true,
     defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
@@ -137,6 +138,13 @@ export const CouponList: React.FC = () => {
     },
     [deleteCoupon],
   );
+
+  useEffect(() => {
+    run(
+      { current: 1, pageSize: 10 },
+      { keyword: '', status: 'ALL', couponType: 'ALL' },
+    );
+  }, [run]);
 
   const columns = useMemo(() => {
     const columnHelper = createColumnHelper<Coupon>();
