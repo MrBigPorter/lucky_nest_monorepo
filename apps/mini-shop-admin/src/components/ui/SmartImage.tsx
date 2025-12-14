@@ -14,7 +14,7 @@ interface SmartImageProps extends Omit<ImageProps, 'cdn'> {
   imgClassName?: string;
 }
 
-export const SmartImage: React.FC<SmartImageProps> = ({
+export const SmartImageImpl: React.FC<SmartImageProps> = ({
   src,
   enableOptimization,
   fallbackSrc,
@@ -115,3 +115,11 @@ export const SmartImage: React.FC<SmartImageProps> = ({
     </div>
   );
 };
+
+export const SmartImage = React.memo(SmartImageImpl, (prev, next) => {
+  const isSrcEqual = prev.src === next.src;
+  const isClassNameEqual = prev.className === next.className;
+  const isOptimizationEqual =
+    prev.enableOptimization === next.enableOptimization;
+  return isSrcEqual && isClassNameEqual && isOptimizationEqual;
+});

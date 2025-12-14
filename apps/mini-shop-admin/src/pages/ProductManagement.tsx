@@ -133,7 +133,22 @@ export const ProductManagement: React.FC = () => {
 
   const handleTreasureState = useCallback(
     (p: Product) => {
-      updateProductState.run(p.treasureId, p.state === 1 ? 0 : 1);
+      ModalManager.open({
+        title: ' Are you sure?',
+        content:
+          p.state === TREASURE_STATE.ACTIVE
+            ? 'Product will be taken offline.'
+            : 'Product will be put online.',
+        confirmText: 'confirm',
+        cancelText: 'cancel',
+        onConfirm: () => {
+          const newState =
+            p.state === TREASURE_STATE.ACTIVE
+              ? TREASURE_STATE.INACTIVE
+              : TREASURE_STATE.ACTIVE;
+          updateProductState.run(p.treasureId, newState);
+        },
+      });
     },
     [updateProductState],
   );
@@ -195,7 +210,6 @@ export const ProductManagement: React.FC = () => {
         cell: (info) => (
           <div className="flex  gap-2">
             <Button
-              isLoading={deleteProduct.loading}
               variant="ghost"
               size="sm"
               onClick={() => handleRemove(info.row.original)}
@@ -211,7 +225,6 @@ export const ProductManagement: React.FC = () => {
             </Button>
 
             <Button
-              isLoading={updateProductState.loading}
               variant="ghost"
               size="sm"
               onClick={() => handleTreasureState(info.row.original)}
@@ -226,13 +239,7 @@ export const ProductManagement: React.FC = () => {
         ),
       }),
     ];
-  }, [
-    deleteProduct.loading,
-    handleOpenEdit,
-    handleRemove,
-    handleTreasureState,
-    updateProductState.loading,
-  ]);
+  }, [handleOpenEdit, handleRemove, handleTreasureState]);
 
   return (
     <div className="space-y-6">
