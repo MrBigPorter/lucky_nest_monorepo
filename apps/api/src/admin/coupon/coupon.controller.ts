@@ -20,10 +20,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
-import { RolesGuard } from '@api/common/guards/roles.guard';
+import { PermissionsGuard } from '@api/common/guards/permissions.guard';
 import { CreateCouponDto } from './dto/create-coupon.dto';
-import { Roles } from '@api/common/decorators/roles.decorator';
-import { Role } from '@lucky/shared';
+import { OpAction, OpModule, Role } from '@lucky/shared';
 import {
   CouponListResponseDto,
   CouponResponseDto,
@@ -32,10 +31,11 @@ import { plainToInstance } from 'class-transformer';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 import { QueryCouponDto } from '@api/admin/coupon/dto/query-coupon.dto';
 import { UpdateCouponDto } from '@api/admin/coupon/dto/update-coupon.dto';
+import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 
 @ApiTags('Admin Coupon Management')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('admin/coupons')
 export class CouponController {
@@ -47,7 +47,7 @@ export class CouponController {
    * @return Created coupon
    */
   @Post('create')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.CREATE)
   @ApiOkResponse({ type: CouponResponseDto })
   async createCoupon(@Body() dto: CreateCouponDto) {
     const coupon = await this.couponService.create(dto);
@@ -63,7 +63,7 @@ export class CouponController {
    *
    */
   @Get('list')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.VIEWER)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.VIEW)
   @ApiResponse({ type: CouponListResponseDto })
   @ApiExtraModels(PaginatedResponseDto, CouponResponseDto)
   async findAll(@Query() dto: QueryCouponDto) {
@@ -82,7 +82,7 @@ export class CouponController {
    * @returns Coupon details
    */
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN, Role.VIEWER)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.VIEW)
   @ApiResponse({ type: CouponResponseDto })
   async findOne(@Param('id') id: string) {
     const coupon = await this.couponService.finOne(id);
@@ -98,7 +98,7 @@ export class CouponController {
    * @returns Updated coupon
    */
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.UPDATE)
   @ApiResponse({ type: CouponResponseDto })
   async updateCoupon(@Param('id') id: string, @Body() dto: UpdateCouponDto) {
     const coupon = await this.couponService.update(id, dto);
@@ -113,7 +113,7 @@ export class CouponController {
    * @return Deleted coupon
    */
   @Delete(':id')
-  @Roles(Role.SUPER_ADMIN, Role.ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.DELETE)
   @ApiResponse({ type: CouponResponseDto })
   async remove(@Param('id') id: string) {
     const coupon = await this.couponService.remove(id);

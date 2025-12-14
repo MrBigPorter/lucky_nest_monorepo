@@ -14,16 +14,16 @@ import { UserService } from '@api/admin/user/user.service';
 import { AdminListDto } from '@api/admin/user/dto/admin-list.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
-import { RolesGuard } from '@api/common/guards/roles.guard';
-import { Roles } from '@api/common/decorators/roles.decorator';
-import { Role } from '@lucky/shared';
+import { PermissionsGuard } from '@api/common/guards/permissions.guard';
+import { OpAction, OpModule, Role } from '@lucky/shared';
 import { UpdateAdminDto } from '@api/admin/user/dto/update-admin.dto';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { CreateAdminDto } from '@api/admin/user/dto/create-admin.dto';
+import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 
 @ApiTags('Admin User Management')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('admin/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -34,7 +34,7 @@ export class UserController {
    * @returns Paginated list of admin users
    *
    */
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.USER, OpAction.USER.VIEW)
   @Get('list')
   async adminList(@Query() query: AdminListDto) {
     return this.userService.adminList(query);
@@ -46,7 +46,7 @@ export class UserController {
    * @param updateAdminDto
    * @param userId
    */
-  @Roles(Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.USER, OpAction.USER.UPDATE)
   @Patch(':id')
   async update(
     @Param('id') id: string,
@@ -62,7 +62,7 @@ export class UserController {
    * @returns Promise<User>
    */
   @Post('create')
-  @Roles(Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.USER, OpAction.USER.CREATE)
   async create(@Body() dto: CreateAdminDto) {
     return this.userService.create(dto);
   }
@@ -73,7 +73,7 @@ export class UserController {
    * @return Promise<void>
    */
   @Delete(':id')
-  @Roles(Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.USER, OpAction.USER.DELETE)
   async remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }

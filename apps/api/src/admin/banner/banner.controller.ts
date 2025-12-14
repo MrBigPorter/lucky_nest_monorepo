@@ -13,20 +13,20 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
-import { RolesGuard } from '@api/common/guards/roles.guard';
+import { PermissionsGuard } from '@api/common/guards/permissions.guard';
 import { BannerService } from '@api/admin/banner/banner.service';
-import { Roles } from '@api/common/decorators/roles.decorator';
 import { BannerResponseDto } from '@api/admin/banner/dto/banner-response.dto';
 import { CreateBannerDto } from '@api/admin/banner/dto/create-banner.dto';
 import { plainToInstance } from 'class-transformer';
-import { Role } from '@lucky/shared';
+import { OpAction, OpModule, Role } from '@lucky/shared';
 import { QueryBannerDto } from '@api/admin/banner/dto/query-banner.dto';
 import { UpdateBannerDto } from '@api/admin/banner/dto/update-banner.dto';
 import { UpdateBannerStateDto } from '@api/admin/banner/dto/update-banner-state.dto';
+import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 
 @ApiTags('admin Banner Management')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('admin/banners')
 export class BannerController {
@@ -37,7 +37,7 @@ export class BannerController {
    * @param dto
    */
   @Post('create')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.CREATE)
   @ApiOkResponse({ type: BannerResponseDto })
   async create(@Body() dto: CreateBannerDto) {
     const data = await this.bannerService.create(dto);
@@ -50,7 +50,7 @@ export class BannerController {
    * @param dto
    */
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.UPDATE)
   @ApiOkResponse({ type: BannerResponseDto })
   async update(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
     const data = await this.bannerService.update(id, dto);
@@ -62,7 +62,7 @@ export class BannerController {
    * @param query
    */
   @Get('list')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.VIEW)
   @ApiOkResponse({ type: [BannerResponseDto] })
   async findAll(@Query() query: QueryBannerDto) {
     const { list, pageSize, page, total } =
@@ -78,7 +78,7 @@ export class BannerController {
    * @param id
    */
   @Get(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.VIEW)
   @ApiOkResponse({ type: BannerResponseDto })
   async findOne(@Param('id') id: string) {
     const data = await this.bannerService.findOne(id);
@@ -91,7 +91,7 @@ export class BannerController {
    * @param dto
    */
   @Patch(':id/state')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.UPDATE)
   @ApiOkResponse({ type: BannerResponseDto })
   async updateState(
     @Param('id') id: string,
@@ -106,7 +106,7 @@ export class BannerController {
    * @param id
    */
   @Delete(':id')
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @RequirePermission(OpModule.MARKETING, OpAction.MARKETING.DELETE)
   @ApiOkResponse({ type: Boolean })
   async remove(@Param('id') id: string) {
     return this.bannerService.remove(id);
