@@ -18,7 +18,7 @@ import {
   WITHDRAW_STATUS,
 } from '@lucky/shared';
 import { ManualAdjustmentDto } from '@api/admin/finance/dto/manual-adjustment.dto';
-import { TRANSACTION_TYPE } from '@lucky/shared/src/types/wallet';
+import { TRANSACTION_TYPE } from '@lucky/shared';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
 import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
 import { AuditWithdrawDto } from '@api/admin/finance/dto/audit-withdraw.dto';

@@ -2,6 +2,15 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 
 @Exclude()
+class UserSimpleDto {
+  @Expose()
+  nickname!: string;
+
+  @Expose()
+  phone!: string;
+}
+
+@Exclude()
 export class WithdrawResponseDto {
   @Expose()
   withdrawId!: string;
@@ -53,13 +62,4 @@ export class WithdrawResponseDto {
   @Expose()
   @Type(() => UserSimpleDto)
   user?: UserSimpleDto;
-}
-
-@Exclude()
-class UserSimpleDto {
-  @Expose()
-  nickname!: string;
-
-  @Expose()
-  phone!: string;
 }

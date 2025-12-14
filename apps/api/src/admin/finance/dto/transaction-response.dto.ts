@@ -3,6 +3,17 @@ import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Exclude()
+class UserSimpleDto {
+  @ApiProperty({ description: 'Nickname', example: 'john_doe' })
+  @Expose()
+  nickname!: string;
+
+  @ApiProperty({ description: 'Phone Number', example: '+1234567890' })
+  @Expose()
+  phone!: string;
+}
+
+@Exclude()
 export class TransactionResponseDto {
   @ApiProperty({ description: 'Transaction ID', example: 'txn_123456' })
   @Expose()
@@ -29,6 +40,22 @@ export class TransactionResponseDto {
   @Expose()
   transactionType!: number;
 
+  @ApiProperty({ description: 'Related ID', example: 'order_987654' })
+  @Expose()
+  relatedId?: string;
+
+  @ApiProperty({ description: 'Related Type', example: 'order' })
+  @Expose()
+  relateType?: string;
+
+  @ApiProperty({ description: 'Description', example: 'Recharge' })
+  @Expose()
+  description!: string;
+
+  @ApiProperty({ description: 'Status', example: 2 })
+  @Expose()
+  status!: number;
+
   @ApiProperty({ description: 'before Balance', example: '500.00' })
   @Expose()
   @DecimalToString()
@@ -52,15 +79,4 @@ export class TransactionResponseDto {
   @Expose()
   @Type(() => UserSimpleDto)
   user?: UserSimpleDto;
-}
-
-@Exclude()
-class UserSimpleDto {
-  @ApiProperty({ description: 'Nickname', example: 'john_doe' })
-  @Expose()
-  nickname!: string;
-
-  @ApiProperty({ description: 'Phone Number', example: '+1234567890' })
-  @Expose()
-  phone!: string;
 }
