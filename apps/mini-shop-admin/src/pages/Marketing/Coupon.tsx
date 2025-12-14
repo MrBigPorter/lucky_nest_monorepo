@@ -12,8 +12,8 @@ import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 
 // 引入你之前定义的常量和 Modal
 import {
-  CreateCouponModal, // 假设这是你上一段代码里的 Modal 组件
-} from './CreateCouponModal'; // 请确保路径正确
+  CouponModal, // 假设这是你上一段代码里的 Modal 组件
+} from './CouponModal.tsx'; // 请确保路径正确
 
 import {
   CalcHelper,
@@ -22,11 +22,11 @@ import {
   DISCOUNT_TYPE,
   ISSUE_TYPE,
   NumHelper,
+  TimeHelper,
   VALID_TYPE,
 } from '@lucky/shared';
 import { Coupon, CouponListParams } from '@/type/types.ts';
 import { couponApi } from '@/api';
-import { PaginationParams } from '@/api/types.ts';
 
 // 搜索表单类型定义
 type CouponSearchForm = {
@@ -42,9 +42,6 @@ const StatusBadge: React.FC<{ status: number }> = ({ status }) => (
     {status === 1 ? `Active` : 'Disabled'}
   </Badge>
 );
-
-const formatDate = (s?: string | null) =>
-  s ? new Date(s).toLocaleDateString() : '-';
 
 export const CouponList: React.FC = () => {
   const addToast = useToastStore((s) => s.addToast);
@@ -77,7 +74,6 @@ export const CouponList: React.FC = () => {
     tableProps,
     refresh,
     run,
-    mutate,
     search: { reset },
   } = useAntdTable(getTableData, {
     defaultPageSize: 10,
@@ -112,7 +108,8 @@ export const CouponList: React.FC = () => {
         title: record ? 'Edit Coupon' : 'Create Coupon',
         // 这里的 CreateCouponModal 就是你上一段代码里的组件
         renderChildren: ({ close, confirm }) => (
-          <CreateCouponModal
+          <CouponModal
+            editingData={record}
             close={close}
             confirm={() => {
               confirm(); // 关闭弹窗
@@ -162,7 +159,7 @@ export const CouponList: React.FC = () => {
             <div className="mt-1 flex gap-2">
               <StatusBadge status={info.row.original.status} />
               {/* 这里可以加更多 Badge，比如 IssueType */}
-              <Badge color="blue" variant="outline">
+              <Badge color="blue">
                 {info.row.original.issueType === ISSUE_TYPE.CLAIM
                   ? 'Claim'
                   : 'System'}
@@ -194,12 +191,12 @@ export const CouponList: React.FC = () => {
         id: 'usage',
         header: 'Usage',
         cell: (info) => {
-          const { usedCount = 0, totalQuantity } = info.row.original;
+          const { issuedQuantity = 0, totalQuantity } = info.row.original;
           const isUnlimited = totalQuantity === -1;
 
           let percent = 0;
           if (!isUnlimited && totalQuantity > 0) {
-            const ratio = CalcHelper.div(usedCount, totalQuantity);
+            const ratio = CalcHelper.div(issuedQuantity, totalQuantity);
             const rawPercent = CalcHelper.mul(ratio, 100);
             percent = CalcHelper.round(rawPercent, 0);
             if (percent > 100) {
@@ -226,7 +223,7 @@ export const CouponList: React.FC = () => {
                 />
               </div>
               <div className="text-[10px] text-gray-400 mt-1">
-                {NumHelper.formatNumber(usedCount)} /{' '}
+                {NumHelper.formatNumber(issuedQuantity)} /{' '}
                 {isUnlimited ? '∞' : NumHelper.formatNumber(totalQuantity)}
               </div>
             </div>
@@ -242,10 +239,10 @@ export const CouponList: React.FC = () => {
               <div className="text-xs text-gray-600">
                 <div className="flex items-center gap-1">
                   <Calendar size={12} className="text-gray-400" />
-                  {formatDate(row.validStartAt)}
+                  {TimeHelper.formatDate(row.validStartAt)}
                 </div>
                 <div className="pl-4 text-gray-400">
-                  to {formatDate(row.validEndAt)}
+                  to {TimeHelper.formatDate(row.validEndAt)}
                 </div>
               </div>
             );

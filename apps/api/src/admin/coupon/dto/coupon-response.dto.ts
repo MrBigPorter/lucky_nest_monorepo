@@ -37,6 +37,14 @@ export class CouponResponseDto {
   @DecimalToString()
   minPurchase!: string;
 
+  @ApiPropertyOptional({
+    description: 'Maximum Discount Amount',
+    required: false,
+  })
+  @Expose()
+  @DecimalToString()
+  maxDiscount?: string;
+
   @ApiProperty({ description: 'already issue quantity' })
   @Expose()
   issuedQuantity!: number;
@@ -44,6 +52,10 @@ export class CouponResponseDto {
   @ApiProperty({ description: 'Total Quantity Issued' })
   @Expose()
   totalQuantity!: number;
+
+  @ApiProperty({ description: 'Per User Limit' })
+  @Expose()
+  perUserLimit!: number;
 
   @ApiProperty({
     description: 'Coupon Status: 1-Active; 2-Inactive;',

@@ -186,6 +186,7 @@ export interface Coupon {
   discountType: 1 | 2;
 
   discountValue: string;
+  maxDiscount?: string;
   minPurchase: string;
 
   issuedQuantity?: number;
@@ -194,7 +195,7 @@ export interface Coupon {
   validType: 1 | 2;
   issueType: 1 | 2 | 3 | 4;
   perUserLimit: number;
-  validDays: number;
+  validDays?: number;
 
   validStartAt: number;
   validEndAt: number;
@@ -215,9 +216,15 @@ export interface CreateCouponPayload extends Omit<
   | 'status'
   | 'issuedQuantity'
   | 'createdAt'
+  | 'validEndAt'
+  | 'validStartAt'
+  | 'maxDiscount'
 > {
   discountValue: number;
   minPurchase: number;
+  validStartAt?: Date;
+  validEndAt?: Date;
+  maxDiscount?: number;
 }
 
 export type UpdateCouponPayload = Partial<

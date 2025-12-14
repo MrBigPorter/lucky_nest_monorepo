@@ -31,20 +31,82 @@ interface CouponFormModalProps {
   editingData?: Coupon;
 }
 
-export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
+const transformFormToPayload = (
+  values: CreateCouponSchemaFormInput,
+): CreateCouponPayload => {
+  const payload: CreateCouponPayload = {
+    ...values,
+    discountValue: Number(values.discountValue),
+    minPurchase: Number(values.minPurchase),
+    totalQuantity: Number(values.totalQuantity),
+    perUserLimit: Number(values.perUserLimit),
+    couponType: Number(values.couponType) as CreateCouponPayload['couponType'],
+    discountType: Number(
+      values.discountType,
+    ) as CreateCouponPayload['discountType'],
+    maxDiscount: values.maxDiscount ? Number(values.maxDiscount) : undefined,
+    issueType: Number(values.issueType) as CreateCouponPayload['issueType'],
+    validType: Number(values.validType) as CreateCouponPayload['validType'],
+    validStartAt: values.validStartAt
+      ? new Date(values.validStartAt)
+      : undefined,
+    validEndAt: values.validEndAt ? new Date(values.validEndAt) : undefined,
+    validDays: values.validDays ? Number(values.validDays) : undefined,
+  };
+
+  if (payload.couponCode === '') {
+    payload.couponCode = undefined;
+  }
+
+  if (payload.discountType !== DISCOUNT_TYPE.PERCENTAGE) {
+    payload.maxDiscount = undefined;
+  }
+
+  if (payload.validType === VALID_TYPE.DAYS_AFTER_RECEIVE) {
+    payload.validStartAt = undefined;
+    payload.validEndAt = undefined;
+  }
+
+  return payload;
+};
+
+const transformPayloadToForm = (
+  payload: Coupon,
+): Partial<CreateCouponSchemaFormInput> => {
+  return {
+    ...payload,
+    discountValue: Number(payload.discountValue),
+    minPurchase: Number(payload.minPurchase),
+    totalQuantity: Number(payload.totalQuantity),
+    perUserLimit: Number(payload.perUserLimit),
+    couponType: Number(payload.couponType),
+    couponCode: payload.couponCode || undefined,
+    discountType: Number(payload.discountType),
+    maxDiscount: payload.maxDiscount ? Number(payload.maxDiscount) : undefined,
+    issueType: Number(payload.issueType),
+    validType: Number(payload.validType),
+    validEndAt: payload.validEndAt ? new Date(payload.validEndAt) : undefined,
+    validStartAt: payload.validStartAt
+      ? new Date(payload.validStartAt)
+      : undefined,
+    validDays: payload.validDays ? Number(payload.validDays) : undefined,
+  };
+};
+
+export const CouponModal: React.FC<CouponFormModalProps> = ({
   close,
   confirm,
   editingData,
 }) => {
   const isEditMode = !!editingData;
 
-  const isCriticalDisabled = isEditMode;
+  const isCriticalDisabled = !!editingData?.issuedQuantity;
 
   const form = useForm<CreateCouponSchemaFormInput>({
     resolver: zodResolver(CreateCouponSchema),
     defaultValues: {
       couponName: '',
-      couponCode: '',
+      couponCode: undefined,
       issueType: 1,
       couponType: 1,
       discountType: 1,
@@ -64,38 +126,21 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
 
   useEffect(() => {
     if (!editingData) return;
-    form.reset({
-      ...editingData,
-      couponType: editingData.couponType,
-      discountType: editingData.discountType,
-      issueType: editingData.issueType,
-      validType: editingData.validType,
-      discountValue: Number(editingData.discountValue),
-      minPurchase: Number(editingData.minPurchase),
-      totalQuantity: Number(editingData.totalQuantity),
-      perUserLimit: Number(editingData.perUserLimit),
-      validDays: editingData.validDays
-        ? Number(editingData.validDays)
-        : undefined,
-      validStartAt: editingData.validStartAt
-        ? new Date(editingData.validStartAt)
-        : undefined,
-      validEndAt: editingData.validEndAt
-        ? new Date(editingData.validEndAt)
-        : undefined,
-    });
+    const formData = transformPayloadToForm(editingData);
+    form.reset(formData);
   }, [editingData, form]);
 
   // 核心改动：统一处理提交逻辑
   const { run, loading } = useRequest(
     async (values: CreateCouponSchemaFormInput) => {
-      const data = values;
+      const data: CreateCouponPayload = transformFormToPayload(values);
+
       if (isEditMode && editingData) {
         // 编辑接口
-        return couponApi.update(editingData.id, values);
+        return couponApi.update(editingData.id, data);
       } else {
         // 创建接口
-        return couponApi.create(values);
+        return couponApi.create(data);
       }
     },
     {
@@ -137,6 +182,7 @@ export const CreateCouponModal: React.FC<CouponFormModalProps> = ({
 
             {/* Coupon Code 通常创建后也不建议随便改，看你业务需求，这里假设可以改 */}
             <FormTextField
+              disabled={!!editingData?.couponCode}
               name="couponCode"
               label="Coupon code (optional)"
               placeholder="VIP666"
