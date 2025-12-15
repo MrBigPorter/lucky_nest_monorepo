@@ -2612,6 +2612,7 @@ __metadata:
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9.3"
     uuid: "npm:^13.0.0"
+    xendit-node: "npm:^7.0.0"
     yaml: "npm:^2.8.1"
   languageName: unknown
   linkType: soft
@@ -14537,6 +14538,13 @@ __metadata:
     imurmurhash: "npm:^0.1.4"
     signal-exit: "npm:^4.0.1"
   checksum: 10c0/e8c850a8e3e74eeadadb8ad23c9d9d63e4e792bd10f4836ed74189ef6e996763959f1249c5650e232f3c77c11169d239cbfc8342fc70f3fe401407d23810505d
+  languageName: node
+  linkType: hard
+
+"xendit-node@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "xendit-node@npm:7.0.0"
+  checksum: 10c0/1f1da69767be39a250b173dc9e8600c380383687a93b5ff4cdbd8fb5eeaa6eff73e21daf4b39226b0e3ba97b8e2fe75a3445824f9d014c250d6240f6ec7748b2
   languageName: node
   linkType: hard
 

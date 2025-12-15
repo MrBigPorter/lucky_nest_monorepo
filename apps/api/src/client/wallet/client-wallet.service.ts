@@ -5,20 +5,22 @@ import { ApplyWithdrawDto } from '@api/client/wallet/dto/apply-withdraw.dto';
 import { Prisma } from '@prisma/client';
 import {
   BizPrefix,
-  OpAction,
   OrderNoHelper,
   RECHARGE_STATUS,
+  RelatedType,
   WITHDRAW_STATUS,
 } from '@lucky/shared';
 import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { TransactionQueryDto } from '@api/client/wallet/dto/transaction-query.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
+import { PaymentService } from '@api/client/payment/payment.service';
 
 @Injectable()
 export class ClientWalletService {
   constructor(
     private prismaService: PrismaService,
     private walletService: WalletService,
+    private paymentService: PaymentService,
   ) {}
 
   /** Apply for a withdrawal
@@ -37,7 +39,8 @@ export class ClientWalletService {
           withdrawNo: OrderNoHelper.generate(BizPrefix.WITHDRAW),
           userId,
           withdrawAmount: amount,
-          actualAmount: account,
+          actualAmount: amount,
+          feeAmount: new Prisma.Decimal(0),
           withdrawStatus: WITHDRAW_STATUS.PENDING_AUDIT,
           accountName,
           withdrawMethod,
@@ -45,15 +48,18 @@ export class ClientWalletService {
         },
       });
 
-      await this.walletService.freezeCash({
-        userId,
-        amount,
-        related: {
-          id: order.withdrawId,
-          type: OpAction.FINANCE.WITHDRAW_AUDIT,
+      await this.walletService.freezeCash(
+        {
+          userId,
+          amount,
+          related: {
+            id: order.withdrawId,
+            type: RelatedType.WITHDRAWAL,
+          },
+          desc: RelatedType.WITHDRAWAL,
         },
-        desc: OpAction.FINANCE.WITHDRAW_AUDIT,
-      });
+        ctx,
+      );
 
       return order;
     });
@@ -67,19 +73,40 @@ export class ClientWalletService {
   async createRecharge(userId: string, dto: CreateRechargeDto) {
     const amount = new Prisma.Decimal(dto.amount);
 
+    // Generate a unique recharge order number
+    const rechargeNo = OrderNoHelper.generate(BizPrefix.DEPOSIT);
+
+    // Create the recharge pending order in the database
     const order = await this.prismaService.rechargeOrder.create({
       data: {
-        rechargeNo: OrderNoHelper.generate(BizPrefix.DEPOSIT),
+        rechargeNo,
         userId,
         rechargeAmount: amount,
         actualAmount: amount,
-        paymentChannel: dto.channelCode,
         rechargeStatus: RECHARGE_STATUS.PENDING,
-        paymentMethod: dto.paymentMethod,
+        paymentMethod: 1, // EWallet online
       },
     });
+
+    // Create payment link via payment gateway ,get xendit invoice url
+    let paymentUrl: string;
+    try {
+      paymentUrl = await this.paymentService.createRechargeLink(
+        order.rechargeNo,
+        amount.toNumber(),
+        // user.email,
+      );
+    } catch (e) {
+      // In case of failure, we might want to handle it (e.g., log, cleanup)
+      throw e;
+    }
     // return { payUrl: order.payUrl, orderId: order.rechargeId };
-    return { payUrl: 'no url', orderId: order.rechargeId };
+    return {
+      rechargeNo: order.rechargeNo,
+      rechargeAmount: order.rechargeAmount.toString(),
+      payUrl: paymentUrl,
+      rechargeStatus: order.rechargeStatus,
+    };
   }
 
   /** Get transaction history

@@ -13,7 +13,7 @@ export class CreateRechargeDto {
   @IsNotEmpty()
   @IsNumber()
   @ToNumber()
-  channelCode!: string;
+  channelCode?: string;
 
   @ApiProperty({
     description: 'Payment method: 1-EWallet 2-BankTransfer 3-QRCode',
@@ -23,5 +23,5 @@ export class CreateRechargeDto {
   @IsNumber()
   @ToNumber()
   @IsIn([1, 2, 3])
-  paymentMethod!: number;
+  paymentMethod?: number;
 }
