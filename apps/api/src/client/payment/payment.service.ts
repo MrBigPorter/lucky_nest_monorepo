@@ -7,50 +7,67 @@ import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
 import { PaymentCallbackDto } from '@api/client/payment/dto/payment-callback.dto';
 import { Prisma } from '@prisma/client';
-import { OpAction, RECHARGE_STATUS } from '@lucky/shared';
+import { OpAction, RECHARGE_STATUS, RelatedType } from '@lucky/shared';
+import Xendit from 'xendit-node';
 
 @Injectable()
 export class PaymentService {
+  private readonly xenditClient: any;
   private readonly logger = new Logger(PaymentService.name);
   constructor(
     private prismaService: PrismaService,
     private walletService: WalletService,
-  ) {}
+  ) {
+    // 初始化 Xendit 客户端
+    this.xenditClient = new Xendit({
+      secretKey: process.env.XENDIT_SECRET_KEY || '',
+    });
+  }
 
   /** Handle recharge payment callback
    *
    * @param channel Payment channel (e.g., 'PAYPAL', 'STRIPE')
    * @param payload Callback payload from payment gateway
+   * @param token
    */
-  async handleRechargeCallback(channel: string, payload: PaymentCallbackDto) {
-    const {
-      orderNo,
-      amount,
-      status,
-      transactionId,
-      metadata,
-      paidA,
-      signature,
-    } = payload;
+  async handleRechargeCallback(channel: string, payload: any, token: string) {
+    if (channel === 'xendit') {
+      const mySecretToken = process.env.XENDIT_CALLBACK_TOKEN;
+      if (!mySecretToken) {
+        throw new InternalServerErrorException(
+          `XENDIT_CALLBACK_TOKEN is not set`,
+        );
+      }
+      if (token !== mySecretToken) {
+        this.logger.log(`Invalid Xendit callback token: ${token}`);
+        throw new InternalServerErrorException('Invalid callback token');
+      }
+    }
+
+    let orderNo, status, amount, transactionId;
+    if (channel === 'xendit') {
+      orderNo = payload.external_id;
+      status = payload.status; // 'PAID', 'EXPIRED', etc.
+      amount = payload.amount;
+      transactionId = payload.id;
+    } else {
+      orderNo = payload.orderNo;
+      status = payload.status;
+      amount = payload.amount;
+      transactionId = payload.transactionId;
+    }
+
+    this.logger.log(`Processing Order: ${orderNo}, Status: ${status}`);
+
+    // 状态检查 (Xendit 成功状态通常是 'PAID' 或 'SETTLED')
+    if (status !== 'PAID' && status !== 'SUCCESS' && status !== 'SETTLED') {
+      this.logger.warn(
+        `Order ${orderNo} has non-success status: ${status}, ignoring.`,
+      );
+      return { status: 'IGNORED', message: `Status is ${status}` };
+    }
 
     const amountDecimal = new Prisma.Decimal(amount);
-
-    this.logger.log(
-      `Received callback for ${orderNo} via ${channel}: ${status}`,
-    );
-
-    // 1. 安全验签 (TODO: 对接真实支付网关时必须实现)
-    // if (!this.verifySignature(payload, signature, channel)) {
-    //   throw new BadRequestException('Invalid signature');
-    // }
-
-    // 如果网关通知的状态不是成功，则只记录日志，不进行资金处理
-    if (status !== 'SUCCESS') {
-      this.logger.warn(
-        `Order ${orderNo} payment failed via gateway. Status: ${status}`,
-      );
-      return { status: 'IGNORED', message: 'Payment status is not success' };
-    }
 
     //开启强事务，确保资金和订单状态一致性
     return this.prismaService.$transaction(async (ctx) => {
@@ -87,7 +104,7 @@ export class PaymentService {
           amount: amountDecimal,
           related: {
             id: order.rechargeId,
-            type: OpAction.FINANCE.RECHARGE_AUDIT,
+            type: RelatedType.RECHARGE,
           },
           desc: `Recharge via ${channel}. Gate Txn: ${transactionId}`,
         },
@@ -102,10 +119,53 @@ export class PaymentService {
           thirdPartyOrderNo: transactionId,
           paymentChannel: channel,
           paidAt: new Date(),
-          callbackData: payload as any,
+          callbackData: payload,
         },
       });
+      return {
+        message: 'Recharge successful',
+      };
     });
+  }
+
+  /** Create a recharge payment link using Xendit Invoice
+   * @param orderNo
+   * @param amount
+   * @param userEmail
+   */
+  async createRechargeLink(
+    orderNo: string, //业务订单号
+    amount: number, //金额 (数字类型)
+    userEmail?: string, //用户邮箱 (可选，用于发回执)
+  ) {
+    const { Invoice } = this.xenditClient;
+    const invoiceInstance = new Invoice({});
+
+    try {
+      this.logger.log(
+        `[Xendit] Creating Invoice for ${orderNo}, Amount: ${amount}`,
+      );
+
+      const response = await invoiceInstance.createInvoice({
+        externalID: orderNo,
+        amount: amount,
+        description: `${RelatedType.RECHARGE} - ${orderNo}`,
+        invoiceDuration: 86400, // 24 hour,
+        currency: 'PHP',
+        payerEmail: userEmail,
+        successRedirectURL: 'https://yourdomain.com/payment/success',
+        failureRedirectURL: 'https://yourdomain.com/payment/failure',
+      });
+
+      this.logger.log(`[Xendit] Invoice created: ${response.invoice_url}`);
+      return response.invoice_url;
+    } catch (error) {
+      if (error instanceof Error) {
+        this.logger.error(`[Xendit] Error creating Invoice: ${error.message}`);
+      }
+
+      throw new InternalServerErrorException('Payment gateway unavailable');
+    }
   }
 
   private verifySignature(

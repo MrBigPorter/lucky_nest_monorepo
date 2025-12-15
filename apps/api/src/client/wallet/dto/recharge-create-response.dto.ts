@@ -19,4 +19,7 @@ export class RechargeCreateResponseDto {
   })
   @Expose()
   payUrl!: string;
+
+  @Expose()
+  rechargeStatus!: number;
 }
