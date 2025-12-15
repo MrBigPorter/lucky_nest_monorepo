@@ -200,8 +200,20 @@ export const TransactionList: React.FC = () => {
               })),
             ],
           },
-          { type: 'date', key: 'startDate', label: 'Start Date' },
-          { type: 'date', key: 'endDate', label: 'End Date' },
+          {
+            type: 'date',
+            key: 'startDate',
+            label: 'Start Date',
+            showTime: false,
+            mode: 'single',
+          },
+          {
+            type: 'date',
+            key: 'endDate',
+            label: 'End Date',
+            showTime: false,
+            mode: 'single',
+          },
         ]}
         onSearch={handleSearch}
         onReset={reset}

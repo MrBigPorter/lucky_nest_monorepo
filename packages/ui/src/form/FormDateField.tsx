@@ -188,7 +188,7 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
                               return;
                             }
 
-                            // ✅ single + showTime：保留旧时间
+                            //  single + showTime：保留旧时间
                             if (mode === "single" && date instanceof Date) {
                               const prev =
                                 value instanceof Date ? value : undefined;
@@ -224,7 +224,7 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
                               </span>
                               <input
                                 type="time"
-                                className="h-8 w-full rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-2 text-sm"
+                                className="h-8 w-full text-amber-700 rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-2 text-sm"
                                 value={
                                   value instanceof Date
                                     ? format(value, "HH:mm")

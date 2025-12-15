@@ -89,8 +89,8 @@ export const SchemaSearchForm = <T extends Record<string, any>>({
             key={String(field.key)}
             name={String(field.key)}
             label={field.label}
-            showTime={true}
-            mode="range"
+            showTime={field.showTime || false}
+            mode={field.mode || 'single'}
           />
         );
       default:

@@ -1,4 +1,3 @@
-// Calendar.tsx
 import * as React from "react";
 import {
   ChevronDownIcon,
@@ -28,11 +27,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       captionLayout={captionLayout}
-      className={cn(
-        // ✅ 这里不要再做 “卡片背景/阴影”
-        "p-3 text-gray-900",
-        className,
-      )}
+      className={cn("p-3 text-gray-900", className)}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString("default", { month: "short" }),
@@ -152,7 +147,7 @@ function CalendarDayButton({
         "data-[range-start=true]:bg-primary-500 data-[range-start=true]:text-white",
         "data-[range-end=true]:bg-primary-500 data-[range-end=true]:text-white",
 
-        // ✅ 焦点：别用 group-data，直接用 modifiers.focused
+        //  焦点：别用 group-data，直接用 modifiers.focused
         modifiers.focused && "ring-2 ring-primary-500/60 relative z-10",
 
         className,

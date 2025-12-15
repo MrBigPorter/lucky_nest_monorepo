@@ -23,4 +23,8 @@ export interface SearchFieldSchema<T> {
   options?: Option[];
   /** 额外的样式类名 (用于控制宽度等) */
   className?: string;
+  /** 仅对 date 有效：是否显示时间选择 */
+  showTime?: boolean;
+  /** 仅对 date 有效：日期选择模式 */
+  mode?: 'single' | 'range';
 }
