@@ -6,8 +6,9 @@ import {
   TRANSACTION_STATUS,
   TRANSACTION_TYPE,
 } from '@lucky/shared/dist/types/wallet';
-import { BizException, throwBiz } from '@api/common/exceptions/biz.exception';
+import { throwBiz } from '@api/common/exceptions/biz.exception';
 import { ERROR_KEYS } from '@api/common/error-codes.gen';
+import { BizPrefix, OrderNoHelper } from '@lucky/shared';
 
 const D = (n: number | string | Prisma.Decimal) => new Prisma.Decimal(n);
 type Tx = Prisma.TransactionClient | PrismaService;
@@ -92,7 +93,7 @@ export class WalletService {
 
     const txn = await db.walletTransaction.create({
       data: {
-        transactionNo: this.genTxnNo(),
+        transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
         walletId: snap.id,
         transactionType: TRANSACTION_TYPE.RECHARGE,
@@ -147,7 +148,7 @@ export class WalletService {
 
     const txn = await db.walletTransaction.create({
       data: {
-        transactionNo: this.genTxnNo(),
+        transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
         walletId: snap.id,
         transactionType: TRANSACTION_TYPE.CONSUMPTION,
@@ -198,7 +199,7 @@ export class WalletService {
 
     const txn = await db.walletTransaction.create({
       data: {
-        transactionNo: this.genTxnNo(),
+        transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
         walletId: snap.id,
         transactionType: TRANSACTION_TYPE.REWARD,
@@ -251,7 +252,7 @@ export class WalletService {
 
     const txn = await db.walletTransaction.create({
       data: {
-        transactionNo: this.genTxnNo(),
+        transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
         walletId: snap.id,
         transactionType: TRANSACTION_TYPE.COIN_EXCHANGE,
@@ -271,13 +272,118 @@ export class WalletService {
     return { coinBalance: after, transactionId: txn.id };
   }
 
-  // generate a unique transaction number
-  private genTxnNo() {
-    const d = new Date();
-    const pad = (n: number, w = 2) => String(n).padStart(w, '0');
-    const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(
-      d.getMinutes(),
-    )}${pad(d.getSeconds())}${String(d.getMilliseconds()).padStart(3, '0')}`;
-    return `TXN${ts}${Math.floor(Math.random() * 1000)}`;
+  /**
+   * Freeze cash amount for withdrawal
+   * @param params
+   * @param tx
+   */
+  async freezeCash(
+    params: {
+      userId: string;
+      amount: number | string | Prisma.Decimal;
+      related?: { id: string; type: string };
+      desc?: string;
+    },
+    tx?: Tx,
+  ) {
+    const db = this.orm(tx);
+    const { userId, amount, related, desc } = params;
+    const amt = D(amount);
+
+    if (amt.lte(0)) throw new BadRequestException('amount must be positive');
+
+    const snap = await this.ensureWallet(userId, db);
+    const beforeReal = D(snap.realBalance ?? 0);
+
+    const res = await db.userWallet.updateMany({
+      where: { userId, realBalance: { gte: amt } },
+      data: {
+        realBalance: { decrement: amt },
+        frozenBalance: { increment: amt },
+      },
+    });
+
+    if (res.count !== 1) {
+      throwBiz(ERROR_KEYS.INSUFFICIENT_BALANCE);
+    }
+
+    const afterReal = beforeReal.sub(amt);
+
+    const txn = await db.walletTransaction.create({
+      data: {
+        transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
+        userId,
+        walletId: snap.id,
+        transactionType: TRANSACTION_TYPE.WITHDRAWAL,
+        balanceType: BALANCE_TYPE.CASH,
+        amount: amt.neg(),
+        beforeBalance: beforeReal,
+        afterBalance: afterReal,
+        relatedId: related?.id,
+        relatedType: related?.type,
+        description: desc ?? 'Frozen for withdrawal',
+        status: TRANSACTION_STATUS.SUCCESS,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return { realBalance: afterReal, transactionId: txn.id };
+  }
+
+  async unfreezeCash(
+    params: {
+      userId: string;
+      amount: number | string | Prisma.Decimal;
+      related?: { id: string; type: string };
+      desc?: string;
+    },
+    tx?: Tx,
+  ) {
+    const db = this.orm(tx);
+    const { userId, amount, related, desc } = params;
+    const amt = D(amount);
+
+    if (amt.lte(0)) throw new BadRequestException('amount must be positive');
+
+    const snap = await this.ensureWallet(userId, db);
+    const beforeFrozen = D(snap.frozenBalance ?? 0);
+
+    const res = await db.userWallet.updateMany({
+      where: { userId, frozenBalance: { gte: amt } },
+      data: {
+        frozenBalance: { decrement: amt },
+        realBalance: { increment: amt },
+      },
+    });
+
+    if (res.count !== 1) {
+      throwBiz(ERROR_KEYS.INSUFFICIENT_BALANCE);
+    }
+
+    const afterFrozen = beforeFrozen.sub(amt);
+
+    const txn = await db.walletTransaction.create({
+      data: {
+        transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
+        userId,
+        walletId: snap.id,
+        transactionType: TRANSACTION_TYPE.REFUND,
+        balanceType: BALANCE_TYPE.CASH,
+        amount: amt,
+        beforeBalance: beforeFrozen,
+        afterBalance: afterFrozen,
+        relatedId: related?.id,
+        relatedType: related?.type,
+        description: desc ?? 'Unfrozen from withdrawal',
+        status: TRANSACTION_STATUS.SUCCESS,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return { frozenBalance: afterFrozen, transactionId: txn.id };
   }
 }

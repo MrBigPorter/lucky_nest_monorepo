@@ -1,91 +1,77 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { WalletService } from '@api/client/wallet/wallet.service';
-import { ApiBearerAuth, ApiOkResponse, ApiProperty } from '@nestjs/swagger';
+
+import { ClientWalletService } from '@api/client/wallet/client-wallet.service';
+import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
-import { CreditDto } from '@api/client/wallet/dto/credit.dto';
-
+import { ApplyWithdrawDto } from '@api/client/wallet/dto/apply-withdraw.dto';
+import { plainToInstance } from 'class-transformer';
+import { WithdrawApplyResponseDto } from '@api/client/wallet/dto/withdraw-apply-response.dto';
+import { RechargeCreateResponseDto } from '@api/client/wallet/dto/recharge-create-response.dto';
+import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { WalletBalanceResponseDto } from '@api/client/wallet/dto/wallet-balance.response.dto';
-import { WalletCreditResponseDto } from '@api/client/wallet/dto/wallet-credit.response.dto';
-import { WalletDebitResponseDto } from '@api/client/wallet/dto/wallet-debit.response.dto';
 
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@UseInterceptors(ClassSerializerInterceptor)
 @Controller('wallet')
 export class WalletController {
-  constructor(private wallet: WalletService) {}
+  constructor(
+    private wallet: WalletService,
+    private clientWallet: ClientWalletService,
+  ) {}
 
-  // Get wallet balance
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Post('balance')
-  @HttpCode(HttpStatus.OK)
+  /**
+   * Get wallet balance
+   * @param userId
+   */
+  @Get('balance')
   @ApiOkResponse({ type: WalletBalanceResponseDto })
   async balance(@CurrentUserId() userId: string) {
-    const res = await this.wallet.balance(userId);
-    return {
-      id: res.id,
-      userId: res.userId,
-      realBalance: res.realBalance.toString(),
-      totalRecharge: res.totalRecharge.toString(),
-      coinBalance: res.coinBalance.toString(),
-      frozenBalance: res.frozenBalance.toString(),
-      totalWithdraw: res.totalWithdraw.toString(),
-    };
+    const data = await this.wallet.balance(userId);
+    return plainToInstance(WalletBalanceResponseDto, data);
   }
 
-  // Credit cash to wallet
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Post('credit')
+  /**
+   * Apply for a withdrawal
+   * @param userId
+   * @param dto
+   */
+  @Post('withdraw/apply')
   @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: WalletCreditResponseDto })
-  async credit(
+  @ApiOkResponse({ type: WithdrawApplyResponseDto })
+  async applyWithdraw(
     @CurrentUserId() userId: string,
-    @Body() dto: CreditDto,
-  ): Promise<WalletCreditResponseDto> {
-    const res = await this.wallet.creditCash({
-      userId,
-      amount: dto.amount,
-      related: {
-        id: dto.relatedId || '',
-        type: 'recharge',
-      },
-      desc: dto.desc,
-    });
-
-    return {
-      realBalance: res.realBalance.toString(),
-    };
+    @Body() dto: ApplyWithdrawDto,
+  ) {
+    const data = await this.clientWallet.applyWithdraw(userId, dto);
+    return plainToInstance(WithdrawApplyResponseDto, data);
   }
 
-  // Debit cash from wallet
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @Post('debit')
+  /**
+   * Create a recharge order
+   * @param userId
+   * @param dto
+   */
+  @Post('recharge/create')
   @HttpCode(HttpStatus.OK)
-  @ApiProperty({ type: WalletDebitResponseDto })
-  async debit(
+  @ApiOkResponse({ type: RechargeCreateResponseDto })
+  async createRecharge(
     @CurrentUserId() userId: string,
-    @Body() dto: CreditDto,
-  ): Promise<WalletDebitResponseDto> {
-    const res = await this.wallet.debitCash({
-      userId,
-      amount: dto.amount,
-      related: {
-        id: dto.relatedId || '',
-        type: 'debit',
-      },
-      desc: dto.desc,
-    });
-    return {
-      realBalance: res.realBalance.toString(),
-    };
+    @Body() dto: CreateRechargeDto,
+  ) {
+    const data = await this.clientWallet.createRecharge(userId, dto);
+    return plainToInstance(RechargeCreateResponseDto, data);
   }
 }
