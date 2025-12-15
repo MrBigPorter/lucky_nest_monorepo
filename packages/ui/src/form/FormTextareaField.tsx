@@ -1,4 +1,3 @@
-import React from "react";
 import type { FieldValues } from "react-hook-form";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
@@ -106,16 +105,20 @@ export function FormTextareaField<
                     )}
                     onChange={(e) => {
                       field.onChange(e);
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       data?.onChange?.(e as any);
                     }}
                     onBlur={(e) => {
                       field.onBlur();
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       data?.onBlur?.(e as any);
                     }}
                     onFocus={(e) => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       data?.onFocus?.(e as any);
                     }}
                     onKeyDown={(e) => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       data?.onKeyDown?.(e as any);
                     }}
                   />

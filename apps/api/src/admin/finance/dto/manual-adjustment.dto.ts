@@ -32,10 +32,7 @@ export class ManualAdjustmentDto {
 
   @ApiProperty({ description: 'Amount', example: 100 })
   @IsNotEmpty()
-  @Type(() => Number)
-  @Matches(/^\d+(\.\d{1,2})?$/, {
-    message: 'Amount must be a positive number with up to two decimal places',
-  })
+  @ToNumber()
   amount!: number;
 
   @ApiProperty({

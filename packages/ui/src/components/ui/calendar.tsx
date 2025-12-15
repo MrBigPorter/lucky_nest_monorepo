@@ -43,7 +43,7 @@ function Calendar({
         root: cn("w-fit text-gray-900", classNames?.root),
 
         // 月份容器
-        months: "flex flex-col gap-4",
+        months: "flex flex-row space-x-4 space-y-0",
         month: "flex w-full flex-col gap-4",
 
         // 顶部导航（左右箭头）

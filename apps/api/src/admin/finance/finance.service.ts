@@ -98,10 +98,18 @@ export class FinanceService {
     // 强一致性事务
     return this.prismaService.$transaction(async (ctx) => {
       const adminUser = await ctx.adminUser.findUnique({
-        where: { id: userId },
+        where: { id: query.adminId },
       });
 
       if (!adminUser) {
+        throw new NotFoundException('Admin user not found');
+      }
+
+      const user = await ctx.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
         throw new NotFoundException('User not found');
       }
 
