@@ -24,6 +24,9 @@ export const BALANCE_TYPE = {
 
 export type BalanceTypeKey = keyof typeof BALANCE_TYPE;
 export type BalanceTypeValue = (typeof BALANCE_TYPE)[BalanceTypeKey];
+export const BALANCE_TYPE_LABEL = Object.fromEntries(
+  Object.entries(BALANCE_TYPE).map(([key, value]) => [value, key]),
+) as Record<BalanceTypeValue, string>;
 
 export const DIRECTION = {
   // 方向：1=收入 2=支出

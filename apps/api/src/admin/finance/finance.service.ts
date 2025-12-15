@@ -34,7 +34,8 @@ export class FinanceService {
    * @returns Paginated list of wallet transactions
    */
   async getTransactions(dto: QueryTransactionDto) {
-    const { page, pageSize, userId, type, startDate, endDate } = dto;
+    const { page, pageSize, userId, type, transactionNo, startDate, endDate } =
+      dto;
     const skip = (page - 1) * pageSize;
 
     // Build dynamic where conditions based on provided filters
@@ -42,6 +43,9 @@ export class FinanceService {
 
     if (type) {
       whereConditions.transactionType = type;
+    }
+    if (transactionNo) {
+      whereConditions.transactionNo = { contains: transactionNo };
     }
     if (userId) {
       whereConditions.userId = userId;

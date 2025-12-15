@@ -243,6 +243,7 @@ export type TransactionSearchForm = {
   type: string;
   startDate: string;
   endDate: string;
+  transactionNo: string;
 };
 
 export type TransactionsListParams = PaginationParams &
