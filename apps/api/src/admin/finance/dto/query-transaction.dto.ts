@@ -31,6 +31,14 @@ export class QueryTransactionDto {
   @IsString()
   userId?: string;
 
+  @ApiPropertyOptional({
+    description: 'Transaction Number',
+    example: '202406120001',
+  })
+  @IsOptional()
+  @IsString()
+  transactionNo?: string;
+
   @ApiPropertyOptional({ description: 'Transaction Type', example: 1 })
   @IsOptional()
   @ToInt()

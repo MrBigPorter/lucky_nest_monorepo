@@ -4,3 +4,4 @@ export * from "./form";
 export * from "./components";
 
 export * from "./lib/utils";
+export class useToast {}
