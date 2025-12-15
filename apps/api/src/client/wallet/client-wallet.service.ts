@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
 import { ApplyWithdrawDto } from '@api/client/wallet/dto/apply-withdraw.dto';
@@ -18,9 +18,10 @@ import { PaymentService } from '@api/client/payment/payment.service';
 @Injectable()
 export class ClientWalletService {
   constructor(
+    @Inject(forwardRef(() => PaymentService))
+    private readonly paymentService: PaymentService,
     private prismaService: PrismaService,
     private walletService: WalletService,
-    private paymentService: PaymentService,
   ) {}
 
   /** Apply for a withdrawal

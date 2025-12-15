@@ -1,4 +1,6 @@
 import {
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -15,8 +17,9 @@ export class PaymentService {
   private readonly xenditClient: any;
   private readonly logger = new Logger(PaymentService.name);
   constructor(
-    private prismaService: PrismaService,
+    @Inject(forwardRef(() => WalletService))
     private walletService: WalletService,
+    private prismaService: PrismaService,
   ) {
     // 初始化 Xendit 客户端
     this.xenditClient = new Xendit({
