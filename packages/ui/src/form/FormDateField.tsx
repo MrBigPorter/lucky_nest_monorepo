@@ -2,7 +2,7 @@ import * as React from "react";
 import type { FieldValues } from "react-hook-form";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 
@@ -10,8 +10,7 @@ import {
   FormControl,
   FormField,
   FormHelpTextVariants,
-  FormInput,
-  FormItem, // 注意：移除了 FormInput，改用下方的 Input
+  FormItem,
   FormLabel,
   FormLabelVariants,
   FormMessage,
@@ -49,6 +48,18 @@ type FormDateFieldProps<TFieldValues extends FieldValues = FieldValues> = Omit<
   formatValue?: (date: Date | DateRange | undefined) => string;
 };
 
+function mergeDateKeepTime(next: Date, prev?: Date) {
+  if (!prev) return next;
+  const d = new Date(next);
+  d.setHours(
+    prev.getHours(),
+    prev.getMinutes(),
+    prev.getSeconds(),
+    prev.getMilliseconds(),
+  );
+  return d;
+}
+
 export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
   name,
   label,
@@ -68,22 +79,6 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
 }: Readonly<FormDateFieldProps<TFieldValues>>) {
   const theme = useFormTheme();
   const [open, setOpen] = React.useState(false);
-
-  // 处理时间变更 (仅 Single 模式)
-  const handleTimeChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    currentDate: Date | undefined,
-    onChange: (date: Date) => void,
-  ) => {
-    const timeValue = e.target.value;
-    if (!timeValue) return;
-
-    const [hours, minutes] = timeValue.split(":").map(Number);
-    const newDate = currentDate ? new Date(currentDate) : new Date();
-    newDate.setHours(hours);
-    newDate.setMinutes(minutes);
-    onChange(newDate);
-  };
 
   return (
     <FormField<TFieldValues, typeof name>
@@ -177,26 +172,39 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
                     <PopoverContent
                       align="start"
                       // 关键修改：添加 explicit background color 防止透明
-                      className="w-auto p-0 border-none bg-transparent shadow-none"
+                      className="w-auto p-0 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden"
                     >
                       <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-md shadow-xl overflow-hidden">
                         {/* --- 2. 日历组件 --- */}
                         <Calendar
-                          // 核心改动：透传 mode，强制类型转换解决 TS 报错
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           mode={mode as any}
                           selected={value}
-                          onSelect={(date) => {
-                            // react-day-picker 的 onSelect 返回值根据 mode 不同而不同
-                            // field.onChange 可以接受 Date 或对象，所以直接传即可
-                            field.onChange(date);
-
-                            // 如果是 range 模式，或者开启了时间选择，不要自动关闭
-                            // 只有在普通单选模式下才自动关闭
-                            if (mode === "single" && !showTime) {
-                              setOpen(false);
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          onSelect={(date: any) => {
+                            // date: Date | DateRange | undefined
+                            if (!date) {
+                              field.onChange(undefined);
+                              return;
                             }
+
+                            // ✅ single + showTime：保留旧时间
+                            if (mode === "single" && date instanceof Date) {
+                              const prev =
+                                value instanceof Date ? value : undefined;
+                              const next = showTime
+                                ? mergeDateKeepTime(date, prev)
+                                : date;
+                              field.onChange(next);
+
+                              // single 且不显示时间：选完自动关闭
+                              if (!showTime) setOpen(false);
+                              return;
+                            }
+
+                            // range：直接写回
+                            field.onChange(date);
                           }}
-                          initialFocus
                           // 限制只能选 2 个日期 (针对 Range)
                           defaultMonth={
                             mode === "range"
@@ -209,28 +217,36 @@ export function FormDateField<TFieldValues extends FieldValues = FieldValues>({
 
                         {/* --- 3. 时间选择输入框 (仅支持 Single 模式) --- */}
                         {showTime && mode === "single" && (
-                          <div className="p-3 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
+                          <div className="p-3 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/60 dark:bg-zinc-900/40">
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-gray-500" />
                               <span className="text-xs font-medium text-gray-500">
-                                Time:
+                                Time
                               </span>
-                              {/* 使用 Shadcn 的 Input 组件 */}
-                              <FormInput
+                              <input
                                 type="time"
-                                className="h-8 w-full bg-white dark:bg-zinc-950"
+                                className="h-8 w-full rounded-md border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-2 text-sm"
                                 value={
-                                  value && value instanceof Date
+                                  value instanceof Date
                                     ? format(value, "HH:mm")
                                     : ""
                                 }
-                                onChange={(e) =>
-                                  handleTimeChange(
-                                    e,
-                                    value as Date,
-                                    field.onChange,
-                                  )
-                                }
+                                onChange={(e) => {
+                                  const timeValue = e.target.value;
+                                  if (!timeValue) return;
+
+                                  const [hours, minutes] = timeValue
+                                    .split(":")
+                                    .map(Number);
+                                  const base =
+                                    value instanceof Date
+                                      ? new Date(value)
+                                      : new Date();
+                                  base.setHours(hours);
+                                  base.setMinutes(minutes);
+                                  base.setSeconds(0);
+                                  base.setMilliseconds(0);
+                                  field.onChange(base);
+                                }}
                               />
                             </div>
                           </div>
