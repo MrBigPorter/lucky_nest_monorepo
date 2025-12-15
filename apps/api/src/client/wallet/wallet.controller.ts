@@ -21,6 +21,11 @@ import { WithdrawApplyResponseDto } from '@api/client/wallet/dto/withdraw-apply-
 import { RechargeCreateResponseDto } from '@api/client/wallet/dto/recharge-create-response.dto';
 import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { WalletBalanceResponseDto } from '@api/client/wallet/dto/wallet-balance.response.dto';
+import { TransactionQueryDto } from '@api/client/wallet/dto/transaction-query.dto';
+import { TransactionListResponseDto } from '@api/client/wallet/dto/transaction-list-response.dto';
+import { WithdrawalItemResponseDto } from '@api/client/wallet/dto/withdrawal-item-response.dto';
+import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
+import { WithdrawalHistoryResponseDto } from '@api/client/wallet/dto/withdrawal-history-response.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -73,5 +78,49 @@ export class WalletController {
   ) {
     const data = await this.clientWallet.createRecharge(userId, dto);
     return plainToInstance(RechargeCreateResponseDto, data);
+  }
+
+  /**
+   * Get transaction history
+   * @param userId
+   * @param dto
+   */
+  @Get('transactions')
+  @ApiOkResponse({ type: TransactionListResponseDto })
+  async getTransactions(
+    @CurrentUserId() userId: string,
+    @Body() dto: TransactionQueryDto,
+  ) {
+    const data = await this.clientWallet.getTransactionHistory(userId, dto);
+    return {
+      total: data.total,
+      page: dto.page,
+      pageSize: dto.pageSize,
+      list: plainToInstance(TransactionListResponseDto, data.list, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  /**
+   * Get withdrawal history
+   * @param userId
+   * @param dto
+   */
+  @Get('withdraw/history')
+  @ApiOkResponse({ type: WithdrawalHistoryResponseDto })
+  async getWithdrawHistory(
+    @CurrentUserId() userId: string,
+    @Body() dto: WithdrawalHistoryQueryDto,
+  ) {
+    const data = await this.clientWallet.getWithdrawalHistory(userId, dto);
+    return {
+      total: data.total,
+      page: dto.page,
+      pageSize: dto.pageSize,
+      list: plainToInstance(WithdrawalItemResponseDto, data.list, {
+        excludeExtraneousValues: true,
+      }),
+    };
   }
 }

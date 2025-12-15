@@ -264,29 +264,52 @@ export function DateToTimestamp() {
   );
 }
 
-/** 字符串脱敏 (手机号/邮箱) */
-export function MaskString(type: 'phone' | 'email' | 'idcard' = 'phone') {
+/** 字符串脱敏 (手机号/邮箱/卡号) */
+export function MaskString(
+  type: 'phone' | 'email' | 'idcard' | 'bankcard' = 'phone', // 🔥 增加 bankcard 类型
+) {
   return applyDecorators(
     Type(() => String),
     Transform(({ value }) => {
       if (isEmpty(value)) return null;
       const str = String(value);
 
+      // 手机号脱敏逻辑 (保留前三后四)
       if (type === 'phone' && str.length >= 7) {
-        return str.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+        // 修正正则表达式以匹配常见的手机号格式 (例如 11 位)
+        // 保留前三位和后四位
+        return str.replace(/(\d{3})\d{3,4}(\d{4})/, '$1****$2');
       }
 
+      // 邮箱脱敏逻辑
       if (type === 'email' && str.includes('@')) {
         const [name, domain] = str.split('@');
         if (name.length <= 2) return `${name}***@${domain}`;
         return `${name.slice(0, 2)}***${name.slice(-1)}@${domain}`;
       }
 
+      // 银行卡/账号脱敏逻辑 (保留前四后四)
+      if (type === 'bankcard' && str.length > 8) {
+        const prefix = str.slice(0, 4);
+        const suffix = str.slice(-4);
+        const maskLength = str.length - 8;
+
+        // 生成星号字符串
+        const masked = '*'.repeat(maskLength);
+
+        return `${prefix}${masked}${suffix}`;
+      }
+
+      // 身份证脱敏逻辑 (如果需要)
+      if (type === 'idcard') {
+        // 假设保留前六后四
+        return str.replace(/^(\d{6})\d{8}(\w{4})$/, '$1********$2');
+      }
+
       return str;
     }),
   );
 }
-
 /** URL 拼前缀 (CDN) */
 export function ToUrl(prefix: string) {
   return applyDecorators(
