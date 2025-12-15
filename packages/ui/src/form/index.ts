@@ -8,6 +8,7 @@ export * from "./FormLabel.tsx";
 export * from "./FormMessage.tsx";
 export * from "./FormPasswordField.tsx";
 export * from "./FormTextField.tsx";
+export * from "./FormTextareaField.tsx";
 export * from "./FormMediaUploaderField.tsx";
 export * from "./FormSelectField.tsx";
 export * from "./HelpText.tsx";

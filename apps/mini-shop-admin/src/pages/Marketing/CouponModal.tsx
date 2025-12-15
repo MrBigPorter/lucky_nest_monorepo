@@ -147,7 +147,6 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
       manual: true,
       onSuccess: () => {
         // 可以根据模式不同显示不同的 toast
-        console.log(isEditMode ? 'Updated' : 'Created');
         confirm();
       },
     },

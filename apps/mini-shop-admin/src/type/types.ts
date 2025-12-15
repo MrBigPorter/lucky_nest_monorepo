@@ -1,4 +1,11 @@
 import { PaginationParams } from '@/api/types.ts';
+import {
+  BalanceTypeValue,
+  RelatedType,
+  TransactionStatusValue,
+  TransactionTypeValue,
+  WithdrawStatus,
+} from '@lucky/shared';
 
 export type Language = 'en' | 'zh';
 export type Theme = 'light' | 'dark';
@@ -230,6 +237,87 @@ export interface CreateCouponPayload extends Omit<
 export type UpdateCouponPayload = Partial<
   Pick<CreateCouponPayload, 'couponName' | 'validEndAt' | 'totalQuantity'>
 >;
+
+export type TransactionSearchForm = {
+  userId: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type TransactionsListParams = PaginationParams &
+  Partial<TransactionSearchForm>;
+
+export interface WalletTransaction {
+  id: string;
+  transactionNo: string; // 流水号
+  userId: string;
+
+  amount: string; // 金额 (后端转为 string 防止精度丢失)
+  beforeBalance: string; // 变动前
+  afterBalance: string; // 变动后
+
+  balanceType: BalanceTypeValue;
+  transactionType: TransactionTypeValue;
+  status: TransactionStatusValue;
+
+  relatedId?: string;
+  relatedType?: RelatedType | string; // 关联业务类型
+
+  description: string;
+  remark?: string;
+
+  createdAt: number; // 时间戳 (后端 @DateToTimestamp)
+  updatedAt?: number;
+
+  user?: Pick<User, 'nickname' | 'avatar' | 'phone'>;
+}
+
+export interface WithdrawOrder {
+  withdrawId: string;
+  withdrawNo: string;
+  userId: string;
+
+  withdrawAmount: string; // 申请金额
+  feeAmount: string; // 手续费
+  actualAmount: string; // 实际到账
+
+  withdrawStatus: WithdrawStatus;
+
+  withdrawMethod: number; // 提现方式枚举
+  withdrawAccount: string; // 账号
+  accountName?: string; // 户名
+  bankName?: string; // 银行名
+
+  auditResult?: string; // 审核意见
+  rejectReason?: string; // 拒绝原因
+
+  createdAt: string | number; // 申请时间
+  completedAt?: string | number;
+
+  user?: Pick<User, 'nickname' | 'avatar' | 'phone'>;
+}
+
+export interface WithdrawListParams extends PaginationParams {
+  status?: WithdrawStatus;
+  keyword?: string; // 搜索: 单号/手机/昵称/ID
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface ManualAdjustPayload {
+  userId: string;
+  actionType: number; // 1=加币, 2=扣币 (Direction Enum)
+  balanceType: number; // 1=现金, 2=金币 (BalanceType Enum)
+  amount: number; // 输入时通常是 number
+  remark: string;
+}
+
+export interface AuditWithdrawPayload {
+  withdrawId: string;
+  status: WithdrawStatus; // 只能是 SUCCESS (2) 或 REJECTED (5)
+  remark: string;
+}
 
 export interface ActivityZone {
   id: string;

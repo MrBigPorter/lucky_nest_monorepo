@@ -35,11 +35,13 @@ import { DataAnalytics } from '../pages/DataAnalytics';
 import { ServiceCenter } from '../pages/ServiceCenter';
 import { ActSectionManagement } from '@/pages/ActSectionManagement.tsx';
 import { BannerManagement } from '@/pages/BannerManagement.tsx';
+import { FinancePage } from '@/pages/FinancePage.tsx';
 
 export interface RouteConfig {
   path: string;
   name: string; // For translation keys
   component: React.ComponentType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
   group: 'Overview' | 'Management' | 'Operations' | 'System';
 }
@@ -168,6 +170,13 @@ export const routes: RouteConfig[] = [
     path: '/finance',
     name: 'finance',
     component: Finance,
+    icon: CreditCard,
+    group: 'System',
+  },
+  {
+    path: '/FinancePage',
+    name: 'finance_page',
+    component: FinancePage,
     icon: CreditCard,
     group: 'System',
   },

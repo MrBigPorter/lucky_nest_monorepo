@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Search, RotateCcw } from 'lucide-react';
-import { Button, BaseSelect } from '@repo/ui';
+import {
+  Button,
+  Form, // 需要从 UI 库引入 Form Wrapper
+  FormDateField,
+  FormSelectField,
+  FormTextField,
+} from '@repo/ui';
 import { SearchFieldSchema } from '@/type/search.ts';
-import { Input } from '@/components/UIComponents.tsx';
+import { useMemo } from 'react';
 
-//  泛型 T 限制为对象，且值通常是 string 或 number
-interface Props<T extends Record<string, string | number | undefined>> {
+// 泛型 T 限制为对象
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface Props<T extends Record<string, any>> {
   schema: SearchFieldSchema<T>[];
   initialValues?: Partial<T>;
   onSearch: (values: T) => void;
@@ -13,86 +20,77 @@ interface Props<T extends Record<string, string | number | undefined>> {
   loading?: boolean;
 }
 
-export const SchemaSearchForm = <
-  T extends Record<string, string | number | undefined>,
->({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const SchemaSearchForm = <T extends Record<string, any>>({
   schema,
   initialValues = {},
   onSearch,
   onReset,
   loading,
 }: Props<T>) => {
-  // 1. 初始化状态
-  const generateInitialState = (): T => {
-    // 这里用 as T 强制断言，因为动态构建对象 TS 很难推断
-    const state = { ...initialValues } as T;
-
+  // 1. 生成默认值对象
+  const defaultValues = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const defaults: any = { ...initialValues };
     schema.forEach((field) => {
-      const key = field.key;
-      // 只有当值不存在时才使用默认值
-      if (state[key] === undefined) {
-        // 使用类型断言告诉 TS，defaultValue 是安全的
-        state[key] = (field.defaultValue ?? '') as T[keyof T];
+      if (defaults[field.key] === undefined) {
+        defaults[field.key] = field.defaultValue ?? '';
       }
     });
-    return state;
+    return defaults;
+  }, [schema, initialValues]);
+
+  // 2. 使用 React Hook Form 接管状态
+  const form = useForm<T>({
+    defaultValues,
+  });
+
+  // 3. 搜索处理
+  const onSubmit = (values: T) => {
+    // 过滤掉 undefined 或空字符串的值（可选，看后端需求，通常搜索时不传空值）
+    // const cleanedValues = Object.fromEntries(
+    //   Object.entries(values).filter(([_, v]) => v !== '' && v !== undefined)
+    // ) as T;
+    onSearch(values);
   };
 
-  const [values, setValues] = useState<T>(generateInitialState);
-
-  // 2. 变更处理
-  const handleChange = <K extends keyof T>(key: K, val: T[K]) => {
-    setValues((prev) => ({ ...prev, [key]: val }));
-  };
-
-  // 3. 触发与重置
-  const handleTrigger = () => onSearch(values);
-
+  // 4. 重置处理
   const handleReset = () => {
-    const resetState = {} as T;
-    schema.forEach((field) => {
-      // 同样断言 defaultValue
-      resetState[field.key] = (field.defaultValue ?? '') as T[keyof T];
-    });
-    setValues(resetState);
+    form.reset(defaultValues); // 重置表单 UI
     onReset?.();
-    // 通常重置后也希望自动触发一次搜索
-    onSearch(resetState);
+    onSearch(defaultValues); // 立即触发一次空搜索
   };
 
-  // 4. 渲染字段
+  // 5. 渲染字段
   const renderField = (field: SearchFieldSchema<T>) => {
-    // 获取当前值，处理 undefined 情况
-    const currentValue = values[field.key] ?? '';
-
     switch (field.type) {
       case 'input':
         return (
-          <Input
+          <FormTextField
             key={String(field.key)}
+            name={String(field.key)}
             label={field.label}
             placeholder={field.placeholder}
-            // 强制转 string，因为 Input 组件 value 只收 string
-            value={String(currentValue)}
-            onChange={(e) =>
-              handleChange(field.key, e.target.value as T[keyof T])
-            }
-            onKeyDown={(e: React.KeyboardEvent) =>
-              e.key === 'Enter' && handleTrigger()
-            }
           />
         );
       case 'select':
         return (
-          <BaseSelect
+          <FormSelectField
             key={String(field.key)}
+            name={String(field.key)}
             label={field.label}
-            placeholder={field.placeholder}
-            // 这里不再报错，因为我们在 type 定义里统一了
             options={field.options || []}
-            // BaseSelect 要求 value 是 string
-            value={String(currentValue)}
-            onChange={(val) => handleChange(field.key, val as T[keyof T])}
+            placeholder={field.placeholder || 'Select...'}
+          />
+        );
+      case 'date':
+        return (
+          <FormDateField
+            key={String(field.key)}
+            name={String(field.key)}
+            label={field.label}
+            showTime={true}
+            mode="range"
           />
         );
       default:
@@ -101,23 +99,29 @@ export const SchemaSearchForm = <
   };
 
   return (
-    <div className="p-4  mb-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
-        {schema.map((field) => (
-          <div key={String(field.key)} className={field.className}>
-            {renderField(field)}
-          </div>
-        ))}
+    <div className="p-4 mb-4 bg-white dark:bg-dark-800 rounded-lg border border-gray-100 dark:border-white/5">
+      {/* 必须包裹在 Form 组件中，以便 FormTextField 等组件能获取上下文 */}
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end"
+        >
+          {schema.map((field) => (
+            <div key={String(field.key)} className={field.className}>
+              {renderField(field)}
+            </div>
+          ))}
 
-        <div className="flex gap-2">
-          <Button onClick={handleTrigger} isLoading={loading}>
-            <Search size={16} className="mr-2" /> Search
-          </Button>
-          <Button variant="outline" onClick={handleReset}>
-            <RotateCcw size={16} />
-          </Button>
-        </div>
-      </div>
+          <div className="flex gap-2 pb-1">
+            <Button type="submit" isLoading={loading}>
+              <Search size={16} className="mr-2" /> Search
+            </Button>
+            <Button variant="outline" type="button" onClick={handleReset}>
+              <RotateCcw size={16} />
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 };

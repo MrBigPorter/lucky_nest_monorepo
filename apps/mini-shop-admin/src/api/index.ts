@@ -25,8 +25,13 @@ import {
   Order,
   Coupon,
   CreateCouponPayload,
-  UpdateCouponPayload,
   CouponListParams,
+  TransactionsListParams,
+  WalletTransaction,
+  WithdrawListParams,
+  ManualAdjustPayload,
+  AuditWithdrawPayload,
+  WithdrawOrder,
 } from '@/type/types.ts';
 
 /**
@@ -263,6 +268,37 @@ export const couponApi = {
   // 删除
   delete: (id: string) => {
     return http.delete(`/v1/admin/coupons/${id}`);
+  },
+};
+
+/**
+ * 财务专区 API
+ */
+export const financeApi = {
+  // 获取交易记录列表
+  getTransactions: (params: TransactionsListParams) => {
+    return http.get<PaginatedResponse<WalletTransaction>>(
+      '/v1/admin/finance/transactions',
+      params,
+    );
+  },
+
+  // 获取提现记录列表
+  getWithdrawals: (params: WithdrawListParams) => {
+    return http.get<PaginatedResponse<WithdrawOrder>>(
+      `/v1/admin/finance/withdrawals`,
+      params,
+    );
+  },
+
+  // 提现审核
+  withdrawalsAudit: (data: AuditWithdrawPayload) => {
+    return http.post('/v1/admin/finance/withdrawals/audit', data);
+  },
+
+  // 余额调整
+  adjust: (data: Partial<ManualAdjustPayload>) => {
+    return http.post(`/v1/admin/finance/adjust`, data);
   },
 };
 
