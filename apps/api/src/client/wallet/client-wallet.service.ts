@@ -2,6 +2,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
@@ -18,6 +19,7 @@ import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { TransactionQueryDto } from '@api/client/wallet/dto/transaction-query.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
 import { PaymentService } from '@api/common/payment/payment.service';
+import { TRANSACTION_STATUS } from '@lucky/shared/dist/types/wallet';
 
 @Injectable()
 export class ClientWalletService {
@@ -28,11 +30,28 @@ export class ClientWalletService {
     private walletService: WalletService,
   ) {}
 
+  async handleUniversalWebhook(payload: any) {
+    const externalId = payload.external_id;
+
+    if (!externalId) {
+      this.logger.warn('[Webhook] Missing external_id, ignored.');
+      return;
+    }
+
+    // Determine if it's a recharge or withdrawal based on the prefix
+    if (externalId.startsWith(BizPrefix.WITHDRAW)) {
+      return this.handleDisbursementCallback(payload);
+    } else {
+      // Default to recharge
+      return this.handleRechargeCallback(payload);
+    }
+  }
+
   /**
    * Handle recharge webhook from payment gateway
    * @param payload
    */
-  async handleRechargeWebhook(payload: any) {
+  private async handleRechargeCallback(payload: any) {
     const orderNo = payload.external_id;
     const status = payload.status; // 'PAID', 'EXPIRED', etc.
     const amount = payload.amount;
@@ -103,6 +122,100 @@ export class ClientWalletService {
       });
 
       return { status: 'SUCCESS', message: 'Recharge processed successfully' };
+    });
+  }
+
+  /**
+   * Handle disbursement (withdrawal) webhook from payment gateway
+   * @param payload
+   */
+  private async handleDisbursementCallback(payload: any) {
+    const orderNo = payload.external_id;
+    const status = payload.status; // 'COMPLETED', 'FAILED', etc.
+    const failureCode = payload.failure_code;
+
+    this.logger.log(
+      `[Disbursement Webhook] Order: ${orderNo}, Status: ${status}`,
+    );
+
+    return this.prismaService.$transaction(async (ctx) => {
+      // Find the withdrawal order
+      const order = await ctx.withdrawOrder.findUnique({
+        where: { withdrawNo: orderNo },
+      });
+      if (!order) {
+        throw new NotFoundException(`Withdrawal order not found: ${orderNo}`);
+      }
+
+      // Idempotency check: return if already processed
+      if (
+        order.withdrawStatus === WITHDRAW_STATUS.SUCCESS ||
+        order.withdrawStatus === WITHDRAW_STATUS.FAILED
+      ) {
+        return {
+          message: 'Withdrawal order already processed',
+          order,
+        };
+      }
+
+      const amount = order.actualAmount;
+
+      if (status === 'COMPLETED') {
+        await ctx.userWallet.update({
+          where: { userId: order.userId },
+          data: {
+            frozenBalance: { decrement: amount }, // Unfreeze the amount
+            totalWithdraw: { increment: amount }, // Increment total withdrawn
+          },
+        });
+
+        // Update withdrawal order status to SUCCESS
+        await ctx.walletTransaction.updateMany({
+          where: {
+            relatedId: order.withdrawId,
+            relatedType: RelatedType.WITHDRAWAL,
+          },
+          data: {
+            status: TRANSACTION_STATUS.SUCCESS,
+            description: 'Withdrawal completed successfully',
+          },
+        });
+
+        // Update withdrawal order status
+        await ctx.withdrawOrder.update({
+          where: { withdrawId: order.withdrawId },
+          data: {
+            withdrawStatus: WITHDRAW_STATUS.SUCCESS,
+            completedAt: new Date(),
+          },
+        });
+      } else if (status === 'FAILED') {
+        this.logger.warn(`Disbursement Failed for ${orderNo}: ${failureCode}`);
+        // Unfreeze the amount back to available balance
+        await this.walletService.unfreezeCash(
+          {
+            userId: order.userId,
+            amount: amount,
+            related: {
+              id: order.withdrawId,
+              type: RelatedType.WITHDRAWAL,
+            },
+            desc: `Withdrawal failed: ${failureCode}`,
+          },
+          ctx,
+        );
+        // Update withdrawal order status to FAILED
+        await ctx.withdrawOrder.update({
+          where: { withdrawId: order.withdrawId },
+          data: {
+            withdrawStatus: WITHDRAW_STATUS.FAILED,
+            completedAt: new Date(),
+            rejectReason: `Disbursement failed: ${failureCode}`,
+          },
+        });
+
+        return { status: 'PROCESSED', xendit_status: status };
+      }
     });
   }
 

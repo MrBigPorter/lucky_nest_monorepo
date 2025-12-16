@@ -34,7 +34,7 @@ export class PaymentWebhookController {
     // 2. 业务处理
     // 注意：目前只处理了充值。如果后续做提现，可以在这里判断
     // 比如检查 payload.status 是 'COMPLETED' (提现) 还是 'PAID' (充值)
-    await this.clientWalletService.handleRechargeWebhook(payload);
+    await this.clientWalletService.handleUniversalWebhook(payload);
 
     return { status: 'OK' };
   }
