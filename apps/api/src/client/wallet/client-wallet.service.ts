@@ -252,7 +252,7 @@ export class ClientWalletService {
             id: order.withdrawId,
             type: RelatedType.WITHDRAWAL,
           },
-          desc: RelatedType.WITHDRAWAL,
+          desc: ` Apply for withdrawal, freeze amount `,
         },
         ctx,
       );
