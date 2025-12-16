@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
-import { PaymentCallbackDto } from '@api/client/payment/dto/payment-callback.dto';
 import { Prisma } from '@prisma/client';
 import { OpAction, RECHARGE_STATUS, RelatedType } from '@lucky/shared';
 import Xendit from 'xendit-node';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PaymentService {
@@ -20,10 +20,12 @@ export class PaymentService {
     @Inject(forwardRef(() => WalletService))
     private walletService: WalletService,
     private prismaService: PrismaService,
+    private configService: ConfigService,
   ) {
     // 初始化 Xendit 客户端
+    const secretKey = this.configService.get<string>('XENDIT_SECRET_KEY');
     this.xenditClient = new Xendit({
-      secretKey: process.env.XENDIT_SECRET_KEY || '',
+      secretKey: secretKey || '',
     });
   }
 
@@ -35,7 +37,9 @@ export class PaymentService {
    */
   async handleRechargeCallback(channel: string, payload: any, token: string) {
     if (channel === 'xendit') {
-      const mySecretToken = process.env.XENDIT_CALLBACK_TOKEN;
+      const mySecretToken = this.configService.get<string>(
+        'XENDIT_CALLBACK_TOKEN',
+      );
       if (!mySecretToken) {
         throw new InternalServerErrorException(
           `XENDIT_CALLBACK_TOKEN is not set`,
@@ -141,31 +145,48 @@ export class PaymentService {
     amount: number, //金额 (数字类型)
     userEmail?: string, //用户邮箱 (可选，用于发回执)
   ) {
-    const { Invoice } = this.xenditClient;
-    const invoiceInstance = new Invoice({});
-
     try {
+      const key = this.configService.get('XENDIT_SECRET_KEY');
+      const maskedKey = key ? `${key.substring(0, 5)}...` : 'MISSING/EMPTY';
+
       this.logger.log(
-        `[Xendit] Creating Invoice for ${orderNo}, Amount: ${amount}`,
+        `[Debug] Using Xendit Key: ${maskedKey}, Order: ${orderNo}, Amount: ${amount}`,
       );
 
-      const response = await invoiceInstance.createInvoice({
-        externalID: orderNo,
-        amount: amount,
-        description: `${RelatedType.RECHARGE} - ${orderNo}`,
-        invoiceDuration: 86400, // 24 hour,
-        currency: 'PHP',
-        payerEmail: userEmail,
-        successRedirectURL: 'https://yourdomain.com/payment/success',
-        failureRedirectURL: 'https://yourdomain.com/payment/failure',
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:3000',
+      );
+
+      const response = await this.xenditClient.Invoice.createInvoice({
+        data: {
+          externalId: orderNo,
+          amount: amount,
+          description: `${RelatedType.RECHARGE} - ${orderNo}`,
+          invoiceDuration: 86400, // 24 hour,
+          currency: 'PHP',
+          payerEmail: userEmail,
+          successRedirectURL: `${frontendUrl}/wallet/recharge/success`,
+          failureRedirectURL: `${frontendUrl}/wallet/recharge/failure`,
+        },
       });
 
-      this.logger.log(`[Xendit] Invoice created: ${response.invoice_url}`);
-      return response.invoice_url;
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error(`[Xendit] Error creating Invoice: ${error.message}`);
+      this.logger.log(`[Xendit] Invoice created: ${response.invoiceUrl}`);
+      return response.invoiceUrl;
+    } catch (error: any) {
+      console.log('================ XENDIT ERROR DEBUG START ================');
+      if (error.response && error.response.data) {
+        console.log(
+          'Xendit API Response:',
+          JSON.stringify(error.response.data, null, 2),
+        );
+      } else {
+        // 如果没有 response，打印整个 error 对象
+        console.log('Raw Error Object:', JSON.stringify(error, null, 2));
       }
+      console.log('================ XENDIT ERROR DEBUG END ================');
+
+      this.logger.error(`[Xendit] Error creating Invoice: ${error.message}`);
 
       throw new InternalServerErrorException('Payment gateway unavailable');
     }

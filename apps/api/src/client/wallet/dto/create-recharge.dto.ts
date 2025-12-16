@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ToNumber } from '@api/common/dto/transforms';
-import { IsIn, IsNotEmpty, IsNumber, Min } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, Min } from 'class-validator';
 
 export class CreateRechargeDto {
   @ApiProperty({ description: 'Recharge amount', example: 100.5 })
@@ -10,16 +10,16 @@ export class CreateRechargeDto {
   amount!: number;
 
   @ApiProperty({ description: 'Payment channel code', example: 'PAYPAL' })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @ToNumber()
-  channelCode?: string;
+  channelCode?: number;
 
   @ApiProperty({
     description: 'Payment method: 1-EWallet 2-BankTransfer 3-QRCode',
     example: 1,
   })
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @ToNumber()
   @IsIn([1, 2, 3])

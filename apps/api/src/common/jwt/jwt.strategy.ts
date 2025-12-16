@@ -14,7 +14,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name);
 
   async validate(payload: any) {
-    this.logger.debug(`JWT payload: ${JSON.stringify(payload)}`);
     // 只把 userId 传给 request.user
     return {
       id: payload.sub,
