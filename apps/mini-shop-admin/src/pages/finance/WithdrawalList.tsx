@@ -8,7 +8,7 @@ import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { financeApi } from '@/api';
 import { WithdrawAuditModal } from './WithdrawAuditModal';
-import { WithdrawOrder } from '@/type/types';
+import { WithdrawOrder, WithdrawSearchForm } from '@/type/types';
 import {
   WITHDRAW_STATUS,
   NumHelper,
@@ -18,12 +18,23 @@ import {
 import { STATUS_CONFIG } from '@/pages/finance/type.ts';
 
 export const WithdrawalList: React.FC = () => {
-  const { tableProps, search, refresh } = useAntdTable(
+  const { tableProps, run, search, refresh } = useAntdTable(
     async ({ current, pageSize }, formData) => {
+      const data: WithdrawSearchForm = formData || {};
+
+      for (const key in data) {
+        if (!data[key as keyof WithdrawSearchForm]) {
+          delete data[key as keyof WithdrawSearchForm];
+        }
+        if (data[key as keyof WithdrawSearchForm] === 'ALL') {
+          delete data[key as keyof WithdrawSearchForm];
+        }
+      }
+
       const res = await financeApi.getWithdrawals({
         page: current,
         pageSize,
-        ...formData,
+        ...data,
       });
       return { list: res.list, total: res.total };
     },
@@ -47,6 +58,10 @@ export const WithdrawalList: React.FC = () => {
     },
     [refresh],
   );
+
+  const handleSearch = (values: WithdrawSearchForm) => {
+    run({ current: 1, pageSize: 10 }, values);
+  };
 
   const columns = useMemo(() => {
     const helper = createColumnHelper<WithdrawOrder>();
@@ -134,11 +149,13 @@ export const WithdrawalList: React.FC = () => {
             type: 'select',
             key: 'status',
             label: 'Status',
-            defaultValue: 1,
-            options: WITHDRAW_STATUS_OPTIONS.map((item) => ({
-              label: item.label,
-              value: String(item.value),
-            })),
+            defaultValue: 'ALL',
+            options: [{ label: 'All', value: 'ALL' }].concat(
+              WITHDRAW_STATUS_OPTIONS.map((item) => ({
+                label: item.label,
+                value: String(item.value),
+              })),
+            ),
           },
           {
             type: 'date',
@@ -151,7 +168,7 @@ export const WithdrawalList: React.FC = () => {
             label: 'End Date',
           },
         ]}
-        onSearch={search.submit}
+        onSearch={handleSearch}
         onReset={search.reset}
       />
 
@@ -160,7 +177,15 @@ export const WithdrawalList: React.FC = () => {
           data={tableProps.dataSource}
           columns={columns}
           loading={tableProps.loading}
-          pagination={tableProps.pagination}
+          pagination={{
+            ...tableProps.pagination,
+            onChange: (page, pageSize) => {
+              tableProps.onChange?.({
+                current: page,
+                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+              });
+            },
+          }}
           rowKey="withdrawId"
         />
       </div>

@@ -300,12 +300,15 @@ export interface WithdrawOrder {
   user?: Pick<User, 'nickname' | 'avatar' | 'phone'>;
 }
 
-export interface WithdrawListParams extends PaginationParams {
-  status?: WithdrawStatus;
-  keyword?: string; // 搜索: 单号/手机/昵称/ID
-  startDate?: string;
-  endDate?: string;
+export interface WithdrawSearchForm {
+  keyword: string; // 搜索: 单号/手机/昵称/ID
+  status: string;
+  startDate: string;
+  endDate: string;
 }
+
+export interface WithdrawListParams
+  extends PaginationParams, Partial<WithdrawSearchForm> {}
 
 export interface ManualAdjustPayload {
   userId: string;
