@@ -32,11 +32,15 @@ export class TransactionResponseDto {
   @DecimalToString()
   amount!: string;
 
-  @ApiProperty({ description: 'Balance Type', example: 1 })
+  @ApiProperty({ description: 'Balance Type： 1=CASH 2=COIN', example: 1 })
   @Expose()
   balanceType!: number;
 
-  @ApiProperty({ description: 'Transaction Type', example: 1 })
+  @ApiProperty({
+    description:
+      'Transaction Type： 1 = Top up 2 = Spend 3 = Refund 4 = Reward 5 = Withdraw 6 = Gold Coin Exchange 7 = Referral Reward 8=SYSTEM_DEDUCT',
+    example: 1,
+  })
   @Expose()
   transactionType!: number;
 
@@ -52,7 +56,10 @@ export class TransactionResponseDto {
   @Expose()
   description!: string;
 
-  @ApiProperty({ description: 'Status', example: 2 })
+  @ApiProperty({
+    description: 'Status： SUCCESS: 1,FAILED: 2,PROCESSING: 3,',
+    example: 2,
+  })
   @Expose()
   status!: number;
 
