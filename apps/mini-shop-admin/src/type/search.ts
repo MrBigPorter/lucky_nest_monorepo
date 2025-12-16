@@ -28,3 +28,5 @@ export interface SearchFieldSchema<T> {
   /** 仅对 date 有效：日期选择模式 */
   mode?: 'single' | 'range';
 }
+
+export type FormSchema = SearchFieldSchema<any>;

@@ -1,194 +1,154 @@
-import React, { useMemo, useCallback } from 'react';
-import { useAntdTable } from 'ahooks';
-import { createColumnHelper } from '@tanstack/react-table';
-import { EyeIcon, ShieldCheck } from 'lucide-react';
+import React, { useRef, useMemo, useCallback } from 'react';
 import { Button, ModalManager } from '@repo/ui';
-import { Badge, Card } from '@/components/UIComponents';
-import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
-import { BaseTable } from '@/components/scaffold/BaseTable';
-import { financeApi } from '@/api';
-import { WithdrawAuditModal } from './WithdrawAuditModal';
-import { WithdrawOrder, WithdrawSearchForm } from '@/type/types';
 import {
-  WITHDRAW_STATUS,
-  NumHelper,
-  TimeHelper,
-  WITHDRAW_STATUS_OPTIONS,
-} from '@lucky/shared';
+  SmartTable,
+  ProColumns,
+  ActionType,
+} from '@/components/scaffold/SmartTable';
+import { financeApi } from '@/api';
+import { WithdrawOrder } from '@/type/types';
+import { WithdrawAuditModal } from './WithdrawAuditModal';
 import { STATUS_CONFIG } from '@/pages/finance/type.ts';
+import { WITHDRAW_STATUS, WITHDRAW_STATUS_OPTIONS } from '@lucky/shared';
+import { EyeIcon, ShieldCheck } from 'lucide-react';
 
 export const WithdrawalList: React.FC = () => {
-  const { tableProps, run, search, refresh } = useAntdTable(
-    async ({ current, pageSize }, formData) => {
-      const data: WithdrawSearchForm = formData || {};
+  const actionRef = useRef<ActionType>(null);
 
-      for (const key in data) {
-        if (!data[key as keyof WithdrawSearchForm]) {
-          delete data[key as keyof WithdrawSearchForm];
-        }
-        if (data[key as keyof WithdrawSearchForm] === 'ALL') {
-          delete data[key as keyof WithdrawSearchForm];
-        }
-      }
+  const handleAudit = useCallback((record: WithdrawOrder) => {
+    ModalManager.open({
+      title: 'Withdrawal Audit',
+      renderChildren: ({ confirm }) => (
+        <WithdrawAuditModal
+          data={record}
+          confirm={() => {
+            confirm();
+            actionRef.current?.reload(true); // ✅ 建议审核后回到第一页并刷新
+          }}
+        />
+      ),
+    });
+  }, []);
 
-      const res = await financeApi.getWithdrawals({
-        page: current,
-        pageSize,
-        ...data,
-      });
-      return { list: res.list, total: res.total };
-    },
-    { defaultPageSize: 10 },
-  );
+  // ✅ 把 valueEnum 也单独 memo（避免 columns 里 reduce 产生新对象的风险）
+  const statusValueEnum = useMemo(() => {
+    return WITHDRAW_STATUS_OPTIONS.reduce(
+      (acc, item) => {
+        const config = STATUS_CONFIG[item.value] || {
+          color: 'gray',
+          label: item.label,
+        };
+        acc[item.value] = { text: config.label, status: config.color };
+        return acc;
+      },
+      {} as Record<number, { text: string; status?: string; color?: string }>,
+    );
+  }, []);
 
-  const handleAudit = useCallback(
-    (record: WithdrawOrder) => {
-      ModalManager.open({
-        title: 'Withdrawal Audit',
-        renderChildren: ({ confirm }) => (
-          <WithdrawAuditModal
-            data={record}
-            confirm={() => {
-              confirm();
-              refresh();
-            }}
-          />
-        ),
-      });
-    },
-    [refresh],
-  );
-
-  const handleSearch = (values: WithdrawSearchForm) => {
-    run({ current: 1, pageSize: 10 }, values);
-  };
-
-  const columns = useMemo(() => {
-    const helper = createColumnHelper<WithdrawOrder>();
-    return [
-      helper.accessor('withdrawNo', { header: 'Order No.' }),
-      helper.accessor('user', {
-        header: 'User',
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{info.getValue()?.nickname}</span>
+  const columns: ProColumns<WithdrawOrder>[] = useMemo(
+    () => [
+      {
+        title: 'Order No.',
+        dataIndex: 'withdrawNo',
+        copyable: true,
+        search: {
+          title: 'Order No',
+          formItemProps: { placeholder: 'Search Order No' },
+        },
+      },
+      {
+        title: 'User',
+        dataIndex: 'user',
+        search: false,
+        render: (_, row) => (
+          <div>
+            <div className="font-medium">{row.user?.nickname}</div>
+            <div className="text-xs text-gray-500">{row.user?.phone}</div>
           </div>
         ),
-      }),
-      helper.accessor('withdrawAmount', {
-        header: 'Amount',
-        cell: (info) => (
-          <span className="font-bold">
-            {NumHelper.formatMoney(info.getValue())}
-          </span>
-        ),
-      }),
-      helper.accessor('withdrawStatus', {
-        header: 'Status',
-        cell: (info) => {
-          const status = info.getValue();
-          // 自动匹配，匹配不到则兜底显示 Unknown
-          const { color, label } = STATUS_CONFIG[status] || {
-            color: 'gray',
-            label: 'Unknown',
-          };
-          return <Badge color={color}>{label}</Badge>;
+      },
+      {
+        title: 'Amount',
+        dataIndex: 'withdrawAmount',
+        valueType: 'money',
+        search: false,
+      },
+      {
+        title: 'Status',
+        dataIndex: 'status',
+        valueType: 'select',
+        valueEnum: statusValueEnum,
+      },
+      {
+        title: 'Start Date',
+        dataIndex: 'startDate',
+        valueType: 'dateTime',
+        search: {
+          valueType: 'dateTime',
+          transform: (value) => ({ startDate: value[0], endDate: value[1] }),
         },
-      }),
-      helper.accessor('createdAt', {
-        header: 'Applied At',
-        cell: (info) => (
-          <span className="text-gray-400 text-xs">
-            {TimeHelper.formatDateTime(info.getValue())}
-          </span>
-        ),
-      }),
-      helper.display({
-        header: 'Action',
-        cell: (info) => {
-          const status = info.row.original.withdrawStatus;
-          if (status !== WITHDRAW_STATUS.PENDING_AUDIT) {
-            return (
-              <Button onClick={() => handleAudit(info.row.original)}>
-                <EyeIcon size={14} /> View
-              </Button>
-            );
-          }
+      },
+      {
+        title: 'Action',
+        valueType: 'option',
+        width: 120,
+        render: (_, row) => {
+          const isPending =
+            row.withdrawStatus === WITHDRAW_STATUS.PENDING_AUDIT;
+
           return (
             <Button
-              variant="danger"
+              variant={isPending ? 'danger' : 'ghost'}
               size="sm"
-              onClick={() => handleAudit(info.row.original)}
+              onClick={() => handleAudit(row)}
             >
-              <ShieldCheck size={14} className="mr-1" /> Audit
+              {isPending ? (
+                <ShieldCheck size={14} className="mr-1" />
+              ) : (
+                <EyeIcon size={14} className="mr-1" />
+              )}
+              {isPending ? 'Audit' : 'View'}
             </Button>
           );
         },
-      }),
-    ];
-  }, [handleAudit]);
+      },
+    ],
+    [handleAudit, statusValueEnum],
+  );
+
+  // ✅ 关键修复：request 用 useCallback 固定引用
+  const requestWithdrawals = useCallback(async (params: any) => {
+    const requestData = { ...params };
+    if (requestData.status === 'ALL') delete requestData.status;
+
+    const res = await financeApi.getWithdrawals(requestData);
+    return {
+      data: res.list,
+      total: res.total,
+      success: true,
+    };
+  }, []);
+
+  // ✅ toolBarRender 也固定引用（SmartTable 内部如果 useEffect 依赖它会抖）
+  const toolBarRender = useCallback(
+    () => [
+      <Button key="export" variant="outline">
+        Export Data
+      </Button>,
+    ],
+    [],
+  );
 
   return (
-    <Card className="border-none shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <ShieldCheck size={20} className="text-primary-500" />
-          Withdrawal Requests
-        </h3>
-      </div>
-
-      <SchemaSearchForm
-        schema={[
-          {
-            type: 'input',
-            key: 'keyword',
-            label: 'Keyword',
-            placeholder: 'Order No / User',
-          },
-          {
-            type: 'select',
-            key: 'status',
-            label: 'Status',
-            defaultValue: 'ALL',
-            options: [{ label: 'All', value: 'ALL' }].concat(
-              WITHDRAW_STATUS_OPTIONS.map((item) => ({
-                label: item.label,
-                value: String(item.value),
-              })),
-            ),
-          },
-          {
-            type: 'date',
-            key: 'startDate',
-            label: 'Start Date',
-          },
-          {
-            type: 'date',
-            key: 'endDate',
-            label: 'End Date',
-          },
-        ]}
-        onSearch={handleSearch}
-        onReset={search.reset}
+    <div className="p-4">
+      <SmartTable<WithdrawOrder>
+        headerTitle="Withdrawal Requests"
+        rowKey="withdrawId"
+        ref={actionRef}
+        columns={columns}
+        request={requestWithdrawals}
+        toolBarRender={toolBarRender}
       />
-
-      <div className="mt-4">
-        <BaseTable
-          data={tableProps.dataSource}
-          columns={columns}
-          loading={tableProps.loading}
-          pagination={{
-            ...tableProps.pagination,
-            onChange: (page, pageSize) => {
-              tableProps.onChange?.({
-                current: page,
-                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
-              });
-            },
-          }}
-          rowKey="withdrawId"
-        />
-      </div>
-    </Card>
+    </div>
   );
 };
