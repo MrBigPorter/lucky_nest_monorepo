@@ -1,0 +1,41 @@
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Headers,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { PaymentService } from '@api/common/payment/payment.service';
+import { ClientWalletService } from '@api/client/wallet/client-wallet.service';
+
+@ApiTags('Payment Webhook')
+@Controller('payment')
+export class PaymentWebhookController {
+  constructor(
+    private paymentService: PaymentService,
+    private clientWalletService: ClientWalletService,
+  ) {}
+  @Post('webhook/:channel')
+  @HttpCode(HttpStatus.OK)
+  async handleWebhook(
+    @Param('channel') channel: string,
+    @Body() payload: any, //防止网关增加字段导致 DTO 校验失败 (400 Bad Request)
+    @Headers('x-callback-token') token: string,
+  ) {
+    // check token validity
+    if (!this.paymentService.verifyCallbackToken(token)) {
+      throw new UnauthorizedException('Invalid callback token');
+    }
+
+    // 2. 业务处理
+    // 注意：目前只处理了充值。如果后续做提现，可以在这里判断
+    // 比如检查 payload.status 是 'COMPLETED' (提现) 还是 'PAID' (充值)
+    await this.clientWalletService.handleRechargeWebhook(payload);
+
+    return { status: 'OK' };
+  }
+}
