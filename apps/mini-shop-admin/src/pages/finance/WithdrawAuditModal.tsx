@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRequest } from 'ahooks';
 import { Button } from '@repo/ui';
 import { financeApi } from '@/api';
@@ -28,13 +28,12 @@ export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
   });
 
   const handleAudit = (status: WithdrawStatus) => {
-    // For Reject, remark is usually mandatory. For Approve, it might be optional,
-    // but based on your previous code, let's keep it required for safety or check logic here.
-    if (status === WITHDRAW_STATUS.REJECTED && !remark) {
-      return; // Reject must have a reason
-    }
     run({ withdrawId: data.withdrawId, status, remark });
   };
+
+  const isWaitForAudit = useMemo(() => {
+    return data.withdrawStatus === WITHDRAW_STATUS.PENDING_AUDIT;
+  }, [data.withdrawStatus]);
 
   return (
     <div className="space-y-5">
@@ -140,39 +139,40 @@ export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
       <div className="space-y-3 pt-2">
         <label className="text-sm font-medium flex justify-between">
           <span>Audit Remark</span>
-          <span className="text-xs text-gray-400 font-normal">
-            Required for rejection
-          </span>
+          <span className="text-xs text-gray-400 font-normal">Required*</span>
         </label>
         <textarea
           className="w-full border border-gray-200 dark:border-white/20 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-transparent"
+          disabled={!isWaitForAudit}
           rows={3}
           placeholder="Enter audit opinion..."
-          value={remark}
+          value={isWaitForAudit ? remark : data.auditResult}
           onChange={(e) => setRemark(e.target.value)}
         />
       </div>
 
-      <div className="flex gap-3 pt-2">
-        <Button
-          variant="danger"
-          className="flex-1"
-          disabled={!remark} // Force remark for safety, or change logic if needed
-          isLoading={loading}
-          onClick={() => handleAudit(WITHDRAW_STATUS.REJECTED)}
-        >
-          Reject
-        </Button>
-        <Button
-          variant="primary"
-          className="flex-1"
-          isLoading={loading}
-          // Approve might not strictly need a remark, but good for records
-          onClick={() => handleAudit(WITHDRAW_STATUS.SUCCESS)}
-        >
-          Approve Payout
-        </Button>
-      </div>
+      {isWaitForAudit && (
+        <div className="flex gap-3 pt-2">
+          <Button
+            variant="danger"
+            className="flex-1"
+            disabled={!remark} // Force remark for safety, or change logic if needed
+            isLoading={loading}
+            onClick={() => handleAudit(WITHDRAW_STATUS.REJECTED)}
+          >
+            Reject
+          </Button>
+          <Button
+            variant="primary"
+            className="flex-1"
+            isLoading={loading}
+            // Approve might not strictly need a remark, but good for records
+            onClick={() => handleAudit(WITHDRAW_STATUS.SUCCESS)}
+          >
+            Approve Payout
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

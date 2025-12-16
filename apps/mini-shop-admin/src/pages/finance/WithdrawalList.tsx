@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { useAntdTable } from 'ahooks';
 import { createColumnHelper } from '@tanstack/react-table';
-import { ShieldCheck } from 'lucide-react';
+import { EyeIcon, ShieldCheck } from 'lucide-react';
 import { Button, ModalManager } from '@repo/ui';
 import { Badge, Card } from '@/components/UIComponents';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
@@ -92,9 +92,19 @@ export const WithdrawalList: React.FC = () => {
         header: 'Action',
         cell: (info) => {
           const status = info.row.original.withdrawStatus;
-          if (status !== WITHDRAW_STATUS.PENDING_AUDIT) return null;
+          if (status !== WITHDRAW_STATUS.PENDING_AUDIT) {
+            return (
+              <Button onClick={() => handleAudit(info.row.original)}>
+                <EyeIcon size={14} /> View
+              </Button>
+            );
+          }
           return (
-            <Button size="sm" onClick={() => handleAudit(info.row.original)}>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleAudit(info.row.original)}
+            >
               <ShieldCheck size={14} className="mr-1" /> Audit
             </Button>
           );
@@ -129,6 +139,16 @@ export const WithdrawalList: React.FC = () => {
               label: item.label,
               value: String(item.value),
             })),
+          },
+          {
+            type: 'date',
+            key: 'startDate',
+            label: 'Start Date',
+          },
+          {
+            type: 'date',
+            key: 'endDate',
+            label: 'End Date',
           },
         ]}
         onSearch={search.submit}
