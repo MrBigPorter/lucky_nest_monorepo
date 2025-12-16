@@ -24,6 +24,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
 import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
 import { AuditWithdrawDto } from '@api/admin/finance/dto/audit-withdraw.dto';
 import { PaymentService } from '@api/common/payment/payment.service';
+import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
 
 @Injectable()
 export class FinanceService {
@@ -278,120 +279,110 @@ export class FinanceService {
    */
   async auditWithdraw(dto: AuditWithdrawDto, adminId: string) {
     const { withdrawId, remark, status } = dto;
-    return this.prismaService.$transaction(async (ctx) => {
-      // 1. 获取提现订单
-      const order = await ctx.withdrawOrder.findUnique({
-        where: { withdrawId },
-      });
-      if (!order) {
-        throw new NotFoundException('Withdrawal order not found');
-      }
 
-      // 2. 检查订单状态 - 只能审核待审核状态的订单
-      if (order.withdrawStatus !== WITHDRAW_STATUS.PENDING_AUDIT) {
-        throw new BadRequestException(
-          'the order is already audited, cannot be audited again',
-        );
-      }
+    // 1. 获取提现订单
+    const order = await this.prismaService.withdrawOrder.findUnique({
+      where: { withdrawId },
+    });
+    if (!order) {
+      throw new NotFoundException('Withdrawal order not found');
+    }
 
-      // 3. 获取用户钱包
-      const wallet = await ctx.userWallet.findUnique({
-        where: { userId: order.userId },
-      });
+    // 2. 检查订单状态 - 只能审核待审核状态的订单
+    if (order.withdrawStatus !== WITHDRAW_STATUS.PENDING_AUDIT) {
+      throw new BadRequestException(
+        'the order is already audited, cannot be audited again',
+      );
+    }
 
-      // 4. 根据审核结果处理资金流转
-      if (!wallet) {
-        throw new NotFoundException('User wallet not found');
-      }
-
+    // 审核通过 (APPROVE) -> 触发打款
+    if (status === WITHDRAW_STATUS.SUCCESS) {
+      // 1. 调用 Xendit 代付接口 (网络请求)
+      // 注意：这里不要包裹在 prisma.$transaction 里，避免长时间锁表
       const amount = new Prisma.Decimal(order.withdrawAmount);
 
-      // 审核通过 (APPROVE) -> 触发打款
-      if (status === WITHDRAW_STATUS.SUCCESS) {
-        // 1. 调用 Xendit 代付接口 (网络请求)
-        // 注意：这里不要包裹在 prisma.$transaction 里，避免长时间锁表
-        let xenditResp;
-        try {
-          const bankCode =
-            order.withdrawMethod === 1 ? 'PH_GCASH' : 'PH_PAYMAYA';
+      let xenditResp: GetPayouts200ResponseDataInner | undefined;
+      try {
+        const bankCode = order.withdrawMethod === 1 ? 'PH_GCASH' : 'PH_PAYMAYA';
 
-          xenditResp = await this.paymentService.createDisbursement({
-            orderNo: order.withdrawNo,
-            amount: amount.toNumber(),
-            bankCode: bankCode,
-            accountName: order?.accountName || '',
-            accountNumber: order?.withdrawAccount || '',
-            description: `Withdrawal for ${order.withdrawNo}`,
-          });
-        } catch (error: any) {
-          throw new BadRequestException(`Xendit API Failed: ${error.message}`);
+        xenditResp = await this.paymentService.createDisbursement({
+          orderNo: order.withdrawNo,
+          amount: amount.toNumber(),
+          bankCode: bankCode,
+          accountName: order?.accountName || '',
+          accountNumber: order?.withdrawAccount || '',
+          description: `Withdrawal for ${order.withdrawNo}`,
+        });
+      } catch (error: any) {
+        throw new BadRequestException(`Xendit API Failed: ${error.message}`);
+      }
+
+      // 2. 更新提现订单状态为处理中
+      return this.prismaService.withdrawOrder.update({
+        where: { withdrawId },
+        data: {
+          withdrawStatus: WITHDRAW_STATUS.PROCESSING,
+          thirdPartyOrderNo: xenditResp?.id,
+          auditorId: adminId,
+          auditedAt: new Date(),
+          auditResult: remark
+            ? `${remark} | Xendit: ${xenditResp?.status}`
+            : `Xendit: ${xenditResp?.status}`,
+        },
+      });
+    } else {
+      return this.prismaService.$transaction(async (ctx) => {
+        // get wallet again in this transaction context
+        const wallet = await ctx.userWallet.findUnique({
+          where: { userId: order.userId },
+        });
+
+        if (!wallet) {
+          throw new NotFoundException('User wallet not found');
         }
 
-        // 2. 更新提现订单状态为处理中
-        return this.prismaService.withdrawOrder.update({
-          where: { withdrawId },
+        const amount = new Prisma.Decimal(order.withdrawAmount);
+
+        // 审核拒绝 (REJECT) -> 退回冻结金额到可用余额
+        await ctx.userWallet.update({
+          where: { userId: order.userId, frozenBalance: { gte: amount } },
           data: {
-            withdrawStatus: WITHDRAW_STATUS.PROCESSING,
-            thirdPartyOrderNo: xenditResp?.referenceId,
-            auditorId: adminId,
-            auditedAt: new Date(),
-            auditResult: `Xendit Status: ${xenditResp?.status}`,
+            realBalance: { increment: amount }, // 返还可用余额
+            frozenBalance: { decrement: amount }, // 减少冻结余额
           },
         });
-      } else {
-        return this.prismaService.$transaction(async (ctx) => {
-          // get wallet again in this transaction context
-          const wallet = await ctx.userWallet.findUnique({
-            where: { userId: order.userId },
-          });
 
-          if (!wallet) {
-            throw new NotFoundException('User wallet not found');
-          }
-
-          const amount = new Prisma.Decimal(order.withdrawAmount);
-
-          // 审核拒绝 (REJECT) -> 退回冻结金额到可用余额
-          await ctx.userWallet.update({
-            where: { userId: order.userId, frozenBalance: { gte: amount } },
-            data: {
-              realBalance: { increment: amount }, // 返还可用余额
-              frozenBalance: { decrement: amount }, // 减少冻结余额
-            },
-          });
-
-          // 更新流水记录
-          await ctx.walletTransaction.create({
-            data: {
-              transactionNo: OrderNoHelper.generate(BizPrefix.REFUND),
-              userId: order.userId,
-              walletId: wallet.id,
-              transactionType: TRANSACTION_TYPE.REFUND, // 提现拒绝
-              balanceType: BALANCE_TYPE.CASH, // 现金余额
-              amount: amount, // 返还记正数
-              beforeBalance: wallet.realBalance, // 变动前余额
-              afterBalance: wallet.realBalance.plus(amount), // 变动后余额
-              description: `Withdraw rejected: ${remark}`,
-              status: TRANSACTION_STATUS.SUCCESS,
-              relatedId: order.withdrawId,
-              relatedType: RelatedType.WITHDRAWAL,
-              remark: `Audit Rejected by ${adminId}`,
-            },
-          });
-
-          // 更新提现订单状态为拒绝
-          return ctx.withdrawOrder.update({
-            where: { withdrawId },
-            data: {
-              withdrawStatus: WITHDRAW_STATUS.REJECTED,
-              auditResult: remark,
-              auditorId: adminId,
-              auditedAt: new Date(),
-              rejectReason: remark,
-            },
-          });
+        // 更新流水记录
+        await ctx.walletTransaction.create({
+          data: {
+            transactionNo: OrderNoHelper.generate(BizPrefix.REFUND),
+            userId: order.userId,
+            walletId: wallet.id,
+            transactionType: TRANSACTION_TYPE.REFUND, // 提现拒绝
+            balanceType: BALANCE_TYPE.CASH, // 现金余额
+            amount: amount, // 返还记正数
+            beforeBalance: wallet.realBalance, // 变动前余额
+            afterBalance: wallet.realBalance.plus(amount), // 变动后余额
+            description: `Withdraw rejected: ${remark}`,
+            status: TRANSACTION_STATUS.SUCCESS,
+            relatedId: order.withdrawId,
+            relatedType: RelatedType.WITHDRAWAL,
+            remark: `Audit Rejected by ${adminId}`,
+          },
         });
-      }
-    });
+
+        // 更新提现订单状态为拒绝
+        return ctx.withdrawOrder.update({
+          where: { withdrawId },
+          data: {
+            withdrawStatus: WITHDRAW_STATUS.REJECTED,
+            auditResult: remark,
+            auditorId: adminId,
+            auditedAt: new Date(),
+            rejectReason: remark,
+          },
+        });
+      });
+    }
   }
 }
