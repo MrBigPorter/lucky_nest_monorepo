@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { TransactionList } from './finance/TransactionList';
 import { WithdrawalList } from './finance/WithdrawalList';
 import { Wallet, FileText, ArrowRightLeft } from 'lucide-react';
+import { DepositList } from '@/pages/finance/DepositList.tsx';
 
 export const FinancePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'transactions' | 'withdrawals'>(
-    'transactions',
-  );
+  const [activeTab, setActiveTab] = useState<
+    'deposits' | 'transactions' | 'withdrawals'
+  >('transactions');
 
   return (
     <div className="space-y-6">
@@ -46,6 +47,16 @@ export const FinancePage: React.FC = () => {
       {/* 2. Tabs 切换 */}
       <div className="border-b border-gray-200 dark:border-gray-700 flex gap-6">
         <button
+          onClick={() => setActiveTab('deposits')}
+          className={`pb-3 text-sm font-medium flex items-center gap-2 transition-all ${
+            activeTab === 'transactions'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ArrowRightLeft size={16} /> Deposit Records
+        </button>
+        <button
           onClick={() => setActiveTab('transactions')}
           className={`pb-3 text-sm font-medium flex items-center gap-2 transition-all ${
             activeTab === 'transactions'
@@ -69,6 +80,7 @@ export const FinancePage: React.FC = () => {
 
       {/* 3. 内容区域 */}
       <div className="min-h-[500px]">
+        {activeTab === 'deposits' && <DepositList />}
         {activeTab === 'transactions' && <TransactionList />}
         {activeTab === 'withdrawals' && <WithdrawalList />}
       </div>
