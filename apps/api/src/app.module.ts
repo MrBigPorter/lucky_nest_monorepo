@@ -12,6 +12,7 @@ import { AdminModule } from '@api/admin/admin.module';
 import { APP_GUARD } from '@nestjs/core';
 import { OtpThrottlerGuard } from '@api/common/guards/otp-throttler.guard';
 import { UploadModule } from '@api/common/upload/upload.module';
+import { PaymentModule } from '@api/common/payment/payment.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -64,6 +65,7 @@ import { UploadModule } from '@api/common/upload/upload.module';
     UploadModule,
     ClientModule,
     AdminModule,
+    PaymentModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],

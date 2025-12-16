@@ -1,4 +1,8 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
 import { ApplyWithdrawDto } from '@api/client/wallet/dto/apply-withdraw.dto';
@@ -13,16 +17,94 @@ import {
 import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { TransactionQueryDto } from '@api/client/wallet/dto/transaction-query.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
-import { PaymentService } from '@api/client/payment/payment.service';
+import { PaymentService } from '@api/common/payment/payment.service';
 
 @Injectable()
 export class ClientWalletService {
+  private logger = new Logger(ClientWalletService.name);
   constructor(
-    @Inject(forwardRef(() => PaymentService))
-    private readonly paymentService: PaymentService,
+    private paymentService: PaymentService,
     private prismaService: PrismaService,
     private walletService: WalletService,
   ) {}
+
+  /**
+   * Handle recharge webhook from payment gateway
+   * @param payload
+   */
+  async handleRechargeWebhook(payload: any) {
+    const orderNo = payload.external_id;
+    const status = payload.status; // 'PAID', 'EXPIRED', etc.
+    const amount = payload.amount;
+    const transactionId = payload.id;
+
+    this.logger.log(
+      `[Webhook] Processing Order: ${orderNo}, Status: ${status}`,
+    );
+
+    // Ignore non-successful statuses
+    if (status !== 'PAID' && status !== 'SETTLED' && status !== 'SUCCESS') {
+      return { status: 'IGNORED', message: `Status is ${status}` };
+    }
+
+    const amountDecimal = new Prisma.Decimal(amount);
+
+    return this.prismaService.$transaction(async (ctx) => {
+      // check if order exists
+      const order = await this.prismaService.rechargeOrder.findUnique({
+        where: { rechargeNo: orderNo },
+      });
+
+      if (!order) {
+        throw new InternalServerErrorException(
+          `Recharge order not found: ${orderNo}`,
+        );
+      }
+
+      // Idempotency check, return if already processed
+      if (order.rechargeStatus === RECHARGE_STATUS.SUCCESS) {
+        return {
+          message: 'Order already processed',
+          order,
+        };
+      }
+
+      // Verify amount, throw error if mismatch
+      if (!order.rechargeAmount.equals(amountDecimal)) {
+        this.logger.error(
+          `Amount mismatch for ${orderNo}. Order: ${order.rechargeAmount}, Paid: ${amountDecimal}`,
+        );
+        throw new InternalServerErrorException('Amount mismatch in callback');
+      }
+
+      // Credit user's wallet
+      await this.walletService.creditCash(
+        {
+          userId: order.userId,
+          amount: amountDecimal,
+          related: {
+            id: order.rechargeId,
+            type: RelatedType.RECHARGE,
+          },
+          desc: `Recharge via Xendit. Txn: ${transactionId}`,
+        },
+        ctx,
+      );
+
+      // Update recharge order status
+      await ctx.rechargeOrder.update({
+        where: { rechargeId: order.rechargeId },
+        data: {
+          rechargeStatus: RECHARGE_STATUS.SUCCESS,
+          thirdPartyOrderNo: transactionId,
+          paidAt: new Date(),
+          callbackData: payload,
+        },
+      });
+
+      return { status: 'SUCCESS', message: 'Recharge processed successfully' };
+    });
+  }
 
   /** Apply for a withdrawal
    *
