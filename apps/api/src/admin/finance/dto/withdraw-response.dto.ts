@@ -69,6 +69,10 @@ export class WithdrawResponseDto {
   @Expose()
   rejectReason?: string;
 
+  @ApiProperty({ description: 'Audit Result', example: 'Approved' })
+  @Expose()
+  auditResult!: string;
+
   @ApiProperty({ description: 'Applied At', example: 1622547800 })
   @Expose()
   @DateToTimestamp()

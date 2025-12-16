@@ -26,6 +26,7 @@ export class PaymentWebhookController {
     @Body() payload: any, //防止网关增加字段导致 DTO 校验失败 (400 Bad Request)
     @Headers('x-callback-token') token: string,
   ) {
+    console.log(`Received payment callback on channel: ${channel}`);
     // xendit webhook handling
     if (channel === 'xendit') {
       // check token validity
