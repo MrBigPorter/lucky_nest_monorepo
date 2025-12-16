@@ -94,12 +94,7 @@ export const WithdrawalList: React.FC = () => {
           const status = info.row.original.withdrawStatus;
           if (status !== WITHDRAW_STATUS.PENDING_AUDIT) return null;
           return (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-blue-600 bg-blue-50 hover:bg-blue-100"
-              onClick={() => handleAudit(info.row.original)}
-            >
+            <Button size="sm" onClick={() => handleAudit(info.row.original)}>
               <ShieldCheck size={14} className="mr-1" /> Audit
             </Button>
           );

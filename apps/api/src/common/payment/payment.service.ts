@@ -6,6 +6,7 @@ import {
 import { Xendit } from 'xendit-node';
 import { ConfigService } from '@nestjs/config';
 import { RelatedType } from '@lucky/shared';
+import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
 
 @Injectable()
 export class PaymentService {
@@ -87,22 +88,23 @@ export class PaymentService {
         `[Xendit] Creating Disbursement for ${payload.orderNo} - ${payload.bankCode}`,
       );
 
-      const response = await this.xenditClient.Payout.createPayout({
-        idempotencyKey: `payout-${payload.orderNo}`,
-        data: {
-          referenceId: payload.orderNo,
-          currency: 'PHP',
-          channelCode: payload.bankCode,
-          channelProperties: {
-            accountNumber: payload.accountNumber,
-            accountHolderName: payload.accountName,
+      const response: GetPayouts200ResponseDataInner =
+        await this.xenditClient.Payout.createPayout({
+          idempotencyKey: `payout-${payload.orderNo}`,
+          data: {
+            referenceId: payload.orderNo,
+            currency: 'PHP',
+            channelCode: payload.bankCode,
+            channelProperties: {
+              accountNumber: payload.accountNumber,
+              accountHolderName: payload.accountName,
+            },
+            amount: payload.amount,
+            description:
+              payload.description ||
+              `${RelatedType.WITHDRAWAL}-${payload.orderNo}`,
           },
-          amount: payload.amount,
-          description:
-            payload.description ||
-            `${RelatedType.WITHDRAWAL}-${payload.orderNo}`,
-        },
-      });
+        });
 
       this.logger.log(
         `[Xendit] Payout Created: ${response.id} | Status: ${response.status}`,

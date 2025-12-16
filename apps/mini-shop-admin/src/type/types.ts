@@ -295,6 +295,7 @@ export interface WithdrawOrder {
 
   createdAt: string | number; // 申请时间
   completedAt?: string | number;
+  appliedAt?: string | number;
 
   user?: Pick<User, 'nickname' | 'avatar' | 'phone'>;
 }

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useRequest } from 'ahooks';
 import { Button } from '@repo/ui';
 import { financeApi } from '@/api';
-import { WithdrawResponseDto } from '@/type/types'; // Updated DTO import
 import { User, CreditCard, ArrowRight, Clock, Copy, Hash } from 'lucide-react';
 import {
   NumHelper,
@@ -10,36 +9,14 @@ import {
   WITHDRAW_STATUS,
   WithdrawStatus,
 } from '@lucky/shared';
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'; // Assuming you have this from previous steps
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { WithdrawOrder } from '@/type/types.ts'; // Assuming you have this from previous steps
 
 interface Props {
-  data: WithdrawResponseDto;
+  data: WithdrawOrder;
   confirm: () => void;
-  close: () => void;
 }
-
-const InfoItem = ({
-  label,
-  value,
-  className = '',
-}: {
-  label: string;
-  value: React.ReactNode;
-  className?: string;
-}) => (
-  <div className={className}>
-    <div className="text-xs text-gray-500 mb-0.5">{label}</div>
-    <div className="text-sm font-medium text-gray-900 dark:text-gray-200">
-      {value}
-    </div>
-  </div>
-);
-
-export const WithdrawAuditModal: React.FC<Props> = ({
-  data,
-  confirm,
-  close,
-}) => {
+export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
   const [remark, setRemark] = useState('');
   const { copy } = useCopyToClipboard();
 
@@ -47,7 +24,6 @@ export const WithdrawAuditModal: React.FC<Props> = ({
     manual: true,
     onSuccess: () => {
       confirm();
-      close();
     },
   });
 
