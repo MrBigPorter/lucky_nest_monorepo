@@ -26,15 +26,20 @@ export class PaymentWebhookController {
     @Body() payload: any, //防止网关增加字段导致 DTO 校验失败 (400 Bad Request)
     @Headers('x-callback-token') token: string,
   ) {
-    // check token validity
-    if (!this.paymentService.verifyCallbackToken(token)) {
-      throw new UnauthorizedException('Invalid callback token');
+    // xendit webhook handling
+    if (channel === 'xendit') {
+      // check token validity
+      if (!this.paymentService.verifyCallbackToken(token)) {
+        throw new UnauthorizedException('Invalid callback token');
+      }
+
+      // 2. 业务处理
+      // 注意：目前只处理了充值。如果后续做提现，可以在这里判断
+      // 比如检查 payload.status 是 'COMPLETED' (提现) 还是 'PAID' (充值)
+      await this.clientWalletService.handleUniversalWebhook(payload);
     }
 
-    // 2. 业务处理
-    // 注意：目前只处理了充值。如果后续做提现，可以在这里判断
-    // 比如检查 payload.status 是 'COMPLETED' (提现) 还是 'PAID' (充值)
-    await this.clientWalletService.handleUniversalWebhook(payload);
+    // Respond with OK status
 
     return { status: 'OK' };
   }

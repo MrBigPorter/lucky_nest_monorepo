@@ -31,35 +31,49 @@ export class ClientWalletService {
   ) {}
 
   async handleUniversalWebhook(payload: any) {
-    const externalId = payload.external_id;
-
-    if (!externalId) {
-      this.logger.warn('[Webhook] Missing external_id, ignored.');
-      return;
+    //  判定逻辑 1: 是否为代付/提现 (Payout)
+    // 依据：Xendit Payout V2 API 回调一定包含 event 字段，且以 'payout.' 开头
+    if (
+      payload?.event &&
+      typeof payload?.event === 'string' &&
+      payload?.event?.startsWith('payout.')
+    ) {
+      this.logger.log(
+        `[Webhook Router] Identified as PAYOUT (Event: ${payload.event})`,
+      );
+      return this.handlePayoutWebhook(payload.data);
     }
 
-    // Determine if it's a recharge or withdrawal based on the prefix
-    if (externalId.startsWith(BizPrefix.WITHDRAW)) {
-      return this.handleDisbursementCallback(payload);
-    } else {
-      // Default to recharge
-      return this.handleRechargeCallback(payload);
+    // 判定逻辑 2: 依据 external_id
+    if (payload?.external_id) {
+      this.logger.log(
+        `[Webhook Router] Identified as INVOICE (Order: ${payload.external_id})`,
+      );
+      return this.handleInvoiceWebhook(payload);
     }
+
+    // 兜底逻辑：无法识别
+    this.logger.warn(`[Webhook Router] Unknown payload format, ignored.`);
+    return { status: 'IGNORED', reason: 'Unknown Format' };
   }
 
   /**
    * Handle recharge webhook from payment gateway
    * @param payload
    */
-  private async handleRechargeCallback(payload: any) {
+  private async handleInvoiceWebhook(payload: any) {
     const orderNo = payload.external_id;
     const status = payload.status; // 'PAID', 'EXPIRED', etc.
     const amount = payload.amount;
     const transactionId = payload.id;
 
-    this.logger.log(
-      `[Webhook] Processing Order: ${orderNo}, Status: ${status}`,
-    );
+    // double check prefix
+    if (!orderNo || !orderNo.startsWith(BizPrefix.DEPOSIT)) {
+      this.logger.warn(`[Invoice] Invalid OrderNo prefix: ${orderNo}`);
+      return { status: 'IGNORED', message: 'Invalid Prefix' };
+    }
+
+    this.logger.log(`[Invoice Logic] Processing ${orderNo}, Status: ${status}`);
 
     // Ignore non-successful statuses
     if (status !== 'PAID' && status !== 'SETTLED' && status !== 'SUCCESS') {
@@ -129,14 +143,18 @@ export class ClientWalletService {
    * Handle disbursement (withdrawal) webhook from payment gateway
    * @param payload
    */
-  private async handleDisbursementCallback(payload: any) {
-    const orderNo = payload.external_id;
+  private async handlePayoutWebhook(payload: any) {
+    const orderNo = payload.reference_id;
     const status = payload.status; // 'COMPLETED', 'FAILED', etc.
     const failureCode = payload.failure_code;
 
-    this.logger.log(
-      `[Disbursement Webhook] Order: ${orderNo}, Status: ${status}`,
-    );
+    // double check prefix
+    if (!orderNo || !orderNo.startsWith(BizPrefix.WITHDRAW)) {
+      this.logger.warn(`[Payout] Invalid OrderNo prefix: ${orderNo}`);
+      return { status: 'IGNORED', message: 'Invalid Prefix' };
+    }
+
+    this.logger.log(`[Payout Logic] Processing ${orderNo}, Status: ${status}`);
 
     return this.prismaService.$transaction(async (ctx) => {
       // Find the withdrawal order
@@ -160,7 +178,7 @@ export class ClientWalletService {
 
       const amount = order.actualAmount;
 
-      if (status === 'COMPLETED') {
+      if (status === 'SUCCEEDED' || status === 'COMPLETED') {
         await ctx.userWallet.update({
           where: { userId: order.userId },
           data: {
@@ -285,24 +303,23 @@ export class ClientWalletService {
     });
 
     // Create payment link via payment gateway ,get xendit invoice url
-    let paymentUrl: string;
     try {
-      paymentUrl = await this.paymentService.createRechargeLink(
+      let paymentUrl = await this.paymentService.createRechargeLink(
         order.rechargeNo,
         amount.toNumber(),
         // user.email,
       );
+      // return { payUrl: order.payUrl, orderId: order.rechargeId };
+      return {
+        rechargeNo: order.rechargeNo,
+        rechargeAmount: order.rechargeAmount.toString(),
+        payUrl: paymentUrl,
+        rechargeStatus: order.rechargeStatus,
+      };
     } catch (e) {
       // In case of failure, we might want to handle it (e.g., log, cleanup)
       throw e;
     }
-    // return { payUrl: order.payUrl, orderId: order.rechargeId };
-    return {
-      rechargeNo: order.rechargeNo,
-      rechargeAmount: order.rechargeAmount.toString(),
-      payUrl: paymentUrl,
-      rechargeStatus: order.rechargeStatus,
-    };
   }
 
   /** Get transaction history
