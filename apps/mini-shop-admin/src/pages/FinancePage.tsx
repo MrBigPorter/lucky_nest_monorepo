@@ -49,22 +49,12 @@ export const FinancePage: React.FC = () => {
         <button
           onClick={() => setActiveTab('deposits')}
           className={`pb-3 text-sm font-medium flex items-center gap-2 transition-all ${
-            activeTab === 'transactions'
+            activeTab === 'deposits'
               ? 'border-b-2 border-primary-500 text-primary-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           <ArrowRightLeft size={16} /> Deposit Records
-        </button>
-        <button
-          onClick={() => setActiveTab('transactions')}
-          className={`pb-3 text-sm font-medium flex items-center gap-2 transition-all ${
-            activeTab === 'transactions'
-              ? 'border-b-2 border-primary-500 text-primary-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <ArrowRightLeft size={16} /> Transactions & Adjust
         </button>
         <button
           onClick={() => setActiveTab('withdrawals')}
@@ -75,6 +65,16 @@ export const FinancePage: React.FC = () => {
           }`}
         >
           <FileText size={16} /> Withdrawal Audits
+        </button>
+        <button
+          onClick={() => setActiveTab('transactions')}
+          className={`pb-3 text-sm font-medium flex items-center gap-2 transition-all ${
+            activeTab === 'transactions'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <ArrowRightLeft size={16} /> Transactions & Adjust
         </button>
       </div>
 
