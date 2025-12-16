@@ -23,10 +23,14 @@ import { TRANSACTION_TYPE } from '@lucky/shared';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
 import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
 import { AuditWithdrawDto } from '@api/admin/finance/dto/audit-withdraw.dto';
+import { PaymentService } from '@api/common/payment/payment.service';
 
 @Injectable()
 export class FinanceService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private paymentService: PaymentService,
+  ) {}
 
   /**
    * Get a paginated list of wallet transactions with optional filters
@@ -268,6 +272,7 @@ export class FinanceService {
 
   /**
    * Audit a withdrawal order
+   * 提现审核：通过则打款，拒绝则退回冻结金额
    * @param dto
    * @param adminId
    */
@@ -301,102 +306,92 @@ export class FinanceService {
 
       const amount = new Prisma.Decimal(order.withdrawAmount);
 
-      // 审核通过 (Approve) -> 扣除冻结资金 (frozenBalance -> totalWithdraw)
+      // 审核通过 (APPROVE) -> 触发打款
       if (status === WITHDRAW_STATUS.SUCCESS) {
+        // 1. 调用 Xendit 代付接口 (网络请求)
+        // 注意：这里不要包裹在 prisma.$transaction 里，避免长时间锁表
+        let xenditResp;
         try {
-          await ctx.userWallet.update({
-            where: {
-              userId: order.userId,
-              // 确保有足够的冻结余额
-              frozenBalance: { gte: amount },
-            },
-            data: {
-              frozenBalance: { decrement: amount }, // 扣除冻结余额
-              totalWithdraw: { increment: amount }, // 增加总提现金额
-            },
+          const bankCode =
+            order.withdrawMethod === 1 ? 'PH_GCASH' : 'PH_PAYMAYA';
+
+          xenditResp = await this.paymentService.createDisbursement({
+            orderNo: order.withdrawNo,
+            amount: amount.toNumber(),
+            bankCode: bankCode,
+            accountName: order?.accountName || '',
+            accountNumber: order?.withdrawAccount || '',
+            description: `Withdrawal for ${order.withdrawNo}`,
           });
-        } catch (error) {
-          if (
-            error instanceof PrismaClientKnownRequestError &&
-            error.code === 'P2025'
-          ) {
-            throw new BadRequestException(
-              'system error: insufficient frozen balance',
-            );
-          }
+        } catch (error: any) {
+          throw new BadRequestException(`Xendit API Failed: ${error.message}`);
         }
 
-        // 记录提现成功流水, 记账为支出
-        await ctx.walletTransaction.updateMany({
-          where: {
-            relatedId: order.withdrawId,
-            relatedType: RelatedType.WITHDRAWAL,
-            status: TRANSACTION_STATUS.PROCESSING,
-          },
+        // 2. 更新提现订单状态为处理中
+        return this.prismaService.withdrawOrder.update({
+          where: { withdrawId },
           data: {
-            status: TRANSACTION_STATUS.SUCCESS,
-            description: 'wallet withdrawal approved and completed',
-            remark: `Audit Approved by ${adminId}`,
-            updatedAt: new Date(),
+            withdrawStatus: WITHDRAW_STATUS.PROCESSING,
+            thirdPartyOrderNo: xenditResp?.referenceId,
+            auditorId: adminId,
+            auditedAt: new Date(),
+            auditResult: `Xendit Status: ${xenditResp?.status}`,
           },
         });
       } else {
-        //  审核拒绝 (Reject) -> 解冻资金 (frozen -> realBalance)
-        //  拒绝通常不产生支出流水，资金只是退回
-        try {
+        return this.prismaService.$transaction(async (ctx) => {
+          // get wallet again in this transaction context
+          const wallet = await ctx.userWallet.findUnique({
+            where: { userId: order.userId },
+          });
+
+          if (!wallet) {
+            throw new NotFoundException('User wallet not found');
+          }
+
+          const amount = new Prisma.Decimal(order.withdrawAmount);
+
+          // 审核拒绝 (REJECT) -> 退回冻结金额到可用余额
           await ctx.userWallet.update({
-            where: {
-              userId: order.userId,
-              frozenBalance: { gte: amount }, // 确保有足够的冻结余额
-            },
+            where: { userId: order.userId, frozenBalance: { gte: amount } },
             data: {
-              frozenBalance: { decrement: amount }, // 解冻,减少冻结余额
-              realBalance: { increment: amount }, // 返还到可用余额
+              realBalance: { increment: amount }, // 返还可用余额
+              frozenBalance: { decrement: amount }, // 减少冻结余额
             },
           });
-        } catch (error) {
-          if (
-            error instanceof PrismaClientKnownRequestError &&
-            error.code === 'P2025'
-          ) {
-            throw new BadRequestException(
-              'system error: insufficient frozen balance',
-            );
-          }
-          throw error;
-        }
 
-        await ctx.walletTransaction.create({
-          data: {
-            transactionNo: OrderNoHelper.generate(BizPrefix.WITHDRAW),
-            userId: order.userId,
-            walletId: wallet.id,
-            transactionType: TRANSACTION_TYPE.REFUND, // 提现拒绝
-            balanceType: BALANCE_TYPE.CASH, // 现金余额
-            amount: amount, // 返还记正数
-            beforeBalance: wallet.realBalance, // 变动前余额
-            afterBalance: wallet.realBalance.plus(amount), // 变动后余额
-            description: 'wallet withdrawal rejected, funds returned',
-            status: TRANSACTION_STATUS.SUCCESS,
-            relatedId: order.withdrawId,
-            relatedType: RelatedType.WITHDRAWAL,
-            remark: `Audit Rejected by ${adminId}`,
-          },
+          // 更新流水记录
+          await ctx.walletTransaction.create({
+            data: {
+              transactionNo: OrderNoHelper.generate(BizPrefix.REFUND),
+              userId: order.userId,
+              walletId: wallet.id,
+              transactionType: TRANSACTION_TYPE.REFUND, // 提现拒绝
+              balanceType: BALANCE_TYPE.CASH, // 现金余额
+              amount: amount, // 返还记正数
+              beforeBalance: wallet.realBalance, // 变动前余额
+              afterBalance: wallet.realBalance.plus(amount), // 变动后余额
+              description: `Withdraw rejected: ${remark}`,
+              status: TRANSACTION_STATUS.SUCCESS,
+              relatedId: order.withdrawId,
+              relatedType: RelatedType.WITHDRAWAL,
+              remark: `Audit Rejected by ${adminId}`,
+            },
+          });
+
+          // 更新提现订单状态为拒绝
+          return ctx.withdrawOrder.update({
+            where: { withdrawId },
+            data: {
+              withdrawStatus: WITHDRAW_STATUS.REJECTED,
+              auditResult: remark,
+              auditorId: adminId,
+              auditedAt: new Date(),
+              rejectReason: remark,
+            },
+          });
         });
       }
-
-      // 5. 更新提现订单状态
-      return ctx.withdrawOrder.update({
-        where: { withdrawId },
-        data: {
-          withdrawStatus: status,
-          auditResult: remark,
-          rejectReason: status === WITHDRAW_STATUS.REJECTED ? remark : null,
-          auditorId: adminId,
-          auditedAt: new Date(),
-          completedAt: status === WITHDRAW_STATUS.SUCCESS ? new Date() : null,
-        },
-      });
     });
   }
 }

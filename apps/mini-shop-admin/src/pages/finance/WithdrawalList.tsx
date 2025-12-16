@@ -9,7 +9,13 @@ import { BaseTable } from '@/components/scaffold/BaseTable';
 import { financeApi } from '@/api';
 import { WithdrawAuditModal } from './WithdrawAuditModal';
 import { WithdrawOrder } from '@/type/types';
-import { WITHDRAW_STATUS, NumHelper, TimeHelper } from '@lucky/shared';
+import {
+  WITHDRAW_STATUS,
+  NumHelper,
+  TimeHelper,
+  WITHDRAW_STATUS_OPTIONS,
+} from '@lucky/shared';
+import { STATUS_CONFIG } from '@/pages/finance/type.ts';
 
 export const WithdrawalList: React.FC = () => {
   const { tableProps, search, refresh } = useAntdTable(
@@ -66,15 +72,12 @@ export const WithdrawalList: React.FC = () => {
         header: 'Status',
         cell: (info) => {
           const status = info.getValue();
-          const color =
-            status === WITHDRAW_STATUS.SUCCESS
-              ? 'green'
-              : status === WITHDRAW_STATUS.REJECTED
-                ? 'red'
-                : status === WITHDRAW_STATUS.PENDING_AUDIT
-                  ? 'yellow'
-                  : 'gray';
-          return <Badge color={color}>{WITHDRAW_STATUS[status]}</Badge>;
+          // 自动匹配，匹配不到则兜底显示 Unknown
+          const { color, label } = STATUS_CONFIG[status] || {
+            color: 'gray',
+            label: 'Unknown',
+          };
+          return <Badge color={color}>{label}</Badge>;
         },
       }),
       helper.accessor('createdAt', {
@@ -126,9 +129,11 @@ export const WithdrawalList: React.FC = () => {
             type: 'select',
             key: 'status',
             label: 'Status',
-            options: Object.keys(WITHDRAW_STATUS)
-              .filter((k) => isNaN(Number(k)))
-              .map((k) => ({ label: k, value: WITHDRAW_STATUS[k as any] })),
+            defaultValue: 1,
+            options: WITHDRAW_STATUS_OPTIONS.map((item) => ({
+              label: item.label,
+              value: String(item.value),
+            })),
           },
         ]}
         onSearch={search.submit}

@@ -3,13 +3,13 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import Xendit from 'xendit-node';
+import { Xendit } from 'xendit-node';
 import { ConfigService } from '@nestjs/config';
 import { RelatedType } from '@lucky/shared';
 
 @Injectable()
 export class PaymentService {
-  private readonly xenditClient: any;
+  private readonly xenditClient: Xendit;
   private readonly logger = new Logger(PaymentService.name);
   constructor(private configService: ConfigService) {
     // 初始化 Xendit 客户端
@@ -58,8 +58,8 @@ export class PaymentService {
           invoiceDuration: 86400, // 24 hour,
           currency: 'PHP',
           payerEmail: userEmail,
-          successRedirectURL: `${frontendUrl}/wallet/recharge/success`,
-          failureRedirectURL: `${frontendUrl}/wallet/recharge/failure`,
+          successRedirectUrl: `${frontendUrl}/wallet/recharge/success`,
+          failureRedirectUrl: `${frontendUrl}/wallet/recharge/failure`,
         },
       });
 
@@ -87,13 +87,17 @@ export class PaymentService {
         `[Xendit] Creating Disbursement for ${payload.orderNo} - ${payload.bankCode}`,
       );
 
-      const response = await this.xenditClient.Disbursement.createDisbursement({
+      const response = await this.xenditClient.Payout.createPayout({
+        idempotencyKey: `payout-${payload.orderNo}`,
         data: {
-          external_id: payload.orderNo,
+          referenceId: payload.orderNo,
+          currency: 'PHP',
+          channelCode: payload.bankCode,
+          channelProperties: {
+            accountNumber: payload.accountNumber,
+            accountHolderName: payload.accountName,
+          },
           amount: payload.amount,
-          bank_code: payload.bankCode,
-          account_holder_name: payload.accountName,
-          account_number: payload.accountNumber,
           description:
             payload.description ||
             `${RelatedType.WITHDRAWAL}-${payload.orderNo}`,
@@ -101,7 +105,7 @@ export class PaymentService {
       });
 
       this.logger.log(
-        `[Xendit] Disbursement Created: ${response.id} | Status: ${response.status}`,
+        `[Xendit] Payout Created: ${response.id} | Status: ${response.status}`,
       );
 
       return response;
@@ -113,8 +117,8 @@ export class PaymentService {
   private handleXenditError(error: any, context: string) {
     this.logger.error(`[Xendit Error - ${context}] ${error.message}`);
     if (error.response?.data) {
-      console.log(
-        'Xendit Raw Error:',
+      console.error(
+        'Xendit Raw Error Details:',
         JSON.stringify(error.response.data, null, 2),
       );
     }

@@ -153,7 +153,7 @@ class HttpClient {
         this.handleUnauthorized();
       }
     } else if (error.request) {
-      msg = '网络连接超时，请检查网络';
+      msg = 'unknown network error, please check your connection';
     } else {
       msg = error.message || msg;
     }

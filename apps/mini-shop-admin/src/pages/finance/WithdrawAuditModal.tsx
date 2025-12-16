@@ -2,80 +2,176 @@ import React, { useState } from 'react';
 import { useRequest } from 'ahooks';
 import { Button } from '@repo/ui';
 import { financeApi } from '@/api';
-import { WithdrawOrder } from '@/type/types';
-import { AlertTriangle, User } from 'lucide-react';
-import { NumHelper, WITHDRAW_STATUS, WithdrawStatus } from '@lucky/shared';
+import { WithdrawResponseDto } from '@/type/types'; // Updated DTO import
+import { User, CreditCard, ArrowRight, Clock, Copy, Hash } from 'lucide-react';
+import {
+  NumHelper,
+  TimeHelper,
+  WITHDRAW_STATUS,
+  WithdrawStatus,
+} from '@lucky/shared';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'; // Assuming you have this from previous steps
 
 interface Props {
-  data: WithdrawOrder;
+  data: WithdrawResponseDto;
   confirm: () => void;
+  close: () => void;
 }
 
-export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
+const InfoItem = ({
+  label,
+  value,
+  className = '',
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) => (
+  <div className={className}>
+    <div className="text-xs text-gray-500 mb-0.5">{label}</div>
+    <div className="text-sm font-medium text-gray-900 dark:text-gray-200">
+      {value}
+    </div>
+  </div>
+);
+
+export const WithdrawAuditModal: React.FC<Props> = ({
+  data,
+  confirm,
+  close,
+}) => {
   const [remark, setRemark] = useState('');
+  const { copy } = useCopyToClipboard();
 
   const { run, loading } = useRequest(financeApi.withdrawalsAudit, {
     manual: true,
-    onSuccess: confirm,
+    onSuccess: () => {
+      confirm();
+      close();
+    },
   });
 
   const handleAudit = (status: WithdrawStatus) => {
-    if (!remark) return; // 简单校验
+    // For Reject, remark is usually mandatory. For Approve, it might be optional,
+    // but based on your previous code, let's keep it required for safety or check logic here.
+    if (status === WITHDRAW_STATUS.REJECTED && !remark) {
+      return; // Reject must have a reason
+    }
     run({ withdrawId: data.withdrawId, status, remark });
   };
 
   return (
-    <div className="space-y-6">
-      {/* 1. 用户与订单概览 */}
-      <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-            {data.user?.avatar ? (
-              <img src={data.user.avatar} className="rounded-full" alt="" />
-            ) : (
-              <User size={20} />
-            )}
+    <div className="space-y-5">
+      {/* 1. Header: ID & Time */}
+      <div className="flex justify-between items-center text-xs text-gray-400 border-b border-gray-100 pb-3 dark:border-white/10">
+        <div className="flex items-center gap-1 font-mono">
+          <Hash size={12} />
+          {data.withdrawNo}
+          <Copy
+            size={12}
+            className="cursor-pointer hover:text-primary-500"
+            onClick={() => copy(data.withdrawNo, 'Withdraw No')}
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          <Clock size={12} />
+          Applied: {TimeHelper.formatDateTime(data.appliedAt)}
+        </div>
+      </div>
+
+      {/* 2. User Info & Account Target */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Left: Who is withdrawing? */}
+        <div className="bg-gray-50 dark:bg-white/5 p-3 rounded-lg space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <User size={16} className="text-gray-500" />
+            <span className="text-sm font-bold">User Info</span>
           </div>
-          <div>
-            <div className="font-bold">{data.user?.nickname || 'Unknown'}</div>
-            <div className="text-xs text-gray-500">{data.user?.phone}</div>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center overflow-hidden">
+              {/* Note: DTO `user` structure might need checking if it has avatar, otherwise fallback */}
+              <User size={16} className="text-gray-500" />
+            </div>
+            <div className="overflow-hidden">
+              <div className="text-sm font-bold truncate">
+                {data.user?.nickname || 'Unknown'}
+              </div>
+              <div className="text-xs text-gray-500">{data.user?.phone}</div>
+            </div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-xs text-gray-500">Withdraw Amount</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {NumHelper.formatMoney(data.withdrawAmount)}
+
+        {/* Right: Where is money going? (Crucial for Audit) */}
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-lg space-y-3">
+          <div className="flex items-center gap-2 mb-2 text-blue-700 dark:text-blue-400">
+            <CreditCard size={16} />
+            <span className="text-sm font-bold">Target Account</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-xs text-gray-500">Channel:</span>
+              <span className="text-xs font-bold">{data.withdrawMethod}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-gray-500">Name:</span>
+              <span className="text-xs font-medium">{data.accountName}</span>
+            </div>
+            <div className="pt-1 border-t border-blue-100 dark:border-white/10 mt-1">
+              <div className="text-xs text-gray-500">Account No:</div>
+              <div className="text-sm font-mono font-bold flex items-center gap-2">
+                {data.withdrawAccount}
+                <Copy
+                  size={12}
+                  className="cursor-pointer text-gray-400 hover:text-blue-500"
+                  onClick={() => copy(data.withdrawAccount, 'Account No')}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 2. 风控数据展示 (模拟数据) */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 border rounded-lg bg-green-50 border-green-100">
-          <div className="text-xs text-gray-500">Total Recharge</div>
-          <div className="font-semibold text-green-700">₱54,000.00</div>
-        </div>
-        <div className="p-3 border rounded-lg bg-red-50 border-red-100">
-          <div className="text-xs text-gray-500">Total Withdraw</div>
-          <div className="font-semibold text-red-700">₱12,500.00</div>
+      {/* 3. Financial Breakdown */}
+      <div className="bg-white dark:bg-black/20 border border-gray-100 dark:border-white/10 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          {/* Request Amount */}
+          <div className="text-left">
+            <div className="text-xs text-gray-500 mb-1">Request Amount</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-300">
+              {NumHelper.formatMoney(data.withdrawAmount)}
+            </div>
+          </div>
+
+          {/* Fee */}
+          <div className="flex flex-col items-center px-4">
+            <ArrowRight size={16} className="text-gray-300 mb-1" />
+            <div className="text-xs text-red-500 font-medium bg-red-50 px-2 py-0.5 rounded-full">
+              - Fee: {NumHelper.formatMoney(data.feeAmount)}
+            </div>
+          </div>
+
+          {/* Actual Payout */}
+          <div className="text-right">
+            <div className="text-xs text-gray-500 mb-1">Actual Payout</div>
+            <div className="text-2xl font-bold text-primary-600">
+              {NumHelper.formatMoney(data.actualAmount)}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-start gap-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-yellow-800 text-sm">
-        <AlertTriangle size={16} className="mt-0.5" />
-        <div>
-          <strong>Risk Check:</strong> User IP changed 3 times in 24h. Manual
-          verification recommended.
-        </div>
-      </div>
-
-      {/* 3. 审核表单 */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium">Audit Remark</label>
+      {/* 4. Audit Action */}
+      <div className="space-y-3 pt-2">
+        <label className="text-sm font-medium flex justify-between">
+          <span>Audit Remark</span>
+          <span className="text-xs text-gray-400 font-normal">
+            Required for rejection
+          </span>
+        </label>
         <textarea
-          className="w-full border rounded-md p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+          className="w-full border border-gray-200 dark:border-white/20 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-transparent"
           rows={3}
-          placeholder="Enter audit opinion (Required for both Approve and Reject)"
+          placeholder="Enter audit opinion..."
           value={remark}
           onChange={(e) => setRemark(e.target.value)}
         />
@@ -85,7 +181,7 @@ export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
         <Button
           variant="danger"
           className="flex-1"
-          disabled={!remark}
+          disabled={!remark} // Force remark for safety, or change logic if needed
           isLoading={loading}
           onClick={() => handleAudit(WITHDRAW_STATUS.REJECTED)}
         >
@@ -93,12 +189,12 @@ export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
         </Button>
         <Button
           variant="primary"
-          className="flex-1 bg-green-600 hover:bg-green-700 border-green-600"
-          disabled={!remark}
+          className="flex-1"
           isLoading={loading}
+          // Approve might not strictly need a remark, but good for records
           onClick={() => handleAudit(WITHDRAW_STATUS.SUCCESS)}
         >
-          Approve
+          Approve Payout
         </Button>
       </div>
     </div>

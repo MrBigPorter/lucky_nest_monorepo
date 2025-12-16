@@ -26,6 +26,7 @@ import { TransactionResponseDto } from '@api/admin/finance/dto/transaction-respo
 import { WithdrawListResponseDto } from '@api/admin/finance/dto/withdraw-list-response.dto';
 import { ReaIp } from '@api/common/decorators/http.decorators';
 import { WithdrawResponseDto } from '@api/admin/finance/dto/withdraw-response.dto';
+import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
 
 @ApiTags('Admin Finance Management')
 @ApiBearerAuth()
@@ -70,13 +71,13 @@ export class FinanceController {
   @Get('withdrawals')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.VIEW)
   @ApiOkResponse({ type: WithdrawListResponseDto })
-  async getWithdrawals(@Query() dto: QueryTransactionDto) {
+  async getWithdrawals(@Query() dto: QueryWithdrawalsDto) {
     const data = await this.financeService.getWithdrawals(dto);
     return {
       total: data.total,
       page: dto.page,
       pageSize: dto.pageSize,
-      list: plainToInstance(TransactionResponseDto, data.list, {
+      list: plainToInstance(WithdrawResponseDto, data.list, {
         excludeExtraneousValues: true,
       }),
     };

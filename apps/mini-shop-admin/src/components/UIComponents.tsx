@@ -291,9 +291,16 @@ export const Switch: React.FC<{
 );
 
 // --- Badge ---
+export type BadgeColor =
+  | 'green'
+  | 'blue'
+  | 'yellow'
+  | 'red'
+  | 'purple'
+  | 'gray';
 export const Badge: React.FC<{
   children: React.ReactNode;
-  color?: 'green' | 'blue' | 'yellow' | 'red' | 'purple' | 'gray';
+  color?: BadgeColor;
 }> = ({ children, color = 'blue' }) => {
   const colors = {
     green:
