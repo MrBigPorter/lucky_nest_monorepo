@@ -22,6 +22,7 @@
     "axios": "^1.13.2",
     "copy-to-clipboard": "^3.3.3",
     "framer-motion": "^11.0.8",
+    "lodash.get": "^4.4.2",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.17",
+    "@types/lodash.get": "^4",
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
