@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
@@ -31,6 +32,7 @@ import { WalletService } from '@api/client/wallet/wallet.service';
 
 @Injectable()
 export class FinanceService {
+  private readonly logger = new Logger(FinanceService.name);
   constructor(
     private prismaService: PrismaService,
     private paymentService: PaymentService,
@@ -471,7 +473,7 @@ export class FinanceService {
 
     // only pending orders can be synced
     if (order.rechargeStatus === RECHARGE_STATUS.SUCCESS) {
-      return { message: 'Recharge order already successful' };
+      return { status: 'NO_CHANGE', message: 'Order already successful' };
     }
 
     //dluble check (Invoice + E-Wallet)
@@ -496,6 +498,10 @@ export class FinanceService {
     if (!xenditInvoice) {
       // too old, mark as failed,more than 1 hour
       if (TimeHelper.isOlderThan(order.createdAt, 1, 'hour')) {
+        this.logger.warn(
+          `Cleaning ghost order ${order.rechargeNo} (Not found on Xendit)`,
+        );
+
         await this.prismaService.rechargeOrder.update({
           where: { rechargeId },
           data: {
@@ -563,6 +569,9 @@ export class FinanceService {
             },
           },
         });
+        this.logger.log(
+          `Synced success for ${order.rechargeNo}: ${xenditInvoice.status}`,
+        );
         return {
           status: 'SYNCED_SUCCESS',
           message: 'Order fixed and user credited.',
@@ -571,14 +580,12 @@ export class FinanceService {
     }
 
     // handle expired or failed orders
-    if (['EXPIRED', 'FAILED', 'VOIDED'].includes(xenditInvoice.status)) {
+    if (xenditInvoice.status === 'EXPIRED') {
       await this.prismaService.rechargeOrder.update({
         where: { rechargeId },
-        data: {
-          rechargeStatus: RECHARGE_STATUS.FAILED,
-        },
+        data: { rechargeStatus: RECHARGE_STATUS.FAILED },
       });
-      return { status: 'SYNCED_EXPIRED', message: 'Order marked as expired.' };
+      return { status: 'SYNCED_EXPIRED', message: 'Order expired' };
     }
     return { status: 'NO_CHANGE', xenditStatus: xenditInvoice.status };
   }
