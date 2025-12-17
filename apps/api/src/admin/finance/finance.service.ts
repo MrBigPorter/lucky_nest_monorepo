@@ -26,7 +26,6 @@ import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dt
 import { AuditWithdrawDto } from '@api/admin/finance/dto/audit-withdraw.dto';
 import { PaymentService } from '@api/common/payment/payment.service';
 import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
-import { QueryOrderDto } from '@api/admin/order/dto/query-order.dto';
 import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
 import { WalletService } from '@api/client/wallet/wallet.service';
 
@@ -453,6 +452,11 @@ export class FinanceService {
     return { list, total, page, pageSize };
   }
 
+  /**
+   * Sync recharge order status with Xendit
+   * @param rechargeId
+   * @param adminId
+   */
   async syncRechargeStatus(rechargeId: string, adminId: string) {
     // check recharge order
     const order = await this.prismaService.rechargeOrder.findUnique({
@@ -492,7 +496,7 @@ export class FinanceService {
     ) {
       const amount = new Prisma.Decimal(order.rechargeAmount);
 
-      await this.prismaService.$transaction(async (ctx) => {
+      return this.prismaService.$transaction(async (ctx) => {
         // give user cash balance
         await this.walletService.creditCash(
           {
@@ -506,20 +510,25 @@ export class FinanceService {
           },
           ctx,
         );
+
+        const paidTime = xenditInvoice.paid_at
+          ? new Date(xenditInvoice.paid_at)
+          : xenditInvoice.paidAt
+            ? new Date(xenditInvoice.paidAt)
+            : new Date();
+
         // update recharge order status
         await ctx.rechargeOrder.update({
           where: { rechargeId },
           data: {
             rechargeStatus: RECHARGE_STATUS.SUCCESS,
-            paidAt: new Date(xenditInvoice.paid_at) || new Date(),
+            paidAt: paidTime,
             thirdPartyOrderNo: xenditInvoice.id,
             callbackData: {
               ...xenditInvoice,
-              callbackData: {
-                ...xenditInvoice,
-                syncBy: adminId,
-                syncAt: new Date(),
-              },
+              syncBy: adminId,
+              syncAt: new Date(),
+              syncType: 'MANUAL',
             },
           },
         });
@@ -617,7 +626,6 @@ export class FinanceService {
     ]);
 
     const calcTrend = (current: number, previous: number) => {
-      console.log('calcTrend', { current, previous });
       if (previous === 0) return current > 0 ? 100 : 0;
       return ((current - previous) / previous) * 100;
     };
