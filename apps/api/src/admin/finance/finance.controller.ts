@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { PermissionsGuard } from '@api/common/guards/permissions.guard';
@@ -132,5 +140,11 @@ export class FinanceController {
   @ApiOkResponse({ type: QueryStatisticsDto })
   async getStatistics() {
     return this.financeService.getStatistics();
+  }
+
+  @Post('recharge/sync/:id')
+  @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.VIEW)
+  async syncRecharge(@Param('id') id: string, @CurrentUserId() userId: string) {
+    return this.financeService.syncRechargeStatus(id, userId);
   }
 }
