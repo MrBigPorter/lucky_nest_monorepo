@@ -46,6 +46,13 @@ export class RechargeResponseDto {
   paymentMethod!: number;
 
   @ApiProperty({
+    description: 'Payment Channel',
+    example: 'GCASH',
+  })
+  @Expose()
+  paymentChannel!: string;
+
+  @ApiProperty({
     description: 'Third Party Order Number',
     example: 'TP1234567890',
     required: false,
@@ -60,6 +67,13 @@ export class RechargeResponseDto {
   @Expose()
   @DateToTimestamp()
   createdAt!: number;
+
+  @ApiProperty({
+    description: 'Paid At (Timestamp)',
+  })
+  @Expose()
+  @DateToTimestamp()
+  paidAt?: number;
 
   @ApiProperty({ description: 'User Info' })
   @Expose()

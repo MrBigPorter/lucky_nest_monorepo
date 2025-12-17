@@ -65,6 +65,20 @@ export class NumHelper {
     });
   }
 
+  static formatTrend = (valueStr: string) => {
+    const val = Number(valueStr);
+    if (isNaN(val)) return "0.00%";
+
+    // 1. 绝对值 (用来显示数字)
+    const absVal = Math.abs(val).toFixed(2);
+
+    // 2. 符号 (大于0加 '+', 小于0自带 '-')
+    const sign = val > 0 ? "+" : val < 0 ? "-" : "";
+
+    // 3. 拼装：符号 + 数字 + %
+    return `${sign}${absVal}%`;
+  };
+
   /**
    * 字节大小 (Byte)
    * 1024 => 1KB

@@ -19,9 +19,11 @@ export type TimeRangeType =
   | "today"
   | "yesterday"
   | "week"
+  | "lastWeek"
   | "last7days"
   | "last30days"
   | "month"
+  | "lastMonth"
   | "quarter"
   | "year";
 
@@ -165,6 +167,10 @@ export class TimeHelper {
         start = now.startOf("isoWeek");
         end = now.endOf("isoWeek");
         break;
+      case "lastWeek":
+        start = now.subtract(1, "week").startOf("isoWeek");
+        end = now.subtract(1, "week").endOf("isoWeek");
+        break;
       case "last7days":
         start = now.subtract(6, "day").startOf("day");
         end = now.endOf("day");
@@ -176,6 +182,10 @@ export class TimeHelper {
       case "month":
         start = now.startOf("month");
         end = now.endOf("month");
+        break;
+      case "lastMonth":
+        start = now.subtract(1, "month").startOf("month");
+        end = now.subtract(1, "month").endOf("month");
         break;
       case "quarter":
         start = now.startOf("quarter");

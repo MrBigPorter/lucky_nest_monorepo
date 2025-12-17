@@ -13,6 +13,7 @@ import {
   OpAction,
   OpModule,
   OrderNoHelper,
+  RECHARGE_STATUS,
   RelatedType,
   TimeHelper,
   TRANSACTION_STATUS,
@@ -393,7 +394,8 @@ export class FinanceService {
    * @param dto
    */
   async recharges(dto: QueryRechargeOrdersDto) {
-    const { page, pageSize, status, keyword, startDate, endDate } = dto;
+    const { page, pageSize, status, keyword, startDate, endDate, channel } =
+      dto;
 
     const skip = (page - 1) * pageSize;
     const whereConditions: Prisma.RechargeOrderWhereInput = {};
@@ -406,6 +408,10 @@ export class FinanceService {
         ...(startDate ? { gte: TimeHelper.getStartOfDay(startDate) } : {}),
         ...(endDate ? { lte: TimeHelper.getEndOfDay(endDate) } : {}),
       };
+    }
+
+    if (channel) {
+      whereConditions.paymentChannel = channel;
     }
 
     if (keyword) {
@@ -422,21 +428,132 @@ export class FinanceService {
       ];
     }
 
-    const [list, total] = await this.prismaService.rechargeOrder.findMany({
-      where: whereConditions,
-      skip,
-      take: pageSize,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            nickname: true,
-            phone: true,
+    const [list, total] = await this.prismaService.$transaction([
+      this.prismaService.rechargeOrder.findMany({
+        where: whereConditions,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              nickname: true,
+              phone: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.prismaService.rechargeOrder.count({
+        where: whereConditions,
+      }),
+    ]);
 
     return { list, total, page, pageSize };
+  }
+
+  /**
+   * Get financial statistics: pending withdrawals, total deposits, total withdrawals
+   * @return Statistics object
+   */
+  async getStatistics() {
+    const thisWeekRange = TimeHelper.getRange('week');
+    const lastWeekRange = TimeHelper.getRange('lastWeek');
+
+    const [
+      pendingWithdrawAgg,
+      totalDepositAgg,
+      totalWithdrawAgg,
+      depositThisWeekAgg,
+      depositLastWeekAgg,
+      withdrawThisWeekAgg,
+      withdrawLastWeekAgg,
+    ] = await Promise.all([
+      // 获取待处理提现总额(审核中 + 处理中)
+      this.prismaService.withdrawOrder.aggregate({
+        _sum: { actualAmount: true },
+        where: {
+          withdrawStatus: {
+            in: [WITHDRAW_STATUS.PENDING_AUDIT, WITHDRAW_STATUS.PROCESSING],
+          },
+        },
+      }),
+      // 获取总充值金额
+      this.prismaService.rechargeOrder.aggregate({
+        _sum: { rechargeAmount: true },
+        where: {
+          rechargeStatus: RECHARGE_STATUS.SUCCESS,
+        },
+      }),
+      // 获取总提现金额
+      this.prismaService.withdrawOrder.aggregate({
+        _sum: { actualAmount: true },
+        where: {
+          withdrawStatus: WITHDRAW_STATUS.SUCCESS,
+        },
+      }),
+      // 本周充值总额
+      this.prismaService.rechargeOrder.aggregate({
+        _sum: { rechargeAmount: true },
+        where: {
+          rechargeStatus: RECHARGE_STATUS.SUCCESS,
+          createdAt: thisWeekRange,
+        },
+      }),
+      // 上周充值总额
+      this.prismaService.rechargeOrder.aggregate({
+        _sum: { rechargeAmount: true },
+        where: {
+          rechargeStatus: RECHARGE_STATUS.SUCCESS,
+          createdAt: lastWeekRange,
+        },
+      }),
+      // 本周提现总额
+      this.prismaService.withdrawOrder.aggregate({
+        _sum: { actualAmount: true },
+        where: {
+          withdrawStatus: WITHDRAW_STATUS.SUCCESS,
+          createdAt: thisWeekRange,
+        },
+      }),
+      // 上周提现总额
+      this.prismaService.withdrawOrder.aggregate({
+        _sum: { actualAmount: true },
+        where: {
+          withdrawStatus: WITHDRAW_STATUS.SUCCESS,
+          createdAt: lastWeekRange,
+        },
+      }),
+    ]);
+
+    const calcTrend = (current: number, previous: number) => {
+      console.log('calcTrend', { current, previous });
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / previous) * 100;
+    };
+
+    const depositThisWeek =
+      depositThisWeekAgg._sum.rechargeAmount?.toNumber() || 0;
+
+    const depositLastWeek =
+      depositLastWeekAgg._sum.rechargeAmount?.toNumber() || 0;
+
+    const withdrawThisWeek =
+      withdrawThisWeekAgg._sum.actualAmount?.toNumber() || 0;
+
+    const withdrawLastWeek =
+      withdrawLastWeekAgg._sum.actualAmount?.toNumber() || 0;
+
+    const pendingWithdraw =
+      pendingWithdrawAgg._sum.actualAmount?.toString() || '0';
+    const totalDeposit = totalDepositAgg._sum.rechargeAmount?.toString() || '0';
+    const totalWithdraw = totalWithdrawAgg._sum.actualAmount?.toString() || '0';
+
+    return {
+      pendingWithdraw,
+      totalWithdraw,
+      totalDeposit,
+      depositTrend: calcTrend(depositThisWeek, depositLastWeek).toFixed(2),
+      withdrawTrend: calcTrend(withdrawThisWeek, withdrawLastWeek).toFixed(2),
+    };
   }
 }
