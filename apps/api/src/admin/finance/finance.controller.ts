@@ -27,6 +27,8 @@ import { WithdrawListResponseDto } from '@api/admin/finance/dto/withdraw-list-re
 import { ReaIp } from '@api/common/decorators/http.decorators';
 import { WithdrawResponseDto } from '@api/admin/finance/dto/withdraw-response.dto';
 import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
+import { RechargeListResponseDto } from '@api/admin/finance/dto/recharge-list-response.dto';
+import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
 
 @ApiTags('Admin Finance Management')
 @ApiBearerAuth()
@@ -50,6 +52,12 @@ export class FinanceController {
     };
   }
 
+  /**
+   * Manual adjustment of user balance
+   * @param dto
+   * @param userId
+   * @param ip
+   */
   @Post('adjust')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.MANUAL_ADJUST)
   @ApiOkResponse({ type: TransactionResponseDto })
@@ -67,6 +75,10 @@ export class FinanceController {
     });
   }
 
+  /**
+   * Get withdrawal requests
+   * @param dto
+   */
   @Get('withdrawals')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.VIEW)
   @ApiOkResponse({ type: WithdrawListResponseDto })
@@ -83,6 +95,31 @@ export class FinanceController {
     };
   }
 
+  /**
+   * Get recharge orders
+   * @param dto
+   */
+  @Get('recharges')
+  @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.VIEW)
+  @ApiOkResponse({ type: RechargeListResponseDto })
+  async getRecharges(@Query() dto: QueryRechargeOrdersDto) {
+    const data = await this.financeService.recharges(dto);
+    const list = plainToInstance(RechargeListResponseDto, data.list, {
+      excludeExtraneousValues: true,
+    });
+    return {
+      total: data.total,
+      page: dto.page,
+      pageSize: dto.pageSize,
+      list: list,
+    };
+  }
+
+  /**
+   * Audit withdrawal request
+   * @param dto
+   * @param userId
+   */
   @Post('withdrawals/audit')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.WITHDRAW_AUDIT)
   @ApiOkResponse({ type: WithdrawResponseDto })
