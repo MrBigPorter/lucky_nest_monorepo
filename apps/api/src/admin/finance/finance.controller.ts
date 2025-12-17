@@ -31,7 +31,6 @@ import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dt
 @ApiTags('Admin Finance Management')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('admin/finance')
 export class FinanceController {
   constructor(private readonly financeService: FinanceService) {}
@@ -73,13 +72,14 @@ export class FinanceController {
   @ApiOkResponse({ type: WithdrawListResponseDto })
   async getWithdrawals(@Query() dto: QueryWithdrawalsDto) {
     const data = await this.financeService.getWithdrawals(dto);
+    const list = plainToInstance(WithdrawResponseDto, data.list, {
+      excludeExtraneousValues: true,
+    });
     return {
       total: data.total,
       page: dto.page,
       pageSize: dto.pageSize,
-      list: plainToInstance(WithdrawResponseDto, data.list, {
-        excludeExtraneousValues: true,
-      }),
+      list: list,
     };
   }
 

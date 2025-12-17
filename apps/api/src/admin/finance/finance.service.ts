@@ -268,7 +268,6 @@ export class FinanceService {
         where: whereConditions,
       }),
     ]);
-    console.log('Withdrawals List:', list);
     return { list, total, page, pageSize };
   }
 
