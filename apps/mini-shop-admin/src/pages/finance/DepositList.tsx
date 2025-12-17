@@ -41,7 +41,6 @@ export const DepositList: React.FC = () => {
       onSuccess: (res) => {
         if (res.status === 'SYNCED_SUCCESS') {
           addToast('success', 'Order synced successfully! User credited.');
-          actionRef.current?.reload();
         } else if (res.status === 'SYNCED_EXPIRED') {
           addToast('info', 'Order expired on Xendit.');
           actionRef.current?.reload();
@@ -56,6 +55,7 @@ export const DepositList: React.FC = () => {
         addToast('error', error.message || 'Failed to sync order');
       },
       onFinally: () => {
+        actionRef.current?.reload();
         setSyncingId(null);
       },
     },
@@ -63,6 +63,7 @@ export const DepositList: React.FC = () => {
 
   const handleSync = useCallback(
     async (record: RechargeOrder) => {
+      setSyncingId(record.rechargeId);
       syncRecharge(record.rechargeId);
     },
     [syncRecharge],
@@ -187,7 +188,13 @@ export const DepositList: React.FC = () => {
         },
       },
     ],
-    [handleViewDetail, statusValueEnum, handleSync, syncingId], // Added dependencies
+    [
+      statusValueEnum,
+      syncRechargeLoading,
+      syncingId,
+      handleViewDetail,
+      handleSync,
+    ], // Added dependencies
   );
 
   const searchSchema: FormSchema[] = useMemo(
