@@ -116,6 +116,42 @@ export class PaymentService {
     }
   }
 
+  /**
+   *  Get Invoice details by Invoice ID
+   * @param invoiceId
+   */
+  async getInvoiceById(invoiceId: string) {
+    try {
+      return await this.xenditClient.Invoice.getInvoiceById({
+        invoiceId: invoiceId,
+      });
+    } catch (error: any) {
+      this.handleXenditError(error, `Get Invoice By ID: ${invoiceId}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get Invoice details by External ID (business order number)
+   * @param externalId
+   */
+  async getInvoiceByExternalId(externalId: string) {
+    try {
+      const response = await this.xenditClient.Invoice.getInvoices({
+        externalId: externalId,
+        limit: 1,
+      });
+
+      if (response && response.length > 0) {
+        return response[0];
+      }
+      return null;
+    } catch (e) {
+      this.handleXenditError(e, `Get Invoice By External ID: ${externalId}`);
+      return null;
+    }
+  }
+
   private handleXenditError(error: any, context: string) {
     this.logger.error(`[Xendit Error - ${context}] ${error.message}`);
     if (error.response?.data) {

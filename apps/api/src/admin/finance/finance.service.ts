@@ -28,12 +28,14 @@ import { PaymentService } from '@api/common/payment/payment.service';
 import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
 import { QueryOrderDto } from '@api/admin/order/dto/query-order.dto';
 import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
+import { WalletService } from '@api/client/wallet/wallet.service';
 
 @Injectable()
 export class FinanceService {
   constructor(
     private prismaService: PrismaService,
     private paymentService: PaymentService,
+    private walletService: WalletService,
   ) {}
 
   /**
@@ -449,6 +451,95 @@ export class FinanceService {
     ]);
 
     return { list, total, page, pageSize };
+  }
+
+  async syncRechargeStatus(rechargeId: string, adminId: string) {
+    // check recharge order
+    const order = await this.prismaService.rechargeOrder.findUnique({
+      where: {
+        rechargeId,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Recharge order not found');
+    }
+
+    // only pending orders can be synced
+    if (order.rechargeStatus === RECHARGE_STATUS.SUCCESS) {
+      return { message: 'Recharge order already successful' };
+    }
+
+    let xenditInvoice;
+
+    if (order.thirdPartyOrderNo) {
+      xenditInvoice = await this.paymentService.getInvoiceById(
+        order.thirdPartyOrderNo,
+      );
+    }
+
+    if (!xenditInvoice) {
+      xenditInvoice = await this.paymentService.getInvoiceByExternalId(
+        order.rechargeNo,
+      );
+    }
+
+    if (!xenditInvoice) throw new NotFoundException('Xendit invoice not found');
+
+    if (
+      (xenditInvoice.status === 'PAID' || xenditInvoice.status === 'SETTLED') &&
+      order.rechargeStatus !== RECHARGE_STATUS.SUCCESS
+    ) {
+      const amount = new Prisma.Decimal(order.rechargeAmount);
+
+      await this.prismaService.$transaction(async (ctx) => {
+        // give user cash balance
+        await this.walletService.creditCash(
+          {
+            userId: order.userId,
+            amount: amount,
+            related: {
+              id: order.rechargeId,
+              type: RelatedType.RECHARGE,
+            },
+            desc: `Manual Sync by Admin: ${adminId}`,
+          },
+          ctx,
+        );
+        // update recharge order status
+        await ctx.rechargeOrder.update({
+          where: { rechargeId },
+          data: {
+            rechargeStatus: RECHARGE_STATUS.SUCCESS,
+            paidAt: new Date(xenditInvoice.paid_at) || new Date(),
+            thirdPartyOrderNo: xenditInvoice.id,
+            callbackData: {
+              ...xenditInvoice,
+              callbackData: {
+                ...xenditInvoice,
+                syncBy: adminId,
+                syncAt: new Date(),
+              },
+            },
+          },
+        });
+        return {
+          status: 'SYNCED_SUCCESS',
+          message: 'Order fixed and user credited.',
+        };
+      });
+    }
+
+    if (xenditInvoice.status === 'EXPIRED') {
+      await this.prismaService.rechargeOrder.update({
+        where: { rechargeId },
+        data: {
+          rechargeStatus: RECHARGE_STATUS.FAILED,
+        },
+      });
+      return { status: 'SYNCED_EXPIRED', message: 'Order marked as expired.' };
+    }
+    return { status: 'NO_CHANGE', xenditStatus: xenditInvoice.status };
   }
 
   /**
