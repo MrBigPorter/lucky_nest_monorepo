@@ -13,10 +13,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { OtpThrottlerGuard } from '@api/common/guards/otp-throttler.guard';
 import { UploadModule } from '@api/common/upload/upload.module';
 import { PaymentModule } from '@api/common/payment/payment.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
   imports: [
+    // 定时任务模块
+    ScheduleModule.forRoot(),
+    // 1) 全局配置模块：环境变量校验
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: Joi.object({
