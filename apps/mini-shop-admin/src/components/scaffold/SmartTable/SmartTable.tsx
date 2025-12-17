@@ -53,6 +53,7 @@ const renderSmartCell = (
   type?: ValueType,
   valueEnum?: valueEnumType,
 ) => {
+  console.log('Rendering cell:', { text, type });
   if (text === null || text === undefined || text === '') return '-';
 
   switch (type) {

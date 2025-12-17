@@ -251,15 +251,36 @@ export function BigIntToString() {
   );
 }
 
-/** Date -> Timestamp (毫秒) */
+/**
+ * 强力转换：任意格式 (Date | string) -> Timestamp (毫秒 number)
+ */
 export function DateToTimestamp() {
   return applyDecorators(
-    // 显式声明类型为 Date，帮助底层识别
+    // 1. 依然保留 Type，辅助 class-transformer 识别
     Type(() => Date),
+
+    // 2. 升级 Transform 逻辑，手动兼容 String 情况
     Transform(({ value }) => {
       if (value === null || value === undefined) return null;
-      if (value instanceof Date) return value.getTime();
-      return value; // 如果已经是时间戳，原样返回
+
+      // 情况 A: 已经是 Date 对象 (比如数据库直接读出的)
+      if (value instanceof Date) {
+        return value.getTime();
+      }
+
+      // 情况 B: 是字符串 (比如 ISO 时间 "2023-12-16T...") -> 核心修复点 🔥
+      if (typeof value === 'string') {
+        const date = new Date(value);
+        // 稍微做个校验，防止无效日期变成 NaN
+        return isNaN(date.getTime()) ? null : date.getTime();
+      }
+
+      // 情况 C: 已经是数字了 (时间戳)，直接返回
+      if (typeof value === 'number') {
+        return value;
+      }
+
+      return value;
     }),
   );
 }

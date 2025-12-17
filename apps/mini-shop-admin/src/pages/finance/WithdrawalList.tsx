@@ -75,7 +75,7 @@ export const WithdrawalList: React.FC = () => {
       },
       {
         title: 'Applied At',
-        dataIndex: 'createdAt',
+        dataIndex: 'appliedAt',
         valueType: 'dateTime',
       },
       {

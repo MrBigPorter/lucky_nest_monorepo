@@ -29,7 +29,6 @@ import { WithdrawalHistoryResponseDto } from '@api/client/wallet/dto/withdrawal-
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@UseInterceptors(ClassSerializerInterceptor)
 @Controller('wallet')
 export class WalletController {
   constructor(
