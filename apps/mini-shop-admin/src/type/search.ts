@@ -29,4 +29,4 @@ export interface SearchFieldSchema<T> {
   mode?: 'single' | 'range';
 }
 
-export type FormSchema = SearchFieldSchema<any>;
+export type FormSchema<T = any> = SearchFieldSchema<T>;

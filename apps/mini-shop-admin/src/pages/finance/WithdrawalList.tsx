@@ -6,11 +6,12 @@ import {
   ActionType,
 } from '@/components/scaffold/SmartTable';
 import { financeApi } from '@/api';
-import { WithdrawOrder } from '@/type/types';
+import { WithdrawListParams, WithdrawOrder } from '@/type/types';
 import { WithdrawAuditModal } from './WithdrawAuditModal';
 import { STATUS_CONFIG } from '@/pages/finance/type.ts';
 import { WITHDRAW_STATUS, WITHDRAW_STATUS_OPTIONS } from '@lucky/shared';
 import { EyeIcon, ShieldCheck } from 'lucide-react';
+import { FormSchema } from '@/type/search.ts';
 
 export const WithdrawalList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
@@ -23,14 +24,13 @@ export const WithdrawalList: React.FC = () => {
           data={record}
           confirm={() => {
             confirm();
-            actionRef.current?.reload(true); // ✅ 建议审核后回到第一页并刷新
+            actionRef.current?.reload(true);
           }}
         />
       ),
     });
   }, []);
 
-  // ✅ 把 valueEnum 也单独 memo（避免 columns 里 reduce 产生新对象的风险）
   const statusValueEnum = useMemo(() => {
     return WITHDRAW_STATUS_OPTIONS.reduce(
       (acc, item) => {
@@ -51,15 +51,10 @@ export const WithdrawalList: React.FC = () => {
         title: 'Order No.',
         dataIndex: 'withdrawNo',
         copyable: true,
-        search: {
-          title: 'Order No',
-          formItemProps: { placeholder: 'Search Order No' },
-        },
       },
       {
         title: 'User',
         dataIndex: 'user',
-        search: false,
         render: (_, row) => (
           <div>
             <div className="font-medium">{row.user?.nickname}</div>
@@ -71,22 +66,17 @@ export const WithdrawalList: React.FC = () => {
         title: 'Amount',
         dataIndex: 'withdrawAmount',
         valueType: 'money',
-        search: false,
       },
       {
         title: 'Status',
-        dataIndex: 'status',
+        dataIndex: 'withdrawStatus',
         valueType: 'select',
         valueEnum: statusValueEnum,
       },
       {
-        title: 'Start Date',
-        dataIndex: 'startDate',
+        title: 'Applied At',
+        dataIndex: 'createdAt',
         valueType: 'dateTime',
-        search: {
-          valueType: 'dateTime',
-          transform: (value) => ({ startDate: value[0], endDate: value[1] }),
-        },
       },
       {
         title: 'Action',
@@ -95,13 +85,9 @@ export const WithdrawalList: React.FC = () => {
         render: (_, row) => {
           const isPending =
             row.withdrawStatus === WITHDRAW_STATUS.PENDING_AUDIT;
-
+          const color = isPending ? 'danger' : 'primary';
           return (
-            <Button
-              variant={isPending ? 'danger' : 'ghost'}
-              size="sm"
-              onClick={() => handleAudit(row)}
-            >
+            <Button variant={color} size="sm" onClick={() => handleAudit(row)}>
               {isPending ? (
                 <ShieldCheck size={14} className="mr-1" />
               ) : (
@@ -116,9 +102,46 @@ export const WithdrawalList: React.FC = () => {
     [handleAudit, statusValueEnum],
   );
 
-  // ✅ 关键修复：request 用 useCallback 固定引用
-  const requestWithdrawals = useCallback(async (params: any) => {
+  const searchSchema: FormSchema[] = useMemo(
+    () => [
+      {
+        type: 'input',
+        key: 'keyword', // 搜索字段：keyword
+        label: 'Keyword',
+        placeholder: 'Order No / Phone / Nickname', // 聚合搜索提示
+      },
+      {
+        type: 'select',
+        key: 'status',
+        label: 'Status',
+        defaultValue: 'ALL',
+        options: [
+          { label: 'All Status', value: 'ALL' },
+          ...WITHDRAW_STATUS_OPTIONS.map((opt) => ({
+            label: opt.label,
+            value: String(opt.value),
+          })),
+        ],
+      },
+      {
+        type: 'date',
+        key: 'startDate',
+        label: 'Start Date',
+        mode: 'single',
+      },
+      {
+        type: 'date',
+        key: 'endDate',
+        label: 'End Date',
+        mode: 'single',
+      },
+    ],
+    [],
+  );
+
+  const requestWithdrawals = useCallback(async (params: WithdrawListParams) => {
     const requestData = { ...params };
+
     if (requestData.status === 'ALL') delete requestData.status;
 
     const res = await financeApi.getWithdrawals(requestData);
@@ -129,7 +152,6 @@ export const WithdrawalList: React.FC = () => {
     };
   }, []);
 
-  // ✅ toolBarRender 也固定引用（SmartTable 内部如果 useEffect 依赖它会抖）
   const toolBarRender = useCallback(
     () => [
       <Button key="export" variant="outline">
@@ -142,10 +164,10 @@ export const WithdrawalList: React.FC = () => {
   return (
     <div className="p-4">
       <SmartTable<WithdrawOrder>
-        headerTitle="Withdrawal Requests"
         rowKey="withdrawId"
         ref={actionRef}
         columns={columns}
+        searchSchema={searchSchema}
         request={requestWithdrawals}
         toolBarRender={toolBarRender}
       />

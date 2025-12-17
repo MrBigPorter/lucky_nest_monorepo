@@ -10,22 +10,31 @@ import get from 'lodash/get';
 import { RefreshCw, Download } from 'lucide-react';
 import { Button } from '@repo/ui';
 
-// ⚠️ 确保路径正确
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { Badge } from '@/components/UIComponents';
 import { NumHelper, TimeHelper } from '@lucky/shared';
 
 import type { ProColumns, RequestData, ActionType, ValueType } from './types';
+import { FormSchema } from '@/type/search.ts';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface SmartTableProps<T extends Record<string, any>> {
   rowKey: keyof T;
   headerTitle?: React.ReactNode;
+
+  // 表格列定义 (主要负责展示)
   columns: ProColumns<T>[];
+
+  // 独立的搜索表单配置 (如果有它，就不从 columns 生成搜索项)
+  searchSchema?: FormSchema[];
+
   request?: RequestData<T>;
   dataSource?: T[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: Record<string, any>;
   toolBarRender?: () => React.ReactNode[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onExport?: (params: any) => void;
   defaultPageSize?: number;
 }
@@ -33,6 +42,7 @@ interface SmartTableProps<T extends Record<string, any>> {
 // ------------------------------------
 // 渲染单元格内容
 // ------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const renderSmartCell = (text: any, type?: ValueType, valueEnum?: any) => {
   if (text === null || text === undefined || text === '') return '-';
 
@@ -54,13 +64,7 @@ const renderSmartCell = (text: any, type?: ValueType, valueEnum?: any) => {
     case 'select':
       if (valueEnum && valueEnum[text]) {
         const { text: label, status, color } = valueEnum[text];
-        const badgeColor =
-          color ||
-          (status === 'Success'
-            ? 'green'
-            : status === 'Error'
-              ? 'red'
-              : 'gray');
+        const badgeColor = color || status || 'default';
         return <Badge color={badgeColor}>{label}</Badge>;
       }
       return text;
@@ -70,9 +74,9 @@ const renderSmartCell = (text: any, type?: ValueType, valueEnum?: any) => {
 };
 
 // ------------------------------------
-// Columns -> Search Schema
+// Columns -> Search Schema (默认生成逻辑)
 // ------------------------------------
-const transformColumnsToSchema = (columns: ProColumns[]): any[] => {
+const transformColumnsToSchema = (columns: ProColumns[]): FormSchema[] => {
   return columns
     .filter(
       (col) =>
@@ -80,6 +84,7 @@ const transformColumnsToSchema = (columns: ProColumns[]): any[] => {
     )
     .map((col) => {
       let type = 'input';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let options: any[] | undefined = undefined;
 
       const searchConfig = typeof col.search === 'object' ? col.search : {};
@@ -88,7 +93,7 @@ const transformColumnsToSchema = (columns: ProColumns[]): any[] => {
       if (valueType === 'select' && col.valueEnum) {
         type = 'select';
         options = Object.entries(col.valueEnum).map(([k, v]) => ({
-          label: (v as any).text,
+          label: (v as typeof v).text,
           value: k,
         }));
         options.unshift({ label: 'All', value: 'ALL' });
@@ -100,13 +105,18 @@ const transformColumnsToSchema = (columns: ProColumns[]): any[] => {
 
       return {
         key: (col.dataIndex as string) || '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         label: (searchConfig as any).title || col.title,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         type: type as any,
         options,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         placeholder: (searchConfig as any).formItemProps?.placeholder
-          ? (searchConfig as any).formItemProps?.placeholder
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (searchConfig as any).formItemProps?.placeholder
           : `Search ${col.title}`,
         // 透传给 FormItem 的属性
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(searchConfig as any).formItemProps,
         // dateRange 强制 range
         ...(valueType === 'dateRange' ? { mode: 'range' } : {}),
@@ -117,12 +127,14 @@ const transformColumnsToSchema = (columns: ProColumns[]): any[] => {
 // ------------------------------------
 // 内部组件
 // ------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SmartTableInner = <T extends Record<string, any>>(
   props: SmartTableProps<T>,
   ref: React.Ref<ActionType>,
 ) => {
   const {
     columns,
+    searchSchema: explicitSearchSchema, // ✨ 获取显式传入的 searchSchema
     request,
     dataSource,
     rowKey,
@@ -130,11 +142,10 @@ const SmartTableInner = <T extends Record<string, any>>(
     toolBarRender,
     onExport,
     defaultPageSize = 10,
-    params, // ✅ 修复 1: 不要在这里解构赋值 params = {}
+    params,
   } = props;
 
-  // ✅ 修复 2: 使用 useMemo 锁定 params 引用
-  // 只有当父组件传入的 params 真正变化时，externalParams 才会变
+  // ✅ 引用锁定，防止死循环
   const externalParams = useMemo(() => params || {}, [params]);
 
   const [data, setData] = useState<T[]>(dataSource || []);
@@ -146,6 +157,7 @@ const SmartTableInner = <T extends Record<string, any>>(
     pageSize: defaultPageSize,
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formParams, setFormParams] = useState<Record<string, any>>({});
 
   const onPageChange = useCallback((p: number, ps: number) => {
@@ -171,20 +183,25 @@ const SmartTableInner = <T extends Record<string, any>>(
       setLoading(true);
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedParams: Record<string, any> = { ...searchParams };
 
-        columns.forEach((col) => {
-          const searchConfig = typeof col.search === 'object' ? col.search : {};
-          const key = col.dataIndex as string;
-          console.log('key:', key);
-          console.log('Transformed Params:', transformedParams);
-          if (searchConfig.transform && transformedParams[key]) {
-            const transformed = searchConfig.transform(transformedParams[key]);
-            delete transformedParams[key];
-            console.log('Transformed Params:', transformed);
-            Object.assign(transformedParams, transformed);
-          }
-        });
+        // 只有在没有使用独立 searchSchema 时，才尝试从 columns 里自动转换参数
+        // 如果使用了 explicitSearchSchema，建议在 request 函数里手动处理转换
+        if (!explicitSearchSchema) {
+          columns.forEach((col) => {
+            const searchConfig =
+              typeof col.search === 'object' ? col.search : {};
+            const key = col.dataIndex as string;
+            if (searchConfig.transform && transformedParams[key]) {
+              const transformed = searchConfig.transform(
+                transformedParams[key],
+              );
+              delete transformedParams[key];
+              Object.assign(transformedParams, transformed);
+            }
+          });
+        }
 
         Object.keys(transformedParams).forEach((key) => {
           if (transformedParams[key] === 'ALL') delete transformedParams[key];
@@ -193,7 +210,7 @@ const SmartTableInner = <T extends Record<string, any>>(
         const res = await request({
           page: pageParams.page,
           pageSize: pageParams.pageSize,
-          ...externalParams, // ✅ 这里的 externalParams 引用现在是稳定的
+          ...externalParams,
           ...transformedParams,
         });
 
@@ -205,12 +222,18 @@ const SmartTableInner = <T extends Record<string, any>>(
         setLoading(false);
       }
     },
-    // ✅ 依赖项安全了
-    [request, columns, externalParams, pagination, formParams],
+    [
+      request,
+      columns,
+      externalParams,
+      pagination,
+      formParams,
+      explicitSearchSchema,
+    ],
   );
 
   useEffect(() => {
-    if (request) fetchData();
+    if (request) fetchData().catch();
     else if (dataSource) setData(dataSource);
   }, [request, dataSource, fetchData]);
 
@@ -223,10 +246,10 @@ const SmartTableInner = <T extends Record<string, any>>(
             if (p.page === 1) return p;
             return { ...p, page: 1 };
           });
-          fetchData({ ...pagination, page: 1 }, formParams);
+          fetchData({ ...pagination, page: 1 }, formParams).catch();
           return;
         }
-        fetchData(pagination, formParams);
+        fetchData(pagination, formParams).catch();
       },
       reset: () => {
         setFormParams({});
@@ -236,9 +259,10 @@ const SmartTableInner = <T extends Record<string, any>>(
     [fetchData, pagination, formParams],
   );
 
-  const searchSchema = useMemo(
-    () => transformColumnsToSchema(columns),
-    [columns],
+  //  核心逻辑：优先使用传入的 searchSchema，否则从 columns 生成
+  const finalSearchSchema = useMemo(
+    () => explicitSearchSchema || transformColumnsToSchema(columns),
+    [columns, explicitSearchSchema],
   );
 
   const tableColumns = useMemo(() => {
@@ -248,6 +272,7 @@ const SmartTableInner = <T extends Record<string, any>>(
         header: col.title,
         accessorKey: col.dataIndex as string,
         size: col.width,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cell: (info: any) => {
           const rawValue = col.dataIndex
             ? get(info.row.original, col.dataIndex as string)
@@ -268,19 +293,27 @@ const SmartTableInner = <T extends Record<string, any>>(
       }));
   }, [columns]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSearch = useCallback((values: any) => {
     setPagination((p) => {
       if (p.page === 1) return p;
       return { ...p, page: 1 };
     });
+
+    // 简单的清理逻辑
     for (const key in values) {
-      if (!values[key]) {
+      if (
+        values[key] === '' ||
+        values[key] === undefined ||
+        values[key] === null
+      ) {
         delete values[key];
       }
       if (values[key] === 'ALL') {
         delete values[key];
       }
     }
+
     setFormParams(values);
   }, []);
 
@@ -293,14 +326,14 @@ const SmartTableInner = <T extends Record<string, any>>(
   }, []);
 
   const handleRefresh = useCallback(() => {
-    fetchData();
+    fetchData().catch();
   }, [fetchData]);
 
   return (
     <div className="space-y-4">
-      {searchSchema.length > 0 && (
+      {finalSearchSchema.length > 0 && (
         <SchemaSearchForm
-          schema={searchSchema}
+          schema={finalSearchSchema}
           onSearch={handleSearch}
           onReset={handleReset}
         />
@@ -327,7 +360,6 @@ const SmartTableInner = <T extends Record<string, any>>(
             {request && (
               <Button
                 variant="ghost"
-                size="icon"
                 onClick={handleRefresh}
                 disabled={loading}
               >
@@ -353,6 +385,7 @@ const SmartTableInner = <T extends Record<string, any>>(
 };
 
 export const SmartTable = forwardRef(SmartTableInner) as <
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   T extends Record<string, any>,
 >(
   props: SmartTableProps<T> & { ref?: React.Ref<ActionType> },
