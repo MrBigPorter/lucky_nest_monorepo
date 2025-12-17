@@ -142,6 +142,11 @@ export class FinanceController {
     return this.financeService.getStatistics();
   }
 
+  /**
+   * Sync recharge order status
+   * @param id
+   * @param userId
+   */
   @Post('recharge/sync/:id')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.VIEW)
   async syncRecharge(@Param('id') id: string, @CurrentUserId() userId: string) {

@@ -316,6 +316,11 @@ export const financeApi = {
   getStatistics: () => {
     return http.get<Statistics>('/v1/admin/finance/statistics');
   },
+
+  // 同步充值状态
+  syncRecharge: (id: string) => {
+    return http.post(`/v1/admin/finance/recharge/sync/${id}`);
+  },
 };
 
 /**

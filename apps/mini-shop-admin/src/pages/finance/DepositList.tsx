@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useRef, useMemo, useCallback, useState } from 'react';
 import { Button, ModalManager } from '@repo/ui';
 import {
   SmartTable,
@@ -9,13 +9,22 @@ import { financeApi } from '@/api';
 import { RechargeListParams, RechargeOrder } from '@/type/types';
 import { DepositDetailModal } from './DepositDetailModal';
 import { DEPOSIT_STATUS_CONFIG, CHANNEL_OPTIONS } from './type';
-import { Search, ArrowDownLeft } from 'lucide-react';
+import { Search, ArrowDownLeft, RefreshCw } from 'lucide-react'; // Added RefreshCw icon
 import { FormSchema } from '@/type/search.ts';
 import { Badge } from '@repo/ui/components/ui/badge.tsx';
+import { useToastStore } from '@/store/useToastStore.ts';
+import { useRequest } from 'ahooks';
+import { RECHARGE_STATUS } from '@lucky/shared';
+
+// Assuming your RECHARGE_STATUS enum/const looks something like this:
+// const RECHARGE_STATUS = { PENDING: 0, SUCCESS: 1, FAILED: 2 };
 
 export const DepositList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null); // State for loading effect
+  const addToast = useToastStore((state) => state.addToast);
 
+  // 1. View Details
   const handleViewDetail = useCallback((record: RechargeOrder) => {
     ModalManager.open({
       title: 'Deposit Order Details',
@@ -24,6 +33,40 @@ export const DepositList: React.FC = () => {
       ),
     });
   }, []);
+
+  const { run: syncRecharge, loading: syncRechargeLoading } = useRequest(
+    financeApi.syncRecharge,
+    {
+      manual: true,
+      onSuccess: (res) => {
+        if (res.status === 'SYNCED_SUCCESS') {
+          addToast('success', 'Order synced successfully! User credited.');
+          actionRef.current?.reload();
+        } else if (res.status === 'SYNCED_EXPIRED') {
+          addToast('info', 'Order expired on Xendit.');
+          actionRef.current?.reload();
+        } else {
+          addToast(
+            'info',
+            `Sync complete: Order status is ${res.xenditStatus}`,
+          );
+        }
+      },
+      onError: (error) => {
+        addToast('error', error.message || 'Failed to sync order');
+      },
+      onFinally: () => {
+        setSyncingId(null);
+      },
+    },
+  );
+
+  const handleSync = useCallback(
+    async (record: RechargeOrder) => {
+      syncRecharge(record.rechargeId);
+    },
+    [syncRecharge],
+  );
 
   const statusValueEnum = useMemo(() => {
     const enumMap: Record<string, { text: string; status: string }> = {};
@@ -100,9 +143,18 @@ export const DepositList: React.FC = () => {
       {
         title: 'Action',
         valueType: 'option',
-        width: 140,
+        width: 180, // Increased width to fit buttons
         render: (_, row) => {
           const button = DEPOSIT_STATUS_CONFIG[row.rechargeStatus];
+          // Assuming 0 is PENDING. You might need to import your ENUM here.
+          const isPending = row.rechargeStatus === RECHARGE_STATUS.PENDING;
+
+          console.log(
+            'Rendering action buttons for row:',
+            row,
+            'isPending:',
+            isPending,
+          );
           return (
             <div className="flex gap-2">
               <Button
@@ -112,15 +164,32 @@ export const DepositList: React.FC = () => {
               >
                 <Search size={14} className="mr-1" /> View
               </Button>
+
+              {/* [NEW] Sync Button: Only show for PENDING orders */}
+              {isPending && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  isLoading={syncRechargeLoading}
+                  disabled={syncingId === row.rechargeId}
+                  onClick={() => handleSync(row)}
+                  className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                >
+                  <RefreshCw
+                    size={14}
+                    className={`mr-1 ${syncingId === row.rechargeId ? 'animate-spin' : ''}`}
+                  />
+                  {syncingId === row.rechargeId ? 'Syncing' : 'Sync'}
+                </Button>
+              )}
             </div>
           );
         },
       },
     ],
-    [handleViewDetail, statusValueEnum],
+    [handleViewDetail, statusValueEnum, handleSync, syncingId], // Added dependencies
   );
 
-  // 6. 独立的搜索表单配置
   const searchSchema: FormSchema[] = useMemo(
     () => [
       {
@@ -143,7 +212,6 @@ export const DepositList: React.FC = () => {
         defaultValue: 'ALL',
         options: [
           { label: 'All Status', value: 'ALL' },
-          // 将配置对象转为 select options
           ...Object.entries(DEPOSIT_STATUS_CONFIG).map(([k, v]) => ({
             label: v.label,
             value: k,
@@ -160,14 +228,9 @@ export const DepositList: React.FC = () => {
     [],
   );
 
-  // 7. 数据请求处理
   const requestDeposits = useCallback(async (params: RechargeListParams) => {
     const requestData = { ...params };
-
-    // 清理 'ALL'
     if (requestData.status === 'ALL') delete requestData.status;
-
-    // 处理日期范围转换 (dateRange -> startDate, endDate)
     if (requestData.dateRange) {
       requestData.startDate = requestData.dateRange.from;
       requestData.endDate = requestData.dateRange.to;
@@ -182,7 +245,6 @@ export const DepositList: React.FC = () => {
     };
   }, []);
 
-  // 8. 顶部工具栏
   const toolBarRender = useCallback(
     () => [
       <Button key="export" variant="outline">

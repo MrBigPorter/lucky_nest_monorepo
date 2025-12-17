@@ -142,6 +142,10 @@ export class PaymentService {
         limit: 1,
       });
 
+      this.logger.log(
+        `Xendit Response for ${externalId}: ${JSON.stringify(response)}`,
+      );
+
       if (response && response.length > 0) {
         return response[0];
       }
