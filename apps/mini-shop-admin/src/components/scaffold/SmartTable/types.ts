@@ -11,6 +11,10 @@ export type ValueType =
   | 'option'
   | 'index';
 
+export type valueEnumType = {
+  [key: string]: { text: string; status?: string; color?: string };
+};
+
 // 2. ActionRef 定义
 export type ActionType = {
   reload: (resetPageIndex?: boolean) => void;

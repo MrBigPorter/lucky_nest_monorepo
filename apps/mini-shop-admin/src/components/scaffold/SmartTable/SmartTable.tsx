@@ -12,10 +12,16 @@ import { Button } from '@repo/ui';
 
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
-import { Badge } from '@/components/UIComponents';
+import { Badge, BadgeColor } from '@/components/UIComponents';
 import { NumHelper, TimeHelper } from '@lucky/shared';
 
-import type { ProColumns, RequestData, ActionType, ValueType } from './types';
+import type {
+  ProColumns,
+  RequestData,
+  ActionType,
+  ValueType,
+  valueEnumType,
+} from './types';
 import { FormSchema } from '@/type/search.ts';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,8 +48,11 @@ interface SmartTableProps<T extends Record<string, any>> {
 // ------------------------------------
 // 渲染单元格内容
 // ------------------------------------
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const renderSmartCell = (text: any, type?: ValueType, valueEnum?: any) => {
+const renderSmartCell = (
+  text: string | number | null | undefined,
+  type?: ValueType,
+  valueEnum?: valueEnumType,
+) => {
   if (text === null || text === undefined || text === '') return '-';
 
   switch (type) {
@@ -65,7 +74,7 @@ const renderSmartCell = (text: any, type?: ValueType, valueEnum?: any) => {
       if (valueEnum && valueEnum[text]) {
         const { text: label, status, color } = valueEnum[text];
         const badgeColor = color || status || 'default';
-        return <Badge color={badgeColor}>{label}</Badge>;
+        return <Badge color={badgeColor as BadgeColor}>{label}</Badge>;
       }
       return text;
     default:
@@ -77,6 +86,7 @@ const renderSmartCell = (text: any, type?: ValueType, valueEnum?: any) => {
 // Columns -> Search Schema (默认生成逻辑)
 // ------------------------------------
 const transformColumnsToSchema = (columns: ProColumns[]): FormSchema[] => {
+  console.log('Transforming columns to search schema...', columns);
   return columns
     .filter(
       (col) =>
@@ -134,7 +144,7 @@ const SmartTableInner = <T extends Record<string, any>>(
 ) => {
   const {
     columns,
-    searchSchema: explicitSearchSchema, // ✨ 获取显式传入的 searchSchema
+    searchSchema: explicitSearchSchema,
     request,
     dataSource,
     rowKey,
