@@ -474,26 +474,57 @@ export class FinanceService {
       return { message: 'Recharge order already successful' };
     }
 
+    //dluble check (Invoice + E-Wallet)
     let xenditInvoice;
+    let syncType = 'INVOICE';
 
+    // first try to get invoice by thirdPartyOrderNo
     if (order.thirdPartyOrderNo) {
       xenditInvoice = await this.paymentService.getInvoiceById(
         order.thirdPartyOrderNo,
       );
     }
 
+    // if not found, try by externalId (rechargeNo)
     if (!xenditInvoice) {
       xenditInvoice = await this.paymentService.getInvoiceByExternalId(
         order.rechargeNo,
       );
     }
 
-    if (!xenditInvoice) throw new NotFoundException('Xendit invoice not found');
+    // clean the data
+    if (!xenditInvoice) {
+      // too old, mark as failed,more than 1 hour
+      if (TimeHelper.isOlderThan(order.createdAt, 1, 'hour')) {
+        await this.prismaService.rechargeOrder.update({
+          where: { rechargeId },
+          data: {
+            rechargeStatus: RECHARGE_STATUS.FAILED,
+            callbackData: {
+              error: 'Transaction not found on Xendit',
+              syncBy: adminId,
+              syncAt: new Date(),
+              note: 'Auto-marked as FAILED because it does not exist in Xendit (Ghost Order)',
+            },
+          },
+        });
+        return {
+          status: 'SYNCED_FAILED',
+          message: 'Order not found on Xendit, marked as FAILED.',
+        };
+      }
 
-    if (
-      (xenditInvoice.status === 'PAID' || xenditInvoice.status === 'SETTLED') &&
-      order.rechargeStatus !== RECHARGE_STATUS.SUCCESS
-    ) {
+      // too new, cannot find
+      throw new NotFoundException(
+        'Transaction not found in Xendit (Too new to clean)',
+      );
+    }
+
+    const isSuccess = ['PAID', 'SETTLED', 'SUCCEEDED'].includes(
+      xenditInvoice.status,
+    );
+
+    if (isSuccess && order.rechargeStatus !== RECHARGE_STATUS.SUCCESS) {
       const amount = new Prisma.Decimal(order.rechargeAmount);
 
       return this.prismaService.$transaction(async (ctx) => {
@@ -539,7 +570,8 @@ export class FinanceService {
       });
     }
 
-    if (xenditInvoice.status === 'EXPIRED') {
+    // handle expired or failed orders
+    if (['EXPIRED', 'FAILED', 'VOIDED'].includes(xenditInvoice.status)) {
       await this.prismaService.rechargeOrder.update({
         where: { rechargeId },
         data: {

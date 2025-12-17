@@ -1,18 +1,19 @@
 import dayjs, { OpUnitType, QUnitType, Dayjs } from "dayjs";
-import "./dayjs-setup"; //  必须引入配置
+import "./dayjs-setup";
 
-//  环境检测
+// 环境检测
 const IS_SERVER = typeof window === "undefined";
 
-//  格式常量池
+// 格式常量池
 export const DATE_FORMATS = {
-  DATETIME: "YYYY-MM-DD HH:mm:ss", // 2025-12-14 14:30:00
-  DATE: "YYYY-MM-DD", // 2025-12-14
-  TIME: "HH:mm:ss", // 14:30:00
-  MONTH: "YYYY-MM", // 2025-12
-  NO_YEAR: "MM-DD HH:mm", // 12-14 14:30
-  FILE_SAFE: "YYYYMMDD_HHmmss", // 20251214_143000
-  TRANSACTION: "YYYYMMDDHHmmssSSS", // 20251214143000123
+  DATETIME: "YYYY-MM-DD HH:mm:ss",
+  DATE: "YYYY-MM-DD",
+  TIME: "HH:mm:ss",
+  MONTH: "YYYY-MM",
+  NO_YEAR: "MM-DD HH:mm",
+  FILE_SAFE: "YYYYMMDD_HHmmss",
+  TRANSACTION: "YYYYMMDDHHmmssSSS",
+  PATH_DATE: "YYYY/MM/DD",
 };
 
 export type TimeRangeType =
@@ -32,15 +33,8 @@ export class TimeHelper {
   //  国际化控制 (Client Only)
   // ==========================================
 
-  /**
-   * 设置全局语言 (仅限客户端/浏览器)
-   *  在 Next.js/NestJS 服务端调用会被自动忽略，防止污染全局
-   */
   static setLocale(lang: string) {
-    if (IS_SERVER) {
-      // 服务端静默忽略，或者打印 warn
-      return;
-    }
+    if (IS_SERVER) return;
     dayjs.locale(lang);
   }
 
@@ -60,24 +54,11 @@ export class TimeHelper {
     return this._format(val, DATE_FORMATS.NO_YEAR);
   }
 
-  /**
-   * 相对时间 (智能环境判断)
-   * @param val 时间
-   * @param lang (可选) 强制指定语言。
-   * - 后端/Server Component: 必须传 lang (否则默认英文)
-   * - 前端/Client Component: 可不传 (跟随 setLocale)
-   */
   static formatRelative(val: any, lang?: string): string {
     const d = this._toDayjs(val);
     if (!d) return "-";
-
-    // 1. 显式传参 (最高优)
     if (lang) return d.locale(lang).fromNow();
-
-    // 2. 服务端兜底 (防止并发污染，强制英文或默认)
     if (IS_SERVER) return d.locale("en").fromNow();
-
-    // 3. 客户端跟随全局
     return d.fromNow();
   }
 
@@ -95,7 +76,92 @@ export class TimeHelper {
   }
 
   // ==========================================
-  // B. [数据类] Prisma/Database
+  // B. [安全与限流] 支付/后端核心逻辑
+  // ==========================================
+
+  /**
+   * 判定目标时间是否早于当前时间的一定偏移量
+   */
+  static isOlderThan(val: any, amount: number, unit: OpUnitType): boolean {
+    const d = this._toDayjs(val);
+    if (!d) return false;
+    // 使用 as any 解决 TypeScript 对 unit 类型的重载匹配问题
+    return d.isBefore(dayjs().subtract(amount, unit as any));
+  }
+
+  /**
+   * 判定是否处于冷却期
+   */
+  static isInCooldown(
+    lastTime: any,
+    amount: number,
+    unit: OpUnitType = "second",
+  ): boolean {
+    const last = this._toDayjs(lastTime);
+    if (!last) return false;
+    // 同理，对 unit 进行类型断言
+    return dayjs().isBefore(last.add(amount, unit as any));
+  }
+
+  /**
+   * 获取剩余秒数 (用于 Redis TTL 或 支付倒计时)
+   */
+  static getRemainingSeconds(expireTime: any): number {
+    const end = this._toDayjs(expireTime);
+    if (!end) return 0;
+    const diff = end.diff(dayjs(), "second");
+    return diff > 0 ? diff : 0;
+  }
+
+  // ==========================================
+  // C. [财务与报表] 对账与区间判定
+  // ==========================================
+
+  /**
+   * 严格区间判定 (含边界)
+   * 需要 dayjs-setup 中加载 isBetween 插件
+   */
+  static isWithinRange(target: any, start: any, end: any): boolean {
+    const t = this._toDayjs(target);
+    const s = this._toDayjs(start);
+    const e = this._toDayjs(end);
+    if (!t || !s || !e) return false;
+    // @ts-ignore
+    return t.isBetween(s, e, null, "[]");
+  }
+
+  /**
+   * 生成日期序列
+   */
+  static generateDateSequence(start: any, end: any): string[] {
+    let curr = this._toDayjs(start);
+    const last = this._toDayjs(end);
+    const dates: string[] = [];
+    if (!curr || !last) return dates;
+    while (curr.isBefore(last) || curr.isSame(last, "day")) {
+      dates.push(curr.format(DATE_FORMATS.DATE));
+      curr = curr.add(1, "day");
+    }
+    return dates;
+  }
+
+  /**
+   * 判定两个时间段是否有重叠 (预约/排课校验)
+   */
+  static isOverlapping(
+    r1: { s: any; e: any },
+    r2: { s: any; e: any },
+  ): boolean {
+    const s1 = this._toDayjs(r1.s),
+      e1 = this._toDayjs(r1.e);
+    const s2 = this._toDayjs(r2.s),
+      e2 = this._toDayjs(r2.e);
+    if (!s1 || !e1 || !s2 || !e2) return false;
+    return s1.isBefore(e2) && s2.isBefore(e1);
+  }
+
+  // ==========================================
+  // D. [数据类] Prisma/Database 适配
   // ==========================================
 
   static toDate(val: any): Date | undefined {
@@ -119,7 +185,7 @@ export class TimeHelper {
   }
 
   // ==========================================
-  // C. [业务逻辑] 日历/签到
+  // E. [业务逻辑] 日历/签到
   // ==========================================
 
   static getDaysInMonth(val: any): number {
@@ -148,7 +214,7 @@ export class TimeHelper {
   }
 
   // ==========================================
-  // D. [后台快捷查询]
+  // F. [后台快捷查询]
   // ==========================================
 
   static getRange(type: TimeRangeType) {
@@ -203,12 +269,11 @@ export class TimeHelper {
   }
 
   // ==========================================
-  //  核心兼容 (iOS Safety Valve)
+  // G. 核心引擎 (iOS Safety Valve)
   // ==========================================
 
   private static _toDayjs(val: any): Dayjs | null {
     if (val === null || val === undefined || val === "") return null;
-    // 🍎 iOS Safari 补丁: 2025-12-14 12:00:00 -> 2025/12/14 12:00:00
     if (typeof val === "string" && val.includes("-") && !val.includes("T")) {
       const d = dayjs(val);
       if (d.isValid()) return d;
