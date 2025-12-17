@@ -12,6 +12,11 @@ export type Theme = 'light' | 'dark';
 
 export type UserRole = 'admin' | 'editor' | 'viewer';
 
+export interface dateRange {
+  from: string;
+  to: string;
+}
+
 export interface Tokens {
   accessToken: string;
   refreshToken?: string;
@@ -340,15 +345,42 @@ export interface RechargePlan {
   tag?: string;
 }
 
+export interface RechargeSearchForm {
+  keyword: string; // 搜索: 单号/手机/昵称/ID
+  status: string;
+  startDate: string;
+  endDate: string;
+  dateRange?: dateRange;
+}
+
+export type RechargeListParams = PaginationParams & Partial<RechargeSearchForm>;
+
 export interface RechargeOrder {
-  id: string;
-  orderNo: string;
-  user: { id: string; name: string; avatar: string };
-  amount: number;
-  bonus: number;
-  method: 'GCash' | 'PayMaya' | 'Bank' | 'Crypto';
-  status: 'pending' | 'success' | 'failed';
-  date: string;
+  rechargeId: string;
+  rechargeNo: string;
+
+  /** 充值金额 (字符串格式) */
+  rechargeAmount: string;
+
+  /** 充值状态: 1-Pending, 2-Processing, 3-Success, 4-Failed, 5-Canceled */
+  rechargeStatus: number;
+
+  /** 支付方式: 1-GCash, 2-PayMaya, 3-Bank, 4-Card */
+  paymentMethod: number;
+
+  /** 支付渠道 */
+  paymentChannel: string;
+
+  /** 第三方单号 (可选) */
+  thirdPartyOrderNo?: string;
+
+  /** 创建时间戳 (毫秒) */
+  createdAt: number;
+
+  paidAt?: number;
+
+  /** 用户信息 */
+  user: Pick<User, 'phone' | 'nickname'>;
 }
 
 export interface Withdrawal {
@@ -371,6 +403,14 @@ export interface Transaction {
   balanceBefore: number;
   balanceAfter: number;
   date: string;
+}
+
+export interface FinanceStatistics {
+  pendingWithdraw: string;
+  totalDeposit: string;
+  totalWithdraw: string;
+  depositTrend: string;
+  withdrawTrend: string;
 }
 
 export interface Order {

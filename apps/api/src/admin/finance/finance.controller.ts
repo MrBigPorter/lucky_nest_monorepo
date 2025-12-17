@@ -1,18 +1,7 @@
-import {
-  Body,
-  ClassSerializerInterceptor,
-  Controller,
-  Get,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { PermissionsGuard } from '@api/common/guards/permissions.guard';
-import { PrismaService } from '@api/common/prisma/prisma.service';
 import { FinanceService } from '@api/admin/finance/finance.service';
 import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 import { OpAction, OpModule } from '@lucky/shared';
@@ -29,6 +18,8 @@ import { WithdrawResponseDto } from '@api/admin/finance/dto/withdraw-response.dt
 import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
 import { RechargeListResponseDto } from '@api/admin/finance/dto/recharge-list-response.dto';
 import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
+import { RechargeResponseDto } from '@api/admin/finance/dto/recharge-response.dto';
+import { QueryStatisticsDto } from '@api/admin/finance/dto/query-statistics.dto';
 
 @ApiTags('Admin Finance Management')
 @ApiBearerAuth()
@@ -104,7 +95,7 @@ export class FinanceController {
   @ApiOkResponse({ type: RechargeListResponseDto })
   async getRecharges(@Query() dto: QueryRechargeOrdersDto) {
     const data = await this.financeService.recharges(dto);
-    const list = plainToInstance(RechargeListResponseDto, data.list, {
+    const list = plainToInstance(RechargeResponseDto, data.list, {
       excludeExtraneousValues: true,
     });
     return {
@@ -131,5 +122,15 @@ export class FinanceController {
     return plainToInstance(WithdrawResponseDto, data, {
       excludeExtraneousValues: true,
     });
+  }
+
+  /**
+   * Get finance statistics
+   */
+  @Get('statistics')
+  @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.VIEW)
+  @ApiOkResponse({ type: QueryStatisticsDto })
+  async getStatistics() {
+    return this.financeService.getStatistics();
   }
 }

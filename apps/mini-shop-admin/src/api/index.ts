@@ -32,6 +32,9 @@ import {
   ManualAdjustPayload,
   AuditWithdrawPayload,
   WithdrawOrder,
+  RechargeOrder,
+  RechargeListParams,
+  Statistics,
 } from '@/type/types.ts';
 
 /**
@@ -299,6 +302,19 @@ export const financeApi = {
   // 余额调整
   adjust: (data: Partial<ManualAdjustPayload>) => {
     return http.post(`/v1/admin/finance/adjust`, data);
+  },
+
+  // 存款记录列表
+  getDeposits: (params: RechargeListParams) => {
+    return http.get<PaginatedResponse<RechargeOrder>>(
+      '/v1/admin/finance/recharges',
+      params,
+    );
+  },
+
+  // 获取统计数据
+  getStatistics: () => {
+    return http.get<Statistics>('/v1/admin/finance/statistics');
   },
 };
 

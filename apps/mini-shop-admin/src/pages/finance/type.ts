@@ -3,6 +3,7 @@ import {
   WithdrawStatus,
   RECHARGE_STATUS,
 } from '@lucky/shared';
+import { ButtonVariant } from '@repo/ui/button.tsx';
 
 export const STATUS_CONFIG = {
   [WITHDRAW_STATUS.PENDING_AUDIT as WithdrawStatus]: {
@@ -26,13 +27,37 @@ export const STATUS_CONFIG = {
 // 状态映射配置 (UI表现层)
 export const DEPOSIT_STATUS_CONFIG: Record<
   number,
-  { color: 'green' | 'red' | 'yellow' | 'gray' | 'blue'; label: string }
+  {
+    color: 'green' | 'red' | 'yellow' | 'gray' | 'blue';
+    label: string;
+    buttonColor: ButtonVariant;
+  }
 > = {
-  [RECHARGE_STATUS.PENDING]: { color: 'yellow', label: 'Pending Payment' },
-  [RECHARGE_STATUS.PROCESSING]: { color: 'blue', label: 'Processing' },
-  [RECHARGE_STATUS.SUCCESS]: { color: 'green', label: 'Success' },
-  [RECHARGE_STATUS.FAILED]: { color: 'red', label: 'Failed' },
-  [RECHARGE_STATUS.CANCELED]: { color: 'gray', label: 'Cancelled' },
+  [RECHARGE_STATUS.PENDING]: {
+    color: 'yellow',
+    label: 'Pending',
+    buttonColor: 'warning',
+  },
+  [RECHARGE_STATUS.PROCESSING]: {
+    color: 'blue',
+    label: 'Processing',
+    buttonColor: 'info',
+  },
+  [RECHARGE_STATUS.SUCCESS]: {
+    color: 'green',
+    label: 'Success',
+    buttonColor: 'success',
+  },
+  [RECHARGE_STATUS.FAILED]: {
+    color: 'red',
+    label: 'Failed',
+    buttonColor: 'danger',
+  },
+  [RECHARGE_STATUS.CANCELED]: {
+    color: 'gray',
+    label: 'Cancelled',
+    buttonColor: 'danger',
+  },
 };
 
 // 渠道筛选 Options

@@ -84,7 +84,7 @@ export const Breadcrumbs: React.FC<{ items: string[] }> = ({ items }) => (
 );
 
 // --- Card ---
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardPropsCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   title?: string;
   action?: React.ReactNode;

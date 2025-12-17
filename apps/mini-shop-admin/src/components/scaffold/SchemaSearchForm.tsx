@@ -48,10 +48,11 @@ export const SchemaSearchForm = <T extends Record<string, any>>({
   // 3. 搜索处理
   const onSubmit = (values: T) => {
     // 过滤掉 undefined 或空字符串的值（可选，看后端需求，通常搜索时不传空值）
-    // const cleanedValues = Object.fromEntries(
-    //   Object.entries(values).filter(([_, v]) => v !== '' && v !== undefined)
-    // ) as T;
-    onSearch(values);
+    const cleanedValues = Object.fromEntries(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      Object.entries(values).filter(([_, v]) => v !== '' && v !== undefined),
+    ) as T;
+    onSearch(cleanedValues);
   };
 
   // 4. 重置处理

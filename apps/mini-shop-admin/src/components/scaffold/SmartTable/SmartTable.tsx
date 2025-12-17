@@ -156,7 +156,7 @@ const SmartTableInner = <T extends Record<string, any>>(
     params,
   } = props;
 
-  // ✅ 引用锁定，防止死循环
+  // 引用锁定，防止死循环
   const externalParams = useMemo(() => params || {}, [params]);
 
   const [data, setData] = useState<T[]>(dataSource || []);
