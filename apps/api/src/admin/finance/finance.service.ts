@@ -25,6 +25,8 @@ import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dt
 import { AuditWithdrawDto } from '@api/admin/finance/dto/audit-withdraw.dto';
 import { PaymentService } from '@api/common/payment/payment.service';
 import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
+import { QueryOrderDto } from '@api/admin/order/dto/query-order.dto';
+import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
 
 @Injectable()
 export class FinanceService {
@@ -384,5 +386,57 @@ export class FinanceService {
         });
       });
     }
+  }
+
+  /**
+   * Get a paginated list of recharge orders with optional filters
+   * @param dto
+   */
+  async recharges(dto: QueryRechargeOrdersDto) {
+    const { page, pageSize, status, keyword, startDate, endDate } = dto;
+
+    const skip = (page - 1) * pageSize;
+    const whereConditions: Prisma.RechargeOrderWhereInput = {};
+
+    if (status) {
+      whereConditions.rechargeStatus = status;
+    }
+    if (startDate || endDate) {
+      whereConditions.createdAt = {
+        ...(startDate ? { gte: TimeHelper.getStartOfDay(startDate) } : {}),
+        ...(endDate ? { lte: TimeHelper.getEndOfDay(endDate) } : {}),
+      };
+    }
+
+    if (keyword) {
+      whereConditions.OR = [
+        {
+          rechargeNo: { contains: keyword },
+        },
+        {
+          user: {
+            nickname: { contains: keyword },
+            phone: { contains: keyword },
+          },
+        },
+      ];
+    }
+
+    const [list, total] = await this.prismaService.rechargeOrder.findMany({
+      where: whereConditions,
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            nickname: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    return { list, total, page, pageSize };
   }
 }
