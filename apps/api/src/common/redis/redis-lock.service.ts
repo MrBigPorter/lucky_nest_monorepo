@@ -1,7 +1,12 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
+import { createClient, RedisClientType } from 'redis';
 
 const UNLOCK_SCRIPT = `
    if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -12,20 +17,41 @@ const UNLOCK_SCRIPT = `
 `;
 
 @Injectable()
-export class RedisLockService {
+export class RedisLockService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisLockService.name);
-  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
+  private client: RedisClientType | undefined;
+
+  constructor(private readonly configService: ConfigService) {}
 
   /**
-   * 获取底层 Redis Client (Node-Redis v4)
-   * @private
+   * 模块初始化时建立 Redis 连接
    */
-  private getClient() {
-    const store = this.cacheManager.store as any;
-    if (!store.client) {
-      throw new Error('Cache store does not have a client property');
+  async onModuleInit() {
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    if (!redisUrl) {
+      throw new Error('REDIS_URL is not defined in configuration');
     }
-    return store.client;
+
+    this.client = createClient({
+      url: redisUrl,
+    });
+
+    this.client.on('error', (err) => {
+      this.logger.error('Redis Client Error', err);
+    });
+
+    await this.client.connect();
+    this.logger.log('🔐 Redis Lock Client connected successfully (Dedicated)');
+  }
+
+  /**
+   * 模块销毁时关闭 Redis 连接
+   */
+  async onModuleDestroy() {
+    if (this.client) {
+      await this.client.quit();
+      this.logger.log('Redis Lock Client disconnected successfully.');
+    }
   }
 
   /**
@@ -39,26 +65,29 @@ export class RedisLockService {
     ttl: number,
     callback: () => Promise<T>,
   ): Promise<T> {
-    const client = this.getClient();
+    if (!this.client?.isOpen) {
+      throw new Error('Redis Lock Client is not connected');
+    }
+
     const lockValue = crypto.randomUUID();
 
-    // 1. 加锁
-    // NX: 只有不存在时才设置
-    // PX: 毫秒级过期
-    const result = await client.set(key, lockValue, { NX: true, PX: ttl });
+    // 1. 加锁 (SET NX PX)
+    const result = await this.client.set(key, lockValue, {
+      NX: true,
+      PX: ttl,
+    });
 
     if (result !== 'OK') {
-      // 这里的 Error 会被上面层级捕获
       throw new Error(`Lock busy: ${key}`);
     }
 
     try {
-      // Execute the callback while holding the lock
+      // 2. 执行业务逻辑
       return await callback();
     } finally {
       try {
-        // Release the lock using the Lua script to ensure we only delete if we own the lock
-        await client.eval(UNLOCK_SCRIPT, {
+        // 3. 解锁 (Lua 脚本)
+        await this.client.eval(UNLOCK_SCRIPT, {
           keys: [key],
           arguments: [lockValue],
         });

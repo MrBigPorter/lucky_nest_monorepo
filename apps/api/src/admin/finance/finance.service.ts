@@ -133,6 +133,21 @@ export class FinanceService {
         throw new NotFoundException('User not found');
       }
 
+      // 如果 3秒内 有一笔刚才生成的调账流水，直接拦截
+      const lastTx = await ctx.walletTransaction.findFirst({
+        where: {
+          userId,
+          relatedType: RelatedType.ADMIN_ADJUST,
+          createdAt: { gte: TimeHelper.getTimeAgo(3, 'second') },
+        },
+      });
+
+      if (lastTx) {
+        throw new BadRequestException(
+          'A recent adjustment was made. Please wait a moment before trying again.',
+        );
+      }
+
       // 获取钱包ID
       const wallet = await ctx.userWallet.findUnique({ where: { userId } });
       if (!wallet) {
@@ -212,6 +227,7 @@ export class FinanceService {
           afterBalance: currentBalance,
           description: remark,
           status: TRANSACTION_STATUS.SUCCESS,
+          relatedType: RelatedType.ADMIN_ADJUST,
         },
       });
 
