@@ -184,6 +184,17 @@ export class TimeHelper {
     return (this._toDayjs(val) || dayjs()).endOf(unit).toDate();
   }
 
+  /**
+   * 获取“过去多少时间”的时间点 (Date对象)
+   * 用于 Prisma 查询，例如: createdAt: { gte: TimeHelper.getTimeAgo(3, 'second') }
+   */
+  static getTimeAgo(amount: number, unit: OpUnitType): Date {
+    // 这里的 unit 需要断言一下类型，因为 dayjs 的类型定义有时候比较严格
+    return dayjs()
+      .subtract(amount, unit as any)
+      .toDate();
+  }
+
   // ==========================================
   // E. [业务逻辑] 日历/签到
   // ==========================================

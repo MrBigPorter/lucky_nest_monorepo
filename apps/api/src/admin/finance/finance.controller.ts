@@ -28,6 +28,7 @@ import { RechargeListResponseDto } from '@api/admin/finance/dto/recharge-list-re
 import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
 import { RechargeResponseDto } from '@api/admin/finance/dto/recharge-response.dto';
 import { QueryStatisticsDto } from '@api/admin/finance/dto/query-statistics.dto';
+import { FinanceAdjustResponseDto } from '@api/admin/finance/dto/finance-adjust-response.dto';
 
 @ApiTags('Admin Finance Management')
 @ApiBearerAuth()
@@ -59,7 +60,7 @@ export class FinanceController {
    */
   @Post('adjust')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.MANUAL_ADJUST)
-  @ApiOkResponse({ type: TransactionResponseDto })
+  @ApiOkResponse({ type: FinanceAdjustResponseDto })
   async manualAdjust(
     @Body() dto: ManualAdjustmentDto,
     @CurrentUserId() userId: string,
@@ -69,7 +70,7 @@ export class FinanceController {
       adminId: userId,
       ip,
     });
-    return plainToInstance(TransactionResponseDto, data, {
+    return plainToInstance(FinanceAdjustResponseDto, data, {
       excludeExtraneousValues: true,
     });
   }
