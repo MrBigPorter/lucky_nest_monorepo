@@ -301,15 +301,27 @@ export class FinanceService {
       throw new NotFoundException('Withdrawal order not found');
     }
 
-    // 2. 检查订单状态 - 只能审核待审核状态的订单
-    if (order.withdrawStatus !== WITHDRAW_STATUS.PENDING_AUDIT) {
-      throw new BadRequestException(
-        'the order is already audited, cannot be audited again',
-      );
-    }
-
-    // 审核通过 (APPROVE) -> 触发打款
+    // 审核通过 (APPROVE) -> 触发打款（审核人员已经检查，这笔款可以打款了，转入1表示可以）
     if (status === WITHDRAW_STATUS.SUCCESS) {
+      // 比如柜台先将单子盖章，但是没有给回单，突然断电了，你没有拿到钱，但是银行告诉你到时候来电了拿着单子来要钱，然后再给你底单
+      //先把状态变成PROCESSING，避免重复打款
+      const updateResult = await this.prismaService.withdrawOrder.updateMany({
+        where: {
+          withdrawId,
+          withdrawStatus: WITHDRAW_STATUS.PENDING_AUDIT,
+        },
+        data: {
+          withdrawStatus: WITHDRAW_STATUS.PROCESSING,
+          auditorId: adminId,
+          auditedAt: new Date(),
+          auditResult: remark || 'Approved, processing payout',
+        },
+      });
+
+      if (updateResult.count === 0) {
+        throw new BadRequestException('Withdrawal order already processed');
+      }
+
       // 1. 调用 Xendit 代付接口 (网络请求)
       // 注意：这里不要包裹在 prisma.$transaction 里，避免长时间锁表
       const amount = new Prisma.Decimal(order.withdrawAmount);
@@ -327,6 +339,15 @@ export class FinanceService {
           description: `Withdrawal for ${order.withdrawNo}`,
         });
       } catch (error: any) {
+        // 打款失败，更新订单状态为失败
+        // 比如你的账户余额不足，Xendit拒绝打款
+        await this.prismaService.withdrawOrder.update({
+          where: { withdrawId },
+          data: {
+            withdrawStatus: WITHDRAW_STATUS.FAILED,
+            auditResult: `Payout failed: ${error.message}`,
+          },
+        });
         throw new BadRequestException(`Xendit API Failed: ${error.message}`);
       }
 
@@ -334,7 +355,7 @@ export class FinanceService {
       return this.prismaService.withdrawOrder.update({
         where: { withdrawId },
         data: {
-          withdrawStatus: WITHDRAW_STATUS.PROCESSING,
+          withdrawStatus: WITHDRAW_STATUS.SUCCESS,
           thirdPartyOrderNo: xenditResp?.id,
           auditorId: adminId,
           auditedAt: new Date(),
@@ -345,6 +366,26 @@ export class FinanceService {
       });
     } else {
       return this.prismaService.$transaction(async (ctx) => {
+        //先把状态变为拒绝，避免重复操作
+        const res = await ctx.withdrawOrder.updateMany({
+          where: {
+            withdrawId,
+            withdrawStatus: WITHDRAW_STATUS.PENDING_AUDIT, // 只能审核待审核的订单
+          },
+          data: {
+            withdrawStatus: WITHDRAW_STATUS.REJECTED,
+            auditorId: adminId,
+            auditedAt: new Date(),
+            auditResult: remark || 'Rejected',
+            rejectReason: remark,
+          },
+        });
+
+        if (res.count === 0) {
+          throw new BadRequestException('Order status has changed');
+        }
+
+        // 只有审核拒绝的订单，才退回冻结金额
         // get wallet again in this transaction context
         const wallet = await ctx.userWallet.findUnique({
           where: { userId: order.userId },
