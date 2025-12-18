@@ -10,7 +10,7 @@ export default defineConfig({
     watch: {
       ignored: ['!**/node_modules/@lucky/shared/**'],
     },
-    allowedHosts: ['dev.joyminis.com'],
+    allowedHosts: ['admin.joyminis.com', 'dev.joyminis.com'],
   },
   plugins: [tailwindcss(), react()],
   resolve: {
