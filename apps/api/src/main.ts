@@ -21,49 +21,23 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);
   const host = config.get<string>('HOST', '0.0.0.0');
-  const corsOrigins = config
-    .get<string>('CORS_ORIGIN', 'http://localhost:3000')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
 
   // 前缀 + 版本
   app.setGlobalPrefix('api');
+  (app as any).set('trust proxy', 1);
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   // 请求 ID
   app.use(requestId());
 
   // 安全 / cookie / CORS
-  app.use(helmet());
-  app.use(cookieParser());
-  app.enableCors(
-    isProd
-      ? {
-          origin: (
-            origin: string,
-            cb: (arg0: Error | null, arg1: boolean) => void,
-          ) => {
-            if (!origin) return cb(null, true);
-            const ok = corsOrigins.includes(origin);
-            cb(ok ? null : new Error(`CORS blocked: ${origin}`), ok);
-          },
-          credentials: true,
-          methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-          allowedHeaders: ['*'], // 放行所有请求头 allow any header
-          exposedHeaders: ['Content-Disposition'],
-        }
-      : {
-          //  开发环境全开：回显任意来源（支持携带凭证）
-          origin: (origin: any, cb: (arg0: null, arg1: boolean) => any) =>
-            cb(null, true),
-          credentials: true,
-          methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-          allowedHeaders: ['*'],
-          exposedHeaders: ['Content-Disposition'],
-          optionsSuccessStatus: 204,
-        },
+  //禁用 Helmet 的跨域资源策略，否则 Nginx 的 CORS 头会被覆盖或冲突
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false,
+    }),
   );
+  app.use(cookieParser());
 
   // global validation
   app.useGlobalPipes(
