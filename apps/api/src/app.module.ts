@@ -14,6 +14,7 @@ import { OtpThrottlerGuard } from '@api/common/guards/otp-throttler.guard';
 import { UploadModule } from '@api/common/upload/upload.module';
 import { PaymentModule } from '@api/common/payment/payment.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RedisLockModule } from '@api/common/redis/redis-lock.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -65,6 +66,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     //全局默认 ttl: 60,     // 60s 窗口
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 60 }]),
     //根模块，把业务模块“挂进来”。Nest 会读这些元数据，生成依赖图。
+    RedisLockModule,
     PrismaModule,
     UploadModule,
     ClientModule,

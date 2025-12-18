@@ -29,6 +29,8 @@ import { PaymentService } from '@api/common/payment/payment.service';
 import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
 import { QueryRechargeOrdersDto } from '@api/admin/finance/dto/query-recharge-orders.dto';
 import { WalletService } from '@api/client/wallet/wallet.service';
+import { DistributedLock } from '@api/common/decorators/distributed-lock.decorator';
+import { RedisLockService } from '@api/common/redis/redis-lock.service';
 
 @Injectable()
 export class FinanceService {
@@ -37,6 +39,8 @@ export class FinanceService {
     private prismaService: PrismaService,
     private paymentService: PaymentService,
     private walletService: WalletService,
+    //必须注入这个服务，且必须是 public readonly lockService
+    public readonly lockService: RedisLockService,
   ) {}
 
   /**
@@ -98,6 +102,7 @@ export class FinanceService {
    * @param query
    *
    */
+  @DistributedLock('manual_adjust_lock:{0.userId}', 5000)
   async manualAdjust(
     dto: ManualAdjustmentDto,
     query: {
@@ -280,9 +285,11 @@ export class FinanceService {
   /**
    * Audit a withdrawal order
    * 提现审核：通过则打款，拒绝则退回冻结金额
+   * 'withdraw:{0.withdrawId}' 意思是取第0个参数(dto)的 withdrawId 属性作为锁的 Key
    * @param dto
    * @param adminId
    */
+  @DistributedLock('withdraw_audit_lock:{0.withdrawId}', 10000)
   async auditWithdraw(dto: AuditWithdrawDto, adminId: string) {
     const { withdrawId, remark, status } = dto;
 

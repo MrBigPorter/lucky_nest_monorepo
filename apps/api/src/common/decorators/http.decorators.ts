@@ -2,7 +2,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { getRealIp, getUserAgent } from '@api/common/utils/request.util';
 
 // get real ip from request
-export const ReaIp = createParamDecorator(
+export const RealIp = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const req = ctx.switchToHttp().getRequest();
     return getRealIp(req);

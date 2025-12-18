@@ -21,7 +21,7 @@ import { TransactionListResponseDto } from '@api/admin/finance/dto/transaction-l
 import { plainToInstance } from 'class-transformer';
 import { TransactionResponseDto } from '@api/admin/finance/dto/transaction-response.dto';
 import { WithdrawListResponseDto } from '@api/admin/finance/dto/withdraw-list-response.dto';
-import { ReaIp } from '@api/common/decorators/http.decorators';
+import { RealIp } from '@api/common/decorators/http.decorators';
 import { WithdrawResponseDto } from '@api/admin/finance/dto/withdraw-response.dto';
 import { QueryWithdrawalsDto } from '@api/admin/finance/dto/query-withdrawals.dto';
 import { RechargeListResponseDto } from '@api/admin/finance/dto/recharge-list-response.dto';
@@ -63,7 +63,7 @@ export class FinanceController {
   async manualAdjust(
     @Body() dto: ManualAdjustmentDto,
     @CurrentUserId() userId: string,
-    @ReaIp() ip: string,
+    @RealIp() ip: string,
   ) {
     const data = await this.financeService.manualAdjust(dto, {
       adminId: userId,

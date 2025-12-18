@@ -20,7 +20,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { AdminLoginDto } from '@api/client/auth/dto/admin-login.dto';
-import { ReaIp, UserAgent } from '@api/common/decorators/http.decorators';
+import { RealIp, UserAgent } from '@api/common/decorators/http.decorators';
 
 @ApiTags('admin Auth Management')
 @Controller('auth')
@@ -37,7 +37,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async loginAdmin(
     @Body() dto: AdminLoginDto,
-    @ReaIp() ip: string,
+    @RealIp() ip: string,
     @UserAgent() ua: string,
   ) {
     return this.auth.adminLogin(dto, ip, ua);
@@ -55,7 +55,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async logoutAdmin(
     @CurrentUserId() userId: string,
-    @ReaIp() ip: string,
+    @RealIp() ip: string,
     @UserAgent() ua: string,
   ) {
     return this.auth.adminLogout(userId, ip, ua);
