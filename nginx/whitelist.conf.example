@@ -1,0 +1,4 @@
+# 复制此文件并重命名为 whitelist.conf
+# 填入你自己的授权 IP
+allow 127.0.0.1;
+# allow <Your_Public_IP>;

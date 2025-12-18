@@ -34,7 +34,7 @@ import {
   WithdrawOrder,
   RechargeOrder,
   RechargeListParams,
-  Statistics,
+  FinanceStatistics,
 } from '@/type/types.ts';
 
 /**
@@ -314,7 +314,7 @@ export const financeApi = {
 
   // 获取统计数据
   getStatistics: () => {
-    return http.get<Statistics>('/v1/admin/finance/statistics');
+    return http.get<FinanceStatistics>('/v1/admin/finance/statistics');
   },
 
   // 同步充值状态
