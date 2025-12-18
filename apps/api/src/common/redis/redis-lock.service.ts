@@ -42,10 +42,13 @@ export class RedisLockService {
     const client = this.getClient();
     const lockValue = crypto.randomUUID();
 
-    // Try to acquire the lock
+    // 1. 加锁
+    // NX: 只有不存在时才设置
+    // PX: 毫秒级过期
     const result = await client.set(key, lockValue, { NX: true, PX: ttl });
 
     if (result !== 'OK') {
+      // 这里的 Error 会被上面层级捕获
       throw new Error(`Lock busy: ${key}`);
     }
 
@@ -56,7 +59,7 @@ export class RedisLockService {
       try {
         // Release the lock using the Lua script to ensure we only delete if we own the lock
         await client.eval(UNLOCK_SCRIPT, {
-          key: [key],
+          keys: [key],
           arguments: [lockValue],
         });
       } catch (e) {

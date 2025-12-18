@@ -156,6 +156,36 @@ export class PaymentService {
     }
   }
 
+  /**
+   * Get Disbursement details by External ID (business order number)
+   * @param externalId 这里的 externalId 实际上对应 Xendit 的 reference_id
+   */
+  async getDisbursementByExternalId(externalId: string) {
+    try {
+      const response = await this.xenditClient.Payout.getPayouts({
+        referenceId: externalId,
+        limit: 1,
+      });
+      // 严谨判断
+      if (response && response.data && response.data.length > 0) {
+        return response.data[0];
+      }
+      return null; // 显式返回 null，表示没找到
+    } catch (e) {
+      // 这里如果报错（比如网络不通），你的 handleXenditError 会 throw Exception
+      // 这是对的，Task 里 catch 了这个 Exception，不会误判为“没找到”
+      this.handleXenditError(
+        e,
+        `Get Disbursement By External ID: ${externalId}`,
+      );
+      return null;
+    }
+  }
+
+  /** Handle Xendit API errors uniformly
+   * @param error
+   * @param context
+   */
   private handleXenditError(error: any, context: string) {
     this.logger.error(`[Xendit Error - ${context}] ${error.message}`);
     if (error.response?.data) {
