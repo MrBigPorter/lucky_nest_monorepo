@@ -36,7 +36,7 @@ export class KycService {
   async submitKyc(userId: string, dto: SubmitKycDto) {
     return this.prismaService.$transaction(async (ctx) => {
       // check if there is an existing KYC record in REVIEWING or APPROVED status
-      const existing = await this.prismaService.kycRecord.findFirst({
+      const existing = await ctx.kycRecord.findFirst({
         where: { userId },
         orderBy: { createdAt: 'desc' },
       });
@@ -48,7 +48,7 @@ export class KycService {
         throw new BadRequestException('KYC is under review, cannot resubmit');
       }
 
-      return ctx.kycRecord.create({
+      const record = await ctx.kycRecord.create({
         data: {
           userId,
           kycStatus: KYC_STATUS.REVIEWING,
@@ -69,6 +69,15 @@ export class KycService {
           auditedAt: null,
         },
       });
+
+      // update user's kyc status to REVIEWING
+      await ctx.user.update({
+        where: { id: userId },
+        data: {
+          kycStatus: KYC_STATUS.REVIEWING,
+        },
+      });
+      return record;
     });
   }
 }

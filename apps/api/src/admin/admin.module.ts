@@ -8,6 +8,7 @@ import { BannerModule } from '@api/admin/banner/banner.module';
 import { OrderModule } from '@api/admin/order/order.module';
 import { CouponModule } from '@api/admin/coupon/coupon.module';
 import { FinanceModule } from '@api/admin/finance/finance.module';
+import { KycModule } from '@api/admin/kyc/kyc.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FinanceModule } from '@api/admin/finance/finance.module';
     OrderModule,
     CouponModule,
     FinanceModule,
+    KycModule,
   ],
   providers: [],
   controllers: [],
