@@ -19,9 +19,6 @@ export class KycService {
     return this.prismaService.kycRecord.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      select: {
-        kycStatus: true,
-      },
     });
   }
 
@@ -41,6 +38,14 @@ export class KycService {
    * @param dto
    */
   async submitKyc(userId: string, dto: SubmitKycDto) {
+    const idType = await this.prismaService.kycIdType.findUnique({
+      where: { typeId: dto.idType, status: 1 },
+    });
+
+    if (!idType) {
+      throw new BadRequestException('Invalid ID type');
+    }
+
     return this.prismaService.$transaction(async (ctx) => {
       // 全局检查：该证件号是否已被其他 APPROVED 的账号使用
       // 注意：是否允许 REVIEWING 状态重复取决于业务

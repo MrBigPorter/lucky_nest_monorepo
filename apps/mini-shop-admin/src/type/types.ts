@@ -1,6 +1,7 @@
 import { PaginationParams } from '@/api/types.ts';
 import {
   BalanceTypeValue,
+  KycStatus,
   RelatedType,
   TransactionStatusValue,
   TransactionTypeValue,
@@ -507,6 +508,43 @@ export interface City {
 export interface Barangay {
   barangayId: number;
   barangayName: string;
+}
+
+export interface KycRecord {
+  id: string;
+  userId: string;
+  user?: {
+    nickname?: string;
+    phone?: string;
+  };
+  kycStatus: KycStatus;
+  idType: number;
+  idNumber?: string;
+  realName?: string;
+  idCardFront?: string;
+  idCardBack?: string;
+  faceImage?: string;
+  livenessScore?: number;
+  videoUrl?: string;
+  rejectReason?: string;
+  auditResult?: string;
+  submittedAt?: string;
+  auditedAt?: number;
+}
+
+export interface KycRecordListParams {
+  page?: number;
+  pageSize?: number;
+  userId?: string;
+  kycStatus?: number;
+  startDate?: string;
+  endDate?: string;
+  dateRange?: dateRange;
+}
+
+export interface AuditKycParams {
+  action: 'APPROVE' | 'REJECT' | 'NEED_MORE';
+  remark: string;
 }
 
 export interface Banner {

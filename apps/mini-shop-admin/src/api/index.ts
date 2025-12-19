@@ -41,6 +41,8 @@ import {
   Province,
   City,
   Barangay,
+  KycRecordListParams,
+  AuditKycParams,
 } from '@/type/types.ts';
 
 /**
@@ -374,6 +376,26 @@ export const regionApi = {
   // 获取区/镇列表
   barangays: (cityId: number) => {
     return http.get<Barangay[]>(`/v1/admin/region/barangays/${cityId}`);
+  },
+};
+
+/**
+ * kyc API
+ */
+export const kycApi = {
+  // 获取 KYC 列表
+  getRecords: (params: KycRecordListParams) => {
+    return http.get('/v1/admin/kyc/records', params);
+  },
+
+  // 获取详情
+  getDetail: (id: string) => {
+    return http.get(`/admin/kyc/records/${id}`);
+  },
+
+  // 审核
+  audit: (id: string, data: AuditKycParams) => {
+    return http.post(`/admin/kyc/${id}/audit`, data);
   },
 };
 
