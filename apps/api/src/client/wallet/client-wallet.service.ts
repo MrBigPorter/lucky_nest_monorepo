@@ -83,50 +83,13 @@ export class ClientWalletService {
     const amountDecimal = new Prisma.Decimal(amount);
 
     return this.prismaService.$transaction(async (ctx) => {
-      // check if order exists
-      const order = await this.prismaService.rechargeOrder.findUnique({
-        where: { rechargeNo: orderNo },
-      });
-
-      if (!order) {
-        throw new InternalServerErrorException(
-          `Recharge order not found: ${orderNo}`,
-        );
-      }
-
-      // Idempotency check, return if already processed
-      if (order.rechargeStatus === RECHARGE_STATUS.SUCCESS) {
-        return {
-          message: 'Order already processed',
-          order,
-        };
-      }
-
-      // Verify amount, throw error if mismatch
-      if (!order.rechargeAmount.equals(amountDecimal)) {
-        this.logger.error(
-          `Amount mismatch for ${orderNo}. Order: ${order.rechargeAmount}, Paid: ${amountDecimal}`,
-        );
-        throw new InternalServerErrorException('Amount mismatch in callback');
-      }
-
-      // Credit user's wallet
-      await this.walletService.creditCash(
-        {
-          userId: order.userId,
-          amount: amountDecimal,
-          related: {
-            id: order.rechargeId,
-            type: RelatedType.RECHARGE,
-          },
-          desc: `Recharge via Xendit. Txn: ${transactionId}`,
+      //状态抢先更新，防止并发问题
+      const updateResult = await ctx.rechargeOrder.updateMany({
+        where: {
+          rechargeNo: orderNo,
+          rechargeStatus: RECHARGE_STATUS.PENDING, // only update if still pending
+          rechargeAmount: amountDecimal, // double check amount
         },
-        ctx,
-      );
-
-      // Update recharge order status
-      await ctx.rechargeOrder.update({
-        where: { rechargeId: order.rechargeId },
         data: {
           rechargeStatus: RECHARGE_STATUS.SUCCESS,
           thirdPartyOrderNo: transactionId,
@@ -134,6 +97,51 @@ export class ClientWalletService {
           callbackData: payload,
         },
       });
+
+      // 如果 count 为 0，说明被抢占了，或者订单有问题
+      if (updateResult.count === 0) {
+        // 做个简单的查库，返回具体原因，方便日志排查
+        const order = await ctx.rechargeOrder.findUnique({
+          where: { rechargeNo: orderNo },
+        });
+        if (!order) {
+          throw new InternalServerErrorException(
+            `Recharge order not found during update: ${orderNo}`,
+          );
+        }
+        if (order.rechargeStatus === RECHARGE_STATUS.SUCCESS) {
+          return {
+            status: 'SUCCESS',
+            message: 'Idempotent: Already Processed',
+          };
+        }
+        throw new InternalServerErrorException(
+          'Failed to update recharge order status, possible concurrency issue',
+        );
+      }
+
+      // check if order exists
+      const order = await ctx.rechargeOrder.findUnique({
+        where: { rechargeNo: orderNo },
+        select: {
+          rechargeId: true,
+          userId: true,
+        },
+      });
+
+      // Credit user's wallet
+      await this.walletService.creditCash(
+        {
+          userId: order?.userId as string,
+          amount: amountDecimal,
+          related: {
+            id: order?.rechargeId as string,
+            type: RelatedType.RECHARGE,
+          },
+          desc: `Recharge via Xendit. Txn: ${transactionId}`,
+        },
+        ctx,
+      );
 
       return { status: 'SUCCESS', message: 'Recharge processed successfully' };
     });
@@ -179,13 +187,35 @@ export class ClientWalletService {
       const amount = order.actualAmount;
 
       if (status === 'SUCCEEDED' || status === 'COMPLETED') {
-        await ctx.userWallet.update({
-          where: { userId: order.userId },
+        // ：使用 updateMany 但允许"强制扣减"
+        // 这里的逻辑是：钱已经没了，我们要扣减冻结金额并增加总提现额
+        // 即使 frozenBalance 不足，理论上也应该扣，但为了数据健康，我们还是加 gte 校验
+        // 如果 gte 校验失败，说明系统有严重 Bug (冻结金额丢了)，但不能让回调死循环
+        const r = await ctx.userWallet.updateMany({
+          where: { userId: order.userId, frozenBalance: { gte: amount } },
           data: {
             frozenBalance: { decrement: amount }, // Unfreeze the amount
             totalWithdraw: { increment: amount }, // Increment total withdrawn
           },
         });
+
+        if (r.count !== 1) {
+          //  严重警报：钱转出去了，但冻结金额不够扣！
+          // 策略：记录严重日志，强制把订单标为完成，防止死循环。
+          // 也可以选择强制扣减 frozenBalance 到负数
+          this.logger.error(
+            `CRITICAL: User ${order.userId} withdraw success but insufficient frozen balance! Order: ${orderNo}`,
+          );
+
+          // 兜底操作：强制扣减 (移除 gte 条件)，或者手动修数据
+          await ctx.userWallet.update({
+            where: { userId: order.userId },
+            data: {
+              frozenBalance: { decrement: amount }, // Unfreeze the amount
+              totalWithdraw: { increment: amount }, // Increment total withdrawn
+            },
+          });
+        }
 
         // Update withdrawal order status to SUCCESS
         await ctx.walletTransaction.updateMany({

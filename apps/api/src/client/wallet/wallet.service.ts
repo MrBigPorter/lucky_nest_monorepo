@@ -78,24 +78,30 @@ export class WalletService {
 
     if (amt.lte(0)) throw new BadRequestException('amount must be positive');
 
-    const snap = await this.ensureWallet(userId, db);
-    const before = D(snap.realBalance ?? 0);
+    await this.ensureWallet(userId, db);
 
-    await db.userWallet.update({
+    // 2.核心修复：直接原子更新，并返回更新后的记录
+    const updateWallet = await db.userWallet.update({
       where: { userId },
       data: {
         realBalance: { increment: amt },
         totalRecharge: { increment: amt },
       },
+      select: {
+        realBalance: true,
+        id: true,
+      },
     });
 
-    const after = before.add(amt);
+    const after = updateWallet.realBalance;
+    const before = after.sub(amt); // 计算更新前的余额
 
+    // 3.记录交易流水
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
-        walletId: snap.id,
+        walletId: updateWallet.id,
         transactionType: TRANSACTION_TYPE.RECHARGE,
         balanceType: BALANCE_TYPE.CASH,
         amount: amt,
@@ -130,27 +136,35 @@ export class WalletService {
 
     if (amt.lte(0)) throw new BadRequestException('amount must be positive');
 
-    const snap = await this.ensureWallet(userId, db);
-    const before = D(snap.realBalance ?? 0);
+    await this.ensureWallet(userId, db);
 
-    const r = await db.userWallet.updateMany({
-      where: { userId, realBalance: { gte: amt } },
-      data: {
-        realBalance: { decrement: amt },
-      },
-    });
-
-    if (r.count !== 1) {
+    // 2. 利用 update 的 where 条件做乐观锁，同时获取更新后的值
+    // Prisma 的 update 如果条件不满足(如余额不足导致记录找不到)，会抛出 P2025 错误
+    let updatedWallet;
+    try {
+      updatedWallet = await db.userWallet.update({
+        where: { userId, realBalance: { gte: amt } }, // 数据库层面的余额检查
+        data: {
+          realBalance: { decrement: amt },
+        },
+        select: {
+          id: true,
+          realBalance: true,
+        },
+      });
+    } catch (e) {
       throwBiz(ERROR_KEYS.INSUFFICIENT_BALANCE);
     }
 
-    const after = before.sub(amt);
+    const after = updatedWallet.realBalance;
+    const before = after.add(amt); // 反推
 
+    // 3.记录交易流水
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
-        walletId: snap.id,
+        walletId: updatedWallet.id,
         transactionType: TRANSACTION_TYPE.CONSUMPTION,
         balanceType: BALANCE_TYPE.CASH,
         amount: amt.neg(), // negative amount for debit
@@ -185,23 +199,27 @@ export class WalletService {
 
     if (amt.lte(0)) throw new BadRequestException('coins must be positive');
 
-    const snap = await this.ensureWallet(userId, db);
-    const before = D(snap.coinBalance ?? 0);
+    await this.ensureWallet(userId, db);
 
-    await db.userWallet.update({
+    const updateWallet = await db.userWallet.update({
       where: { userId },
       data: {
         coinBalance: { increment: amt },
       },
+      select: {
+        coinBalance: true,
+        id: true,
+      },
     });
 
-    const after = before.add(amt);
+    const after = updateWallet.coinBalance;
+    const before = after.sub(amt);
 
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
-        walletId: snap.id,
+        walletId: updateWallet.id,
         transactionType: TRANSACTION_TYPE.REWARD,
         balanceType: BALANCE_TYPE.COIN,
         amount: amt,
@@ -235,26 +253,32 @@ export class WalletService {
 
     if (amt.lte(0)) throw new BadRequestException('coins must be positive');
 
-    const snap = await this.ensureWallet(userId, db);
-    const before = D(snap.coinBalance ?? 0);
-    const r = await db.userWallet.updateMany({
+    await this.ensureWallet(userId, db);
+
+    const res = await db.userWallet.updateMany({
       where: { userId, coinBalance: { gte: amt } },
       data: {
         coinBalance: { decrement: amt },
       },
     });
 
-    if (r.count !== 1) {
+    if (res.count !== 1) {
       throw new BadRequestException('insufficient coin balance');
     }
 
-    const after = before.sub(amt);
+    const currentWallet = await db.userWallet.findUniqueOrThrow({
+      where: { userId },
+      select: { id: true, coinBalance: true },
+    });
+
+    const after = currentWallet.coinBalance;
+    const before = after.add(amt);
 
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
-        walletId: snap.id,
+        walletId: currentWallet.id,
         transactionType: TRANSACTION_TYPE.COIN_EXCHANGE,
         balanceType: BALANCE_TYPE.COIN,
         amount: amt.neg(), // negative amount for debit
@@ -292,9 +316,9 @@ export class WalletService {
 
     if (amt.lte(0)) throw new BadRequestException('amount must be positive');
 
-    const snap = await this.ensureWallet(userId, db);
-    const beforeReal = D(snap.realBalance ?? 0);
+    await this.ensureWallet(userId, db);
 
+    //  Atomic Update (Optimistic Lock)
     const res = await db.userWallet.updateMany({
       where: { userId, realBalance: { gte: amt } },
       data: {
@@ -307,13 +331,23 @@ export class WalletService {
       throwBiz(ERROR_KEYS.INSUFFICIENT_BALANCE);
     }
 
-    const afterReal = beforeReal.sub(amt);
+    // Fetch current wallet state
+    const currentWallet = await db.userWallet.findUniqueOrThrow({
+      where: { userId },
+      select: {
+        id: true,
+        realBalance: true,
+      },
+    });
+
+    const afterReal = currentWallet.realBalance;
+    const beforeReal = afterReal.add(amt);
 
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
-        walletId: snap.id,
+        walletId: currentWallet.id,
         transactionType: TRANSACTION_TYPE.WITHDRAWAL,
         balanceType: BALANCE_TYPE.CASH,
         amount: amt.neg(),
@@ -347,8 +381,7 @@ export class WalletService {
 
     if (amt.lte(0)) throw new BadRequestException('amount must be positive');
 
-    const snap = await this.ensureWallet(userId, db);
-    const beforeFrozen = D(snap.frozenBalance ?? 0);
+    await this.ensureWallet(userId, db);
 
     const res = await db.userWallet.updateMany({
       where: { userId, frozenBalance: { gte: amt } },
@@ -362,13 +395,20 @@ export class WalletService {
       throwBiz(ERROR_KEYS.INSUFFICIENT_BALANCE);
     }
 
-    const afterFrozen = beforeFrozen.sub(amt);
+    // 2. ：立即获取最新的真实冻结余额
+    const currentWallet = await db.userWallet.findUniqueOrThrow({
+      where: { userId },
+      select: { id: true, frozenBalance: true },
+    });
+
+    const afterFrozen = currentWallet.frozenBalance;
+    const beforeFrozen = afterFrozen.add(amt);
 
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
-        walletId: snap.id,
+        walletId: currentWallet.id,
         transactionType: TRANSACTION_TYPE.REFUND,
         balanceType: BALANCE_TYPE.CASH,
         amount: amt,
