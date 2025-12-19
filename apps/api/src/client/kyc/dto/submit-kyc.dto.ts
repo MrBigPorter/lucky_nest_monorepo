@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsObject,
   IsNotEmpty,
+  IsUrl,
 } from 'class-validator';
 import { ToInt, ToNumber } from '@api/common/dto/transforms';
 
@@ -37,6 +38,7 @@ export class SubmitKycDto {
   })
   @IsNotEmpty()
   @IsString()
+  @IsUrl()
   @MaxLength(255)
   idCardFront!: string;
 
@@ -46,12 +48,14 @@ export class SubmitKycDto {
   })
   @IsOptional()
   @IsString()
+  @IsUrl()
   @MaxLength(255)
   idCardBack?: string;
 
   @ApiProperty({ description: 'face image url', maxLength: 255 })
   @IsNotEmpty()
   @IsString()
+  @IsUrl()
   @MaxLength(255)
   faceImage!: string;
 
@@ -64,6 +68,7 @@ export class SubmitKycDto {
   @ApiPropertyOptional({ description: 'video url', maxLength: 255 })
   @IsOptional()
   @IsString()
+  @IsUrl()
   @MaxLength(255)
   videoUrl?: string;
 
