@@ -454,6 +454,41 @@ export type OrderSearchForm = {
   orderStatus: string;
 };
 
+export interface AddressResponse {
+  addressId: string;
+  userId: string;
+  userNickname?: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  province: string;
+  city: string;
+  barangay: string;
+  fullAddress: string;
+  isDefault: number;
+  createdAt: number;
+}
+
+export interface AddressSeahFormInput {
+  keyword: string;
+  userId: string;
+  province: string;
+}
+
+export interface QueryListAddressParams
+  extends PaginationParams, Partial<AddressSeahFormInput> {}
+
+export interface UpdateAddress {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  fullAddress?: string;
+  isDefault?: number;
+  provinceId?: number;
+  cityId?: number;
+  barangayId?: number;
+}
+
 export interface Banner {
   id: string;
   title: string;

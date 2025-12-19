@@ -35,6 +35,9 @@ import {
   RechargeOrder,
   RechargeListParams,
   FinanceStatistics,
+  QueryListAddressParams,
+  AddressResponse,
+  UpdateAddress,
 } from '@/type/types.ts';
 
 /**
@@ -320,6 +323,34 @@ export const financeApi = {
   // 同步充值状态
   syncRecharge: (id: string) => {
     return http.post(`/v1/admin/finance/recharge/sync/${id}`);
+  },
+};
+
+/**
+ * 地址管理 API
+ */
+export const addressApi = {
+  // 获取地址列表
+  list: (params: QueryListAddressParams) => {
+    return http.get<PaginatedResponse<AddressResponse>>(
+      '/v1/admin/address/list',
+      params,
+    );
+  },
+
+  // 获取地址详情
+  getAddress: (id: string) => {
+    return http.get<AddressResponse>(`/v1/admin/address/${id}`);
+  },
+
+  // 更新地址
+  updateAddress: (id: string, data: UpdateAddress) => {
+    return http.post<AddressResponse>(`/v1/admin/address/update/${id}`, data);
+  },
+
+  // 删除地址
+  deleteAddress: (id: string) => {
+    return http.delete(`/v1/admin/address/delete/${id}`);
   },
 };
 

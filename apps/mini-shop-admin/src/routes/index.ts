@@ -36,6 +36,7 @@ import { ServiceCenter } from '../pages/ServiceCenter';
 import { ActSectionManagement } from '@/pages/ActSectionManagement.tsx';
 import { BannerManagement } from '@/pages/BannerManagement.tsx';
 import { FinancePage } from '@/pages/FinancePage.tsx';
+import { AddressList } from '@/pages/AddressList.tsx';
 
 export interface RouteConfig {
   path: string;
@@ -61,6 +62,13 @@ export const routes: RouteConfig[] = [
     path: '/users',
     name: 'users',
     component: UserManagement,
+    icon: Users,
+    group: 'Management',
+  },
+  {
+    path: '/address',
+    name: 'address',
+    component: AddressList,
     icon: Users,
     group: 'Management',
   },
