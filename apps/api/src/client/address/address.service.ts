@@ -6,51 +6,14 @@ import {
   UpdateAddressDto,
 } from '@api/client/address/dto/address.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
+import { RegionService } from '@api/common/region/region.service';
 
 @Injectable()
 export class AddressService {
-  constructor(private prismaService: PrismaService) {}
-
-  /**
-   * Validate and get geographical information based on province, city, and barangay IDs.
-   * @param provinceId
-   * @param cityId
-   * @param barangayId
-   * @private
-   */
-  private async validateAndGetGeoInfo(
-    provinceId: number,
-    cityId: number,
-    barangayId: number,
-  ) {
-    // Validate barangay => city => province
-    const barangay = await this.prismaService.barangay.findUnique({
-      where: { barangayId: barangayId },
-      include: {
-        city: {
-          include: {
-            province: true,
-          },
-        },
-      },
-    });
-    if (!barangay) {
-      throw new BadRequestException('Invalid barangay ID');
-    }
-
-    if (barangay.cityId !== cityId || barangay.city.provinceId !== provinceId) {
-      throw new BadRequestException(
-        'City or Province does not match with Barangay',
-      );
-    }
-
-    return {
-      province: barangay.city.province.provinceName,
-      cityName: barangay.city.cityName,
-      barangayName: barangay.barangayName,
-      postalCode: barangay.city.postalCode,
-    };
-  }
+  constructor(
+    private prismaService: PrismaService,
+    private regionService: RegionService,
+  ) {}
 
   /**
    * Create a new address for the user.
@@ -67,7 +30,7 @@ export class AddressService {
     }
 
     // Validate geographical info
-    const geo = await this.validateAndGetGeoInfo(
+    const geo = await this.regionService.validateAndGetGeoInfo(
       dto.provinceId,
       dto.cityId,
       dto.barangayId,
@@ -99,8 +62,8 @@ export class AddressService {
           lastName: dto.lastName,
           phone: dto.phone,
           province: geo.province,
-          city: geo.cityName,
-          barangay: geo.barangayName,
+          city: geo.city,
+          barangay: geo.barangay,
           postalCode: geo.postalCode,
           fullAddress: dto.fullAddress,
           label: dto.label,
@@ -118,7 +81,7 @@ export class AddressService {
    */
   async update(userId: string, addressId: string, dto: UpdateAddressDto) {
     // Validate geographical info
-    const geo = await this.validateAndGetGeoInfo(
+    const geo = await this.regionService.validateAndGetGeoInfo(
       dto.provinceId,
       dto.cityId,
       dto.barangayId,
@@ -153,8 +116,8 @@ export class AddressService {
             lastName: dto.lastName,
             phone: dto.phone,
             province: geo.province,
-            city: geo.cityName,
-            barangay: geo.barangayName,
+            city: geo.city,
+            barangay: geo.barangay,
             postalCode: geo.postalCode,
             fullAddress: dto.fullAddress,
             label: dto.label,

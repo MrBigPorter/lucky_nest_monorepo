@@ -5,51 +5,14 @@ import {
   AdminUpdateAddressDto,
 } from '@api/admin/address/dto/admin-address.dto';
 import { Prisma } from '@prisma/client';
+import { RegionService } from '@api/common/region/region.service';
 
 @Injectable()
 export class AddressService {
-  constructor(private prismaService: PrismaService) {}
-
-  /**
-   * 私有辅助：地理信息校验
-   * 确保 Admin 不会录入不存在的区域或脏数据
-   */
-  private async validateAndGetGeoInfo(
-    provinceId?: number,
-    cityId?: number,
-    barangayId?: number,
-  ) {
-    // 如果没有传任何地理 ID，说明不修改地址区域
-    if (!provinceId && !cityId && !barangayId) return null;
-
-    if (!provinceId || !cityId || !barangayId) {
-      throw new BadRequestException(
-        'Province, City, and Barangay must be updated together',
-      );
-    }
-
-    const barangay = await this.prismaService.barangay.findUnique({
-      where: { barangayId },
-      include: {
-        city: {
-          include: { province: true },
-        },
-      },
-    });
-
-    if (!barangay) throw new BadRequestException('Invalid Barangay ID');
-
-    if (barangay.cityId !== cityId || barangay.city.provinceId !== provinceId) {
-      throw new BadRequestException('Geo location mismatch');
-    }
-
-    return {
-      province: barangay.city.province.provinceName,
-      city: barangay.city.cityName,
-      barangay: barangay.barangayName,
-      postalCode: barangay.city.postalCode,
-    };
-  }
+  constructor(
+    private prismaService: PrismaService,
+    private regionService: RegionService,
+  ) {}
 
   /**
    * Admin 获取用户地址列表，支持多条件筛选
@@ -112,7 +75,7 @@ export class AddressService {
       throw new BadRequestException('Address not found');
     }
 
-    const geo = await this.validateAndGetGeoInfo(
+    const geo = await this.regionService.validateAndGetGeoInfo(
       dto.provinceId,
       dto.cityId,
       dto.barangayId,

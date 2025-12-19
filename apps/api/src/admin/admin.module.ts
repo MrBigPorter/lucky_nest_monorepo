@@ -10,6 +10,7 @@ import { CouponModule } from '@api/admin/coupon/coupon.module';
 import { FinanceModule } from '@api/admin/finance/finance.module';
 import { KycModule } from '@api/admin/kyc/kyc.module';
 import { AddressModule } from '@api/admin/address/address.module';
+import { AdminRegionModule } from '@api/admin/region/admin-region.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AddressModule } from '@api/admin/address/address.module';
     FinanceModule,
     KycModule,
     AddressModule,
+    AdminRegionModule,
   ],
   providers: [],
   controllers: [],
