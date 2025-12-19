@@ -16,4 +16,5 @@ export * from "./utils/enum-options.util";
 export * from "./utils/order-no.helper";
 export * from "./constants/operation-log.constants";
 export * from "./constants/business.constants";
+export * from "./constants/kyc.constants";
 export * from "./config/rbac.config";

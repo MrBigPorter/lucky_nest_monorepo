@@ -1,13 +1,3 @@
-/** KYC状态: 0-未认证 1-审核中 2-审核失败 3-待补充 4-已认证 */
-export const KYC_STATUS = {
-  /** 未认证 */ UNVERIFIED: 0,
-  /** 审核中 */ REVIEWING: 1,
-  /** 审核失败 */ REJECTED: 2,
-  /** 待补充资料 */ PENDING_INFO: 3,
-  /** 已认证 */ VERIFIED: 4,
-} as const;
-export type KycStatusNum = (typeof KYC_STATUS)[keyof typeof KYC_STATUS];
-
 /** 登录类型: 1-密码登录 2-短信验证码 3-第三方登录 */
 export const LOGIN_TYPE = {
   /** 密码登录 */ PASSWORD: 1,

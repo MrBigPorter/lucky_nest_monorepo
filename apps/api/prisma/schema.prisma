@@ -1,5 +1,3 @@
-// apps/api/prisma/schema.prisma
-
 generator client {
   provider      = "prisma-client-js"
   // native = 在当前环境生成；另外显式包含 Mac 和 Alpine
@@ -61,6 +59,12 @@ model User {
   withdrawOrders      WithdrawOrder[]
   /// user coupons
   userCoupons           UserCoupon[]
+
+  // kyc records
+  kycRecords            KycRecord[]
+
+  // addresses
+  addresses             UserAddress[]
 
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
@@ -573,6 +577,38 @@ model UserWallet {
   @@index([userId], map: "idx_user_id")
 }
 
+/// 用户收货地址
+model UserAddress {
+  addressId   String   @id @default(cuid()) @map("address_id") @db.VarChar(32)
+  userId      String   @map("user_id") @db.VarChar(32)
+
+  firstName   String   @map("first_name") @db.VarChar(50)
+  lastName    String   @map("last_name") @db.VarChar(50)
+  phone       String   @db.VarChar(20)
+
+  province    String   @db.VarChar(50)
+  city        String   @db.VarChar(50)
+  barangay    String   @db.VarChar(50)
+
+  fullAddress String   @map("full_address") @db.Text
+  postalCode  String?  @map("postal_code") @db.VarChar(10)
+
+  // 地址标签 (Home, Office, Other)
+  label       String?  @db.VarChar(20)
+
+  isDefault   Int      @default(0) @map("is_default") @db.SmallInt
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // deliveries  Delivery[]
+
+  @@index([userId])
+  @@map("user_addresses")
+}
+
 // 钱包流水
 model WalletTransaction {
   id              String   @id @default(cuid()) @map("id") @db.VarChar(32)
@@ -835,3 +871,127 @@ model WithdrawOrder {
   @@index([withdrawStatus])
   @@map("withdraw_orders")
 }
+
+
+
+/// 省份配置 (Philippines Provinces)
+model Province {
+  provinceId   Int      @id @default(autoincrement()) @map("province_id")
+  provinceName String   @unique @map("province_name") @db.VarChar(100)
+  provinceCode String?  @map("province_code") @db.VarChar(50)
+  sortOrder    Int      @default(0) @map("sort_order")
+  status       Int      @default(1) @db.SmallInt // 1=启用
+
+  cities       City[]
+
+  @@map("provinces")
+}
+
+/// 城市配置 (Philippines Cities)
+model City {
+  cityId     Int      @id @default(autoincrement()) @map("city_id")
+  provinceId Int      @map("province_id")
+  cityName   String   @map("city_name") @db.VarChar(100)
+  cityCode   String?  @map("city_code") @db.VarChar(50)
+  postalCode String?  @map("postal_code") @db.VarChar(10)
+  status     Int      @default(1) @db.SmallInt // 1=启用
+
+  province   Province @relation(fields: [provinceId], references: [provinceId])
+  barangays  Barangay[] // 关联下级社区
+
+  @@index([provinceId])
+  @@map("cities")
+}
+
+/// 菲律宾最小行政单位 Barangay (物流必填)
+model Barangay {
+  barangayId   Int      @id @default(autoincrement()) @map("barangay_id")
+  cityId       Int      @map("city_id")
+  barangayName String   @map("barangay_name") @db.VarChar(100)
+  status       Int      @default(1) @db.SmallInt
+
+  city         City     @relation(fields: [cityId], references: [cityId])
+
+  @@index([cityId])
+  @@map("barangays")
+}
+
+/// KYC 证件类型配置 (ID Types)
+model KycIdType {
+  typeId        Int      @id @default(autoincrement()) @map("type_id")
+  typeName      String   @map("type_name") @db.VarChar(200)
+  typeNameEn    String?  @map("type_name_en") @db.VarChar(200)
+
+  // 验证规则配置
+  requiresFront Int      @default(1) @map("requires_front") @db.SmallInt // 是否需要正面
+  requiresBack  Int      @default(1) @map("requires_back") @db.SmallInt  // 是否需要背面
+  requiresOcr   Int      @default(1) @map("requires_ocr") @db.SmallInt   // 是否支持OCR
+
+  sortOrder     Int      @default(0) @map("sort_order")
+  status        Int      @default(1) @db.SmallInt
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("kyc_id_types")
+}
+
+/// KYC 职业类型配置 (Occupations)
+model KycOccupationType {
+  occupationId   Int      @id @default(autoincrement()) @map("occupation_id")
+  occupationName String   @map("occupation_name") @db.VarChar(200)
+  category       String?  @map("occupation_category") @db.VarChar(50)
+
+  sortOrder      Int      @default(0) @map("sort_order")
+  status         Int      @default(1) @db.SmallInt
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("kyc_occupation_types")
+}
+
+
+/// KYC 认证记录
+model KycRecord {
+  id            String   @id @default(cuid()) @map("id") @db.VarChar(32)
+  userId        String   @map("user_id") @db.VarChar(32)
+
+  // 状态: 0-未提交 1-审核中 2-审核失败 3-待补充 4-已通过
+  kycStatus     Int      @default(0) @map("kyc_status") @db.SmallInt
+
+  // 证件信息 (用户填写的)
+  idType        Int      @default(1) @map("id_type")
+  idNumber      String?  @map("id_number") @db.VarChar(50)
+  realName      String?  @map("real_name") @db.VarChar(100)
+
+  // ===  图片凭证 ===
+  idCardFront   String?  @map("id_card_front") @db.VarChar(255) // 身份证正面URL
+  idCardBack    String?  @map("id_card_back") @db.VarChar(255)  // 身份证背面URL
+
+  // ===  活体检测存证 (Google ML Kit 结果) ===
+  faceImage     String?  @map("face_image") @db.VarChar(255)    // 活体抓拍的最佳人脸图
+  livenessScore Float?   @map("liveness_score")                 // (可选) 前端传来的置信度
+  videoUrl      String?  @map("video_url") @db.VarChar(255)     // (可选) 活体过程录屏
+
+  // ===  OCR/比对数据
+  ocrRawData    Json?    @map("ocr_raw_data")                   // 身份证 OCR 原始数据
+  verifyResult  Json?    @map("verify_result")                  // 人脸比对结果 (Face++ / AWS)
+
+  // 审核结果
+  auditResult   String?  @map("audit_result") @db.Text
+  rejectReason  String?  @map("reject_reason") @db.VarChar(255)
+  auditorId     String?  @map("auditor_id") @db.VarChar(32)
+
+  submittedAt   DateTime? @map("submitted_at")
+  auditedAt     DateTime? @map("audited_at")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([kycStatus])
+  @@map("kyc_records")
+}
+
