@@ -14,6 +14,7 @@ import { PermissionsGuard } from '@api/common/guards/permissions.guard';
 import { AddressService } from '@api/admin/address/address.service';
 import {
   AdminAddressResponseDto,
+  AdminQueryAddressDto,
   AdminUpdateAddressDto,
 } from '@api/admin/address/dto/admin-address.dto';
 import { QueryAddressListDto } from '@api/client/address/dto/address.dto';
@@ -35,7 +36,7 @@ export class AddressController {
   @Get('list')
   @RequirePermission(OpModule.USER, OpAction.USER.VIEW)
   @ApiOkResponse({ type: AdminAddressResponseDto })
-  async list(@Query() dto: QueryAddressListDto) {
+  async list(@Query() dto: AdminQueryAddressDto) {
     const data = await this.addressService.list(dto);
     return {
       ...data,
