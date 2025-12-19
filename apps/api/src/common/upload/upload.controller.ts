@@ -6,6 +6,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import {
+  Body,
   Controller,
   FileTypeValidator,
   MaxFileSizeValidator,
@@ -18,6 +19,7 @@ import {
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { UploadService } from '@api/common/upload/upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadFolderDto } from '@api/common/upload/dto/upload-folder.dto';
 
 @ApiTags('Upload')
 @ApiBearerAuth()
@@ -29,14 +31,6 @@ export class UploadController {
   @Post('image')
   @ApiOperation({ summary: 'upload image/video (Cloudflare R2)' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-      },
-    },
-  })
   @UseInterceptors(FileInterceptor('file'))
   async uploadMedia(
     @UploadedFile(
@@ -50,11 +44,16 @@ export class UploadController {
       }),
     )
     file: Express.Multer.File,
+    @Body() dto: UploadFolderDto,
   ) {
     // 根据 mime 类型区分存储目录
     const isVideo = file.mimetype.startsWith('video/');
-    const folder = isVideo ? 'videos' : 'images';
 
-    return this.uploadService.uploadFile(file, folder);
+    let target = dto.folder;
+    if (!dto.folder) {
+      target = isVideo ? 'videos' : 'images';
+    }
+
+    return this.uploadService.uploadFile(file, target);
   }
 }
