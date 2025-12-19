@@ -12,6 +12,7 @@ import { OrderModule } from '@api/client/orders/order.module';
 import { HealthController } from '@api/client/health/health.controller';
 import { KycModule } from '@api/client/kyc/kyc.module';
 import { AddressModule } from '@api/client/address/address.module';
+import { ClientRegionModule } from '@api/client/region/client-region.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AddressModule } from '@api/client/address/address.module';
     OrderModule,
     KycModule,
     AddressModule,
+    ClientRegionModule,
   ],
   providers: [],
   controllers: [HealthController],

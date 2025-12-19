@@ -48,6 +48,8 @@ export class AdminQueryAddressDto {
   @ApiPropertyOptional({
     description: 'keyword (search in firstName, lastName, phone)',
   })
+  @IsOptional()
+  @IsString()
   keyword?: string;
 }
 
@@ -71,26 +73,26 @@ export class AdminUpdateAddressDto {
   @Matches(/^(09|\+639)\d{9}$/, { message: 'Invalid phone format' })
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'provinceId' })
-  @IsOptional()
+  @ApiProperty({ description: 'provinceId' })
+  @IsNotEmpty()
   @ToInt()
   @IsInt()
   @Min(1)
-  provinceId?: number;
+  provinceId!: number;
 
-  @ApiPropertyOptional({ description: 'cityId' })
-  @IsOptional()
+  @ApiProperty({ description: 'cityId' })
+  @IsNotEmpty()
   @ToInt()
   @IsInt()
   @Min(1)
-  cityId?: number;
+  cityId!: number;
 
-  @ApiPropertyOptional({ description: 'barangayId' })
-  @IsOptional()
+  @ApiProperty({ description: 'barangayId' })
+  @IsNotEmpty()
   @ToInt()
   @IsInt()
   @Min(1)
-  barangayId?: number;
+  barangayId!: number;
 
   @ApiPropertyOptional({ description: 'fullAddress' })
   @IsOptional()

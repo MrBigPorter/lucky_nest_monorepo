@@ -38,6 +38,9 @@ import {
   QueryListAddressParams,
   AddressResponse,
   UpdateAddress,
+  Province,
+  City,
+  Barangay,
 } from '@/type/types.ts';
 
 /**
@@ -351,6 +354,26 @@ export const addressApi = {
   // 删除地址
   deleteAddress: (id: string) => {
     return http.delete(`/v1/admin/address/delete/${id}`);
+  },
+};
+
+/**
+ * region API
+ */
+export const regionApi = {
+  // 获取省份列表
+  provinces: () => {
+    return http.get<Province[]>('/v1/admin/region/provinces');
+  },
+
+  // 获取城市列表
+  cities: (provinceId: number) => {
+    return http.get<City[]>(`/api/v1/admin/region/cities/${provinceId}`);
+  },
+
+  // 获取区/镇列表
+  barangays: (cityId: number) => {
+    return http.get<Barangay[]>(`/v1/admin/region/barangays/${cityId}`);
   },
 };
 

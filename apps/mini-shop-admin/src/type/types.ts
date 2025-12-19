@@ -467,6 +467,10 @@ export interface AddressResponse {
   fullAddress: string;
   isDefault: number;
   createdAt: number;
+
+  provinceId?: number;
+  cityId?: number;
+  barangayId?: number;
 }
 
 export interface AddressSeahFormInput {
@@ -487,6 +491,22 @@ export interface UpdateAddress {
   provinceId?: number;
   cityId?: number;
   barangayId?: number;
+}
+
+export interface Province {
+  provinceId: number;
+  provinceName: string;
+}
+
+export interface City {
+  cityId: number;
+  cityName: string;
+  postalCode: string;
+}
+
+export interface Barangay {
+  barangayId: number;
+  barangayName: string;
 }
 
 export interface Banner {

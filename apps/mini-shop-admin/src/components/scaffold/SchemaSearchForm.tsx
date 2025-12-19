@@ -68,6 +68,7 @@ export const SchemaSearchForm = <T extends Record<string, any>>({
       case 'input':
         return (
           <FormTextField
+            autoComplete={false}
             key={String(field.key)}
             name={String(field.key)}
             label={field.label}
