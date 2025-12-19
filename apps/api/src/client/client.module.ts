@@ -10,6 +10,7 @@ import { GroupModule } from '@api/common/group/group.module';
 import { WalletModule } from '@api/client/wallet/wallet.module';
 import { OrderModule } from '@api/client/orders/order.module';
 import { HealthController } from '@api/client/health/health.controller';
+import { KycModule } from '@api/client/kyc/kyc.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { HealthController } from '@api/client/health/health.controller';
     GroupModule,
     WalletModule,
     OrderModule,
+    KycModule,
   ],
   providers: [],
   controllers: [HealthController],
