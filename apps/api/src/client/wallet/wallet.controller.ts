@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -88,7 +89,7 @@ export class WalletController {
   @ApiOkResponse({ type: TransactionListResponseDto })
   async getTransactions(
     @CurrentUserId() userId: string,
-    @Body() dto: TransactionQueryDto,
+    @Query() dto: TransactionQueryDto,
   ) {
     const data = await this.clientWallet.getTransactionHistory(userId, dto);
     return {
