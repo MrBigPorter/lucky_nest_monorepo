@@ -9,6 +9,7 @@ import { OrderModule } from '@api/admin/order/order.module';
 import { CouponModule } from '@api/admin/coupon/coupon.module';
 import { FinanceModule } from '@api/admin/finance/finance.module';
 import { KycModule } from '@api/admin/kyc/kyc.module';
+import { AddressModule } from '@api/admin/address/address.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { KycModule } from '@api/admin/kyc/kyc.module';
     CouponModule,
     FinanceModule,
     KycModule,
+    AddressModule,
   ],
   providers: [],
   controllers: [],
