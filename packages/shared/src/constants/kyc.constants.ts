@@ -18,3 +18,5 @@ export const OP_ACTION = {
   REJECT: "REJECT",
   NEED_MORE: "NEED_MORE",
 } as const;
+
+export type KycOpAction = (typeof OP_ACTION)[keyof typeof OP_ACTION];

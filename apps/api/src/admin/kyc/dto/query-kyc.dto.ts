@@ -22,7 +22,7 @@ export class QueryKycDto {
   @ToInt()
   @IsInt()
   @Min(1)
-  pageSize?: number = 10;
+  pageSize?: number = 20;
 
   @ApiPropertyOptional({ description: 'user ID', example: 'user_12345' })
   @IsOptional()

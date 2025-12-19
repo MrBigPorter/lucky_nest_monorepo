@@ -8,8 +8,8 @@ export class AuditKycDto {
   })
   @IsNotEmpty()
   @IsString()
-  @IsIn(['approve', 'reject', 'need_more'])
-  action!: 'approve' | 'reject' | 'need_more';
+  @IsIn(['APPROVE', 'REJECT', 'NEED_MORE'])
+  action!: 'APPROVE' | 'REJECT' | 'NEED_MORE';
 
   @ApiProperty({
     description: 'remark (max 500 characters)',
