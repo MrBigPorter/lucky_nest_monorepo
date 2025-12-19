@@ -19,6 +19,9 @@ export class KycService {
     return this.prismaService.kycRecord.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
+      select: {
+        kycStatus: true,
+      },
     });
   }
 
@@ -44,7 +47,7 @@ export class KycService {
       const duplicateId = await ctx.kycRecord.findFirst({
         where: {
           idNumber: dto.idNumber,
-          userId,
+          userId: { not: userId },
           kycStatus: {
             in: [KYC_STATUS.REVIEWING, KYC_STATUS.APPROVED],
           },

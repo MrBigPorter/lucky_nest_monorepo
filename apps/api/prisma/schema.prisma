@@ -991,7 +991,6 @@ model KycRecord {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([kycStatus])
   @@map("kyc_records")
 }
 
