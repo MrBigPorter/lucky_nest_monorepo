@@ -11,6 +11,7 @@ import { WalletModule } from '@api/client/wallet/wallet.module';
 import { OrderModule } from '@api/client/orders/order.module';
 import { HealthController } from '@api/client/health/health.controller';
 import { KycModule } from '@api/client/kyc/kyc.module';
+import { AddressModule } from '@api/client/address/address.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { KycModule } from '@api/client/kyc/kyc.module';
     WalletModule,
     OrderModule,
     KycModule,
+    AddressModule,
   ],
   providers: [],
   controllers: [HealthController],
