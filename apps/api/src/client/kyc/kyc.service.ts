@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { SubmitKycDto } from '@api/client/kyc/dto/submit-kyc.dto';
 import { KYC_STATUS } from '@lucky/shared';
@@ -35,7 +39,23 @@ export class KycService {
    */
   async submitKyc(userId: string, dto: SubmitKycDto) {
     return this.prismaService.$transaction(async (ctx) => {
-      // check if there is an existing KYC record in REVIEWING or APPROVED status
+      // 全局检查：该证件号是否已被其他 APPROVED 的账号使用
+      // 注意：是否允许 REVIEWING 状态重复取决于业务
+      const duplicateId = await ctx.kycRecord.findFirst({
+        where: {
+          idNumber: dto.idNumber,
+          userId,
+          kycStatus: {
+            in: [KYC_STATUS.REVIEWING, KYC_STATUS.APPROVED],
+          },
+        },
+      });
+
+      if (duplicateId) {
+        throw new ConflictException('Identity document already in use.');
+      }
+
+      // 获取当前用户最新的 KYC 记录
       const existing = await ctx.kycRecord.findFirst({
         where: { userId },
         orderBy: { createdAt: 'desc' },
@@ -60,8 +80,8 @@ export class KycService {
           faceImage: dto.faceImage,
           livenessScore: dto.livenessScore,
           videoUrl: dto.videoUrl,
-          ocrRawData: dto.ocrRawData as any,
-          verifyResult: dto.verifyResult as any,
+          ocrRawData: dto.ocrRawData ?? {},
+          verifyResult: dto.verifyResult ?? {},
           submittedAt: new Date(),
           auditResult: null,
           rejectReason: null,
