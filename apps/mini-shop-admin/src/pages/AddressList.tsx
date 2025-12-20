@@ -16,6 +16,7 @@ import {
   QueryListAddressParams,
   UpdateAddress,
 } from '@/type/types.ts';
+import { Card } from '@/components/UIComponents.tsx';
 
 export const AddressList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
@@ -183,20 +184,22 @@ export const AddressList: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-4">
-      <SmartTable<AddressResponse>
-        headerTitle={
-          <div className="flex items-center gap-2">
-            <MapPin className="text-primary-500" size={20} />
-            <span>Address Management</span>
-          </div>
-        }
-        rowKey="addressId"
-        ref={actionRef}
-        columns={columns}
-        searchSchema={searchSchema}
-        request={requestAddress}
-      />
-    </div>
+    <Card>
+      <div className="p-4">
+        <SmartTable<AddressResponse>
+          headerTitle={
+            <div className="flex items-center gap-2">
+              <MapPin className="text-primary-500" size={20} />
+              <span>Address Management</span>
+            </div>
+          }
+          rowKey="addressId"
+          ref={actionRef}
+          columns={columns}
+          searchSchema={searchSchema}
+          request={requestAddress}
+        />
+      </div>
+    </Card>
   );
 };

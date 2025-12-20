@@ -12,6 +12,7 @@ import { KycRecord, KycRecordListParams } from '@/type/types.ts';
 import { KYC_STATUS } from '@lucky/shared';
 import { Badge } from '@repo/ui/components/ui/badge.tsx';
 import { kycApi } from '@/api';
+import { Card } from '@/components/UIComponents.tsx';
 
 export const KycList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
@@ -169,20 +170,22 @@ export const KycList: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-4">
-      <SmartTable<KycRecord>
-        headerTitle={
-          <div className="flex items-center gap-2">
-            <Shield className="text-primary-600" size={20} />
-            <span>KYC Applications</span>
-          </div>
-        }
-        rowKey="id"
-        ref={actionRef}
-        columns={columns}
-        searchSchema={searchSchema}
-        request={requestKyc}
-      />
-    </div>
+    <Card>
+      <div className="p-4">
+        <SmartTable<KycRecord>
+          headerTitle={
+            <div className="flex items-center gap-2">
+              <Shield className="text-primary-600" size={20} />
+              <span>KYC Applications</span>
+            </div>
+          }
+          rowKey="id"
+          ref={actionRef}
+          columns={columns}
+          searchSchema={searchSchema}
+          request={requestKyc}
+        />
+      </div>
+    </Card>
   );
 };
