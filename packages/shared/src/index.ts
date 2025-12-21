@@ -7,6 +7,7 @@ export * from "./types/order";
 export * from "./types/actSection";
 export * from "./types/coupon";
 export * from "./types/finance";
+export * from "./types/user-device";
 
 export * from "./string/isNullOrEmpty";
 export * from "./number/CalcHelper";
