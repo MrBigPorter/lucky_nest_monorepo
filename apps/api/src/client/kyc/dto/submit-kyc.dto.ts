@@ -13,6 +13,15 @@ import {
 import { ToInt, ToNumber } from '@api/common/dto/transforms';
 
 export class SubmitKycDto {
+  @ApiProperty({
+    description: 'session id from third-party service',
+    maxLength: 100,
+  })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  sessionId!: string;
+
   @ApiProperty({ description: '（KycIdType.typeId）', example: 1 })
   @IsNotEmpty()
   @ToInt()

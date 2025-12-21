@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -52,6 +53,60 @@ export class UploadService {
         secretAccessKey,
       },
     });
+  }
+
+  /**
+   * Key ownership check (IMPORTANT)
+   *
+   * Your current key format is:
+   *   uploads/${module}/${userId}/${file}
+   *
+   * We enforce this ONLY for private modules (kyc/finance/contract/id-card).
+   * For legacy data, you can optionally accept old prefixes below.
+   */
+  private assertOwnedKey(key: string, module: string, userId: string) {
+    const normalized = (key || '').replace(/^\/+/, '');
+
+    const allowedPrefixes = [`uploads/${module}/${userId}/`];
+
+    const ok = allowedPrefixes.some((p) => normalized.startsWith(p));
+    if (!ok) {
+      throw new ConflictException('File key not owned by current user');
+    }
+  }
+
+  /**
+   * Internal method to upload file to S3
+   * @param body
+   * @param key
+   * @param bucket
+   * @param contentType
+   * @param encrypt
+   * @private
+   */
+  private async internalPutToS3(
+    body: Buffer | Uint8Array | Blob | string,
+    key: string,
+    bucket: string,
+    contentType: string,
+    encrypt: boolean = false, // 默认不加密，按需开启
+  ) {
+    try {
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+          ...(encrypt ? { ServerSideEncryption: 'AES256' } : {}),
+        }),
+      );
+      this.logger.log(`File uploaded successfully to ${bucket}/${key}`);
+      return { key };
+    } catch (error) {
+      this.logger.error('Internal Upload Error', error);
+      throw new InternalServerErrorException('Internal Upload Error');
+    }
   }
 
   /**
@@ -122,18 +177,22 @@ export class UploadService {
   /**
    * 生成查看/下载签名 URL (GET)
    */
-  async getDownloadUrl(key: string, module: string = 'common') {
+  async getDownloadUrl(
+    key: string,
+    module: string = 'common',
+    userId?: string,
+  ) {
     if (!key) return null;
+    const normalized = key.replace(/^\/+/, '');
+
     // 兼容旧数据
     if (key.startsWith('http')) return key;
 
     const { bucket, isPrivate } = this.getBucketConfig(module);
 
-    // 如果是公开桶，直接返回 CDN 链接，不浪费计算资源
-    if (!isPrivate && this.publicDomain) {
-      // 去掉末尾可能存在的 / 防止双斜杠
+    if (!isPrivate) {
       const domain = this.publicDomain.replace(/\/$/, '');
-      return `${domain}/${key}`;
+      return `${domain}/${normalized}`;
     }
 
     // 私有桶：必须生成临时签名
@@ -143,9 +202,9 @@ export class UploadService {
     });
 
     try {
-      // 签发 1 小时 (3600秒) 有效的查看链接
+      // 签发 5 分钟有效的下载链接
       return await getSignedUrl(this.s3Client as any, command, {
-        expiresIn: 3600,
+        expiresIn: 300,
       });
     } catch (error) {
       this.logger.error(
@@ -156,38 +215,85 @@ export class UploadService {
     }
   }
 
-  // upload file to R2
-  async uploadFile(file: Express.Multer.File, folder: string = 'treasures') {
-    // generate unique file name: treasures/uuid.jpg
-    const fileExt = extname(file.originalname);
-    const fileName = `${folder}/${uuidv4()}${fileExt}`;
+  /**
+   * Get file buffer from S3
+   * @param key
+   * @param module
+   * @param userId
+   */
+  async getFileBuffer(
+    key: string,
+    module: string = 'kyc',
+    userId: string,
+  ): Promise<Buffer> {
+    if (!key) throw new ConflictException('Missing key');
+    const normalized = key.replace(/^\/+/, '');
 
-    try {
-      // apply to upload
-      await this.s3Client.send(
-        new PutObjectCommand({
-          Bucket: this.publicBucket,
-          Key: fileName,
-          Body: file.buffer, // 直接上传内存中的 Buffer
-          ContentType: file.mimetype,
-        }),
-      );
-
-      // return url
-      const domain = this.publicDomain.replace(/\/$/, '');
-      const url = `${domain}/${fileName}`;
-
-      this.logger.log(`File uploaded successfully: ${url}`);
-
-      return {
-        url,
-        key: fileName,
-        originalName: file.originalname,
-      };
-    } catch (error) {
-      // @ts-ignore
-      this.logger.error(`R2 Upload Error: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('R2 Upload Error');
+    const { bucket, isPrivate } = this.getBucketConfig(module);
+    if (isPrivate) {
+      this.assertOwnedKey(normalized, module, userId);
     }
+
+    const data = await this.s3Client.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    );
+
+    const byteArray = await data.Body!.transformToByteArray();
+    return Buffer.from(byteArray); // 统一转回 Buffer
+  }
+  /**
+   * Upload buffer to S3
+   * @param buffer
+   * @param module
+   * @param userId
+   * @param mimeType
+   */
+  async uploadBuffer(
+    buffer: Buffer,
+    module: string,
+    userId: string,
+    mimeType: string = 'image/jpeg',
+  ) {
+    const { bucket, isPrivate } = this.getBucketConfig(module);
+
+    const uniqueFileName = `face_${uuidv4()}.jpg`;
+    const key = `uploads/${module}/${userId}/${uniqueFileName}`;
+
+    const result = await this.internalPutToS3(
+      buffer,
+      key,
+      bucket,
+      mimeType,
+      true,
+    );
+
+    return {
+      ...result,
+      isPrivate,
+    };
+  }
+
+  /**
+   * Upload file from Multer to public S3 bucket
+   * @param file
+   * @param folder
+   */
+  async uploadFile(file: Express.Multer.File, folder: string = 'treasures') {
+    const fileExt = extname(file.originalname);
+    const key = `${folder}/${uuidv4()}${fileExt}`;
+
+    const result = await this.internalPutToS3(
+      file.buffer,
+      key,
+      this.publicBucket,
+      file.mimetype,
+      false,
+    );
+
+    return {
+      ...result,
+      url: `${this.publicDomain.replace(/\/$/, '')}/${key}`,
+      originalName: file.originalname,
+    };
   }
 }

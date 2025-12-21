@@ -4,142 +4,166 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { KycVerifyResult } from '@api/common/kyc-provider/interfaces/kyc-result.interface';
-import NodeFormData = require('form-data');
-import axios from 'axios';
+import {
+  RekognitionClient,
+  CreateFaceLivenessSessionCommand,
+  GetFaceLivenessSessionResultsCommand,
+  CompareFacesCommand,
+} from '@aws-sdk/client-rekognition';
+import { UploadService } from '@api/common/upload/upload.service';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class KycProviderService {
   private readonly logger = new Logger(KycProviderService.name);
-  private apiKey: string = '';
-  private apiSecret: string = '';
-  private passScore: number = 75; // 默认 75
-  private useMock: boolean = true;
-  private apiUrl: string = '';
+  private rekognitionClient: RekognitionClient;
+  private readonly livenessPassScore: number;
+  private readonly faceMatchScore: number;
 
-  constructor(private configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('FACEPLUSPLUS_API_KEY') || '';
-    this.apiSecret =
-      this.configService.get<string>('FACEPLUSPLUS_API_SECRET') || '';
-    // 允许配置 API 节点 (用 US 节点更快/更合规: https://api-us.faceplusplus.com/facepp/v3/compare)
-    this.apiUrl =
-      this.configService.get<string>('FACEPLUSPLUS_API_URL') ||
-      'https://api-cn.faceplusplus.com/facepp/v3/compare';
-    this.passScore = parseInt(
-      this.configService.get<string>('KYC_PASS_SCORE') || '75',
-      10,
+  constructor(
+    private configService: ConfigService,
+    private uploadService: UploadService,
+  ) {
+    const region = this.configService.get<string>(
+      'AWS_REGION',
+      'ap-southeast-1',
+    );
+    const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = this.configService.get<string>(
+      'AWS_SECRET_ACCESS_KEY',
     );
 
-    const isProduction =
-      this.configService.get<string>('NODE_ENV') === 'production';
-
-    // 如果环境变量里有 Key，就关闭 Mock，启用真机验证
-    if (this.apiKey && this.apiSecret) {
-      this.useMock = false;
-    } else {
-      if (isProduction) {
-        throw new Error(
-          'FATAL: FACEPLUSPLUS_API_KEY is missing in PRODUCTION environment!',
-        );
-      }
-      this.logger.warn('No API Key found. Fallback to MOCK mode (DEV only).');
-    }
+    this.livenessPassScore = Number(
+      this.configService.get<string>('KYC_LIVENESS_PASS_SCORE', '85'),
+    );
+    this.faceMatchScore = Number(
+      this.configService.get<string>('KYC_FACE_MATCH_SCORE', '90'),
+    );
+    // Initialize AWS Rekognition client
+    this.rekognitionClient = new RekognitionClient({
+      region,
+      ...(accessKeyId && secretAccessKey
+        ? { credentials: { accessKeyId, secretAccessKey } }
+        : {}),
+    });
   }
 
   /**
-   * 调用 Face++ 进行人脸比对
-   * @param dto
+   * Create a liveness detection session
+   * @param userId
    */
-  async verify(dto: any): Promise<KycVerifyResult> {
-    // 使用 Mock 验证
-    if (this.useMock) {
-      return this.runMockVerification(dto);
-    }
-
-    // 调用 Face++ API 进行验证
-    return this.runFacePlusPlus(dto.idCardFront, dto.faceImage);
-  }
-
-  /**
-   * 调用 Face++ Compare API 进行人脸比对
-   * @param idCardFront
-   * @param faceImage
-   * @private
-   */
-  private async runFacePlusPlus(
-    idCardFront: string,
-    faceImage: string,
-  ): Promise<KycVerifyResult> {
-    this.logger.log('Calling Face++ Compare API...');
-    const url = 'https://api-cn.faceplusplus.com/facepp/v3/compare';
-
+  async createLivenessSession(
+    userId: string,
+  ): Promise<{ sessionId: string | undefined } | undefined> {
     try {
-      const formData = new NodeFormData();
-      formData.append('api_key', this.apiKey);
-      formData.append('api_secret', this.apiSecret);
-      formData.append('image_url1', idCardFront); // 身份证 (R2 临时链接)
-      formData.append('image_url2', faceImage); // 自拍 (R2 临时链接)
-      const headers = formData.getHeaders();
-      // 发起请求
-      const response = await axios.post(url, formData, {
-        headers: headers,
-        timeout: 15000, // 15 秒超时
+      const command = new CreateFaceLivenessSessionCommand({
+        // 幂等性 Token，防止短时间内重复创建扣费
+        ClientRequestToken: `kyc-liveness-${userId}-${randomUUID()}`,
+        Settings: {
+          AuditImagesLimit: 1, // 最多保存一张审核图片
+        },
+      });
+      const response = await this.rekognitionClient.send(command);
+      return { sessionId: response.SessionId };
+    } catch (error: any) {
+      this.logger.error('AWS CreateSession Error', error);
+      throw new InternalServerErrorException(
+        'could not create liveness session',
+      );
+    }
+  }
+
+  /**
+   * Verify liveness and match with ID card
+   * @param userId
+   * @param sessionId
+   * @param idCardUrl
+   */
+
+  async verifyLivenessAndMatchIdCard(
+    userId: string,
+    sessionId: string,
+    idCardKey: string,
+  ): Promise<{
+    success: boolean;
+    passed: boolean;
+    reason: string | null;
+    livenessConfidence: number;
+    faceSimilarity: number | null;
+    referenceImageBytes?: Uint8Array;
+  }> {
+    try {
+      this.logger.log('start to verify liveness and match ID card');
+
+      // get liveness results
+      const livenessCommand = new GetFaceLivenessSessionResultsCommand({
+        SessionId: sessionId,
       });
 
-      const data = response.data;
+      const livenessResponse =
+        await this.rekognitionClient.send(livenessCommand);
 
-      const confidence = data.confidence || 0;
-      const passed = confidence > this.passScore;
+      const confidence = livenessResponse.Confidence || 0;
+      if (confidence < this.livenessPassScore) {
+        return {
+          success: true,
+          passed: false,
+          livenessConfidence: confidence,
+          faceSimilarity: null,
+          reason:
+            'low confidence in liveness detection, may not be a real person',
+        };
+      }
 
-      this.logger.log(`Face++ Result: Score ${confidence}, Passed: ${passed}`);
+      // compare face from liveness with ID card
+      const livenessImage = livenessResponse.ReferenceImage?.Bytes;
+      if (!livenessImage) {
+        return {
+          success: false,
+          passed: false,
+          livenessConfidence: confidence,
+          faceSimilarity: null,
+          reason: 'no reference image from liveness detection',
+        };
+      }
+      // get id card image from R2
+      this.logger.log('fetching ID card image from URL');
+      // 2. 直接从 R2 读取证件照 (比 Axios 更稳)
+      const idCardImage = await this.uploadService.getFileBuffer(
+        idCardKey,
+        'kyc',
+        userId,
+      );
+      // compare faces
+      const compareCommand = new CompareFacesCommand({
+        SourceImage: { Bytes: livenessImage },
+        TargetImage: { Bytes: idCardImage },
+        SimilarityThreshold: this.faceMatchScore,
+      });
+
+      // send compare command
+      const compareResponse = await this.rekognitionClient.send(compareCommand);
+      const faceMatches = compareResponse.FaceMatches || [];
+      const similarity = faceMatches[0]?.Similarity ?? 0;
+
+      const isSamePerson =
+        faceMatches.length > 0 && similarity! >= this.faceMatchScore;
+
+      this.logger.log('liveness and ID card matching completed');
 
       return {
         success: true,
-        passed,
-        score: confidence,
-        rawResponse: data,
-        rejectReason: passed
-          ? undefined
-          : `Low confidence score: ${confidence}`,
+        passed: isSamePerson, // only pass if both liveness and face match
+        livenessConfidence: confidence,
+        faceSimilarity: isSamePerson ? similarity : 0,
+        reason: isSamePerson ? null : 'face does not match ID card',
+        referenceImageBytes: livenessImage,
       };
     } catch (error: any) {
-      this.logger.error(
-        'Face++ API Error',
-        error.response?.data || error.message,
-      );
-      // 这样 KycService 就会中断流程，不会把用户标记为 REJECTED，而是让用户稍后重试
+      this.logger.error('AWS Liveness Verification Error', error);
       throw new InternalServerErrorException(
-        'KYC Provider Service Unavailable',
+        'could not verify liveness and match ID card',
       );
     }
-  }
-
-  /**
-   * 运行 Mock 验证 (不调用真实服务)
-   * @param dto
-   * @private
-   */
-  private async runMockVerification(dto: any): Promise<KycVerifyResult> {
-    this.logger.warn('⚠️ Running in MOCK mode (No real verification)');
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    if (dto.realName && dto.realName.toUpperCase().includes('FAIL')) {
-      return {
-        success: true,
-        passed: false,
-        score: 45.5,
-        rejectReason: '[Mock] Artificial Reject Triggered',
-      };
-    }
-
-    // 默认：通过
-    return {
-      success: true,
-      passed: true,
-      score: 98.5, // 假装分数很高
-      ocrData: {
-        name: dto.realName,
-        idNumber: dto.idNumber,
-      },
-    };
   }
 }

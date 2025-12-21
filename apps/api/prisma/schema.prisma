@@ -956,6 +956,7 @@ model KycRecord {
   id            String   @id @default(cuid()) @map("id") @db.VarChar(32)
   userId        String   @map("user_id") @db.VarChar(32)
 
+  sessionId    String? @unique  @map("session_id")
   // 状态: 0-未提交 1-审核中 2-审核失败 3-待补充 4-已通过
   kycStatus     Int      @default(0) @map("kyc_status") @db.SmallInt
 
