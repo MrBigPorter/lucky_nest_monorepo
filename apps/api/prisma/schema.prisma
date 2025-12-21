@@ -66,11 +66,52 @@ model User {
   // addresses
   addresses             UserAddress[]
 
+  // devices
+  devices               UserDevice[]
+
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
   @@index([kycStatus], map: "idx_user_kyc_status")
   @@map("users")
 }
+
+
+model UserDevice {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id") @db.VarChar(32)
+
+  // 核心指纹
+  deviceId    String   @map("device_id") @db.VarChar(64) // 唯一硬件码
+  deviceModel String?  @map("device_model") @db.VarChar(100) // 例如 iPhone 14
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+
+  // 风控状态
+  isTrusted   Boolean  @default(false) @map("is_trusted") // 是否信任（老设备）
+  status      Int      @default(1) // 1-正常 0-冻结(该用户禁止在此设备登录)
+
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 1. 快速查某个用户是否拥有某台设备
+  @@unique([userId, deviceId])
+  // 2. 查这台设备被多少个不同用户使用过 (检测一机多号)
+  @@index([deviceId])
+  @@map("user_devices")
+}
+
+
+model DeviceBlacklist {
+  id          String   @id @default(cuid())
+  deviceId    String   @unique @map("device_id")
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("device_blacklist")
+}
+
+
 
 // ======== 用户登录日志 login=========
 model UserLoginLog {
@@ -976,7 +1017,11 @@ model KycRecord {
 
   // ===  OCR/比对数据
   ocrRawData    Json?    @map("ocr_raw_data")                   // 身份证 OCR 原始数据
-  verifyResult  Json?    @map("verify_result")                  // 人脸比对结果 (Face++ / AWS)
+  verifyResult  Json?    @map("verify_result")
+
+  ipAddress     String?  @map("ip_address") @db.VarChar(50)
+  deviceId      String?  @map("device_id") @db.VarChar(100)
+  deviceModel   String?  @map("device_model") @db.VarChar(100)// 人脸比对结果 (Face++ / AWS)
 
   // 审核结果
   auditResult   String?  @map("audit_result") @db.Text
@@ -992,6 +1037,7 @@ model KycRecord {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([deviceId])
   @@map("kyc_records")
 }
 
