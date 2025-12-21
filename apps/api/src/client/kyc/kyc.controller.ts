@@ -16,10 +16,19 @@ import { SessionResponseDto } from '@api/client/kyc/dto/session.response.dto';
 import { Throttle } from '@nestjs/throttler';
 import { RedisLockService } from '@api/common/redis/redis-lock.service';
 import { DistributedLock } from '@api/common/decorators/distributed-lock.decorator';
+import { DeviceSecurityGuard } from '@api/common/guards/device-security.guard';
+import {
+  DeviceSecurity,
+  DeviceSecurityLevel,
+} from '@api/common/decorators/device-security.decorator';
+import {
+  CurrentDevice,
+  DeviceInfo,
+} from '@api/common/decorators/http.decorators';
 
 @ApiTags('KYC')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, DeviceSecurityGuard)
 @Controller('kyc')
 export class KycController {
   constructor(
@@ -69,9 +78,14 @@ export class KycController {
    */
   @Post('submit')
   @ApiOkResponse({ type: KycResponseDto })
+  @DeviceSecurity(DeviceSecurityLevel.LOG_ONLY)
   @DistributedLock('kyc:submit:{0}', 5000) // 每用户每 5 秒只能提交一次
-  async submitKyc(@CurrentUserId() userId: string, @Body() dto: SubmitKycDto) {
-    const record = await this.kycService.submitKyc(userId, dto);
+  async submitKyc(
+    @CurrentUserId() userId: string,
+    @Body() dto: SubmitKycDto,
+    @CurrentDevice() device: DeviceInfo,
+  ) {
+    const record = await this.kycService.submitKyc(userId, dto, device);
     return plainToInstance(KycResponseDto, record);
   }
 }

@@ -13,6 +13,7 @@ import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { SessionResponseDto } from '@api/client/kyc/dto/session.response.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
+import { DeviceInfo } from '@api/common/decorators/http.decorators';
 
 @Injectable()
 export class KycService {
@@ -55,8 +56,9 @@ export class KycService {
    * Submit KYC information， including liveness verification and ID card matching
    * @param userId
    * @param dto
+   * @param device
    */
-  async submitKyc(userId: string, dto: SubmitKycDto) {
+  async submitKyc(userId: string, dto: SubmitKycDto, device: DeviceInfo) {
     // 1. 严格所有权检查 (新增：检查背面)
     // 这里的调用不仅是为了读取，更是为了利用 assertOwnedKey 防止越权
     // 校验文件是否存在且有权限访问
@@ -180,6 +182,9 @@ export class KycService {
             // 如果自动拒绝，视为已审核
             auditedAt:
               initialStatus === KYC_STATUS.REJECTED ? new Date() : null,
+            ipAddress: device.ip,
+            deviceId: device.deviceId,
+            deviceModel: device.deviceModel,
           },
         });
 

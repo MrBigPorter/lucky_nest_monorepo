@@ -195,6 +195,10 @@ export class UploadService {
       return `${domain}/${normalized}`;
     }
 
+    if (userId) {
+      this.assertOwnedKey(normalized, module, userId);
+    }
+
     // 私有桶：必须生成临时签名
     const command = new GetObjectCommand({
       Bucket: bucket,
@@ -249,7 +253,7 @@ export class UploadService {
    * @param mimeType
    */
   async uploadBuffer(
-    buffer: Buffer,
+    buffer: Buffer | Uint8Array,
     module: string,
     userId: string,
     mimeType: string = 'image/jpeg',
