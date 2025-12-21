@@ -167,6 +167,54 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aws-sdk/client-rekognition@npm:^3.956.0":
+  version: 3.956.0
+  resolution: "@aws-sdk/client-rekognition@npm:3.956.0"
+  dependencies:
+    "@aws-crypto/sha256-browser": "npm:5.2.0"
+    "@aws-crypto/sha256-js": "npm:5.2.0"
+    "@aws-sdk/core": "npm:3.956.0"
+    "@aws-sdk/credential-provider-node": "npm:3.956.0"
+    "@aws-sdk/middleware-host-header": "npm:3.956.0"
+    "@aws-sdk/middleware-logger": "npm:3.956.0"
+    "@aws-sdk/middleware-recursion-detection": "npm:3.956.0"
+    "@aws-sdk/middleware-user-agent": "npm:3.956.0"
+    "@aws-sdk/region-config-resolver": "npm:3.956.0"
+    "@aws-sdk/types": "npm:3.956.0"
+    "@aws-sdk/util-endpoints": "npm:3.956.0"
+    "@aws-sdk/util-user-agent-browser": "npm:3.956.0"
+    "@aws-sdk/util-user-agent-node": "npm:3.956.0"
+    "@smithy/config-resolver": "npm:^4.4.5"
+    "@smithy/core": "npm:^3.20.0"
+    "@smithy/fetch-http-handler": "npm:^5.3.8"
+    "@smithy/hash-node": "npm:^4.2.7"
+    "@smithy/invalid-dependency": "npm:^4.2.7"
+    "@smithy/middleware-content-length": "npm:^4.2.7"
+    "@smithy/middleware-endpoint": "npm:^4.4.1"
+    "@smithy/middleware-retry": "npm:^4.4.17"
+    "@smithy/middleware-serde": "npm:^4.2.8"
+    "@smithy/middleware-stack": "npm:^4.2.7"
+    "@smithy/node-config-provider": "npm:^4.3.7"
+    "@smithy/node-http-handler": "npm:^4.4.7"
+    "@smithy/protocol-http": "npm:^5.3.7"
+    "@smithy/smithy-client": "npm:^4.10.2"
+    "@smithy/types": "npm:^4.11.0"
+    "@smithy/url-parser": "npm:^4.2.7"
+    "@smithy/util-base64": "npm:^4.3.0"
+    "@smithy/util-body-length-browser": "npm:^4.2.0"
+    "@smithy/util-body-length-node": "npm:^4.2.1"
+    "@smithy/util-defaults-mode-browser": "npm:^4.3.16"
+    "@smithy/util-defaults-mode-node": "npm:^4.2.19"
+    "@smithy/util-endpoints": "npm:^3.2.7"
+    "@smithy/util-middleware": "npm:^4.2.7"
+    "@smithy/util-retry": "npm:^4.2.7"
+    "@smithy/util-utf8": "npm:^4.2.0"
+    "@smithy/util-waiter": "npm:^4.2.7"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/9166483cc0acdecf355c7895b939e0cd048af95e238cda7c91057f5bbf1302c15ebc07ca44b2153d36ac9eb62424c0833c40de9a07c1f255e7fb5cb7785f6486
+  languageName: node
+  linkType: hard
+
 "@aws-sdk/client-s3@npm:^3.956.0":
   version: 3.956.0
   resolution: "@aws-sdk/client-s3@npm:3.956.0"
@@ -2601,6 +2649,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@lucky/api@workspace:apps/api"
   dependencies:
+    "@aws-sdk/client-rekognition": "npm:^3.956.0"
     "@aws-sdk/client-s3": "npm:^3.956.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.956.0"
     "@lucky/shared": "workspace:*"

@@ -12,13 +12,33 @@ import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { SubmitKycDto } from '@api/client/kyc/dto/submit-kyc.dto';
 import { KycIdTypesResponseDto } from '@api/client/kyc/dto/kyc-id-types.response.dto';
 import { KycResponseDto } from '@api/client/kyc/dto/kyc.response.dto';
+import { SessionResponseDto } from '@api/client/kyc/dto/session.response.dto';
+import { Throttle } from '@nestjs/throttler';
+import { RedisLockService } from '@api/common/redis/redis-lock.service';
+import { DistributedLock } from '@api/common/decorators/distributed-lock.decorator';
 
 @ApiTags('KYC')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('kyc')
 export class KycController {
-  constructor(private readonly kycService: KycService) {}
+  constructor(
+    private readonly kycService: KycService,
+    public readonly lockService: RedisLockService,
+  ) {}
+
+  /**
+   * Create a liveness detection session for the user
+   * @param userId
+   */
+  @Post('session')
+  @ApiProperty({ type: SessionResponseDto })
+  @Throttle({ kycSessionRequest: { limit: 2, ttl: 60_000 } })
+  @DistributedLock('kyc:session:create:{0}', 2000) // 每用户每 2 秒只能创建一次
+  async createSession(@CurrentUserId() userId: string) {
+    const session = await this.kycService.createSession(userId);
+    return plainToInstance(SessionResponseDto, session);
+  }
 
   /**
    * Get my KYC record
@@ -43,11 +63,13 @@ export class KycController {
 
   /**
    * Submit KYC information
-   * @param userId
-   * @param dto
+   * keyPattern: 'kyc:submit:{0}'
+   * - {0} 表示第一个参数 (userId)
+   * - 这样每个用户只能并发提交一次，互不影响
    */
   @Post('submit')
   @ApiOkResponse({ type: KycResponseDto })
+  @DistributedLock('kyc:submit:{0}', 5000) // 每用户每 5 秒只能提交一次
   async submitKyc(@CurrentUserId() userId: string, @Body() dto: SubmitKycDto) {
     const record = await this.kycService.submitKyc(userId, dto);
     return plainToInstance(KycResponseDto, record);
