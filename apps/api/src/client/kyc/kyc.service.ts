@@ -6,14 +6,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { SubmitKycDto } from '@api/client/kyc/dto/submit-kyc.dto';
-import { KYC_STATUS, KycStatus } from '@lucky/shared';
+import { KYC_STATUS, KycStatus, TimeHelper } from '@lucky/shared';
 import { UploadService } from '@api/common/upload/upload.service';
 import { KycProviderService } from '@api/common/kyc-provider/kyc-provider.service';
-import { CurrentUserId } from '@api/common/decorators/user.decorator';
-import { ApiOkResponse } from '@nestjs/swagger';
-import { SessionResponseDto } from '@api/client/kyc/dto/session.response.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
 import { DeviceInfo } from '@api/common/decorators/http.decorators';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class KycService {
@@ -27,8 +25,134 @@ export class KycService {
    * Create a liveness detection session for the user
    * @param userId
    */
-  async createSession(@CurrentUserId() userId: string) {
-    return this.kycProvider.createLivenessSession(userId);
+  async createSession(userId: string) {
+    const DAILY_LIMIT = 2; // 每用户每天最多创建 2 次
+    const REUSE_WINDOW_MINUTES = 10; // 10 分钟内复用已有 session
+    const startOfDay = TimeHelper.getStartOfDay();
+
+    // 多天冷却策略
+    const REJECT_COOLDOWN_HOURS = 72; // 3天
+    const PENALTY_WINDOW_DAYS = 30;
+    const PENALTY_REJECT_COUNT = 2;
+    const PENALTY_COOLDOWN_DAYS = 7;
+
+    // 0) 如果正在审核，直接禁止
+    const latestKyc = await this.prismaService.kycRecord.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: { kycStatus: true, createdAt: true, auditedAt: true },
+    });
+
+    if (latestKyc?.kycStatus === KYC_STATUS.REVIEWING) {
+      throw new BadRequestException(
+        'KYC is under review, cannot create session',
+      );
+    }
+
+    if (latestKyc?.kycStatus === KYC_STATUS.APPROVED) {
+      throw new BadRequestException(
+        'KYC already approved, cannot create session',
+      );
+    }
+
+    // 1) 30天内被拒次数 -> 惩罚冷却
+    const rejectCount = await this.prismaService.kycRecord.count({
+      where: {
+        userId,
+        kycStatus: KYC_STATUS.REJECTED,
+        createdAt: {
+          gte: TimeHelper.getTimeAgo(PENALTY_WINDOW_DAYS, 'day'),
+        },
+      },
+    });
+
+    // 2) 如果最新一次是 REJECTED，检查冷却（优先用 auditedAt，没有就用 createdAt）
+    if (latestKyc?.kycStatus === KYC_STATUS.REJECTED) {
+      const base = latestKyc.auditedAt ?? latestKyc.createdAt;
+
+      // 惩罚冷却（更长）
+      if (rejectCount >= PENALTY_REJECT_COUNT) {
+        const until = dayjs(base).add(PENALTY_COOLDOWN_DAYS, 'day').toDate();
+        if (until > new Date()) {
+          throw new BadRequestException(
+            `Due to multiple recent KYC rejections, you can create a new session after ${dayjs(
+              until,
+            ).format('YYYY-MM-DD HH:mm:ss')}`,
+          );
+        }
+      } else {
+        // 普通冷却
+        const until = dayjs(base).add(REJECT_COOLDOWN_HOURS, 'hour').toDate();
+        if (until > new Date()) {
+          throw new BadRequestException(
+            `You can create a new KYC session after ${dayjs(until).format(
+              'YYYY-MM-DD HH:mm:ss',
+            )}`,
+          );
+        }
+      }
+    }
+
+    // 1. 检查当天创建次数
+    const todayCount = await this.prismaService.kycLivenessSession.count({
+      where: {
+        userId,
+        createdAt: { gte: startOfDay },
+      },
+    });
+    if (todayCount >= DAILY_LIMIT) {
+      throw new BadRequestException(
+        `Daily KYC session limit reached (${DAILY_LIMIT}/day)`,
+      );
+    }
+
+    // 2. 检查最近是否有未使用的 session 可复用
+    const reusableSession =
+      await this.prismaService.kycLivenessSession.findFirst({
+        where: {
+          userId,
+          usedAt: null,
+          createdAt: {
+            gte: TimeHelper.getTimeAgo(REUSE_WINDOW_MINUTES, 'minute'),
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+    if (reusableSession) {
+      return {
+        sessionId: reusableSession.sessionId,
+        reused: true,
+        todayUsedCount: todayCount, // 没有新增创建次数
+        dailyLimit: DAILY_LIMIT,
+        remaining: DAILY_LIMIT - todayCount,
+      };
+    }
+
+    // 3. 创建新 session
+    const session = await this.kycProvider.createLivenessSession(userId);
+
+    if (!session || !session.sessionId) {
+      throw new BadRequestException('Could not create KYC liveness session');
+    }
+
+    // 4. 记录到数据库
+    await this.prismaService.kycLivenessSession.create({
+      data: {
+        userId,
+        sessionId: session.sessionId,
+      },
+    });
+
+    const newCount = todayCount + 1;
+
+    return {
+      sessionId: session.sessionId,
+      reused: false,
+      todayUsedCount: newCount,
+      dailyLimit: DAILY_LIMIT,
+      remaining: DAILY_LIMIT - newCount,
+    };
   }
 
   /**
@@ -78,11 +202,30 @@ export class KycService {
     }
 
     return this.prismaService.$transaction(async (ctx) => {
-      const sessionUsed = await ctx.kycRecord.findUnique({
+      const session = await ctx.kycLivenessSession.findUnique({
         where: { sessionId: dto.sessionId },
       });
 
-      if (sessionUsed) {
+      if (!session || !session.sessionId) {
+        throw new ConflictException('KYC session not found.');
+      }
+
+      if (session.usedAt) {
+        throw new ConflictException('KYC session not found or already used.');
+      }
+
+      const claim = await ctx.kycLivenessSession.updateMany({
+        where: {
+          sessionId: dto.sessionId,
+          userId,
+          usedAt: null,
+        },
+        data: {
+          usedAt: new Date(),
+        },
+      });
+
+      if (claim.count !== 1) {
         throw new ConflictException('KYC session not found or already used.');
       }
 

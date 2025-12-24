@@ -41,7 +41,9 @@ export class DeviceSecurityGuard implements CanActivate {
 
     // 2. 拿 User (必须在 JwtAuthGuard 后)
     const request = context.switchToHttp().getRequest();
+    console.log('DeviceSecurityGuard request.url:', request);
     const user = request.user;
+    console.log('DeviceSecurityGuard user:', user);
     if (!user || !user.id) {
       throw new UnauthorizedException();
     }

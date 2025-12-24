@@ -63,6 +63,8 @@ model User {
   // kyc records
   kycRecords            KycRecord[]
 
+  KycLivenessAttempts KycLivenessAttempt[]
+
   // addresses
   addresses             UserAddress[]
 
@@ -1041,3 +1043,33 @@ model KycRecord {
   @@map("kyc_records")
 }
 
+
+model KycLivenessAttempt {
+  id        String   @id @default(cuid()) @db.VarChar(32)
+  userId    String   @unique @map("user_id") @db.VarChar(32)
+
+  attemptId String   @map("attempt_id") @db.VarChar(64)  // 第三方活体检测服务的尝试ID
+  token     String   @map("token") @db.VarChar(128) // 第三方活体检测服务的访问令牌
+  sessionId String?  @map("session_id") @db.VarChar(64) // 关联的KYC会话ID
+
+  expiresAt DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("kyc_liveness_attempts")
+}
+
+model KycLivenessSession {
+  id         String   @id @default(cuid()) @db.VarChar(32)
+  userId     String   @db.VarChar(32)
+  sessionId  String   @unique @map("session_id")
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("kyc_liveness_sessions")
+}
