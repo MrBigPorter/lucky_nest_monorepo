@@ -24,10 +24,7 @@ export class KycProviderService {
     private configService: ConfigService,
     private uploadService: UploadService,
   ) {
-    const region = this.configService.get<string>(
-      'AWS_REGION',
-      'ap-southeast-1',
-    );
+    const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
     const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get<string>(
       'AWS_SECRET_ACCESS_KEY',
@@ -39,6 +36,7 @@ export class KycProviderService {
     this.faceMatchScore = Number(
       this.configService.get<string>('KYC_FACE_MATCH_SCORE', '90'),
     );
+
     // Initialize AWS Rekognition client
     this.rekognitionClient = new RekognitionClient({
       region,
@@ -50,15 +48,15 @@ export class KycProviderService {
 
   /**
    * Create a liveness detection session
-   * @param userId
+   * @param clientRequestToken
    */
   async createLivenessSession(
-    userId: string,
+    clientRequestToken: string,
   ): Promise<{ sessionId: string | undefined } | undefined> {
     try {
       const command = new CreateFaceLivenessSessionCommand({
         // 幂等性 Token，防止短时间内重复创建扣费
-        ClientRequestToken: `kyc-liveness-${userId}-${randomUUID()}`,
+        ClientRequestToken: clientRequestToken,
         Settings: {
           AuditImagesLimit: 1, // 最多保存一张审核图片
         },
@@ -77,7 +75,7 @@ export class KycProviderService {
    * Verify liveness and match with ID card
    * @param userId
    * @param sessionId
-   * @param idCardUrl
+   * @param idCardKey
    */
 
   async verifyLivenessAndMatchIdCard(

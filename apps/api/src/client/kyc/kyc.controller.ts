@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOkResponse,
   ApiProperty,
   ApiTags,
@@ -41,9 +42,9 @@ export class KycController {
    * @param userId
    */
   @Post('session')
-  @ApiProperty({ type: SessionResponseDto })
-  @Throttle({ kycSessionRequest: { limit: 2, ttl: 60_000 } })
-  @DistributedLock('kyc:session:create:{0}', 2000) // 每用户每 2 秒只能创建一次
+  @Throttle({ kycSessionRequest: { limit: 1, ttl: 60_000 } })
+  @DistributedLock('kyc:session:create:{0}', 15000) // 每用户每 2 秒只能创建一次
+  @ApiOkResponse({ type: SessionResponseDto })
   async createSession(@CurrentUserId() userId: string) {
     const session = await this.kycService.createSession(userId);
     return plainToInstance(SessionResponseDto, session);
@@ -77,6 +78,7 @@ export class KycController {
    * - 这样每个用户只能并发提交一次，互不影响
    */
   @Post('submit')
+  @ApiBody({ type: SubmitKycDto })
   @ApiOkResponse({ type: KycResponseDto })
   @DeviceSecurity(DeviceSecurityLevel.LOG_ONLY)
   @DistributedLock('kyc:submit:{0}', 5000) // 每用户每 5 秒只能提交一次
