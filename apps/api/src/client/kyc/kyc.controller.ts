@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -26,6 +33,11 @@ import {
   CurrentDevice,
   DeviceInfo,
 } from '@api/common/decorators/http.decorators';
+import { UploadService } from '@api/common/upload/upload.service';
+import {
+  UploadUrlDto,
+  UploadUrlResponseDto,
+} from '@api/client/kyc/dto/upload-url.dto';
 
 @ApiTags('KYC')
 @ApiBearerAuth()
@@ -33,6 +45,7 @@ import {
 @Controller('kyc')
 export class KycController {
   constructor(
+    private readonly uploadService: UploadService,
     private readonly kycService: KycService,
     public readonly lockService: RedisLockService,
   ) {}
@@ -43,7 +56,7 @@ export class KycController {
    */
   @Post('session')
   @Throttle({ kycSessionRequest: { limit: 1, ttl: 60_000 } })
-  @DistributedLock('kyc:session:create:{0}', 15000) // 每用户每 2 秒只能创建一次
+  @DistributedLock('kyc:session:create:{0}', 15000) // 每用户每 15 秒只能创建一次
   @ApiOkResponse({ type: SessionResponseDto })
   async createSession(@CurrentUserId() userId: string) {
     const session = await this.kycService.createSession(userId);
@@ -89,5 +102,24 @@ export class KycController {
   ) {
     const record = await this.kycService.submitKyc(userId, dto, device);
     return plainToInstance(KycResponseDto, record);
+  }
+
+  /**
+   * Generate presigned upload URL for ID card upload
+   * @param userId
+   * @param dto
+   */
+  @Post('upload-url')
+  @ApiOkResponse({ type: UploadUrlResponseDto })
+  async uploadIdCard(
+    @CurrentUserId() userId: string,
+    @Body() dto: UploadUrlDto,
+  ) {
+    return this.uploadService.generatePresignedUrl(
+      userId,
+      dto.fileName,
+      dto.fileType,
+      'kyc',
+    );
   }
 }
