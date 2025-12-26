@@ -20,3 +20,14 @@ export const OP_ACTION = {
 } as const;
 
 export type KycOpAction = (typeof OP_ACTION)[keyof typeof OP_ACTION];
+
+// 定义证件类型的枚举，方便前端生成类型
+export enum KycIdCardType {
+  PASSPORT = "PASSPORT",
+  PH_DRIVER_LICENSE = "PH_DRIVER_LICENSE",
+  PH_UMID = "PH_UMID",
+  PH_NATIONAL_ID = "PH_NATIONAL_ID",
+  CN_ID = "CN_ID",
+  VN_ID = "VN_ID",
+  UNKNOWN = "UNKNOWN",
+}

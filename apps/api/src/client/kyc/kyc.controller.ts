@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Post,
   UseGuards,
@@ -38,7 +40,10 @@ import {
   UploadUrlDto,
   UploadUrlResponseDto,
 } from '@api/client/kyc/dto/upload-url.dto';
-import { KycIdCardOrcDto } from '@api/client/kyc/dto/kyc-id-card-orc.dto';
+import {
+  KycIdCardOrcDto,
+  KycOcrResponseDto,
+} from '@api/client/kyc/dto/kyc-id-card-orc.dto';
 
 @ApiTags('KYC')
 @ApiBearerAuth()
@@ -57,6 +62,7 @@ export class KycController {
    * @param userId
    */
   @Post('session')
+  @HttpCode(HttpStatus.OK)
   @Throttle({ kycSessionRequest: { limit: 1, ttl: 60_000 } })
   @DistributedLock('kyc:session:create:{0}', 15000) // 每用户每 15 秒只能创建一次
   @ApiOkResponse({ type: SessionResponseDto })
@@ -93,6 +99,7 @@ export class KycController {
    * - 这样每个用户只能并发提交一次，互不影响
    */
   @Post('submit')
+  @HttpCode(HttpStatus.OK)
   @ApiBody({ type: SubmitKycDto })
   @ApiOkResponse({ type: KycResponseDto })
   @DistributedLock('kyc:submit:{0}', 5000) // 每用户每 5 秒只能提交一次
@@ -111,6 +118,7 @@ export class KycController {
    * @param dto
    */
   @Post('upload-url')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: UploadUrlResponseDto })
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async uploadIdCard(
@@ -131,6 +139,8 @@ export class KycController {
    * @param userId
    */
   @Post('ocr')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: KycOcrResponseDto })
   // 1. 节流：限制每分钟最多调 3 次 (防止脚本刷量)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @DistributedLock('kyc:ocr:id-card:{0}', 10000) // 每用户每 10 秒只能请求一次 OCR
