@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Post,
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { SubmitKycDto } from '@api/client/kyc/dto/submit-kyc.dto';
@@ -13,6 +12,10 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/edge';
 import { DeviceInfo } from '@api/common/decorators/http.decorators';
 import dayjs from 'dayjs';
 
+// 限制图片大小策略 (Fail Fast)
+const MIN_IMAGE_SIZE = 5 * 1024; // 5KB (小于这个通常是损坏文件或纯色块)
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB (太大浪费带宽和内存)
+
 @Injectable()
 export class KycService {
   constructor(
@@ -20,6 +23,25 @@ export class KycService {
     private uploadService: UploadService,
     private kycProvider: KycProviderService,
   ) {}
+
+  /**
+   * Validate image size
+   * @param buffer
+   * @param fieldName
+   */
+  async validateImageSize(buffer: Buffer, fieldName: string) {
+    const size = buffer.length;
+    if (size < MIN_IMAGE_SIZE) {
+      throw new BadRequestException(
+        `Uploaded file for ${fieldName} is too small to be a valid image.`,
+      );
+    }
+    if (size > MAX_IMAGE_SIZE) {
+      throw new BadRequestException(
+        `Uploaded file for ${fieldName} exceeds the maximum allowed size of ${MAX_IMAGE_SIZE / (1024 * 1024)} MB.`,
+      );
+    }
+  }
 
   /**
    * Create a liveness detection session for the user
@@ -177,19 +199,54 @@ export class KycService {
   }
 
   /**
+   * Perform OCR on the provided ID card image
+   * @param userId
+   * @param idCardKey
+   */
+  async ocrIdCard(userId: string, idCardKey: string) {
+    // 校验文件是否存在且有权限访问
+    const imageBuffer = await this.uploadService.getFileBuffer(
+      idCardKey,
+      'kyc',
+      userId,
+    );
+
+    // 验证图片大小
+    await this.validateImageSize(imageBuffer, 'ID Card');
+
+    // 调用 KYC Provider 进行 OCR
+    // 3. 只有检查通过了，才去调用昂贵的 OCR 服务
+    // 注意：如果 UploadService 实现了缓存，这里不会重复下载
+    // 如果 KycProvider 支持传入 Buffer，建议修改 KycProvider 接口直接传 imageBuffer，避免二次下载
+    return await this.kycProvider.ocrIdCard(userId, idCardKey);
+  }
+
+  /**
    * Submit KYC information， including liveness verification and ID card matching
    * @param userId
    * @param dto
    * @param device
    */
   async submitKyc(userId: string, dto: SubmitKycDto, device: DeviceInfo) {
-    // 1. 严格所有权检查 (新增：检查背面)
+    // 1. 严格所有权检查 (检查背面)
     // 这里的调用不仅是为了读取，更是为了利用 assertOwnedKey 防止越权
     // 校验文件是否存在且有权限访问
-    await this.uploadService.getFileBuffer(dto.idCardFront, 'kyc', userId);
+    const frontBuffer = await this.uploadService.getFileBuffer(
+      dto.idCardFront,
+      'kyc',
+      userId,
+    );
+
+    // 验证图片大小
+    await this.validateImageSize(frontBuffer, 'ID Card Front');
 
     if (dto.idCardBack) {
-      await this.uploadService.getFileBuffer(dto.idCardBack, 'kyc', userId);
+      const backBuffer = await this.uploadService.getFileBuffer(
+        dto.idCardBack,
+        'kyc',
+        userId,
+      );
+      await this.validateImageSize(backBuffer, 'ID Card Back');
     }
 
     // check id type validity
