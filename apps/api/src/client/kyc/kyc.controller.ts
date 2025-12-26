@@ -38,10 +38,12 @@ import {
   UploadUrlDto,
   UploadUrlResponseDto,
 } from '@api/client/kyc/dto/upload-url.dto';
+import { KycIdCardOrcDto } from '@api/client/kyc/dto/kyc-id-card-orc.dto';
 
 @ApiTags('KYC')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, DeviceSecurityGuard)
+@DeviceSecurity(DeviceSecurityLevel.LOG_ONLY)
 @Controller('kyc')
 export class KycController {
   constructor(
@@ -93,7 +95,6 @@ export class KycController {
   @Post('submit')
   @ApiBody({ type: SubmitKycDto })
   @ApiOkResponse({ type: KycResponseDto })
-  @DeviceSecurity(DeviceSecurityLevel.LOG_ONLY)
   @DistributedLock('kyc:submit:{0}', 5000) // 每用户每 5 秒只能提交一次
   async submitKyc(
     @CurrentUserId() userId: string,
@@ -111,6 +112,7 @@ export class KycController {
    */
   @Post('upload-url')
   @ApiOkResponse({ type: UploadUrlResponseDto })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async uploadIdCard(
     @CurrentUserId() userId: string,
     @Body() dto: UploadUrlDto,
@@ -121,5 +123,25 @@ export class KycController {
       dto.fileType,
       'kyc',
     );
+  }
+
+  /**
+   * OCR for ID card
+   * @param dto
+   * @param userId
+   */
+  @Post('ocr')
+  // 1. 节流：限制每分钟最多调 3 次 (防止脚本刷量)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @DistributedLock('kyc:ocr:id-card:{0}', 10000) // 每用户每 10 秒只能请求一次 OCR
+  async ocrIdCard(
+    @Body() dto: KycIdCardOrcDto,
+    @CurrentUserId() userId: string,
+  ) {
+    const result = await this.kycService.ocrIdCard(userId, dto.key);
+    if (!result) {
+      throw new NotFoundException('OCR result not found');
+    }
+    return result;
   }
 }
