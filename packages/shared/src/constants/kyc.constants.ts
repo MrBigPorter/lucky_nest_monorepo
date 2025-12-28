@@ -42,6 +42,71 @@ export enum KycIdCardType {
   VN_ID = 30,
 }
 
+export const ID_TYPE_ALIASES = Object.freeze({
+  PASSPORT: "PASSPORT",
+  PH_PASSPORT: "PASSPORT",
+
+  PH_DRIVER_LICENSE: "PH_DRIVER_LICENSE",
+  PH_DRIVERS_LICENSE: "PH_DRIVER_LICENSE",
+  DRIVER_LICENSE: "PH_DRIVER_LICENSE",
+  DRIVERS_LICENSE: "PH_DRIVER_LICENSE",
+  DRIVING_LICENSE: "PH_DRIVER_LICENSE",
+  PH_DL: "PH_DRIVER_LICENSE",
+  DL: "PH_DRIVER_LICENSE",
+
+  PH_UMID: "PH_UMID",
+  UMID: "PH_UMID",
+
+  PH_NATIONAL_ID: "PH_NATIONAL_ID",
+  NATIONAL_ID: "PH_NATIONAL_ID",
+  PHILSYS: "PH_NATIONAL_ID",
+  PHILIPPINE_NATIONAL_ID: "PH_NATIONAL_ID",
+
+  // 未来证件（你 enum 已预留）
+  PH_PRC_ID: "PH_PRC_ID",
+  PRC_ID: "PH_PRC_ID",
+  PROFESSIONAL_REGULATION_COMMISSION: "PH_PRC_ID",
+
+  PH_POSTAL_ID: "PH_POSTAL_ID",
+  POSTAL_ID: "PH_POSTAL_ID",
+
+  CN_ID: "CN_ID",
+  CHINA_ID: "CN_ID",
+  PRC_CITIZEN_ID: "CN_ID",
+  CHINESE_ID: "CN_ID",
+
+  VN_ID: "VN_ID",
+  VIETNAM_ID: "VN_ID",
+  VIETNAMESE_ID: "VN_ID",
+} as const);
+
+// 规范字符串 -> DB enum int
+export const ID_TYPE_CODE: Record<string, KycIdCardType> = Object.freeze({
+  UNKNOWN: KycIdCardType.UNKNOWN,
+  PASSPORT: KycIdCardType.PASSPORT,
+  PH_DRIVER_LICENSE: KycIdCardType.PH_DRIVER_LICENSE,
+  PH_UMID: KycIdCardType.PH_UMID,
+  PH_NATIONAL_ID: KycIdCardType.PH_NATIONAL_ID,
+  PH_PRC_ID: KycIdCardType.PH_PRC_ID,
+  PH_POSTAL_ID: KycIdCardType.PH_POSTAL_ID,
+  CN_ID: KycIdCardType.CN_ID,
+  VN_ID: KycIdCardType.VN_ID,
+});
+
+export function normalizeTypeText(v: any): string {
+  const s = String(v ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/-+/g, "_");
+
+  return (ID_TYPE_ALIASES as any)[s] ?? "UNKNOWN";
+}
+
+export function toKycIdCardType(typeText: string): KycIdCardType {
+  return ID_TYPE_CODE[typeText] ?? KycIdCardType.UNKNOWN;
+}
+
 // 2. 定义文案映射
 export const KycIdCardTypeLabel: Record<KycIdCardType, string> = {
   [KycIdCardType.UNKNOWN]: "Unknown Type",

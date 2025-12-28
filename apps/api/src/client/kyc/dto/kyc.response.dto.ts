@@ -1,73 +1,88 @@
-import { Exclude, Expose, Transform } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Exclude()
 export class KycResponseDto {
-  @ApiProperty({ description: 'KYC Record ID' })
-  @Expose()
-  id!: string;
-
-  @ApiProperty({ description: 'User ID' })
-  @Expose()
-  userId!: string;
-
   @ApiProperty({
     description:
-      'KYC status: DRAFT: 0, REVIEWING: 1, REJECTED: 2, NEED_MORE: 3, APPROVED: 4, AUTO_REJECTED: 5',
-    example: 1,
+      'Status: 0-Draft, 1-Reviewing, 2-Rejected, 3-NeedMore, 4-Approved, 5-AutoReject',
   })
   @Expose()
   kycStatus!: number;
 
-  // === 1. 身份信息 ===
-
-  @ApiProperty({ description: 'ID Type ID (e.g. 1, 10)', example: 1 })
+  // === 1. 证件核心信息 ===
+  @ApiProperty({ description: 'ID Type (1-Passport, etc.)' })
   @Expose()
   idType!: number;
 
-  @ApiPropertyOptional({ description: 'Real Name', example: 'Juan Dela Cruz' })
-  @Expose()
-  realName?: string;
+  @Expose() idNumber?: string;
+  @Expose() firstName?: string;
+  @Expose() middleName?: string;
+  @Expose() lastName?: string;
+  @Expose() realName?: string;
+  @Expose() gender?: string;
 
-  @ApiPropertyOptional({ description: 'ID Number', example: 'A123-4567-890' })
+  @ApiPropertyOptional({ type: Date })
   @Expose()
-  idNumber?: string;
-
-  @ApiPropertyOptional({ description: 'Birthday', example: '1990-01-01' })
-  @Expose()
+  @Type(() => Date)
   birthday?: Date;
 
-  @ApiPropertyOptional({ description: 'Front Image S3 Key' })
+  @Expose() placeOfBirth?: string;
+  @Expose() nationality?: string;
+
+  @ApiPropertyOptional({ type: Date })
   @Expose()
-  idCardFront?: string;
+  @Type(() => Date)
+  expiryDate?: Date;
 
-  @ApiPropertyOptional({ description: 'Back Image S3 Key' })
+  @ApiPropertyOptional({ type: Date })
   @Expose()
-  idCardBack?: string;
+  @Type(() => Date)
+  issueDate?: Date;
 
-  @ApiPropertyOptional({ description: 'Face/Selfie Image S3 Key' })
-  @Expose()
-  faceImage?: string;
+  @Expose() countryCode?: number;
 
-  // === 3. 审核反馈 ===
+  // === 2. 财务能力 (AMLA) ===
+  @Expose() sourceOfIncome?: string;
+  @Expose() natureOfWork?: string;
+  @Expose() employerName?: string;
 
-  @ApiPropertyOptional({ description: 'Reason for rejection (Show to user)' })
-  @Expose()
-  rejectReason?: string;
+  // === 3. 地址信息 (Philippines Standard) ===
+  @Expose() province?: string;
+  @Expose() city?: string;
+  @Expose() barangay?: string;
+  @Expose() postalCode?: string;
+  @Expose() address?: string;
 
-  // === 4. 时间信息 ===
+  @Expose() isSameAddress!: boolean;
+  @Expose() currentAddress?: any; // Json 字段直接吐给前端
 
-  @ApiPropertyOptional({ description: 'Submission timestamp' })
-  @Expose()
-  submittedAt?: Date;
+  // === 4. 图片凭证 (S3 Keys) ===
+  @Expose() idCardFront?: string;
+  @Expose() idCardBack?: string;
+  @Expose() selfiePhoto?: string;
+  @Expose() assetProof?: string;
+  @Expose() optionalPhoto?: string;
+  @Expose() faceImage?: string;
 
-  @ApiPropertyOptional({ description: 'Audit timestamp' })
-  @Expose()
-  auditedAt?: Date;
+  // === 5. 风控数据 ===
+  @Expose() livenessScore?: number;
+  @Expose() securityFlags?: any;
+  @Expose() ocrRawData?: any;
+  @Expose() riskLevel!: number;
 
-  // === 5. 高级调试信息 (可选) ===
+  // === 6. 设备指纹 ===
+  @Expose() ipAddress?: string;
+  @Expose() deviceId?: string;
+  @Expose() deviceModel?: string;
+  @Expose() appVersion?: string;
 
-  @ApiPropertyOptional({ description: 'OCR Raw Data (Optional display)' })
-  @Expose()
-  ocrRawData?: any;
+  // === 7. 审核反馈 ===
+  @Expose() auditResult?: string;
+  @Expose() rejectReason?: string;
+  @Expose() auditorId?: string;
+
+  @Expose() @Type(() => Date) submittedAt?: Date;
+  @Expose() @Type(() => Date) auditedAt?: Date;
+  @Expose() @Type(() => Date) createdAt!: Date;
 }
