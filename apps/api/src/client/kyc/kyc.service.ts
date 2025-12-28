@@ -159,11 +159,13 @@ export class KycService {
     }
 
     // 4. 记录到数据库
-    await this.prismaService.kycLivenessSession.create({
-      data: {
+    await this.prismaService.kycLivenessSession.upsert({
+      where: { sessionId: session.sessionId },
+      create: {
         userId,
         sessionId: session.sessionId,
       },
+      update: {},
     });
 
     const newCount = todayCount + 1;
@@ -255,195 +257,205 @@ export class KycService {
     backFile: Express.Multer.File | null,
     device: DeviceInfo,
   ) {
-    // 1. 校验文件大小 (内存校验，极快)
+    // 1) 文件大小校验（Fail Fast）
     await this.validateImageSize(frontFile.buffer, 'ID Card Front');
+    if (backFile) await this.validateImageSize(backFile.buffer, 'ID Card Back');
 
-    if (backFile) {
-      await this.validateImageSize(backFile.buffer, 'ID Card Back');
-    }
-
-    // check id type validity
+    // 2) ID Type 校验
     const idType = await this.prismaService.kycIdType.findFirst({
       where: { id: dto.idType, status: 1 },
     });
+    if (!idType) throw new BadRequestException('Invalid ID type');
 
-    if (!idType) {
-      throw new BadRequestException('Invalid ID type');
-    }
+    return this.prismaService.$transaction(
+      async (ctx) => {
+        // A) 先做“不会消耗 session”的校验（保留你原来的 findUnique 逻辑，错误更清晰）
+        const session = await ctx.kycLivenessSession.findUnique({
+          where: { sessionId: dto.sessionId },
+          select: { sessionId: true, userId: true, usedAt: true },
+        });
 
-    return this.prismaService.$transaction(async (ctx) => {
-      const session = await ctx.kycLivenessSession.findUnique({
-        where: { sessionId: dto.sessionId },
-      });
-
-      if (!session || !session.sessionId) {
-        throw new ConflictException('KYC session not found.');
-      }
-
-      if (session.usedAt) {
-        throw new ConflictException('KYC session not found or already used.');
-      }
-
-      const claim = await ctx.kycLivenessSession.updateMany({
-        where: {
-          sessionId: dto.sessionId,
-          userId,
-          usedAt: null,
-        },
-        data: {
-          usedAt: new Date(),
-        },
-      });
-
-      if (claim.count !== 1) {
-        throw new ConflictException('KYC session not found or already used.');
-      }
-
-      // 全局检查：该证件号是否已被其他 APPROVED 的账号使用
-      // 注意：是否允许 REVIEWING 状态重复取决于业务
-      const duplicateId = await ctx.kycRecord.findFirst({
-        where: {
-          idNumber: dto.idNumber,
-          userId: { not: userId },
-          kycStatus: {
-            in: [KYC_STATUS.REVIEWING, KYC_STATUS.APPROVED],
-          },
-        },
-      });
-
-      if (duplicateId) {
-        throw new ConflictException('Identity document already in use.');
-      }
-
-      // 获取当前用户最新的 KYC 记录
-      const existing = await ctx.kycRecord.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (existing?.kycStatus === KYC_STATUS.APPROVED) {
-        throw new BadRequestException('KYC already approved, cannot resubmit');
-      }
-      if (existing?.kycStatus === KYC_STATUS.REVIEWING) {
-        throw new BadRequestException('KYC is under review, cannot resubmit');
-      }
-
-      // 6. 调用 AWS 执行活体校验与人脸比对
-      const {
-        passed,
-        reason,
-        livenessConfidence,
-        faceSimilarity,
-        referenceImageBytes, // AWS 截取的高清人脸
-      } = await this.kycProvider.verifyLivenessAndMatchIdCard(
-        userId,
-        dto.sessionId,
-        frontFile.buffer,
-      );
-
-      //文件归档：上传到 S3 (只有到了这一步才存文件) ---
-      // 1. 上传正面
-      const { key: frontKey } = await this.uploadService.uploadBuffer(
-        frontFile.buffer,
-        'kyc',
-        userId,
-        frontFile.mimetype,
-        'id-card-front',
-      );
-      // 2. 上传背面
-      let backKey: string | null = null;
-      if (backFile) {
-        const res = await this.uploadService.uploadBuffer(
-          backFile.buffer,
-          'kyc',
-          userId,
-          backFile.mimetype,
-          'id-card-back',
-        );
-        backKey = res.key;
-      }
-
-      // 5. 决定初始状态
-      let initialStatus: KycStatus = KYC_STATUS.REVIEWING;
-      let autoRejectReason = null;
-      // faceImageKey：优先用 AWS reference image 上传后的 key
-      // 不信任前端传的 faceImage（防止用户传别人的 key）
-      let faceImageKey: string | null = null;
-
-      if (passed) {
-        if (!referenceImageBytes) {
-          initialStatus = KYC_STATUS.REJECTED;
-          autoRejectReason = 'No reference image returned from KYC provider';
-        } else {
-          // AWS SDK v3 在浏览器/Node 环境下返回的是 Uint8Array
-          const imageBuffer = Buffer.from(referenceImageBytes);
-          const { key } = await this.uploadService.uploadBuffer(
-            imageBuffer,
-            'kyc',
-            userId,
-            'image/jpeg',
-            'face-image',
-          );
-          faceImageKey = key;
+        if (!session || session.userId !== userId) {
+          throw new ConflictException('KYC session not found.');
         }
-      } else if (!passed) {
-        initialStatus = KYC_STATUS.REJECTED;
-        autoRejectReason = reason || 'Machine verification failed';
-      }
+        if (session.usedAt) {
+          throw new ConflictException('KYC session not found or already used.');
+        }
 
-      try {
-        const record = await ctx.kycRecord.create({
-          data: {
-            userId,
-            sessionId: dto.sessionId,
-            kycStatus: initialStatus,
-            idType: dto.idType,
+        // B) duplicate id（全局）
+        const duplicateId = await ctx.kycRecord.findFirst({
+          where: {
             idNumber: dto.idNumber,
-            realName: dto.realName,
-            idCardFront: frontKey,
-            idCardBack: backKey,
-            // 只用后端生成/验证过的 faceImageKey
-            faceImage: faceImageKey,
-            livenessScore: livenessConfidence ?? 0,
-            ocrRawData: dto.ocrRawData ?? {},
-            submittedAt: new Date(),
-            auditResult: autoRejectReason ? 'Auto-rejected by System' : null,
-            rejectReason: autoRejectReason,
-            // 如果自动拒绝，视为已审核
-            auditedAt:
-              initialStatus === KYC_STATUS.REJECTED ? new Date() : null,
-            ipAddress: device.ip,
-            deviceId: device.deviceId,
-            deviceModel: device.deviceModel,
+            userId: { not: userId },
+            kycStatus: { in: [KYC_STATUS.REVIEWING, KYC_STATUS.APPROVED] },
           },
+          select: { id: true },
+        });
+        if (duplicateId) {
+          throw new ConflictException('Identity document already in use.');
+        }
+
+        // C) 本人最新 KYC 状态校验
+        const existing = await ctx.kycRecord.findFirst({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          select: { kycStatus: true },
         });
 
-        // update user's kyc status to REVIEWING
-        await ctx.user.update({
-          where: { id: userId },
-          data: {
-            kycStatus: initialStatus,
-          },
-        });
-        return record;
-      } catch (error: any) {
-        if (
-          error instanceof PrismaClientKnownRequestError &&
-          error.code === 'P2002'
-        ) {
-          const target = error.meta?.target as string[];
-          if (target && target.includes('sessionId')) {
-            throw new ConflictException(
-              'Liveness session already used (DB Constraint).',
-            );
-          }
-          if (target && target.includes('idNumber')) {
-            // 假设你给 idNumber 也加了 unique
-            throw new ConflictException('Identity document already in use.');
-          }
+        if (existing?.kycStatus === KYC_STATUS.APPROVED) {
+          throw new BadRequestException(
+            'KYC already approved, cannot resubmit',
+          );
         }
-        throw error;
-      }
-    });
+        if (existing?.kycStatus === KYC_STATUS.REVIEWING) {
+          throw new BadRequestException('KYC is under review, cannot resubmit');
+        }
+
+        // D) 所有校验通过后，再“原子占用” session（防并发复用）
+        const claimedAt = new Date();
+        const claim = await ctx.kycLivenessSession.updateMany({
+          where: {
+            sessionId: dto.sessionId,
+            userId,
+            usedAt: null,
+          },
+          data: { usedAt: claimedAt },
+        });
+
+        if (claim.count !== 1) {
+          throw new ConflictException('KYC session not found or already used.');
+        }
+
+        try {
+          //  优化开始：并行加速 (Promise.all) ---
+          // 同时启动：1. 活体比对  2. 上传正面图  3. 上传背面图(如果有)
+          const [verificationResult, frontUploadResult, backUploadResult] =
+            await Promise.all([
+              // 任务 1: 算力任务
+              this.kycProvider.verifyLivenessAndMatchIdCard(
+                userId,
+                dto.sessionId,
+                frontFile.buffer,
+              ),
+              // 任务 2: IO 任务 (上传 Front)
+              this.uploadService.uploadBuffer(
+                frontFile.buffer,
+                'kyc',
+                userId,
+                frontFile.mimetype,
+                'id-card-front',
+              ),
+              // 任务 3: IO 任务 (上传 Back - 可选)
+              backFile
+                ? this.uploadService.uploadBuffer(
+                    backFile.buffer,
+                    'kyc',
+                    userId,
+                    backFile.mimetype,
+                    'id-card-back',
+                  )
+                : Promise.resolve(null),
+            ]);
+
+          // 解构结果
+          const { passed, reason, livenessConfidence, referenceImageBytes } =
+            verificationResult;
+          const { key: frontKey } = frontUploadResult;
+          const backKey = backUploadResult?.key ?? null;
+
+          // G) 初始状态判定 + faceImageKey（只信任后端生成的）
+          let initialStatus: KycStatus = KYC_STATUS.REVIEWING;
+          let autoRejectReason: string | null = null;
+          let faceImageKey: string | null = null;
+
+          if (passed) {
+            if (!referenceImageBytes) {
+              initialStatus = KYC_STATUS.REJECTED;
+              autoRejectReason =
+                'No reference image returned from KYC provider';
+            } else {
+              const imageBuffer = Buffer.from(referenceImageBytes);
+              const { key } = await this.uploadService.uploadBuffer(
+                imageBuffer,
+                'kyc',
+                userId,
+                'image/jpeg',
+                'face-image',
+              );
+              faceImageKey = key;
+            }
+          } else {
+            initialStatus = KYC_STATUS.REJECTED;
+            autoRejectReason = reason || 'Machine verification failed';
+          }
+
+          // H) 入库
+          const record = await ctx.kycRecord.create({
+            data: {
+              userId,
+              sessionId: dto.sessionId,
+              kycStatus: initialStatus,
+              idType: dto.idType,
+              idNumber: dto.idNumber,
+              realName: dto.realName,
+              firstName: dto.firstName,
+              middleName: dto.middleName,
+              lastName: dto.lastName,
+              idCardFront: frontKey,
+              idCardBack: backKey,
+              faceImage: faceImageKey,
+              province: dto.provinceId.toString(),
+              city: dto.cityId.toString(),
+              barangay: dto.barangayId.toString(),
+              livenessScore: livenessConfidence ?? 0,
+              ocrRawData: dto.ocrRawData ?? {},
+              submittedAt: new Date(),
+              auditResult: autoRejectReason ? 'Auto-rejected by System' : null,
+              rejectReason: autoRejectReason,
+              auditedAt:
+                initialStatus === KYC_STATUS.REJECTED ? new Date() : null,
+              ipAddress: device.ip,
+              deviceId: device.deviceId,
+              deviceModel: device.deviceModel,
+            },
+          });
+
+          // I) 同步用户 KYC 状态
+          await ctx.user.update({
+            where: { id: userId },
+            data: { kycStatus: initialStatus },
+          });
+
+          return record;
+        } catch (error: any) {
+          // J) 手动回滚 claim（只回滚本次 claimedAt 的占用）
+          await ctx.kycLivenessSession.updateMany({
+            where: { sessionId: dto.sessionId, userId, usedAt: claimedAt },
+            data: { usedAt: null },
+          });
+
+          if (
+            error instanceof PrismaClientKnownRequestError &&
+            error.code === 'P2002'
+          ) {
+            const target = error.meta?.target as string[] | undefined;
+            if (target?.includes('sessionId')) {
+              throw new ConflictException(
+                'Liveness session already used (DB Constraint).',
+              );
+            }
+            if (target?.includes('idNumber')) {
+              throw new ConflictException('Identity document already in use.');
+            }
+          }
+
+          throw error;
+        }
+      },
+      {
+        maxWait: 5000, // 默认 2000
+        timeout: 20000, // 默认 5000 -> 改为 20000 (20秒)
+      },
+    );
   }
 }

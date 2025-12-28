@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { KycIdCardType } from '@lucky/shared';
+import { DateToTimestamp } from '@api/common/dto/transforms';
 
-export class KycIdCardOrcDto {
-  @ApiProperty({ description: 'The key of the ID card OCR field' })
+export class KycIdCardOcrDto {
+  @ApiProperty({ description: 'The storage key of the ID card image' })
   @IsNotEmpty()
   @IsString()
   key!: string;
@@ -11,11 +12,17 @@ export class KycIdCardOrcDto {
 
 export class KycOcrResponseDto {
   @ApiProperty({
-    description: 'Detected ID card type',
-    enum: KycIdCardType,
-    example: 'PASSPORT',
+    description: 'Detected ID card type (normalized text)',
+    example: '0',
   })
-  type!: string;
+  typeText!: string;
+
+  @ApiProperty({
+    description: 'Detected ID card type enum value (for DB mapping)',
+    enum: KycIdCardType,
+    example: KycIdCardType.PASSPORT,
+  })
+  type!: KycIdCardType;
 
   @ApiProperty({
     description: 'Country code (e.g., PH, CN, VN, Global)',
@@ -23,25 +30,81 @@ export class KycOcrResponseDto {
   })
   country!: string;
 
+  @ApiProperty({ description: 'First name', nullable: true, required: false })
+  firstName!: string | null;
+
+  @ApiProperty({ description: 'Middle name', nullable: true, required: false })
+  middleName!: string | null;
+
+  @ApiProperty({ description: 'Last name', nullable: true, required: false })
+  lastName!: string | null;
+
   @ApiProperty({
-    description: 'Extracted ID number',
-    required: false,
+    description: 'Normalized full name in "FIRST MIDDLE LAST" order',
     nullable: true,
+    required: false,
+  })
+  realName!: string | null;
+
+  @ApiProperty({
+    description: 'Extracted ID number (spaces/dashes removed)',
+    nullable: true,
+    required: false,
     example: 'A12345678',
   })
   idNumber!: string | null;
 
   @ApiProperty({
-    description: 'Extracted Name',
-    required: false,
+    description: 'Name as shown on the card (or fallback)',
     nullable: true,
+    required: false,
     example: 'JUAN DELA CRUZ',
   })
   name!: string | null;
 
   @ApiProperty({
-    description:
-      'Full raw text returned by OCR for debugging or manual correction',
+    description: 'Gender (MALE/FEMALE/UNKNOWN)',
+    nullable: true,
+    required: false,
+    example: 'MALE',
+  })
+  gender!: string | null;
+
+  @ApiProperty({
+    description: 'Birthday (YYYY-MM-DD)',
+    nullable: true,
+    required: false,
+    example: '1990-01-01',
+  })
+  @DateToTimestamp()
+  birthday!: string | null;
+
+  @ApiProperty({
+    description: 'Expiry date (YYYY-MM-DD)',
+    nullable: true,
+    required: false,
+    example: '2030-01-01',
+  })
+  @DateToTimestamp()
+  expiryDate!: string | null;
+
+  @ApiProperty({ description: 'Fraud/suspicious flag', example: false })
+  isSuspicious!: boolean;
+
+  @ApiProperty({ description: 'Fraud score (0-100)', example: 12 })
+  fraudScore!: number;
+
+  @ApiProperty({
+    description: 'Fraud reason if suspicious',
+    nullable: true,
+    required: false,
+    example: null,
+  })
+  fraudReason!: string | null;
+
+  @ApiProperty({
+    description: 'Raw text/debug source',
+    example: 'Extracted by Gemini AI (2.5-flash) with Fraud Check',
   })
   rawText!: string;
 }

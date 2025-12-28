@@ -5,41 +5,46 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  RekognitionClient,
+  CompareFacesCommand,
   CreateFaceLivenessSessionCommand,
   GetFaceLivenessSessionResultsCommand,
-  CompareFacesCommand,
+  RekognitionClient,
 } from '@aws-sdk/client-rekognition';
 import {
-  VertexAI,
   GenerativeModel,
-  HarmCategory,
   HarmBlockThreshold,
+  HarmCategory,
+  VertexAI,
 } from '@google-cloud/vertexai';
 // UploadService 仅用于兼容旧方法，核心逻辑不需要它了
 import { UploadService } from '@api/common/upload/upload.service';
+import {
+  KycIdCardType,
+  toKycIdCardType,
+  normalizeTypeText,
+} from '@lucky/shared';
+import { randomUUID } from 'node:crypto';
 
-// 定义统一的返回接口
 export interface IdCardResult {
-  type:
-    | 'PASSPORT'
-    | 'PH_DRIVER_LICENSE'
-    | 'PH_UMID'
-    | 'PH_NATIONAL_ID'
-    | 'PH_ACR'
-    | 'CN_ID'
-    | 'VN_ID'
-    | 'UNKNOWN';
+  type: KycIdCardType;
+  typeText: string;
+
   country: string;
+
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  realName: string | null;
+
   idNumber: string | null;
   name: string | null;
   gender: string | null;
   birthday: string | null;
   expiryDate?: string | null;
-  // 新增：伪造检测字段
-  isSuspicious: boolean; // 是否可疑
-  fraudScore: number; // 欺诈分 0-100 (分数越高越假)
-  fraudReason: string | null; // 具体理由 (例如: "Detected screen moiré patterns", "Black and white photocopy")
+
+  isSuspicious: boolean;
+  fraudScore: number;
+  fraudReason: string | null;
   rawText?: string;
 }
 
@@ -150,12 +155,22 @@ export class KycProviderService {
         return result;
       } else {
         return {
-          type: 'UNKNOWN',
+          type: KycIdCardType.UNKNOWN,
+          typeText: 'UNKNOWN',
           country: 'UNKNOWN',
+
           idNumber: null,
           name: null,
+
+          firstName: null,
+          middleName: null,
+          lastName: null,
+          realName: null,
+
           birthday: null,
           gender: null,
+          expiryDate: null,
+
           isSuspicious: false,
           fraudScore: 0,
           fraudReason: null,
@@ -171,7 +186,7 @@ export class KycProviderService {
   }
 
   /**
-   *  旧版兼容 OCR: 通过 Key 下载
+   * 旧版兼容 OCR: 通过 Key 下载
    * 适用于：修复旧数据，或后台管理员手动触发重扫
    */
   async ocrIdCardByKey(
@@ -187,41 +202,38 @@ export class KycProviderService {
   }
 
   /**
-   * Gemini 核心提取逻辑 (升级版：加入反欺诈指令)
+   * Gemini 核心提取逻辑 (升级版：加入反欺诈指令 + 代码级误报过滤)
    */
   private async extractWithGemini(
     imageBuffer: Buffer,
   ): Promise<IdCardResult | null> {
     if (!this.geminiModel) return null;
 
-    // 升级后的 Prompt：加入 "Anti-Spoofing" 和 "Forensics" 指令
+    // 🔥 优化后的 Prompt：增加了对字体容错的指令
     const prompt = `
-      Act as a KYC Security Expert. Analyze this ID card image for OCR and FRAUD detection.
-      Output STRICT JSON.
-      
-      Part 1: Extraction
-      1. "type": Identify ID type (PH_DRIVER_LICENSE, PASSPORT, etc. or UNKNOWN).
-      2. "country": PH, CN, VN, or Global.
-      3. "idNumber": Remove spaces/dashes.
-      4. "name": Full Name.
-      5. "birthday": YYYY-MM-DD.
-      6. "gender": MALE/FEMALE.
-      7. "expiryDate": YYYY-MM-DD.
+Act as a KYC Security Expert. Analyze this ID card image for OCR and FRAUD detection.
+Return ONLY a single valid JSON object (no markdown, no explanation).
 
-      Part 2: Forgery & Liveness Analysis (CRITICAL)
-      Analyze the image for signs of digital manipulation or spoofing. Check for:
-      - Screen Recapture: Look for Moiré patterns (wavy lines), pixel grids, or screen glare.
-      - Digital Fake: Look for perfectly flat colors, unnatural text alignment (Photoshop), or lack of depth.
-      - Photocopy: Is it black and white or low contrast?
-      - Cropping: Are edges cut off unnaturally?
-      
-      Based on this, add these fields:
-      8. "isSuspicious": boolean (true if any sign of fake/screen/photocopy is found).
-      9. "fraudScore": number (0-100). 0 = Real physical card, 100 = Obvious fake/screen.
-      10. "fraudReason": string (e.g., "Photo of a digital screen detected", "Mismatched fonts", "Black and white photocopy"). If safe, return null.
+RULES FOR FRAUD CHECK:
+1. Detect screen recapture, photocopies, or obvious photoshop edits.
+2. **IGNORE FONT ARTIFACTS**: Official IDs often use custom anti-counterfeit fonts. Do NOT flag text as "Cyrillic", "Mixed Script", or "Non-standard font" unless it is blatantly fake.
+3. If the card looks physically real (has texture, holograms), lower the fraud score even if OCR is imperfect.
 
-      IMPORTANT: Return ONLY valid JSON.
-    `;
+Fields:
+- type: one of PASSPORT, PH_DRIVER_LICENSE, PH_UMID, PH_NATIONAL_ID, PH_PRC_ID, PH_POSTAL_ID, CN_ID, VN_ID, UNKNOWN
+- country: PH, CN, VN, GLOBAL, or UNKNOWN
+- idNumber: remove spaces/dashes
+- name: full name on card
+- firstName, middleName, lastName, realName
+- birthday: YYYY-MM-DD (IMPORTANT: must be a string)
+- gender: MALE or FEMALE
+- expiryDate: YYYY-MM-DD or null
+
+Fraud fields:
+- isSuspicious: boolean
+- fraudScore: number 0-100
+- fraudReason: string or null
+`.trim();
 
     try {
       const result = await this.geminiModel.generateContent({
@@ -242,54 +254,112 @@ export class KycProviderService {
       });
 
       const response = await result.response;
-      let text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) return null;
 
-      let cleanJson = text.replace(/```json|```/g, '').trim();
-      if (!cleanJson.endsWith('}') && cleanJson.includes('{')) {
-        cleanJson += '}';
+      const jsonStr = this.extractJsonObject(text);
+      if (!jsonStr) {
+        this.logger.error(`Gemini returned non-JSON: ${text}`);
+        return this.createFallbackResult('AI returned invalid JSON');
       }
 
+      let data: any;
       try {
-        const data = JSON.parse(cleanJson);
-
-        // 简单的后处理，防止 AI 幻觉返回空对象
-        const isSuspicious = data.isSuspicious === true || data.fraudScore > 50;
-
-        return {
-          type: data.type || 'UNKNOWN',
-          country: data.country || 'UNKNOWN',
-          idNumber: data.idNumber || null,
-          name: data.name || null,
-          birthday: data.birthday || null,
-          gender: data.gender || 'UNKNOWN',
-          expiryDate: data.expiryDate || null,
-
-          //  映射新增的风控字段
-          isSuspicious: isSuspicious,
-          fraudScore: typeof data.fraudScore === 'number' ? data.fraudScore : 0,
-          fraudReason:
-            data.fraudReason ||
-            (isSuspicious ? 'Unknown suspicious artifact' : null),
-
-          rawText: 'Extracted by Gemini AI (2.5-flash) with Fraud Check',
-        };
-      } catch (parseError) {
-        this.logger.error(`JSON Parse Failed: ${text}`);
-        // 如果解析失败，可能是图片太糊导致 AI 乱说话，建议视为可疑
-        return {
-          type: 'UNKNOWN',
-          country: 'UNKNOWN',
-          idNumber: null,
-          name: null,
-          birthday: null,
-          gender: null,
-          isSuspicious: true,
-          fraudScore: 80,
-          fraudReason: 'AI Parsing Failed (Image likely poor quality)',
-        } as IdCardResult;
+        data = JSON.parse(jsonStr);
+      } catch (e) {
+        this.logger.error(`JSON Parse Failed: ${jsonStr}`);
+        return this.createFallbackResult('AI JSON parse failed');
       }
+
+      // --- 数据清洗 ---
+
+      // 1. 类型映射
+      const typeTextRaw =
+        typeof data.type === 'string'
+          ? data.type
+          : typeof data.typeText === 'string'
+            ? data.typeText
+            : typeof data.type === 'number'
+              ? ((KycIdCardType as any)[data.type] ?? 'UNKNOWN')
+              : 'UNKNOWN';
+
+      const typeText = normalizeTypeText(String(typeTextRaw ?? 'UNKNOWN'));
+      const type = toKycIdCardType(typeText);
+
+      // 2. 姓名处理
+      const fromAi = {
+        firstName: this.normNullableString(data.firstName),
+        middleName: this.normNullableString(data.middleName),
+        lastName: this.normNullableString(data.lastName),
+        realName: this.normNullableString(data.realName),
+      };
+      const fallback = this.splitName(data.name);
+
+      const firstName = fromAi.firstName ?? fallback.firstName;
+      const middleName = fromAi.middleName ?? fallback.middleName;
+      const lastName = fromAi.lastName ?? fallback.lastName;
+      const realName = fromAi.realName ?? fallback.realName;
+      const name = this.normNullableString(data.name) ?? realName ?? null;
+
+      // 3. 基础字段
+      const country = this.normalizeCountry(data.country);
+      const gender = this.normalizeGender(data.gender);
+      const idNumber = this.normalizeIdNumber(data.idNumber);
+      const birthday = this.normalizeDate(data.birthday);
+      const expiryDate = this.normalizeDate(data.expiryDate);
+
+      // 4. 🔥 风控分数逻辑 (含 Cyrillic 补丁)
+      let fraudScoreSafe = this.clamp(Number(data.fraudScore));
+      let isSuspicious = data.isSuspicious === true || fraudScoreSafe >= 60; // 建议阈值 60
+      let fraudReason = this.normNullableString(data.fraudReason);
+
+      // 【补丁】: 强制修正 "Cyrillic" 或 "Font" 相关的误报
+      if (fraudReason) {
+        const reasonLower = fraudReason.toLowerCase();
+        const isFontIssue =
+          reasonLower.includes('cyrillic') ||
+          reasonLower.includes('font') ||
+          reasonLower.includes('mixed script') ||
+          reasonLower.includes('alphabet');
+
+        // 如果是因为字体问题扣分，且分数不是极其离谱(>=85)，则强制放行
+        if (isFontIssue && fraudScoreSafe < 85) {
+          this.logger.warn(
+            `Ignoring AI False Positive (Font/Cyrillic): ${fraudReason}`,
+          );
+
+          fraudScoreSafe = 20; // 降为低风险
+          isSuspicious = false;
+          fraudReason = null; // 清空理由，避免前端展示错误警告
+        }
+      }
+
+      // 如果还是高风险，但 reason 为空，给一个默认值
+      if (isSuspicious && !fraudReason) {
+        fraudReason = 'Unknown suspicious artifact';
+      }
+
+      return {
+        type,
+        typeText,
+        country,
+        idNumber,
+
+        firstName,
+        middleName,
+        lastName,
+        realName,
+
+        name,
+        birthday,
+        gender,
+        expiryDate,
+
+        isSuspicious,
+        fraudScore: fraudScoreSafe,
+        fraudReason,
+        rawText: 'Extracted by Gemini AI (2.5-flash) with Fraud Check',
+      };
     } catch (e) {
       this.logger.error('Vertex AI Error', e);
       return null;
@@ -299,12 +369,9 @@ export class KycProviderService {
   async createLivenessSession(
     userId: string,
   ): Promise<{ sessionId: string | undefined }> {
-    // 注意：AWS 这里的入参通常是 clientRequestToken，可以用 userId 或者 uuid
-    const clientRequestToken = userId;
-
     try {
       const command = new CreateFaceLivenessSessionCommand({
-        ClientRequestToken: clientRequestToken,
+        ClientRequestToken: randomUUID(),
         Settings: { AuditImagesLimit: 1 },
       });
       const response = await this.rekognitionClient.send(command);
@@ -318,12 +385,12 @@ export class KycProviderService {
   }
 
   /**
-   *  新版活体比对: 直接接收 Buffer
+   * 新版活体比对: 直接接收 Buffer
    */
   async verifyLivenessAndMatchIdCard(
     userId: string,
     sessionId: string,
-    idCardBuffer: Buffer, // <--- 关键修改：直接传 Buffer
+    idCardBuffer: Buffer,
   ): Promise<{
     success: boolean;
     passed: boolean;
@@ -363,10 +430,9 @@ export class KycProviderService {
       }
 
       // 2. 人证比对 (Source: 活体截图, Target: 用户上传的 Buffer)
-      // 注意：不再调用 uploadService.getFileBuffer，直接用 idCardBuffer
       const compareCommand = new CompareFacesCommand({
         SourceImage: { Bytes: livenessImage },
-        TargetImage: { Bytes: idCardBuffer }, // <--- 直接使用内存 Buffer
+        TargetImage: { Bytes: idCardBuffer },
         SimilarityThreshold: this.faceMatchScore,
       });
 
@@ -391,5 +457,137 @@ export class KycProviderService {
       this.logger.error('AWS Liveness Verification Error', error);
       throw new InternalServerErrorException('Verification failed');
     }
+  }
+
+  // --- Helpers ---
+
+  private createFallbackResult(reason: string): IdCardResult {
+    return {
+      type: KycIdCardType.UNKNOWN,
+      typeText: 'UNKNOWN',
+      country: 'UNKNOWN',
+      idNumber: null,
+      name: null,
+      firstName: null,
+      middleName: null,
+      lastName: null,
+      realName: null,
+      birthday: null,
+      gender: 'UNKNOWN',
+      expiryDate: null,
+      isSuspicious: true,
+      fraudScore: 80,
+      fraudReason: reason,
+      rawText: '',
+    };
+  }
+
+  private clamp(n: number, min = 0, max = 100) {
+    return Math.max(min, Math.min(max, n));
+  }
+
+  private normNullableString(v: any): string | null {
+    const s =
+      typeof v === 'string' ? v.trim() : v == null ? '' : String(v).trim();
+    return s ? s : null;
+  }
+
+  private normalizeCountry(v: any): string {
+    const s = this.normNullableString(v)?.toUpperCase();
+    if (!s) return 'UNKNOWN';
+    if (s === 'GLOBAL') return 'GLOBAL';
+    return s;
+  }
+
+  private normalizeGender(v: any): string {
+    const s = this.normNullableString(v)?.toUpperCase() ?? '';
+    if (!s) return 'UNKNOWN';
+    if (s === 'M') return 'MALE';
+    if (s === 'F') return 'FEMALE';
+    if (s === 'MALE' || s === 'FEMALE') return s;
+    return 'UNKNOWN';
+  }
+
+  private normalizeIdNumber(v: any): string | null {
+    const s = this.normNullableString(v);
+    if (!s) return null;
+    return s.replace(/[\s-]+/g, '');
+  }
+
+  private normalizeDate(v: any): string | null {
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) return null;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+      const d = new Date(s);
+      return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : null;
+    }
+
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      if (v > 10_000_000_000) return new Date(v).toISOString().slice(0, 10);
+      if (v > 100_000_000) return new Date(v * 1000).toISOString().slice(0, 10);
+    }
+    return null;
+  }
+
+  private extractJsonObject(text: string): string | null {
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start < 0 || end < 0 || end <= start) return null;
+    return cleaned.slice(start, end + 1);
+  }
+
+  private splitName(full: any) {
+    const raw = String(full ?? '').trim();
+    if (!raw) {
+      return {
+        firstName: null,
+        middleName: null,
+        lastName: null,
+        realName: null,
+      };
+    }
+
+    if (raw.includes(',')) {
+      const [last, rest] = raw.split(',', 2).map((x) => x.trim());
+      const parts = rest.split(/\s+/).filter(Boolean);
+      const first = parts[0] ?? null;
+      const middle = parts.length > 1 ? parts.slice(1).join(' ') : null;
+      const realName = [first, middle, last].filter(Boolean).join(' ') || null;
+      return {
+        firstName: first,
+        middleName: middle,
+        lastName: last || null,
+        realName,
+      };
+    }
+
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+      return {
+        firstName: parts[0],
+        middleName: null,
+        lastName: null,
+        realName: parts[0],
+      };
+    }
+    if (parts.length === 2) {
+      const realName = `${parts[0]} ${parts[1]}`;
+      return {
+        firstName: parts[0],
+        middleName: null,
+        lastName: parts[1],
+        realName,
+      };
+    }
+
+    const firstName = parts[0];
+    const lastName = parts[parts.length - 1];
+    const middleName = parts.slice(1, -1).join(' ') || null;
+    const realName =
+      [firstName, middleName, lastName].filter(Boolean).join(' ') || null;
+    return { firstName, middleName, lastName, realName };
   }
 }

@@ -92,7 +92,8 @@ export class KycController {
     if (!file) {
       throw new NotFoundException('File not found');
     }
-    return this.kycService.scanIdCard(file.buffer);
+    const result = this.kycService.scanIdCard(file.buffer);
+    return plainToInstance(KycOcrResponseDto, result);
   }
 
   /**
