@@ -38,6 +38,12 @@ export class QueryKycDto {
   @IsInt()
   kycStatus?: number;
 
+  @ApiPropertyOptional({ description: 'ID type ID', example: 1 })
+  @IsOptional()
+  @ToInt()
+  @IsInt()
+  idType?: number;
+
   @ApiPropertyOptional({
     description: 'start date (ISO format)',
     example: '2024-01-01T00:00:00Z',
