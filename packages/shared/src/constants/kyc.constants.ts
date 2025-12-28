@@ -1,3 +1,5 @@
+import { buildOptionsFromLabelMap } from "../utils/enum-options.util";
+
 export const KYC_STATUS = {
   DRAFT: 0, // 未提交
   REVIEWING: 1, // 审核中
@@ -8,6 +10,17 @@ export const KYC_STATUS = {
 } as const;
 
 export type KycStatus = (typeof KYC_STATUS)[keyof typeof KYC_STATUS];
+
+export const KYC_STATUS_LABEL: Record<number, string> = {
+  [KYC_STATUS.DRAFT]: "Draft",
+  [KYC_STATUS.REVIEWING]: "Reviewing",
+  [KYC_STATUS.REJECTED]: "Rejected",
+  [KYC_STATUS.NEED_MORE]: "Need More Info",
+  [KYC_STATUS.APPROVED]: "Approved",
+  [KYC_STATUS.AUTO_REJECTED]: "Auto Rejected (Risk)",
+};
+
+export const KYC_STATUS_OPTIONS = buildOptionsFromLabelMap(KYC_STATUS_LABEL);
 
 export const OP_MODULE = {
   KYC: "KYC",

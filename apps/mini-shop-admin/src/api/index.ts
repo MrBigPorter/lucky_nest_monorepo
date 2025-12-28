@@ -390,12 +390,12 @@ export const kycApi = {
 
   // 获取详情
   getDetail: (id: string) => {
-    return http.get(`/admin/kyc/records/${id}`);
+    return http.get(`/v1/admin/kyc/records/${id}`);
   },
 
   // 审核
   audit: (id: string, data: AuditKycParams) => {
-    return http.post(`/admin/kyc/${id}/audit`, data);
+    return http.post(`/v1/admin/kyc/${id}/audit`, data);
   },
 };
 

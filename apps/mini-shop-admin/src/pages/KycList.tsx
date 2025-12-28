@@ -1,16 +1,21 @@
-import React, { useRef, useMemo, useCallback } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { Button, ModalManager } from '@repo/ui';
 import {
-  SmartTable,
-  ProColumns,
   ActionType,
+  ProColumns,
+  SmartTable,
 } from '@/components/scaffold/SmartTable';
 import { KycAuditModal } from './kyc/KycAuditModal';
-import { Shield, Eye } from 'lucide-react';
+import { Eye, Shield } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { KycRecord, KycRecordListParams } from '@/type/types.ts';
-import { KYC_STATUS } from '@lucky/shared';
-import { Badge } from '@repo/ui/components/ui/badge.tsx';
+import {
+  KYC_STATUS,
+  KycIdCardType,
+  KycIdCardTypeLabel,
+  KycIdTypesList,
+} from '@lucky/shared';
+import { Badge, BadgeVariant } from '@repo/ui/components/ui/badge.tsx';
 import { kycApi } from '@/api';
 import { Card } from '@/components/UIComponents.tsx';
 
@@ -21,6 +26,7 @@ export const KycList: React.FC = () => {
   const handleView = useCallback((record: KycRecord) => {
     ModalManager.open({
       title: 'KYC Audit Detail',
+      size: 'xl',
       renderChildren: ({ close }) => (
         <KycAuditModal
           data={record}
@@ -39,6 +45,7 @@ export const KycList: React.FC = () => {
       [KYC_STATUS.APPROVED]: { label: 'Approved', color: 'success' }, // Green
       [KYC_STATUS.REJECTED]: { label: 'Rejected', color: 'danger' }, // Red
       [KYC_STATUS.NEED_MORE]: { label: 'Need More', color: 'warning' }, // Orange
+      [KYC_STATUS.AUTO_REJECTED]: { label: 'Auto Rejected', color: 'danger' }, // Red
     }),
     [],
   );
@@ -74,23 +81,27 @@ export const KycList: React.FC = () => {
       {
         title: 'ID Type',
         dataIndex: 'idType',
-        // 这里可以做一个 Map 映射 TypeID 到 Name，暂时显示 ID
-        render: (dom) => <Badge variant="outline">Type {dom}</Badge>,
+        render: (_, row) => {
+          return KycIdCardTypeLabel[row?.idType as KycIdCardType] || 'Unknown';
+        },
       },
       {
         title: 'Status',
         dataIndex: 'kycStatus',
         valueType: 'select',
         valueEnum: {
-          0: { text: 'Draft', status: 'Default' },
-          1: { text: 'Reviewing', status: 'Processing' },
-          2: { text: 'Rejected', status: 'Error' },
-          3: { text: 'Need More', status: 'Warning' },
-          4: { text: 'Approved', status: 'Success' },
+          0: { text: 'Draft', status: 'default' },
+          1: { text: 'Reviewing', status: 'destructive' },
+          2: { text: 'Rejected', status: 'success' },
+          3: { text: 'Need More', status: 'warning' },
+          4: { text: 'Approved', status: 'success' },
+          5: { text: 'Auto Rejected', status: 'info' },
         },
         render: (_, row) => {
           const conf = statusConfig[row.kycStatus];
-          return <Badge variant={conf?.color}>{conf?.label}</Badge>;
+          return (
+            <Badge variant={conf?.color as BadgeVariant}>{conf?.label}</Badge>
+          );
         },
       },
       {
@@ -141,6 +152,15 @@ export const KycList: React.FC = () => {
         options: Object.entries(statusConfig).map(([k, v]) => ({
           label: v.label,
           value: k,
+        })),
+      },
+      {
+        type: 'select',
+        key: 'idType',
+        label: 'ID Type',
+        options: KycIdTypesList.map((item) => ({
+          label: item.label,
+          value: String(item.value),
         })),
       },
       {

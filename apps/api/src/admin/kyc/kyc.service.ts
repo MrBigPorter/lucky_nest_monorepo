@@ -13,10 +13,14 @@ import {
   TimeHelper,
 } from '@lucky/shared';
 import { AuditKycDto } from '@api/admin/kyc/dto/audit-kyc.dto';
+import { UploadService } from '@api/common/upload/upload.service';
 
 @Injectable()
 export class KycService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private uploadService: UploadService,
+  ) {}
 
   /**
    * Get KYC record list with pagination and filters
@@ -30,15 +34,20 @@ export class KycService {
       userId,
       endDate,
       startDate,
+      idType,
     } = dto;
 
     const skip = (page - 1) * pageSize;
     const whereConditions: Prisma.KycRecordWhereInput = {};
-    if (kycStatus) {
+    if (kycStatus != null || kycStatus !== undefined) {
       whereConditions.kycStatus = kycStatus;
     }
     if (userId) {
       whereConditions.userId = userId;
+    }
+
+    if (idType) {
+      whereConditions.idType = idType;
     }
 
     if (startDate || endDate) {
@@ -66,12 +75,70 @@ export class KycService {
       }),
     ]);
 
+    const list = await Promise.all(
+      records.map((record) => this.transformRecord(record)),
+    );
+
     return {
       total,
-      list: records,
+      list,
       page,
       pageSize,
     };
+  }
+
+  /**
+   * Transform KYC record by generating signed URLs for images
+   * @param record
+   * @private
+   */
+  private async transformRecord(record: any) {
+    if (!record) return null;
+
+    //1. 并行生成签名 URL (纯内存计算，速度极快)
+    // 注意：第三个参数必须传 record.userId，UploadService 需要验证文件归属
+    const [idCardFrontUrl, idCardBackUrl, faceImage] = await Promise.all([
+      record.idCardFront
+        ? this.uploadService.getDownloadUrl(
+            record.idCardFront,
+            'kyc',
+            record.userId,
+          )
+        : null,
+      record.idCardBack
+        ? this.uploadService.getDownloadUrl(
+            record.idCardBack,
+            'kyc',
+            record.userId,
+          )
+        : null,
+      record.faceImage
+        ? this.uploadService.getDownloadUrl(
+            record.faceImage,
+            'kyc',
+            record.userId,
+          )
+        : null,
+    ]);
+    return {
+      ...record,
+      idCardFront: idCardFrontUrl,
+      idCardBack: idCardBackUrl,
+      faceImage: faceImage,
+
+      // 3. 清洗 OCR 数据里的敏感原始路径
+      ocrRawData: this.sanitizeOcrData(record.ocrRawData),
+    };
+  }
+
+  // 辅助：清洗 OCR 数据
+  private sanitizeOcrData(ocr: any) {
+    if (!ocr || typeof ocr !== 'object') return ocr;
+    const clean = { ...ocr };
+    // 删掉 OCR 结果里带的本地路径
+    delete clean.idCardFront;
+    delete clean.idCardBack;
+    return clean;
   }
 
   /**

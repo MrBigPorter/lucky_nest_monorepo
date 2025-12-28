@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import { useRequest } from 'ahooks';
-import { Button } from '@repo/ui';
-import { User, ShieldCheck, AlertCircle, Video } from 'lucide-react';
-import { KYC_STATUS, TimeHelper } from '@lucky/shared';
+import { Button, cn } from '@repo/ui';
+import {
+  User,
+  Video,
+  X,
+  Maximize2,
+  CheckCircle2,
+  XCircle,
+  ScanText,
+  AlertTriangle,
+  FileText,
+} from 'lucide-react';
+import { KYC_STATUS, KYC_STATUS_LABEL, TimeHelper } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore';
-import { SmartImage } from '@/components/ui/SmartImage';
 import { KycRecord } from '@/type/types.ts';
-import { kycApi } from '@/api'; // ✅ 1. 引入 SmartImage
+import { kycApi } from '@/api';
+import { Image } from '@unpic/react';
 
 interface Props {
   data: KycRecord;
@@ -14,47 +24,151 @@ interface Props {
   reload: () => void;
 }
 
-// ✅ 2. 修改 ImageCard 组件，使用 SmartImage
-const ImageCard = ({ title, src }: { title: string; src?: string }) => (
-  <div className="border border-gray-200 dark:border-white/10 rounded-lg p-2 bg-gray-50 dark:bg-white/5">
-    <div className="text-xs text-gray-500 mb-2 font-medium">{title}</div>
-    {src ? (
-      <div className="relative aspect-video rounded-md overflow-hidden bg-black/5 dark:bg-white/5 cursor-pointer group">
-        <SmartImage
+// --- 组件：大图预览 (Lightbox) ---
+const ImagePreviewModal = ({
+  src,
+  title,
+  onClose,
+}: {
+  src: string;
+  title: string;
+  onClose: () => void;
+}) => {
+  if (!src) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors"
+      >
+        <X size={32} />
+      </button>
+      <div
+        className="max-w-full max-h-full flex flex-col items-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
           src={src}
           alt={title}
-          // 为了审核清晰，这里设大一点的宽高基准，实际显示由 CSS 控制
-          width={800}
-          height={450}
-          layout="constrained"
-          // 让图片充满容器，并保持 object-cover
-          className="w-full h-full"
-          imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="max-w-[90vw] max-h-[85vh] object-contain rounded shadow-2xl"
         />
+        <p className="text-white/90 mt-3 text-lg font-medium">{title}</p>
+      </div>
+    </div>
+  );
+};
 
-        {/* 悬停遮罩提示 */}
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium backdrop-blur-[2px]">
-          Click to Zoom
+// --- 组件：精致的证据卡片 ---
+const EvidenceCard = ({
+  title,
+  src,
+  onPreview,
+}: {
+  title: string;
+  src?: string;
+  onPreview: (src: string, title: string) => void;
+}) => (
+  <div className="group relative bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all">
+    {/* Header */}
+    <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+      <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+        {title}
+      </span>
+      {src && (
+        <Maximize2
+          size={14}
+          className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+        />
+      )}
+    </div>
+
+    {/* Image Area */}
+    <div className="relative aspect-video bg-gray-100 dark:bg-black/20">
+      {src ? (
+        <div
+          className="w-full h-full cursor-zoom-in"
+          onClick={() => onPreview(src, title)}
+        >
+          <Image
+            src={src}
+            alt={title}
+            width={600}
+            height={400}
+            layout="constrained"
+            className="w-full h-full object-contain"
+          />
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
         </div>
-      </div>
-    ) : (
-      <div className="aspect-video flex items-center justify-center text-gray-400 text-xs bg-gray-100 dark:bg-white/5 rounded-md border border-dashed border-gray-200 dark:border-white/10">
-        No Image
-      </div>
-    )}
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-1">
+          <ScanText size={24} className="opacity-20" />
+          <span className="text-[10px]">No Image</span>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// --- 组件：数据对比行 ---
+const InfoRow = ({
+  label,
+  value,
+  subValue,
+  highlight = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  subValue?: string;
+  highlight?: boolean;
+}) => (
+  <div className="py-3 border-b border-gray-100 dark:border-white/5 last:border-0">
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-xs text-gray-500">{label}</span>
+      {subValue && (
+        <span
+          className={cn(
+            'text-[10px] font-mono px-1.5 py-0.5 rounded border',
+            value !== subValue
+              ? 'bg-amber-50 text-amber-700 border-amber-100'
+              : 'bg-green-50 text-green-700 border-green-100',
+          )}
+        >
+          OCR: {subValue}
+        </span>
+      )}
+    </div>
+    <div
+      className={cn(
+        'text-sm break-all',
+        highlight
+          ? 'font-bold text-gray-900 dark:text-white'
+          : 'text-gray-700 dark:text-gray-300',
+      )}
+    >
+      {value || '-'}
+    </div>
   </div>
 );
 
 export const KycAuditModal: React.FC<Props> = ({ data, close, reload }) => {
   const [remark, setRemark] = useState('');
+  const [previewImage, setPreviewImage] = useState<{
+    src: string;
+    title: string;
+  } | null>(null);
   const addToast = useToastStore((state) => state.addToast);
 
   const isReviewing = data.kycStatus === KYC_STATUS.REVIEWING;
+  const ocrData = data.ocrRawData || {};
 
   const { run: submitAudit, loading } = useRequest(kycApi.audit, {
     manual: true,
     onSuccess: () => {
-      addToast('success', 'Audit submitted successfully');
+      addToast('success', 'Audit processed successfully');
       reload();
       close();
     },
@@ -65,165 +179,228 @@ export const KycAuditModal: React.FC<Props> = ({ data, close, reload }) => {
 
   const handleAudit = (action: 'APPROVE' | 'REJECT' | 'NEED_MORE') => {
     if (!remark && action !== 'APPROVE') {
-      return addToast('error', 'Please enter a remark for rejection.');
+      return addToast('error', 'Remark is required for this action.');
     }
     submitAudit(data.id, { action, remark });
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 h-[70vh] overflow-hidden">
-      {/* LEFT: Evidence Area (Images & Video) - Scrollable */}
-      <div className="lg:col-span-3 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-        <div className="flex items-center gap-2 mb-2 sticky top-0 bg-white dark:bg-gray-900 z-10 py-2">
-          <ShieldCheck className="text-primary-600" size={18} />
-          <h3 className="font-bold text-gray-800 dark:text-white">
-            Identity Evidence
+    <>
+      {/* 主容器：填满弹窗高度，左右布局 */}
+      <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white dark:bg-gray-900">
+        {/* --- LEFT: Evidence Area (Scrollable) --- */}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-black/20 custom-scrollbar border-r border-gray-200 dark:border-white/5">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <ScanText size={16} className="text-primary-600" /> Identity
+            Documents
           </h3>
-        </div>
 
-        {/* 证件照区域 */}
-        <div className="grid grid-cols-2 gap-4">
-          <ImageCard title="ID Card Front" src={data.idCardFront} />
-          <ImageCard title="ID Card Back" src={data.idCardBack} />
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <EvidenceCard
+              title="ID Card Front"
+              src={data.idCardFront}
+              onPreview={(s, t) => setPreviewImage({ src: s, title: t })}
+            />
+            <EvidenceCard
+              title="ID Card Back"
+              src={data.idCardBack}
+              onPreview={(s, t) => setPreviewImage({ src: s, title: t })}
+            />
+          </div>
 
-        {/* 人脸与活体区域 */}
-        <div className="grid grid-cols-2 gap-4">
-          <ImageCard title="Face / Selfie" src={data.faceImage} />
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Video size={16} className="text-primary-600" /> Biometric
+            Verification
+          </h3>
 
-          {/* 视频区域保持原样，也可以封装 Video 组件 */}
-          <div className="border border-gray-200 dark:border-white/10 rounded-lg p-2 bg-gray-50 dark:bg-white/5">
-            <div className="text-xs text-gray-500 mb-2 font-medium flex justify-between">
-              <span>Liveness Video</span>
-              {data.livenessScore && (
-                <span
-                  className={
-                    data.livenessScore > 90
-                      ? 'text-green-600'
-                      : 'text-amber-500'
-                  }
-                >
-                  Score: {data.livenessScore.toFixed(1)}%
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+            <EvidenceCard
+              title="Selfie Photo"
+              src={data.faceImage}
+              onPreview={(s, t) => setPreviewImage({ src: s, title: t })}
+            />
+
+            <div className="group relative bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden shadow-sm">
+              <div className="px-3 py-2 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  Liveness Video
                 </span>
-              )}
+                {data.livenessScore !== undefined && (
+                  <span
+                    className={cn(
+                      'text-[10px] px-1.5 rounded font-bold',
+                      data.livenessScore > 90
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-amber-100 text-amber-700',
+                    )}
+                  >
+                    Score: {data.livenessScore.toFixed(0)}
+                  </span>
+                )}
+              </div>
+              <div className="relative aspect-video bg-black flex items-center justify-center">
+                {data.videoUrl ? (
+                  <video
+                    src={data.videoUrl}
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-gray-500 gap-1">
+                    <Video size={24} className="opacity-30" />
+                    <span className="text-[10px]">No Video</span>
+                  </div>
+                )}
+              </div>
             </div>
-            {data.videoUrl ? (
-              <video
-                src={data.videoUrl}
-                controls
-                className="w-full h-auto rounded-md aspect-video bg-black object-contain"
+          </div>
+        </div>
+
+        {/* --- RIGHT: Sidebar (Info + Fixed Footer) --- */}
+        {/* 关键修改：flex-col 并且包含了 Footer */}
+        <div className="w-full lg:w-96 flex flex-col h-full bg-white dark:bg-gray-900 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] z-10 relative">
+          {/* 1. Scrollable Data List (占据剩余空间) */}
+          <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+            <div className="flex items-center gap-2 mb-4">
+              <User size={16} className="text-primary-600" />
+              <h3 className="font-bold text-gray-800 dark:text-white text-sm">
+                Applicant Data
+              </h3>
+            </div>
+
+            <div className="space-y-1">
+              <InfoRow
+                label="Submitted Name"
+                value={data.realName}
+                subValue={ocrData.name}
+                highlight
               />
+              <InfoRow
+                label="ID Number"
+                value={
+                  <code className="font-mono text-primary-700">
+                    {data.idNumber}
+                  </code>
+                }
+                subValue={ocrData.idNumber}
+                highlight
+              />
+              <InfoRow
+                label="Birthday"
+                value={TimeHelper.formatDate(data.birthday)}
+                subValue={TimeHelper.formatDate(ocrData.birthday)}
+              />
+              <InfoRow label="User ID" value={data.userId} />
+              <InfoRow label="Phone" value={data.user?.phone} />
+              <InfoRow
+                label="Submission Time"
+                value={TimeHelper.formatDateTime(data.submittedAt)}
+              />
+            </div>
+
+            {ocrData.idNumber && data.idNumber !== ocrData.idNumber && (
+              <div className="mt-6 p-3 bg-red-50 border border-red-100 rounded-lg text-red-700 text-xs flex gap-2">
+                <AlertTriangle size={16} className="shrink-0" />
+                <div>
+                  <strong>Risk Alert:</strong> ID Number mismatch.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Sticky Footer (固定在右下角) */}
+          <div className="flex-none p-5 border-t border-gray-100 dark:border-white/10 bg-gray-50/50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText size={14} className="text-gray-400" />
+              <span className="text-xs font-bold text-gray-500 uppercase">
+                Decision
+              </span>
+            </div>
+
+            <textarea
+              className={cn(
+                'w-full h-20 border rounded-lg p-3 text-sm outline-none resize-none transition-all mb-4',
+                'bg-white dark:bg-black/20 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500',
+                'border-gray-200 dark:border-white/20',
+                !isReviewing && 'opacity-60 bg-gray-50 cursor-not-allowed',
+              )}
+              disabled={!isReviewing}
+              placeholder={
+                isReviewing
+                  ? 'Remarks (Required for Reject/More Info)...'
+                  : 'Auditor remarks...'
+              }
+              value={
+                isReviewing
+                  ? remark
+                  : data.auditResult || data.rejectReason || ''
+              }
+              onChange={(e) => setRemark(e.target.value)}
+            />
+
+            {isReviewing ? (
+              <div className="grid grid-cols-4 gap-3">
+                <Button
+                  variant="danger"
+                  className="col-span-1"
+                  size="sm"
+                  isLoading={loading}
+                  disabled={!remark}
+                  onClick={() => handleAudit('REJECT')}
+                  title="Reject"
+                >
+                  <XCircle size={18} />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="col-span-1 border-amber-300 text-amber-600 hover:bg-amber-50"
+                  size="sm"
+                  isLoading={loading}
+                  disabled={!remark}
+                  onClick={() => handleAudit('NEED_MORE')}
+                  title="Request Info"
+                >
+                  ?
+                </Button>
+                <Button
+                  variant="primary"
+                  className="col-span-2 shadow-sm"
+                  size="sm"
+                  isLoading={loading}
+                  onClick={() => handleAudit('APPROVE')}
+                >
+                  <CheckCircle2 size={16} className="mr-2" /> Approve
+                </Button>
+              </div>
             ) : (
-              <div className="aspect-video flex flex-col items-center justify-center text-gray-400 text-xs bg-gray-100 dark:bg-white/5 rounded-md border border-dashed border-gray-200 dark:border-white/10">
-                <Video size={24} className="mb-1 opacity-50" />
-                No Video
+              <div
+                className={cn(
+                  'flex items-center justify-center gap-2 p-3 rounded-lg font-bold border text-sm',
+                  data.kycStatus === KYC_STATUS.APPROVED
+                    ? 'bg-green-50 text-green-700 border-green-200'
+                    : 'bg-red-50 text-red-700 border-red-200',
+                )}
+              >
+                {data.kycStatus === KYC_STATUS.APPROVED ? (
+                  <CheckCircle2 size={18} />
+                ) : (
+                  <XCircle size={18} />
+                )}
+                <span>Current Status: {KYC_STATUS_LABEL[data.kycStatus]}</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* RIGHT: Info & Action Area */}
-      <div className="lg:col-span-2 flex flex-col border-l border-gray-100 dark:border-white/10 pl-6 bg-white dark:bg-gray-900">
-        {/* User Info */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <User className="text-primary-600" size={18} />
-            <h3 className="font-bold text-gray-800 dark:text-white">
-              Applicant Info
-            </h3>
-          </div>
-          <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl space-y-3 text-sm border border-gray-100 dark:border-white/5">
-            <div className="flex justify-between">
-              <span className="text-gray-500">User ID</span>
-              <span className="font-mono select-all">{data.userId}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Nickname</span>
-              <span className="font-medium">{data.user?.nickname || '-'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Phone</span>
-              <span className="font-medium">{data.user?.phone || '-'}</span>
-            </div>
-            <div className="border-t border-dashed border-gray-200 dark:border-white/10 my-2 pt-2"></div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Submitted Name</span>
-              <span className="font-bold text-lg text-gray-900 dark:text-white">
-                {data.realName}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500">ID Number</span>
-              <code className="bg-white dark:bg-black/20 px-2 py-1 rounded border border-gray-200 dark:border-white/10 font-mono text-primary-600 font-bold select-all">
-                {data.idNumber}
-              </code>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Submitted At</span>
-              <span>{TimeHelper.formatDateTime(data.submittedAt)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Audit Actions - Sticky Bottom */}
-        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-white/10">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="text-primary-600" size={18} />
-            <h3 className="font-bold text-gray-800 dark:text-white">
-              Audit Decision
-            </h3>
-          </div>
-
-          <textarea
-            className="w-full h-24 border border-gray-200 dark:border-white/20 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-gray-50 dark:bg-white/5 resize-none mb-4 transition-all"
-            disabled={!isReviewing}
-            placeholder={
-              isReviewing
-                ? 'Enter audit remark (required for rejection)...'
-                : 'Audit remark...'
-            }
-            value={
-              isReviewing ? remark : data.auditResult || data.rejectReason || ''
-            }
-            onChange={(e) => setRemark(e.target.value)}
-          />
-
-          {isReviewing ? (
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="danger"
-                isLoading={loading}
-                disabled={!remark} // Reject requires remark
-                onClick={() => handleAudit('REJECT')}
-                className="w-full"
-              >
-                Reject
-              </Button>
-              <Button
-                variant="primary"
-                isLoading={loading}
-                onClick={() => handleAudit('APPROVE')}
-                className="w-full"
-              >
-                Approve
-              </Button>
-            </div>
-          ) : (
-            <div
-              className={`text-center p-3 rounded-lg font-bold border ${
-                data.kycStatus === KYC_STATUS.APPROVED
-                  ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                  : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-              }`}
-            >
-              {data.kycStatus === KYC_STATUS.APPROVED
-                ? 'Current Status: Approved'
-                : 'Current Status: Rejected'}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* Lightbox */}
+      {previewImage && (
+        <ImagePreviewModal
+          src={previewImage.src}
+          title={previewImage.title}
+          onClose={() => setPreviewImage(null)}
+        />
+      )}
+    </>
   );
 };

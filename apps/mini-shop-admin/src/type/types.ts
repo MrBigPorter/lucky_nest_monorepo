@@ -510,26 +510,66 @@ export interface Barangay {
   barangayName: string;
 }
 
+// 新增：OCR 原始数据的类型定义
+// 用于在审核界面做 "用户填写的 vs 机器识别的" 对比
+export interface KycOcrData {
+  name?: string; // OCR 识别的全名
+  idNumber?: string; // OCR 识别的证件号
+  birthday?: number | string; // OCR 识别的生日
+  gender?: string; // OCR 识别的性别
+  expiryDate?: string | null;
+
+  // 还可以包含风控字段
+  fraudScore?: number;
+  isSuspicious?: boolean;
+  faceMatched?: boolean;
+}
+
 export interface KycRecord {
   id: string;
   userId: string;
+
+  // 关联用户信息
   user?: {
     nickname?: string;
     phone?: string;
+    avatar?: string; // 可能会用到头像
   };
-  kycStatus: KycStatus;
-  idType: number;
-  idNumber?: string;
-  realName?: string;
+
+  kycStatus: KycStatus; // 0, 1, 2, 3, 4 ...
+
+  // 证件信息
+  idType: number; // 证件类型 ID
+  idNumber?: string; // 用户填写的证件号
+  realName?: string; // 用户填写的真实姓名
+
+  // 补充字段 (用于 UI 展示)
+  birthday?: string | number; // 用户填写的生日
+  gender?: string; // 用户填写的性别
+  countryCode?: string; // 国家代码
+
+  // 证据图片 (注意：这里已经是签名后的 URL)
   idCardFront?: string;
   idCardBack?: string;
   faceImage?: string;
-  livenessScore?: number;
-  videoUrl?: string;
-  rejectReason?: string;
-  auditResult?: string;
+
+  // 活体检测
+  livenessScore?: number; // 0-100 分数
+  videoUrl?: string; // 活体视频地址
+
+  ocrRawData?: KycOcrData;
+
+  // 审核结果
+  rejectReason?: string; // 拒绝主要原因
+  auditResult?: string; // 审核员备注 (Remark)
+  auditorId?: string; // 审核员 ID
+  auditorName?: string; // 审核员名字 (可选)
+
+  // 时间字段 (建议统一格式，通常 API 返回 ISO 字符串)
   submittedAt?: string;
-  auditedAt?: number;
+  auditedAt?: string | number; // 兼容时间戳或字符串
+  createdAt?: string | number;
+  updatedAt?: string | number;
 }
 
 export interface KycRecordListParams {

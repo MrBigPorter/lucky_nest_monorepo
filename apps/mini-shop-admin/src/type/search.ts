@@ -7,7 +7,7 @@ export interface Option {
   value: string;
 }
 
-// 🔥 核心：单个字段的配置结构
+// 单个字段的配置结构
 export interface SearchFieldSchema<T> {
   /** 字段对应后端接口的 key (例如 'title', 'status') */
   key: keyof T;
