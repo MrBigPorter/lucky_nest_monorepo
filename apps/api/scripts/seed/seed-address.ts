@@ -1,62 +1,32 @@
+// prisma/seed-address.ts
+
 import { PrismaClient } from '@prisma/client';
-import * as fs from 'fs';
-import * as path from 'path';
+import { phAddressData } from './data/ph-address'; // 引入上面的数据
 
 const prisma = new PrismaClient();
 
-// 定义数据结构接口
-interface BarangayData {
-  name: string;
-}
-
-interface CityData {
-  name: string;
-  code: string;
-  zip: string;
-  barangays: string[];
-}
-
-interface ProvinceData {
-  name: string;
-  code: string;
-  cities: CityData[];
-}
-
 async function main() {
-  console.log('🌱 Starting address seeding...');
+  console.log('🌏 Seeding Philippines Address Data...');
 
-  // 1. 读取 JSON 文件
-  const filePath = path.join(__dirname, 'data/ph_locations.json');
+  // 遍历省份
+  for (const provData of phAddressData) {
+    console.log(`Processing Province: ${provData.province}`);
 
-  if (!fs.existsSync(filePath)) {
-    console.error(`❌ Data file not found at: ${filePath}`);
-    process.exit(1);
-  }
-
-  const rawData = fs.readFileSync(filePath, 'utf-8');
-  const provinces: ProvinceData[] = JSON.parse(rawData);
-
-  console.log(`📦 Found ${provinces.length} provinces.`);
-
-  // 2. 开始入库
-  for (const provData of provinces) {
-    console.log(`Processing: ${provData.name}...`);
-
-    // A. 插入省份 (Upsert: 有则更新，无则创建)
+    // 1. 创建或查找省份 (Upsert)
     const province = await prisma.province.upsert({
-      where: { provinceName: provData.name }, // 假设省名唯一，实际项目可用 code
-      update: {},
+      where: { provinceName: provData.province },
+      update: {}, // 如果存在，什么都不做
       create: {
-        provinceName: provData.name,
+        provinceName: provData.province,
         provinceCode: provData.code,
         status: 1,
       },
     });
 
-    // B. 处理该省下的城市
+    // 遍历该省份下的城市
     for (const cityData of provData.cities) {
-      // 查找或创建城市
-      // 注意：这里用 findFirst + create 的组合，因为 cityCode 在 schema 里是可选的
+      // 2. 查找城市是否存在 (由于 Schema 中 cityName 不是 unique，只能用 findFirst)
+      // 建议：在 schema 中给 City 加 @@unique([provinceId, cityName]) 唯一索引
       let city = await prisma.city.findFirst({
         where: {
           provinceId: province.provinceId,
@@ -64,62 +34,51 @@ async function main() {
         },
       });
 
+      // 如果不存在，则创建
       if (!city) {
         city = await prisma.city.create({
           data: {
             provinceId: province.provinceId,
             cityName: cityData.name,
             cityCode: cityData.code,
-            postalCode: cityData.zip,
+            postalCode: cityData.postalCode,
             status: 1,
           },
         });
       }
 
-      // C. 批量插入 Barangay (性能优化点)
-      // 如果该城市下还没有 barangay，则进行插入
-      const barangayCount = await prisma.barangay.count({
+      // 3. 批量处理 Barangay
+      // 这里的逻辑是：如果 Barangay 不存在就创建
+      // 为了性能，我们可以先查出该城市下所有的 Barangay
+      const existingBarangays = await prisma.barangay.findMany({
         where: { cityId: city.cityId },
+        select: { barangayName: true },
       });
 
-      if (barangayCount === 0 && cityData.barangays.length > 0) {
-        const payload = cityData.barangays.map((bName) => ({
+      const existingNames = new Set(
+        existingBarangays.map((b) => b.barangayName),
+      );
+
+      const newBarangays = cityData.barangays
+        .filter((bName) => !existingNames.has(bName)) // 过滤掉已经存在的
+        .map((bName) => ({
           cityId: city!.cityId,
           barangayName: bName,
           status: 1,
         }));
 
+      if (newBarangays.length > 0) {
         await prisma.barangay.createMany({
-          data: payload,
-          skipDuplicates: true,
+          data: newBarangays,
         });
         console.log(
-          `   └─ Added ${payload.length} barangays to ${city.cityName}`,
+          `   └─ Added ${newBarangays.length} barangays to ${cityData.name}`,
         );
       }
     }
   }
 
-  // 3. 同时初始化 KYC 证件类型
-  const idTypes = [
-    { typeName: 'Philippine National ID', requiresBack: 1 },
-    { typeName: 'Driver’s License', requiresBack: 1 },
-    { typeName: 'Passport', requiresBack: 0 },
-    { typeName: 'SSS Card', requiresBack: 0 },
-    { typeName: 'UMID', requiresBack: 1 },
-  ];
-
-  for (const type of idTypes) {
-    await prisma.kycIdType.upsert({
-      where: { typeId: idTypes.indexOf(type) + 1 },
-      update: {},
-      create: {
-        typeName: type.typeName,
-        requiresBack: type.requiresBack,
-        sortOrder: idTypes.indexOf(type),
-      },
-    });
-  }
+  console.log('✅ Philippines Address Seeding Completed.');
 }
 
 main()

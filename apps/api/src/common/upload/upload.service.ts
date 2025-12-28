@@ -251,18 +251,27 @@ export class UploadService {
    * @param module
    * @param userId
    * @param mimeType
+   * @param prefix
    */
   async uploadBuffer(
     buffer: Buffer | Uint8Array,
     module: string,
     userId: string,
     mimeType: string = 'image/jpeg',
+    prefix: string = 'file',
   ) {
     const { bucket, isPrivate } = this.getBucketConfig(module);
 
-    const uniqueFileName = `face_${uuidv4()}.jpg`;
+    // 根据 mimeType 简单推断后缀，或者直接生成 jpg
+    let ext = '.jpg';
+    if (mimeType === 'image/png') ext = '.png';
+    else if (mimeType === 'application/pdf') ext = '.pdf';
+
+    // 生成语义化的文件名：uploads/kyc/user_123/id_front_xxxx.jpg
+    const uniqueFileName = `${prefix}_${uuidv4()}${ext}`;
     const key = `uploads/${module}/${userId}/${uniqueFileName}`;
 
+    // 强制开启加密 (encrypt = true)
     const result = await this.internalPutToS3(
       buffer,
       key,

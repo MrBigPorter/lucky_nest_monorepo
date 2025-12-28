@@ -5,10 +5,14 @@ import { ApiProperty } from '@nestjs/swagger';
 export class KycIdTypesResponseDto {
   @ApiProperty({ description: 'ID type ID', example: 1 })
   @Expose()
-  typeId!: number;
+  id!: number;
 
-  @ApiProperty({ description: 'ID type name', example: 'Passport' })
+  @ApiProperty({ description: 'Unique code', example: 'PASSPORT' })
   @Expose()
+  code!: string;
+
+  @ApiProperty({ description: 'Display name', example: 'Passport' })
+  @Expose({ name: 'label' })
   typeName!: string;
 
   @ApiProperty({
