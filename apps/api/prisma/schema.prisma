@@ -955,25 +955,34 @@ model Barangay {
 
   city         City     @relation(fields: [cityId], references: [cityId])
 
+  @@unique([cityId, barangayName])
+
   @@index([cityId])
   @@map("barangays")
 }
 
-/// KYC 证件类型配置 (ID Types)
+// 证件类型配置表
 model KycIdType {
-  typeId        Int      @id @default(autoincrement()) @map("type_id")
-  typeName      String   @map("type_name") @db.VarChar(200)
-  typeNameEn    String?  @map("type_name_en") @db.VarChar(200)
+  // 这里直接用枚举的 Int 值作为主键，方便对应
+  id          Int      @id @map("id")
 
-  // 验证规则配置
-  requiresFront Int      @default(1) @map("requires_front") @db.SmallInt // 是否需要正面
-  requiresBack  Int      @default(1) @map("requires_back") @db.SmallInt  // 是否需要背面
-  requiresOcr   Int      @default(1) @map("requires_ocr") @db.SmallInt   // 是否支持OCR
+  // 内部代号: "PH_DRIVER_LICENSE" (给开发者看)
+  code        String   @unique @db.VarChar(50)
 
-  sortOrder     Int      @default(0) @map("sort_order")
-  status        Int      @default(1) @db.SmallInt
+  // 展示名称: "Driver's License" (给用户看，支持随时改)
+  label       String   @db.VarChar(100)
 
-  createdAt     DateTime @default(now()) @map("created_at")
+  // 国家代码: "PH", "CN", "GLOBAL" (用于前端筛选)
+  country     String   @default("GLOBAL") @db.VarChar(10)
+
+  // 排序权重 (数字越小越靠前)
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  // 状态: 1-启用 0-禁用 (比如某个证件接口挂了，可以临时下架)
+  status      Int      @default(1) @db.SmallInt
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("kyc_id_types")
 }
@@ -998,48 +1007,91 @@ model KycOccupationType {
 model KycRecord {
   id            String   @id @default(cuid()) @map("id") @db.VarChar(32)
   userId        String   @map("user_id") @db.VarChar(32)
+  sessionId     String?  @unique @map("session_id")
 
-  sessionId    String? @unique  @map("session_id")
-  // 状态: 0-未提交 1-审核中 2-审核失败 3-待补充 4-已通过
+  // 状态: 0-未提交 1-审核中 2-审核失败 3-待补充 4-已通过 5-系统拒绝(自动风控)
   kycStatus     Int      @default(0) @map("kyc_status") @db.SmallInt
 
-  // 证件信息 (用户填写的)
+  // === 1. 证件核心信息 ===
   idType        Int      @default(1) @map("id_type")
   idNumber      String?  @map("id_number") @db.VarChar(50)
-  realName      String?  @map("real_name") @db.VarChar(100)
+  firstName     String?  @map("first_name") @db.VarChar(50)
+  middleName    String?  @map("middle_name") @db.VarChar(50)
+  lastName      String?  @map("last_name") @db.VarChar(50)
+  realName      String?  @map("real_name") @db.VarChar(150)
 
-  // ===  图片凭证 ===
-  idCardFront   String?  @map("id_card_front") @db.VarChar(255) // 身份证正面URL
-  idCardBack    String?  @map("id_card_back") @db.VarChar(255)  // 身份证背面URL
+  gender        String?  @db.VarChar(10)
+  birthday      DateTime? @map("birthday")
 
-  // ===  活体检测存证 (Google ML Kit 结果) ===
-  faceImage     String?  @map("face_image") @db.VarChar(255)    // 活体抓拍的最佳人脸图
-  livenessScore Float?   @map("liveness_score")                 // (可选) 前端传来的置信度
-  videoUrl      String?  @map("video_url") @db.VarChar(255)     // (可选) 活体过程录屏
+  // [新增] 出生地 (AMLA 合规必填)
+  placeOfBirth  String?   @map("place_of_birth") @db.VarChar(100)
+  // [新增] 国籍 (区分外国人)
+  nationality   String?   @map("nationality") @db.VarChar(50)
 
-  // ===  OCR/比对数据
-  ocrRawData    Json?    @map("ocr_raw_data")                   // 身份证 OCR 原始数据
-  verifyResult  Json?    @map("verify_result")
+  expiryDate    DateTime? @map("expiry_date")
+  // [新增] 签发日期 (辅助验证证件真伪)
+  issueDate     DateTime? @map("issue_date")
 
+  countryCode   Int?      @map("country_code")
+
+  // === 2. 财务能力 ===
+  sourceOfIncome String? @map("source_of_income")
+  natureOfWork   String? @map("nature_of_work")
+  // [新增] 公司名称/雇主 (风控核查用)
+  employerName   String? @map("employer_name") @db.VarChar(100)
+
+  // === 3. 详细地址信息 (Philippines Standard) ===
+  province      String?  @db.VarChar(100)
+  city          String?  @db.VarChar(100)
+  barangay      String?  @db.VarChar(100)
+  postalCode    String?  @map("postal_code") @db.VarChar(20)
+  address       String?  @db.Text
+
+  // 当前居住地
+  isSameAddress Boolean  @default(true) @map("is_same_address")
+  currentAddress Json?   @map("current_address_json")
+
+  // === 4. 图片凭证 ===
+  idCardFront   String?  @map("id_card_front") @db.VarChar(255)
+  idCardBack    String?  @map("id_card_back") @db.VarChar(255)
+  selfiePhoto   String?  @map("selfie_photo") @db.VarChar(255)
+  assetProof    String?  @map("asset_proof") @db.VarChar(255)
+  optionalPhoto String?  @map("optional_photo") @db.VarChar(255)
+
+  // === 5. 活体与风控数据 ===
+  faceImage     String?  @map("face_image") @db.VarChar(255)
+  livenessScore Float?   @map("liveness_score")
+  securityFlags Json?    @map("security_flags")
+
+  // [新增] OCR 原始数据备份 (用于对比用户是否篡改了表单)
+  ocrRawData    Json?    @map("ocr_raw_data")
+
+  // [新增] 自动计算的风险等级 (0-Safe, 1-Review, 2-High Risk)
+  riskLevel     Int      @default(0) @map("risk_level") @db.SmallInt
+
+  // === 6. 设备指纹 ===
   ipAddress     String?  @map("ip_address") @db.VarChar(50)
   deviceId      String?  @map("device_id") @db.VarChar(100)
-  deviceModel   String?  @map("device_model") @db.VarChar(100)// 人脸比对结果 (Face++ / AWS)
+  deviceModel   String?  @map("device_model") @db.VarChar(100)
+  // [新增] App 版本号 (用于排查旧版本兼容性问题)
+  appVersion    String?  @map("app_version") @db.VarChar(20)
 
-  // 审核结果
+  // === 7. 审核结果 ===
   auditResult   String?  @map("audit_result") @db.Text
   rejectReason  String?  @map("reject_reason") @db.VarChar(255)
   auditorId     String?  @map("auditor_id") @db.VarChar(32)
 
   submittedAt   DateTime? @map("submitted_at")
   auditedAt     DateTime? @map("audited_at")
-
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([deviceId])
+  // 复合索引：同时查证件号 + 国家 + 证件类型
+  // 场景：查找“菲律宾(63)的护照(Type 1)号码为 A1234567”的记录
+  @@index([countryCode, idType, idNumber])
   @@map("kyc_records")
 }
 

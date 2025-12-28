@@ -218,40 +218,53 @@ export class KycService {
     // 3. 只有检查通过了，才去调用昂贵的 OCR 服务
     // 注意：如果 UploadService 实现了缓存，这里不会重复下载
     // 如果 KycProvider 支持传入 Buffer，建议修改 KycProvider 接口直接传 imageBuffer，避免二次下载
-    return await this.kycProvider.ocrIdCard(userId, idCardKey);
+    return await this.kycProvider.ocrIdCardByKey(userId, idCardKey);
+  }
+
+  /**
+   * Perform OCR on the provided ID card image buffer
+   * @param buffer
+   */
+  async scanIdCard(buffer: Buffer) {
+    // 1. 基础校验
+    await this.validateImageSize(buffer, 'OCR Scan File');
+    // 2. 直接调 Provider (内存处理)
+    const result = await this.kycProvider.ocrIdCardByBuffer(buffer);
+    // 3. 风控拦截：如果是极为明显的假图，直接报错，不给用户回填机会
+    if (result.isSuspicious && result.fraudScore > 90) {
+      throw new BadRequestException(
+        'The uploaded ID card image appears to be invalid. Please use a different image.',
+      );
+    }
+    return result;
   }
 
   /**
    * Submit KYC information， including liveness verification and ID card matching
+   * 接收前端传来的文件流 -> 校验 -> 上传 S3 -> 入库
    * @param userId
    * @param dto
+   * @param frontFile
+   * @param backFile
    * @param device
    */
-  async submitKyc(userId: string, dto: SubmitKycDto, device: DeviceInfo) {
-    // 1. 严格所有权检查 (检查背面)
-    // 这里的调用不仅是为了读取，更是为了利用 assertOwnedKey 防止越权
-    // 校验文件是否存在且有权限访问
-    const frontBuffer = await this.uploadService.getFileBuffer(
-      dto.idCardFront,
-      'kyc',
-      userId,
-    );
+  async submitKyc(
+    userId: string,
+    dto: SubmitKycDto,
+    frontFile: Express.Multer.File,
+    backFile: Express.Multer.File | null,
+    device: DeviceInfo,
+  ) {
+    // 1. 校验文件大小 (内存校验，极快)
+    await this.validateImageSize(frontFile.buffer, 'ID Card Front');
 
-    // 验证图片大小
-    await this.validateImageSize(frontBuffer, 'ID Card Front');
-
-    if (dto.idCardBack) {
-      const backBuffer = await this.uploadService.getFileBuffer(
-        dto.idCardBack,
-        'kyc',
-        userId,
-      );
-      await this.validateImageSize(backBuffer, 'ID Card Back');
+    if (backFile) {
+      await this.validateImageSize(backFile.buffer, 'ID Card Back');
     }
 
     // check id type validity
     const idType = await this.prismaService.kycIdType.findFirst({
-      where: { typeId: dto.idType, status: 1 },
+      where: { id: dto.idType, status: 1 },
     });
 
     if (!idType) {
@@ -321,12 +334,35 @@ export class KycService {
         reason,
         livenessConfidence,
         faceSimilarity,
-        referenceImageBytes,
+        referenceImageBytes, // AWS 截取的高清人脸
       } = await this.kycProvider.verifyLivenessAndMatchIdCard(
         userId,
         dto.sessionId,
-        dto.idCardFront,
+        frontFile.buffer,
       );
+
+      //文件归档：上传到 S3 (只有到了这一步才存文件) ---
+      // 1. 上传正面
+      const { key: frontKey } = await this.uploadService.uploadBuffer(
+        frontFile.buffer,
+        'kyc',
+        userId,
+        frontFile.mimetype,
+        'id-card-front',
+      );
+      // 2. 上传背面
+      let backKey: string | null = null;
+      if (backFile) {
+        const res = await this.uploadService.uploadBuffer(
+          backFile.buffer,
+          'kyc',
+          userId,
+          backFile.mimetype,
+          'id-card-back',
+        );
+        backKey = res.key;
+      }
+
       // 5. 决定初始状态
       let initialStatus: KycStatus = KYC_STATUS.REVIEWING;
       let autoRejectReason = null;
@@ -345,6 +381,8 @@ export class KycService {
             imageBuffer,
             'kyc',
             userId,
+            'image/jpeg',
+            'face-image',
           );
           faceImageKey = key;
         }
@@ -362,20 +400,12 @@ export class KycService {
             idType: dto.idType,
             idNumber: dto.idNumber,
             realName: dto.realName,
-            idCardFront: dto.idCardFront,
-            idCardBack: dto.idCardBack,
+            idCardFront: frontKey,
+            idCardBack: backKey,
             // 只用后端生成/验证过的 faceImageKey
             faceImage: faceImageKey,
             livenessScore: livenessConfidence ?? 0,
-            videoUrl: dto.videoUrl,
             ocrRawData: dto.ocrRawData ?? {},
-            verifyResult: {
-              sessionId: dto.sessionId,
-              passed,
-              livenessConfidence,
-              faceSimilarity,
-              reason,
-            },
             submittedAt: new Date(),
             auditResult: autoRejectReason ? 'Auto-rejected by System' : null,
             rejectReason: autoRejectReason,
