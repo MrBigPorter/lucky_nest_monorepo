@@ -138,7 +138,7 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
               height={40}
               layout="constrained"
               src={info.row.original.treasureCoverImg}
-              className="w-10 h-10 rounded object-cover bg-gray-100"
+              className="min-w-[40px] h-10 rounded object-cover bg-gray-100"
               alt=""
               loading="lazy"
             />

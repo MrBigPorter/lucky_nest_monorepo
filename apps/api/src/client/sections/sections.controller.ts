@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, HttpException, Query } from '@nestjs/common';
 import { SectionsService } from '@api/client/sections/sections.service';
 
 @Controller('home')
@@ -7,7 +7,16 @@ export class SectionsController {
 
   @Get('sections')
   async sections(@Query('limit') limit?: string) {
-    const n = Number(limit ?? 10);
-    return await this.svc.getHomeSections(Number.isFinite(n) ? n : 10);
+    const n = parseInt(limit ?? '10', 10);
+    // 捕获可能产生的锁繁忙异常
+    try {
+      return await this.svc.getHomeSections(isNaN(n) ? 10 : n);
+    } catch (error: any) {
+      if (error.message.includes('Lock busy')) {
+        // 这里可以根据业务决定是返回 429 还是返回一个过期的缓存/空列表
+        throw new HttpException('System is busy, please try again later', 429);
+      }
+      throw error;
+    }
   }
 }

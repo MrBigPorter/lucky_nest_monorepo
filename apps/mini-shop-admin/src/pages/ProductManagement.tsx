@@ -162,7 +162,7 @@ export const ProductManagement: React.FC = () => {
         header: 'Product',
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
+            <div className="w-12 h-12 min-w-[46px] rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
               <SmartImage
                 src={info.row.original.treasureCoverImg}
                 width={46}

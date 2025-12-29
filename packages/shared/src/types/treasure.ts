@@ -57,3 +57,12 @@ export const IS_OWNER = {
   YES: 1,
   NO: 0,
 } as const;
+
+export enum SectionKey {
+  SPECIAL = "home_special",
+  NEW_USER = "home_new_user",
+  APPLE = "home_apple_zone",
+  ENDING = "home_ending",
+  FEATURED = "home_featured",
+  RECOMMEND = "home_recommend",
+}

@@ -50,6 +50,7 @@
     "joi": "^18.0.1",
     "morgan": "^1.10.1",
     "morgan-body": "^2.6.9",
+    "p-limit": "^7.2.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
