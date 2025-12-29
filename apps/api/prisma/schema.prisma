@@ -344,8 +344,8 @@ model Treasure {
   desc          String?  @map("desc") @db.Text
   ///状态: 0-下架 1-上架
   state         Int      @default(1) @map("state") @db.SmallInt /// 0=下架 1=上架
-  hotScore3d           Float    @default(0)
-  hotScore7d           Float    @default(0)
+  hotScore3d           Float    @default(0) @map("hot_score_3d")
+  hotScore7d           Float    @default(0) @map("hot_score_7d")
 
 
   // 关系

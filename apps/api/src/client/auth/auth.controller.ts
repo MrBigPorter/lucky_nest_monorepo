@@ -23,6 +23,7 @@ import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { RefreshTokenDto } from '@api/client/auth/dto/refresh-token.dto';
 import { TokenResponseDto } from '@api/client/auth/dto/token-response.dto';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
+import { UserProfileResponseDto } from '@api/client/auth/dto/user-profile.response.dto';
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
 //@Controller('auth')：这组接口的前缀是 /auth/*。
@@ -57,6 +58,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('profile')
+  @ApiOkResponse({ type: UserProfileResponseDto })
   async profile(@CurrentUserId() userId: string) {
     return this.auth.profile(userId);
   }

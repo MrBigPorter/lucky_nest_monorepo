@@ -1,39 +1,57 @@
 type Row = any;
 
 export function mapTreasure(row: Row) {
-  // 统一 id 为字符串
-  const treasureId = String(row.treasure_id ?? row.id);
+  const treasureId = String(row.treasure_id ?? row.id ?? '');
 
-  // buy_rate 统一成字符串两位小数
   const rateRaw =
     row.buy_quantity_rate ??
     (row.seq_shelves_quantity
       ? (Number(row.seq_buy_quantity ?? 0) * 100) /
         Number(row.seq_shelves_quantity)
       : 0);
-  const buyRate = Number(rateRaw || 0).toFixed(2);
+  const buyRate = Number(Number(rateRaw || 0).toFixed(2));
 
   return {
-    treasure_id: treasureId,
-    treasure_name: row.treasure_name ?? row.name ?? '',
-    product_name: row.product_name ?? '',
-    treasure_cover_img: row.treasure_cover_img ?? null,
-    main_image_list: row.main_image_list ?? [],
-    cost_amount: Number(row.cost_amount ?? 0),
-    unit_amount: Number(row.unit_amount ?? 1),
+    // 基础必填项
+    treasureId: treasureId,
+    treasureName: row.treasure_name ?? row.name ?? '',
+    buyQuantityRate: buyRate,
 
-    seq_shelves_quantity: row.seq_shelves_quantity ?? null,
-    seq_buy_quantity: row.seq_buy_quantity ?? null,
-    min_buy_quantity: row.min_buy_quantity ?? null,
+    // 金额类：前端定义为 String?，所以这里我们要转成 String
+    // 如果前端使用 JsonNumConverter 处理，后端返回 Number 也可以，
+    // 但根据你提供的 dart 代码，它们被定义为 String?，建议转为字符串。
+    costAmount: row.cost_amount ? String(row.cost_amount) : '0.00',
+    unitAmount: Number(row.unit_amount ?? 1), // 前端用了 toDouble 转换，这里传数字
+    maxUnitCoins: row.max_unit_coins ? String(row.max_unit_coins) : '0',
+    maxUnitAmount: row.max_unit_amount ? String(row.max_unit_amount) : '0.00',
+    charityAmount: row.charity_amount ? String(row.charity_amount) : '0.00',
 
-    buy_quantity_rate: Number(buyRate),
+    // 数字/状态类
+    imgStyleType: Number(row.img_style_type ?? 0),
+    lotteryMode: Number(row.lottery_mode ?? 1),
+    // 注意：前端 lotteryTime 是 int?，后端如果是 Date 对象需要转成时间戳
+    lotteryTime: row.lottery_time
+      ? Math.floor(new Date(row.lottery_time).getTime() / 1000)
+      : 0,
 
-    lottery_mode: Number(row.lottery_mode ?? 1),
-    lottery_time: Number(row.lottery_time ?? 0),
+    seqBuyQuantity: Number(row.seq_buy_quantity ?? 0),
+    seqShelvesQuantity: Number(row.seq_shelves_quantity ?? 0),
+    minBuyQuantity: Number(row.min_buy_quantity ?? 1),
+    maxPerBuyQuantity: Number(row.max_per_buy_quantity ?? 0),
+    cashState: Number(row.cash_state ?? 1),
+    rate: row.rate ? Number(row.rate) : 0,
 
-    img_style_type: Number(row.img_style_type ?? 0),
+    // 字符串/列表类
+    productName: row.product_name ?? '',
+    treasureSeq: row.treasure_seq ?? '',
+    treasureCoverImg: row.treasure_cover_img ?? '',
+    mainImageList: Array.isArray(row.main_image_list)
+      ? row.main_image_list
+      : [],
+    ruleContent: row.rule_content ?? '',
+    desc: row.desc ?? '',
 
-    hot_score_3d: Number(row.hot_score3d ?? row.hot_score_3d ?? 0),
-    hot_score_7d: Number(row.hot_score7d ?? row.hot_score_7d ?? 0),
+    // 热度评分 (前端模型里虽然没写，但建议保留供以后扩展)
+    hotScore3d: Number(row.hot_score_3d ?? 0),
   };
 }
