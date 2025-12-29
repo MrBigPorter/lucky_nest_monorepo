@@ -44,7 +44,6 @@ const TREASURE_SELECT = `
   t.min_buy_quantity,
   t.max_per_buy_quantity,
   t.cash_state,
-  t.rate,
 
   t.product_name,
   t.treasure_seq,
