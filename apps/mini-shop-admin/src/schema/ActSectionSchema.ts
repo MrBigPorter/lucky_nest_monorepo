@@ -9,8 +9,8 @@ export const ActSectionSchema = z.object({
       invalid_type_error: 'Image Style Type must be a number',
     })
     .int('Image Style Type must be an integer')
-    .refine((val) => [1, 2, 3].includes(val), {
-      message: 'Image Style Type must be one of 1, 2, or 3',
+    .refine((val) => [1, 2, 3, 4].includes(val), {
+      message: 'Image Style Type must be one of 1, 2, 3,or 4',
     }),
   status: z.coerce
     .number({

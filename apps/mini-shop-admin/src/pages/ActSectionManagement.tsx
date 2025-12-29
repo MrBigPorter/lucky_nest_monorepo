@@ -22,6 +22,7 @@ import { ProductSelectorModal } from '@/pages/act-section/ProductSelectorModal.t
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
+import { getActSectionTypeLabel } from '@lucky/shared';
 
 type ActSectionSearchForm = {
   title: string;
@@ -204,8 +205,7 @@ export const ActSectionManagement: React.FC = () => {
         cell: (info) => {
           const val = info.getValue();
           // 简单映射，你可以根据实际 UI 需求修改
-          const label =
-            val === 0 ? 'Carousel' : val === 1 ? 'Grid (2)' : 'Grid (3)';
+          const label = getActSectionTypeLabel(val);
           const icon =
             val === 0 ? <ImageIcon size={14} /> : <LayoutGrid size={14} />;
           return (

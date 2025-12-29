@@ -125,9 +125,19 @@ export const ProductSelectorModal: React.FC<Props> = ({
               label="Style Type"
               numeric={true}
               options={[
-                { label: 'Carousel (0)', value: '0' },
-                { label: 'Grid 2 Columns (1)', value: '1' },
-                { label: 'Grid 3 Columns (2)', value: '2' },
+                { label: 'Ending (Horizontal Scroll)', value: '1' },
+                {
+                  label: 'Special Area (List w/ Progress)',
+                  value: '2',
+                },
+                {
+                  label: 'Home Future (Vertical Big Cards)',
+                  value: '3',
+                },
+                {
+                  label: 'Recommendation (Grid 2 Columns)',
+                  value: '4',
+                },
               ]}
             />
             <FormTextField required name="limit" label="Limit" type="number" />
