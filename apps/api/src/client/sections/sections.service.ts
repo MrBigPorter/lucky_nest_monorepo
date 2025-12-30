@@ -227,6 +227,8 @@ export class SectionsService implements OnModuleInit {
         FROM treasures t
         WHERE t.state = 1
           AND t.treasure_id = ANY($1::text[])
+        --  新增：过滤掉过期的商品 
+         AND (t.sales_end_at IS NULL OR t.sales_end_at > NOW())
         ORDER BY array_position($1::text[], t.treasure_id)
         LIMIT $2
       `,
@@ -244,13 +246,15 @@ export class SectionsService implements OnModuleInit {
         SELECT ${TREASURE_SELECT}
         FROM treasures t
         WHERE t.state = 1
+        --  过滤过期
+        AND (t.sales_end_at IS NULL OR t.sales_end_at > NOW())
         ORDER BY
           -- 1. 还没开始的排在最上方
           CASE WHEN t.sales_start_at > NOW() THEN 0 ELSE 1 END,
           -- 2. 还没开始的：按开始时间【升序】，最快开售的在最前
           CASE WHEN t.sales_start_at > NOW() THEN t.sales_start_at ELSE NULL END ASC NULLS LAST,
           -- 3. 已经开始的：按进度【降序】，快成团的在最前
-          (t.seq_buy_quantity::numeric / NULLIF(t.seq_shelves_quantity, 0)::numeric) DESC NULLS LAST, -- ✨ 这里补上逗号
+          (t.seq_buy_quantity::numeric / NULLIF(t.seq_shelves_quantity, 0)::numeric) DESC NULLS LAST, -- 这里补上逗号
           -- 4. 最后按创建时间
           t.created_at DESC
         LIMIT $1
@@ -268,6 +272,7 @@ export class SectionsService implements OnModuleInit {
         SELECT ${TREASURE_SELECT}
         FROM treasures t
         WHERE t.state = 1
+        AND (t.sales_end_at IS NULL OR t.sales_end_at > NOW())
         ORDER BY
         -- 让刚上架但还没开始团购的排在前面，作为预告
         CASE WHEN t.sales_start_at > NOW() THEN 0 ELSE 1 END,
@@ -287,6 +292,7 @@ export class SectionsService implements OnModuleInit {
         SELECT ${TREASURE_SELECT}
         FROM treasures t
         WHERE t.state = 1
+        AND (t.sales_end_at IS NULL OR t.sales_end_at > NOW())
         ORDER BY
             -- 优先展示 3日热度 (需要在 Seed 里或者定时任务里更新这个字段)
             t.hot_score_3d DESC, 
