@@ -98,6 +98,8 @@ export const productApi = {
   // 更新商品排序
   updateProductOrder: (id: string, sortOrder: number) =>
     http.patch<Product>(`/products/${id}/order`, { sortOrder }),
+
+  pureHomeCache: () => http.post('v1/admin/treasure/purge-home-cache'),
 };
 
 /**

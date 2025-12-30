@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Edit3, Trash2, Ban, CheckCircle } from 'lucide-react';
+import { Edit3, Trash2, Ban, CheckCircle, RotateCcw } from 'lucide-react';
 import { Card, Badge } from '@/components/UIComponents';
 import { useAntdTable, useRequest } from 'ahooks';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -63,6 +63,13 @@ export const ProductManagement: React.FC = () => {
     },
   });
 
+  const purgeCacheReq = useRequest(productApi.pureHomeCache, {
+    manual: true,
+    onSuccess: () => {
+      addToast('success', 'Home cache purged successfully.');
+    },
+  });
+
   const updateProductState = useRequest(productApi.updateProductState, {
     manual: true,
     onSuccess: () => {
@@ -98,9 +105,10 @@ export const ProductManagement: React.FC = () => {
   const handleOpenCreate = () => {
     ModalManager.open({
       title: 'Create Product',
+      size: 'xl',
       onConfirm: () => refresh(),
-      renderChildren: ({ close, confirm }) =>
-        CreateProductFormModal(categories, close, confirm),
+      renderChildren: ({ confirm }) =>
+        CreateProductFormModal(categories, confirm),
     });
   };
 
@@ -108,9 +116,10 @@ export const ProductManagement: React.FC = () => {
     (p: Product) => {
       ModalManager.open({
         title: 'Edit Product',
+        size: 'xl',
         onConfirm: () => refresh(),
-        renderChildren: ({ close, confirm }) =>
-          EditProductFormModal(categories, close, confirm, p),
+        renderChildren: ({ confirm }) =>
+          EditProductFormModal(categories, confirm, p),
       });
     },
     [categories, refresh],
@@ -248,6 +257,17 @@ export const ProductManagement: React.FC = () => {
         description="Manage treasure hunt items & inventory"
         buttonText="Add Product"
         buttonOnClick={handleOpenCreate}
+        action={
+          <Button
+            variant="outline"
+            className="mr-2 border-orange-200 text-orange-600 hover:bg-orange-50"
+            isLoading={purgeCacheReq.loading}
+            onClick={() => purgeCacheReq.run()}
+          >
+            <RotateCcw size={16} className="mr-2" />
+            Purge Home Cache
+          </Button>
+        }
       />
       <Card>
         {/* 筛选区 */}

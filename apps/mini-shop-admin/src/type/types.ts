@@ -67,35 +67,77 @@ export interface User {
   inviterId?: string; // Who invited this user
 }
 
+// 1. 定义赠品配置的结构 (对应后端的 bonusConfig JSON)
+export interface BonusConfig {
+  bonusItemName: string;
+  bonusItemImg?: string;
+  winnerCount: number;
+  allowRobot?: boolean;
+}
+
+// 2. 更新商品列表/详情返回类型
 export interface Product {
   treasureId: string;
   treasureName: string;
-  productName: string;
+  productName?: string; // 后端 DTO 里是可选的
   costAmount: number;
   unitAmount: number;
+
+  // 库存相关
   seqShelvesQuantity: number;
   seqBuyQuantity: number;
   buyQuantityRate: number;
+
   treasureCoverImg: string;
   state: number;
   createdAt: number;
   updatedAt: number;
   desc: string;
+
   categories: (Pick<Category, 'id' | 'name'> & {
     categoryId: number;
   })[];
+
+  // --- [新增] 物流与拼团配置 (对应 TreasureResponseDto) ---
+  shippingType?: number; // 1-实物 2-无需物流
+  weight?: number; // 重量
+
+  groupSize?: number; // 成团人数
+  groupTimeLimit?: number; // 成团时效(秒)
+
+  bonusConfig?: BonusConfig; // 赠品配置对象
+
+  // --- [新增] 预售时间 ---
+  salesStartAt?: number; // 时间戳
+  salesEndAt?: number; // 时间戳
 }
 
+// 3. 更新创建商品参数类型 (对应 CreateTreasureDto)
 export interface CreateProduct {
-  treasureName: string; // 商品名称
-  costAmount: number; // 成本价
-  unitAmount: number; // 单价
-  seqShelvesQuantity: number; // 上架份数 / 库存数量
-  categoryIds: number[]; // 分类 ID 列表
-  treasureCoverImg: string; // 封面图片 URL
-  desc?: string; // 描述
-}
+  treasureName: string;
+  costAmount: number;
+  unitAmount: number;
+  seqShelvesQuantity?: number;
 
+  categoryIds: number[];
+  treasureCoverImg: string;
+  desc?: string;
+
+  // --- [新增] 必须加这些，否则前端表单的数据传不过去 ---
+  shippingType?: number;
+  weight?: number;
+
+  groupSize?: number;
+  groupTimeLimit?: number;
+
+  // 注意：后端接收的是 bonusConfig JSON 对象，而不是扁平的字段
+  bonusConfig?: BonusConfig;
+
+  // 时间传给后端通常是时间戳 (number) 或 ISO 字符串，看你后端 Transform
+  // 根据之前的后端代码，我们没做特定转换，所以传 number (时间戳) 最稳
+  salesStartAt?: number;
+  salesEndAt?: number;
+}
 export interface ActSection {
   id: string; // "1"
   key: string; // "home_new_arrival"

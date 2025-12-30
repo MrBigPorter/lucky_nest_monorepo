@@ -9,38 +9,62 @@ import { TREASURE_STATE } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
+import { RedisService } from '@api/common/redis/redis.service';
+import { HOME_CACHE_KEYS } from '@api/common/constants/cache.constants';
 
 @Injectable()
 export class TreasureService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    public redisService: RedisService,
+  ) {}
 
   /**
    * Create a new treasure
    * @param dto
    * @returns Promise<Treasure>
-   *
    */
   async create(dto: CreateTreasureDto) {
     const { categoryIds, ...rest } = dto;
 
     try {
-      return this.prisma.treasure.create({
+      return await this.prisma.treasure.create({
         data: {
-          ...rest,
-          seqBuyQuantity: 0, // default sell to 0
-          state: TREASURE_STATE.ACTIVE, // default to active
+          // 1. 基础字段映射
+          treasureName: rest.treasureName,
+          treasureCoverImg: rest.treasureCoverImg,
+          desc: rest.desc,
+          costAmount: rest.costAmount,
+          unitAmount: rest.unitAmount,
 
-          // prisma auto fill up the treasureId to categories
-          // bind product to categories
+          // 2. 库存处理 (DTO的 stockQuantity -> DB的 seqShelvesQuantity)
+          // 如果前端没传 stockQuantity，尝试取旧字段，或者默认为 0
+          seqShelvesQuantity: rest.seqShelvesQuantity ?? 0,
+          seqBuyQuantity: 0, // 初始已售为 0
+          salesEndAt: rest.salesEndAt,
+          salesStartAt: rest.salesStartAt,
+
+          // 3. 状态
+          state: TREASURE_STATE.ACTIVE,
+
+          // 4. [新增] 物流与拼团配置
+          shippingType: rest.shippingType ?? 1, // 默认实物配送
+          weight: rest.weight,
+          groupSize: rest.groupSize ?? 5,
+          groupTimeLimit: rest.groupTimeLimit ?? 86400,
+
+          // 5. [类型修复] 强制转换为 any 以解决 DTO Class 与 Prisma JSON 的冲突
+          bonusConfig: (rest.bonusConfig ?? Prisma.JsonNull) as any,
+
+          // 6. 关联分类
           categories: {
             create: categoryIds.map((id) => ({
               category: {
-                connect: { id }, // bind product to categories
+                connect: { id },
               },
             })),
           },
         },
-        // return include category info
         include: {
           categories: {
             include: {
@@ -52,7 +76,6 @@ export class TreasureService {
     } catch (error) {
       // 捕获“分类不存在”的错误
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        // P2025 是 Prisma 的 "Record not found" 错误码
         if (error.code === 'P2025') {
           throw new Error('Category not found');
         }
@@ -110,8 +133,6 @@ export class TreasureService {
     return {
       list: list.map((item) => ({
         ...item,
-        createdAt: item.createdAt.getTime(),
-        updatedAt: item.updatedAt.getTime(),
       })),
       page,
       pageSize,
@@ -148,7 +169,7 @@ export class TreasureService {
    * @returns Promise<Treasure>
    */
   async update(id: string, dto: UpdateTreasureDto) {
-    // check treasure
+    // check treasure exists
     await this.findOne(id);
 
     const { categoryIds, ...rest } = dto;
@@ -156,14 +177,40 @@ export class TreasureService {
     return this.prisma.treasure.update({
       where: { treasureId: id },
       data: {
-        ...rest,
-        //关联更新策略：如果有传新分类，就重置关联
+        // --- 基础字段 (只有传了才更新) ---
+        ...(rest.treasureName && { treasureName: rest.treasureName }),
+        ...(rest.treasureCoverImg && {
+          treasureCoverImg: rest.treasureCoverImg,
+        }),
+        ...(rest.unitAmount && { unitAmount: rest.unitAmount }),
+        ...(rest.desc && { desc: rest.desc }),
+
+        // 兼容旧字段传参
+        seqShelvesQuantity: rest.seqShelvesQuantity,
+
+        // --- [新增] 配置更新 (只有传了才更新) ---
+        ...(rest.shippingType && { shippingType: rest.shippingType }),
+        ...(rest.weight !== undefined && { weight: rest.weight }),
+        ...(rest.groupSize && { groupSize: rest.groupSize }),
+        ...(rest.groupTimeLimit && { groupTimeLimit: rest.groupTimeLimit }),
+
+        ...(rest.salesStartAt !== undefined && {
+          salesStartAt: rest.salesStartAt,
+        }),
+        ...(rest.salesEndAt !== undefined && { salesEndAt: rest.salesEndAt }),
+
+        // [类型修复] 只有当 bonusConfig 存在时才更新，并强转 any
+        ...(rest.bonusConfig && {
+          bonusConfig: rest.bonusConfig as any,
+        }),
+
+        // --- 分类关联更新 ---
         ...(categoryIds && {
           categories: {
-            deleteMany: {}, // 1. 先把这商品从旧货架拿下来 (清空旧关联)
+            deleteMany: {}, // 1. 先清空旧关联
             create: categoryIds.map((id) => ({
               category: {
-                connect: { id }, // 2. 再放到新货架上去
+                connect: { id }, // 2. 再建立新关联
               },
             })),
           },
@@ -222,5 +269,15 @@ export class TreasureService {
     return this.prisma.treasure.delete({
       where: { treasureId: id },
     });
+  }
+
+  /**
+   * Purge home page cache related to treasures
+   */
+  async purgeHomeCache() {
+    const keys = await this.redisService.keys(
+      HOME_CACHE_KEYS.HOME_SECTIONS_PATTERN,
+    );
+    if (keys.length > 0) await this.redisService.del(...keys);
   }
 }

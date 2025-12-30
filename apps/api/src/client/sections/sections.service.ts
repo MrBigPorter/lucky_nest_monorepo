@@ -6,6 +6,7 @@ import pLimit from 'p-limit';
 import { RedisService } from '@api/common/redis/redis.service';
 import { RedisLockService } from '@api/common/redis/redis-lock.service';
 import { DistributedLock } from '@api/common/decorators/distributed-lock.decorator';
+import { HOME_CACHE_KEYS } from '@api/common/constants/cache.constants';
 
 type SectionRow = {
   id: string;
@@ -51,8 +52,24 @@ const TREASURE_SELECT = `
   t.main_image_list,
   t.rule_content,
   t."desc",
+  t.state,
 
-  t.hot_score_3d
+  -- ✨ [新增] 物流与拼团相关字段
+  t.shipping_type,
+  t.weight,
+  t.group_size,
+  t.group_time_limit,
+
+  -- [新增] 赠品配置 (通常存为 JSONB)
+  t.bonus_config,
+
+  -- [新增] 销售/预售时间
+  t.sales_start_at,
+  t.sales_end_at,
+
+  t.hot_score_3d,
+  t.created_at,
+  t.updated_at
 `;
 
 @Injectable()
@@ -83,7 +100,7 @@ export class SectionsService implements OnModuleInit {
   }
 
   private homeKey(limit: number) {
-    return `home:sections:v1:limit:${limit}`;
+    return HOME_CACHE_KEYS.HOME_SECTIONS(limit);
   }
 
   /**  * 获取首页楼层数据（带缓存）
@@ -123,7 +140,7 @@ export class SectionsService implements OnModuleInit {
    * @param limit
    * @private
    */
-  @DistributedLock('lock:home-sections:v1:limit:{0}', 10000)
+  @DistributedLock(HOME_CACHE_KEYS.LOCK_HOME_SECTIONS_TPL, 10000)
   private async getHomeSectionsNoCache(limit = 8) {
     // 二次确认缓存
     const key = this.homeKey(limit);
@@ -219,8 +236,8 @@ export class SectionsService implements OnModuleInit {
   }
 
   /**
-   * 逻辑 B1: 即将开奖 (倒计时优先)
-   */
+   * 逻辑 B1: 即将开团/进度最快 (优先展示最紧迫的团购机会)
+   * */
   private async fetchEndingItems(limit: number) {
     return this.prisma.$queryRawUnsafe<any[]>(
       `
@@ -228,12 +245,14 @@ export class SectionsService implements OnModuleInit {
         FROM treasures t
         WHERE t.state = 1
         ORDER BY
-            -- 1. 有开奖时间且未过期的排最前
-            CASE WHEN t.lottery_time IS NOT NULL AND t.lottery_time > NOW() THEN 0 ELSE 1 END,
-            -- 2. 时间越近越靠前
-            CASE WHEN t.lottery_time > NOW() THEN t.lottery_time ELSE NULL END ASC NULLS LAST,
-            -- 3. 售罄模式进度越快越靠前
-            (t.seq_buy_quantity::numeric / NULLIF(t.seq_shelves_quantity, 0)::numeric) DESC NULLS LAST
+          -- 1. 还没开始的排在最上方
+          CASE WHEN t.sales_start_at > NOW() THEN 0 ELSE 1 END,
+          -- 2. 还没开始的：按开始时间【升序】，最快开售的在最前
+          CASE WHEN t.sales_start_at > NOW() THEN t.sales_start_at ELSE NULL END ASC NULLS LAST,
+          -- 3. 已经开始的：按进度【降序】，快成团的在最前
+          (t.seq_buy_quantity::numeric / NULLIF(t.seq_shelves_quantity, 0)::numeric) DESC NULLS LAST, -- ✨ 这里补上逗号
+          -- 4. 最后按创建时间
+          t.created_at DESC
         LIMIT $1
       `,
       limit,
@@ -241,15 +260,18 @@ export class SectionsService implements OnModuleInit {
   }
 
   /**
-   * 逻辑 B2: 最新上架
-   */
+   * 逻辑 B2: 最新上架 (考虑即将开始的预售)
+   * */
   private async fetchFeaturedItems(limit: number) {
     return this.prisma.$queryRawUnsafe<any[]>(
       `
         SELECT ${TREASURE_SELECT}
         FROM treasures t
         WHERE t.state = 1
-        ORDER BY t.created_at DESC -- 创建时间倒序
+        ORDER BY
+        -- 让刚上架但还没开始团购的排在前面，作为预告
+        CASE WHEN t.sales_start_at > NOW() THEN 0 ELSE 1 END,
+        t.created_at DESC
         LIMIT $1
       `,
       limit,

@@ -36,6 +36,7 @@
     "react-day-picker": "^9.12.0",
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.2.3",
+    "react-quill-new": "^3.7.0",
     "tailwind-merge": "^3.4.0",
     "tailwind-variants": "^3.2.2"
   }

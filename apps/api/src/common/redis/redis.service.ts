@@ -57,8 +57,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async del(key: string): Promise<number> {
-    return await this.client.del(key);
+  /**
+   * 获取匹配模式的所有 Key
+   * 注意：在生产环境 Key 数量极多时建议改用 scanIterator，
+   * 但对于首页楼层这种 Key 数量有限的场景，KEYS 是最直接的。
+   */
+  async keys(pattern: string): Promise<string[]> {
+    return await this.client.keys(pattern);
+  }
+
+  /**
+   * 增强的删除方法：支持删除单个 Key 或 多个 Key
+   */
+  async del(...keys: string[]): Promise<number> {
+    if (!keys || keys.length === 0) return 0;
+    // Node-Redis v4 的 del 接收 string | string[]
+    return await this.client.del(keys);
   }
 
   // ==========================================

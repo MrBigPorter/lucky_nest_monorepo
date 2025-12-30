@@ -1,7 +1,8 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ToTrimmedString } from '@api/common/dto/transforms';
+import { TreasureFilterType } from '@lucky/shared';
 
 export class TreasureQueryDto {
   @ApiPropertyOptional({ description: 'page', example: 1, type: Number })
@@ -42,4 +43,8 @@ export class TreasureQueryDto {
   @IsString()
   @ToTrimmedString()
   q?: string;
+
+  @IsOptional()
+  @IsEnum(TreasureFilterType)
+  filterType?: TreasureFilterType;
 }

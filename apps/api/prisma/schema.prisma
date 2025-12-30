@@ -344,8 +344,37 @@ model Treasure {
   desc          String?  @map("desc") @db.Text
   ///状态: 0-下架 1-上架
   state         Int      @default(1) @map("state") @db.SmallInt /// 0=下架 1=上架
+  status  String  @default("ACTIVE") @map("lifecycle_status") @db.VarChar(20)
   hotScore3d           Float    @default(0) @map("hot_score_3d")
   hotScore7d           Float    @default(0) @map("hot_score_7d")
+
+  // ---物流与实物属性 ---
+  /// 物流类型: 1-实物 2-无需物流
+  shippingType     Int      @default(1) @map("shipping_type") @db.SmallInt
+  /// 重量
+  weight           Decimal? @map("weight") @db.Decimal(10, 3)
+
+  // ---  拼团与赠礼 ---
+  /// 成团人数
+  groupSize        Int      @default(5) @map("group_size")
+  /// 成团时效
+  groupTimeLimit   Int      @default(86400) @map("group_time_limit")
+
+  /// 奖励配置
+  bonusConfig      Json?    @map("bonus_config")
+
+  // --- 时间与状态  ---
+  salesStartAt     DateTime? @map("sales_start_at")
+  salesEndAt       DateTime? @map("sales_end_at")
+
+  /// 乐观锁版本号
+  version          Int       @default(0) @map("version")
+  /// 虚拟销量 (基数，比如设为 1000，前端显示 1000 + seqBuyQuantity)
+  fakeSalesCount Int @default(0) @map("fake_sales_count")
+  /// 虚拟头像列表 (存一堆头像 URL，前端直接展示)
+  virtualAvatars Json? @map("virtual_avatars")
+
+  flashSaleProducts FlashSaleProduct[]
 
 
   // 关系
@@ -354,6 +383,7 @@ model Treasure {
   sectionItems ActSectionItem[]
   orders     Order[]
 
+  @@index([status, salesEndAt], map: "idx_treasure_cron")
   @@index([lotteryMode])
   @@index([lotteryTime])
   @@index([state])
@@ -427,6 +457,16 @@ model TreasureGroup {
   totalWinningTimes Int     @default(0) @map("total_winning_times")
   ///状态: 1-进行中 2-已结束
   groupStatus       Int     @default(1) @map("group_status") @db.SmallInt /// 1=进行中 2=已结束
+
+  // ---  机器人计数 ---
+  robotCount     Int      @default(0) @map("robot_count")
+
+  // 确保 status 字段存在，如果以前有 groupStatus，建议统一用一个，或者做映射
+  status         Int      @default(0) @map("status") @db.SmallInt
+
+  expireAt       DateTime @default(now()) @map("expire_at")
+  successAt      DateTime? @map("success_at")
+  drawnAt        DateTime? @map("drawn_at")
 
   treasure Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
   creator  User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
@@ -719,6 +759,20 @@ model Order {
   paidAt     DateTime? @map("paid_at")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // ---  物流状态  ---
+  /// 0-待发货 1-已发货 2-已签收
+  shippingStatus   Int      @default(0) @map("shipping_status") @db.SmallInt
+
+  // ---  收货地址快照
+  shippingAddress  Json?    @map("shipping_address")
+
+  // ---  快递单号  ---
+  logisticsCo      String?  @map("logistics_co") @db.VarChar(50)
+  trackingNo       String?  @map("tracking_no") @db.VarChar(50)
+
+  // ---  退款与奖励  ---
+  hasBonus         Int      @default(0) @map("has_bonus") @db.SmallInt
 
   user       User    @relation(fields: [userId],references: [id], onDelete: Cascade)
   treasure   Treasure @relation(fields: [treasureId],references: [treasureId], onDelete: Restrict)
@@ -1124,4 +1178,38 @@ model KycLivenessSession {
 
   @@index([userId, createdAt])
   @@map("kyc_liveness_sessions")
+}
+
+/// 秒杀/抢购场次表
+model FlashSaleSession {
+  id        String   @id @default(cuid())
+  title     String   @map("title") @db.VarChar(50) // 例如 "10:00 AM Rush"
+
+  startTime DateTime @map("start_time") // 2025-12-30 10:00:00
+  endTime   DateTime @map("end_time")   // 2025-12-30 12:00:00
+
+  status    Int      @default(1) // 1=启用
+
+  products  FlashSaleProduct[]
+
+  @@map("flash_sale_sessions")
+  @@index([startTime, endTime])
+}
+
+/// 秒杀商品关联
+model FlashSaleProduct {
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
+  treasureId String @map("treasure_id")
+  // 秒杀库存 (独立于总库存，防止秒杀把正价库存卖空)
+  flashStock Int    @default(0) @map("flash_stock")
+  // 秒杀价格
+  flashPrice Decimal @map("flash_price") @db.Decimal(10, 2)
+
+  sortOrder Int    @default(0)
+
+  session   FlashSaleSession @relation(fields: [sessionId], references: [id])
+  treasure  Treasure         @relation(fields: [treasureId], references: [treasureId])
+
+  @@map("flash_sale_products")
 }

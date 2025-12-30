@@ -1,9 +1,6 @@
-import type {
-  FormThemeVariantsClass,
-  VariantKey,
-} from "@ui-kit/form/types/themeType";
-import type { AutoCompleteOption, InputModeOption } from "@ui-kit";
 import type { FieldPath, FieldValues } from "react-hook-form";
+import { AutoCompleteOption, InputModeOption } from "../constants.ts";
+import { FormThemeVariantsClass, VariantKey } from "./themeType.ts";
 
 export interface BaseFieldProps<
   TFieldValues extends FieldValues = FieldValues,

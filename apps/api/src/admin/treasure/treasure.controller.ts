@@ -104,4 +104,14 @@ export class TreasureController {
   async remove(@Param('id') id: string) {
     return this.treasureService.remove(id);
   }
+
+  /**
+   * Purge home cache
+   * @returns Promise<void>
+   */
+  @Post('purge-home-cache')
+  @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.UPDATE)
+  async purgeHomeCache() {
+    return this.treasureService.purgeHomeCache();
+  }
 }
