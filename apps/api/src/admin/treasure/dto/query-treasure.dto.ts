@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { ToNumber } from '@api/common/dto/transforms';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TreasureFilterType } from '@lucky/shared';
 
 export class QueryTreasureDto {
   @ApiProperty({ description: 'page', example: 1, type: 'number' })
@@ -43,4 +44,13 @@ export class QueryTreasureDto {
   @IsOptional()
   @IsString()
   treasureName?: string;
+
+  @ApiPropertyOptional({
+    description: 'filter type',
+    example: TreasureFilterType.PRE_SALE,
+    enum: TreasureFilterType,
+  })
+  @IsOptional()
+  @IsString()
+  filterType?: string;
 }

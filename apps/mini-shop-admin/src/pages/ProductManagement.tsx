@@ -8,7 +8,7 @@ import type { Product, Category } from '@/type/types.ts';
 import { Button, ModalManager } from '@repo/ui';
 import { CreateProductFormModal } from '@/pages/product/CreateProductFormModal.tsx';
 import { EditProductFormModal } from '@/pages/product/EditProductFormModal.tsx';
-import { TREASURE_STATE } from '@lucky/shared';
+import { TREASURE_STATE, TreasureFilterType } from '@lucky/shared';
 import { useToastStore } from '@/store/useToastStore.ts';
 import { SmartImage } from '@/components/ui/SmartImage.tsx';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 type ProductSearchForm = {
   treasureName?: string;
   categoryId?: number | 'ALL';
+  filterType?: TreasureFilterType | 'ALL';
 };
 
 type ProductListParams = {
@@ -25,6 +26,7 @@ type ProductListParams = {
   pageSize: number;
   treasureName?: string;
   categoryId?: number;
+  filterType?: TreasureFilterType;
 };
 
 const getProductsTableData = async (
@@ -39,6 +41,9 @@ const getProductsTableData = async (
   if (formData?.treasureName) params.treasureName = formData.treasureName;
   if (formData?.categoryId && formData.categoryId !== 'ALL') {
     params.categoryId = Number(formData.categoryId);
+  }
+  if (formData?.filterType && formData.filterType !== 'ALL') {
+    params['filterType'] = formData.filterType;
   }
 
   const data = await productApi.getProducts(params);
@@ -87,7 +92,7 @@ export const ProductManagement: React.FC = () => {
     defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
-      { treasureName: '', categoryId: 'ALL' },
+      { treasureName: '', categoryId: 'ALL', filterType: 'ALL' },
     ],
   });
 
@@ -292,6 +297,16 @@ export const ProductManagement: React.FC = () => {
                     value: String(c.id),
                   })),
                 ],
+              },
+              {
+                type: 'select',
+                key: 'filterType',
+                label: 'Filter Type',
+                defaultValue: 'ALL',
+                options: Object.values(TreasureFilterType).map((type) => ({
+                  label: type,
+                  value: type,
+                })),
               },
             ]}
             onSearch={handleSearch}

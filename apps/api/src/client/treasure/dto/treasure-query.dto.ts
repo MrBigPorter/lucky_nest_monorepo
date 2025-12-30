@@ -44,7 +44,12 @@ export class TreasureQueryDto {
   @ToTrimmedString()
   q?: string;
 
+  @ApiPropertyOptional({
+    description: 'filter type',
+    example: TreasureFilterType.PRE_SALE,
+    enum: TreasureFilterType,
+  })
   @IsOptional()
-  @IsEnum(TreasureFilterType)
-  filterType?: TreasureFilterType;
+  @IsString()
+  filterType?: string;
 }

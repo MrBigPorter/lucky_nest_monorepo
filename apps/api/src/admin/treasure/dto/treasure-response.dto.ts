@@ -115,6 +115,10 @@ export class TreasureResponseDto {
   @DateToTimestamp()
   updatedAt!: number;
 
+  @ApiProperty({ description: '状态标签', example: 'ACTIVE' })
+  @Expose()
+  statusTag!: string;
+
   @ApiProperty({ type: [TreasureCategoryResponseDto], description: '所属分类' })
   @Expose()
   @Transform(({ value }) => {
