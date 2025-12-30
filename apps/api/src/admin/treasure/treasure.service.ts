@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { CreateTreasureDto } from '@api/admin/treasure/dto/create-treasure.dto';
-import { TREASURE_STATE } from '@lucky/shared';
+import { TREASURE_STATE, TreasureFilterType } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
@@ -90,7 +90,7 @@ export class TreasureService {
    * @returns Promise<{ list: Treasure[], page: number, pageSize: number, total: number }>
    */
   async findAll(dto: QueryTreasureDto) {
-    const { page, pageSize, categoryId } = dto;
+    const { page, pageSize, categoryId, filterType } = dto;
     const skip = (page - 1) * pageSize;
     const take = pageSize;
 
@@ -111,14 +111,47 @@ export class TreasureService {
       };
     }
 
+    const now = new Date();
+
+    if (filterType === TreasureFilterType.PRE_SALE) {
+      //只看预售：开始时间 > 现在
+      whereCondition.salesStartAt = {
+        gt: now,
+      };
+    }
+
+    if (filterType === TreasureFilterType.ON_SALE) {
+      //  只看正在卖：
+      // (开始时间为空 OR 开始时间 <= 现在) AND (未过期)
+      whereCondition.AND = [
+        {
+          OR: [
+            { salesStartAt: { lte: now } }, // 或者 已经开始了
+            { salesStartAt: null }, // 没有设置开始时间(立即开售)
+          ],
+        },
+        {
+          OR: [
+            { salesEndAt: null }, // 没有设置结束时间(永久售卖)
+            { salesEndAt: { gt: now } }, // 或者 还没有结束
+          ],
+        },
+      ];
+    }
+
+    const orderBy: Prisma.TreasureOrderByWithRelationInput = {};
+    if (filterType === TreasureFilterType.PRE_SALE) {
+      orderBy.salesStartAt = 'asc';
+    } else {
+      orderBy.createdAt = 'desc';
+    }
+
     const [list, total] = await this.prisma.$transaction([
       this.prisma.treasure.findMany({
         where: whereCondition,
         skip,
         take,
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy,
         include: {
           categories: {
             include: {
@@ -133,6 +166,8 @@ export class TreasureService {
     return {
       list: list.map((item) => ({
         ...item,
+        statusTag:
+          item.salesStartAt && item.salesStartAt > now ? 'PRE_SALE' : 'ACTIVE',
       })),
       page,
       pageSize,
@@ -159,7 +194,13 @@ export class TreasureService {
       },
     });
     if (!item) throw new NotFoundException(`Treasure with id ${id} not found`);
-    return item;
+    return {
+      ...item,
+      statusTag:
+        item.salesStartAt && item.salesStartAt > new Date()
+          ? 'PRE_SALE'
+          : 'ON_SALE',
+    };
   }
 
   /**
