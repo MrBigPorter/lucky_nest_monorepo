@@ -17,3 +17,4 @@ export * from "./getFieldDefaults.ts";
 export * from "./FormCheckboxField.tsx";
 export * from "./FormDateField.tsx";
 export * from "./FormSwitchField.tsx";
+export * from "./FormRichTextField.tsx";

@@ -1,33 +1,78 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
+  IsDate,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
-import { ToNumber } from '@api/common/dto/transforms';
+import { ToDate, ToNumber } from '@api/common/dto/transforms';
+import { Type } from 'class-transformer';
+
+// 定义 bonusConfig 的结构验证
+class BonusConfigDto {
+  @ApiProperty({ description: 'Bonus item name', example: 'iPhone 15' })
+  @IsString()
+  bonusItemName!: string;
+
+  @ApiPropertyOptional({ description: 'Bonus item image' })
+  @IsOptional()
+  @IsString()
+  bonusItemImg?: string;
+
+  @ApiProperty({ description: 'Number of winners per group', example: 1 })
+  @IsInt()
+  @Min(1)
+  winnerCount!: number;
+
+  @ApiPropertyOptional({ description: 'Allow robots', example: true })
+  @IsOptional()
+  allowRobot?: boolean;
+}
 
 export class CreateTreasureDto {
+  // --- A. 基础信息 ---
   @ApiProperty({
-    description: 'treasure name',
-    example: 'iphone 15 pro max',
-    type: 'string',
+    description: 'Treasure name (Product Name)',
+    example: 'Lucky Limited Edition Badge',
   })
   @IsNotEmpty()
   @IsString()
   treasureName!: string;
 
-  @ApiProperty({ description: 'cost price', example: '1000', type: 'number' })
+  @ApiProperty({
+    description: 'Cover image URL',
+    example: 'https://oss.../badge.jpg',
+  })
   @IsNotEmpty()
+  @IsString()
+  treasureCoverImg!: string;
+
+  @ApiPropertyOptional({ description: 'Description / Details HTML' })
+  @IsOptional()
+  @IsString()
+  desc?: string;
+
+  @ApiProperty({ description: 'Category IDs', example: [1, 2] })
+  @IsArray()
+  @IsNotEmpty()
+  @IsInt({ each: true })
+  categoryIds!: number[];
+
+  @ApiPropertyOptional({ description: 'Cost price (for internal use)' })
+  @IsOptional()
   @ToNumber()
   @IsNumber()
   @Min(0)
-  costAmount!: number;
+  costAmount?: number;
 
-  @ApiProperty({ description: 'price/unit', example: '100', type: 'number' })
+  @ApiProperty({ description: 'Selling price (Unit Amount)', example: 50.0 })
   @IsNotEmpty()
   @ToNumber()
   @IsNumber()
@@ -35,34 +80,69 @@ export class CreateTreasureDto {
   unitAmount!: number;
 
   @ApiProperty({
-    description: 'total quantity',
-    example: '10',
-    type: 'number',
+    description: 'Initial stock quantity when listed',
+    example: 100,
   })
   @IsNotEmpty()
   @ToNumber()
-  @IsNumber()
+  @IsInt()
   @Min(0)
   seqShelvesQuantity!: number;
 
-  @ApiProperty({ description: 'category id', example: [1, 2], type: 'number' })
-  @IsArray()
-  @IsNotEmpty()
-  @IsNumber({}, { each: true })
-  @IsInt({ each: true })
-  categoryIds!: number[];
+  // --- C. 物流属性  ---
+  @ApiProperty({
+    description: 'Shipping Type: 1-Physical, 2-No Shipping',
+    example: 1,
+    default: 1,
+  })
+  @IsOptional() // 可选，默认为 1
+  @IsInt()
+  @IsEnum([1, 2, 3])
+  shippingType?: number;
+
+  @ApiPropertyOptional({ description: 'Weight in kg', example: 0.5 })
+  @IsOptional()
+  @ToNumber()
+  @IsNumber()
+  weight?: number;
+
+  // --- D. 拼团配置 ---
+  @ApiProperty({ description: 'Group size', example: 5, default: 5 })
+  @IsOptional()
+  @ToNumber()
+  @IsInt()
+  @Min(2)
+  groupSize?: number;
 
   @ApiProperty({
-    description: 'treasure image',
-    example: 'http://ww.jpg',
-    type: 'string',
+    description: 'Group time limit in seconds',
+    example: 86400,
+    default: 86400,
   })
-  @IsNotEmpty()
-  @IsString()
-  treasureCoverImg!: string;
-
-  @ApiPropertyOptional({ description: 'about the detail' })
   @IsOptional()
-  @IsString()
-  desc?: string;
+  @ToNumber()
+  @IsInt()
+  @Min(60)
+  groupTimeLimit?: number;
+
+  // --- E. 销售时间 (Pre-sale) ---
+  @ApiProperty({ description: 'Sales start time' })
+  @IsNotEmpty()
+  @ToDate()
+  @IsDate()
+  salesStartAt!: Date;
+
+  @ApiProperty({ description: 'Sales end time' })
+  @IsNotEmpty()
+  @ToDate()
+  @IsDate()
+  salesEndAt!: Date;
+
+  // --- E. 赠品配置 (JSON) ---
+  @ApiPropertyOptional({ description: 'Bonus configuration JSON' })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested() // 如果想严格验证内部结构取消注释
+  @Type(() => BonusConfigDto)
+  bonusConfig?: BonusConfigDto;
 }

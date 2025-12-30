@@ -16,5 +16,5 @@ export interface ModalProps {
   showClose?: boolean;
   enableClickOutsideClose?: boolean;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "xxl";
 }

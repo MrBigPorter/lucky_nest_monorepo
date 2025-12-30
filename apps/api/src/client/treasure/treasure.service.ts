@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { TreasureQueryDto } from '@api/client/treasure/dto/treasure-query.dto';
+import { RedisService } from '@api/common/redis/redis.service';
+import { TreasureFilterType } from '@lucky/shared';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TreasureService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    public readonly redisService: RedisService,
+  ) {}
 
   // 统一计算购买进度，返回 0~100，保留两位小数
   private calcProgressPercent(
@@ -22,10 +28,14 @@ export class TreasureService {
 
   // 商品列表
   async list(query: TreasureQueryDto) {
-    const { page, pageSize, q, categoryId, state } = query;
+    const { page, pageSize, q, categoryId, state, filterType } = query;
+
+    const now = new Date();
+
     const where: any = {};
 
-    if (typeof state === 'number') where.state = state;
+    where.state = typeof state === 'number' ? state : 1;
+
     if (q?.trim()) {
       where.OR = [
         { treasureName: { contains: q, mode: 'insensitive' } },
@@ -42,11 +52,46 @@ export class TreasureService {
       };
     }
 
+    if (filterType === TreasureFilterType.PRE_SALE) {
+      //只看预售：开始时间 > 现在
+      where.salesStartAt = {
+        gt: now,
+      };
+    }
+
+    if (filterType === TreasureFilterType.ON_SALE) {
+      //  只看正在卖：
+      // (开始时间为空 OR 开始时间 <= 现在) AND (未过期)
+      where.AND = [
+        {
+          OR: [
+            { salesStartAt: { lte: now } }, // 或者 已经开始了
+            { salesStartAt: null }, // 没有设置开始时间(立即开售)
+          ],
+        },
+        {
+          OR: [
+            { salesEndAt: null }, // 没有设置结束时间(永久售卖)
+            { salesEndAt: { gt: now } }, // 或者 还没有结束
+          ],
+        },
+      ];
+    }
+
+    // 5. 排序优化
+    // 如果是查预售，按“开始时间”升序排（最近开始的排前面）
+    // 否则按创建时间倒序
+    const orderBy: Prisma.TreasureOrderByWithRelationInput = {};
+    if (filterType === TreasureFilterType.PRE_SALE) {
+      orderBy.salesStartAt = 'asc';
+    } else {
+      orderBy.createdAt = 'desc';
+    }
     const [total, items] = await this.prisma.$transaction([
       this.prisma.treasure.count({ where }),
       this.prisma.treasure.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
         select: {
@@ -61,6 +106,18 @@ export class TreasureService {
           lotteryMode: true,
           lotteryTime: true,
           state: true,
+          cashState: true,
+          charityAmount: true,
+          groupMaxNum: true,
+          imgStyleType: true,
+          minBuyQuantity: true,
+          maxUnitCoins: true,
+          maxUnitAmount: true,
+          maxPerBuyQuantity: true,
+          shippingType: true,
+          groupSize: true,
+          salesStartAt: true,
+          salesEndAt: true,
           categories: {
             select: {
               category: {
@@ -82,6 +139,9 @@ export class TreasureService {
         it.seqBuyQuantity,
       ),
       categories: it.categories.map((c) => c.category),
+      // 虽然前端可以算，但后端给标记更稳
+      statusTag:
+        it.salesStartAt && it.salesStartAt > now ? 'PRE_SALE' : 'ON_SALE',
     }));
 
     return {
@@ -120,12 +180,19 @@ export class TreasureService {
         maxUnitCoins: true,
         maxUnitAmount: true,
         maxPerBuyQuantity: true,
+
+        shippingType: true,
+        groupSize: true,
+        salesStartAt: true,
+        salesEndAt: true,
       },
     });
 
     if (!result) {
       throw new Error('Treasure not found');
     }
+
+    const now = new Date(); // 获取当前时间
 
     const progressPercent = this.calcProgressPercent(
       result.seqShelvesQuantity,
@@ -135,6 +202,10 @@ export class TreasureService {
     return {
       ...result,
       buyQuantityRate: progressPercent,
+      statusTag:
+        result.salesStartAt && result.salesStartAt > now
+          ? 'PRE_SALE'
+          : 'ON_SALE',
     };
   }
 }

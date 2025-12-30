@@ -9,6 +9,7 @@ import morganBody from 'morgan-body';
 import { requestId } from '@api/common/middleware/request-id';
 import { AllExceptionsFilter } from '@api/common/filters/all-exceptions.filter';
 import { ResponseWrapInterceptor } from '@api/common/interceptors/response-wrap.interceptor';
+import { ServerTimeInterceptor } from '@api/common/interceptors/server-time.interceptor';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -50,7 +51,10 @@ async function bootstrap() {
   );
 
   // 统一响应壳 response wrap
-  app.useGlobalInterceptors(new ResponseWrapInterceptor(app.get('Reflector')));
+  app.useGlobalInterceptors(
+    new ResponseWrapInterceptor(app.get('Reflector')),
+    new ServerTimeInterceptor(),
+  );
 
   // 全局异常 global exception filter
   const adapterHost = app.get(HttpAdapterHost);
