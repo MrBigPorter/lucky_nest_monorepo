@@ -14,6 +14,13 @@ import { SmartImage } from '@/components/ui/SmartImage.tsx';
 import { BaseTable } from '@/components/scaffold/BaseTable.tsx';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm.tsx';
 import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
+import { format } from 'date-fns'; // 建议安装 date-fns: yarn add date-fns
+
+// 扩展 Product 类型以包含后端动态计算的 statusTag
+// 如果你的 types.ts 还没更新，这里临时扩展一下
+type ProductWithTag = Product & {
+  statusTag?: 'PRE_SALE' | 'ON_SALE';
+};
 
 type ProductSearchForm = {
   treasureName?: string;
@@ -29,6 +36,7 @@ type ProductListParams = {
   filterType?: TreasureFilterType;
 };
 
+// ✅ 优化 1: 增加 try-catch 和空值兜底，防止表格崩溃
 const getProductsTableData = async (
   { current, pageSize }: { current: number; pageSize: number },
   formData: ProductSearchForm,
@@ -46,11 +54,16 @@ const getProductsTableData = async (
     params['filterType'] = formData.filterType;
   }
 
-  const data = await productApi.getProducts(params);
-  return {
-    list: data.list ?? [],
-    total: data.total ?? 0,
-  };
+  try {
+    const data = await productApi.getProducts(params);
+    return {
+      list: data?.list ?? [],
+      total: data?.total ?? 0,
+    };
+  } catch (error) {
+    console.error('Fetch products failed:', error);
+    return { list: [], total: 0 };
+  }
 };
 
 export const ProductManagement: React.FC = () => {
@@ -65,6 +78,7 @@ export const ProductManagement: React.FC = () => {
     manual: true,
     onSuccess: () => {
       refresh();
+      addToast('success', 'Product deleted successfully');
     },
   });
 
@@ -99,19 +113,21 @@ export const ProductManagement: React.FC = () => {
   const pagination = tableProps.pagination || {};
   const pageSize = pagination.pageSize ?? 10;
 
-  const dataSource = (tableProps.dataSource || []) as Product[];
+  const dataSource = (tableProps.dataSource || []) as ProductWithTag[];
 
-  // 搜索
   const handleSearch = (values: ProductSearchForm) => {
-    // 自动重置到第一页，并带上所有条件
     run({ current: 1, pageSize: pageSize }, values);
   };
 
+  // ✅ 优化 2: 创建成功后重置到第一页，确保看到新数据
   const handleOpenCreate = () => {
     ModalManager.open({
       title: 'Create Product',
       size: 'xl',
-      onConfirm: () => refresh(),
+      onConfirm: () => {
+        // 重置搜索条件并回到第一页
+        reset();
+      },
       renderChildren: ({ confirm }) =>
         CreateProductFormModal(categories, confirm),
     });
@@ -135,8 +151,8 @@ export const ProductManagement: React.FC = () => {
       ModalManager.open({
         title: 'Are you sure?',
         content: 'Product will be removed permanently!!',
-        confirmText: 'confirm',
-        cancelText: 'cancel',
+        confirmText: 'Confirm',
+        cancelText: 'Cancel',
         onConfirm: () => {
           deleteProduct.run(p.treasureId);
         },
@@ -148,13 +164,13 @@ export const ProductManagement: React.FC = () => {
   const handleTreasureState = useCallback(
     (p: Product) => {
       ModalManager.open({
-        title: ' Are you sure?',
+        title: 'Are you sure?',
         content:
           p.state === TREASURE_STATE.ACTIVE
             ? 'Product will be taken offline.'
             : 'Product will be put online.',
-        confirmText: 'confirm',
-        cancelText: 'cancel',
+        confirmText: 'Confirm',
+        cancelText: 'Cancel',
         onConfirm: () => {
           const newState =
             p.state === TREASURE_STATE.ACTIVE
@@ -168,80 +184,144 @@ export const ProductManagement: React.FC = () => {
   );
 
   const columns = useMemo(() => {
-    // 列定义
-    const columnHelper = createColumnHelper<Product>();
+    const columnHelper = createColumnHelper<ProductWithTag>();
 
     return [
       columnHelper.accessor('treasureName', {
         header: 'Product',
+        // 设置最小宽度防止挤压
+        size: 250,
         cell: (info) => (
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 min-w-[46px] rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
+            <div className="w-12 h-12 min-w-[48px] rounded-lg bg-gray-100 dark:bg-white/10 overflow-hidden border border-gray-200 dark:border-white/5">
               <SmartImage
                 src={info.row.original.treasureCoverImg}
-                width={46}
-                height={46}
+                width={48}
+                height={48}
                 alt={info.getValue()}
                 className="w-full h-full object-cover"
               />
             </div>
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">
+            <div className="flex flex-col">
+              <div
+                className="font-medium text-gray-900 dark:text-white line-clamp-1"
+                title={info.getValue()}
+              >
                 {info.getValue()}
               </div>
-              <div className="text-xs text-gray-500">
-                ID: {info.row.original.treasureId}
+              <div className="text-xs text-gray-500 font-mono">
+                {info.row.original.treasureId}
               </div>
             </div>
           </div>
         ),
       }),
-      columnHelper.accessor('seqShelvesQuantity', {
-        header: 'Shares',
-        cell: (info) => (
-          <span className="font-mono text-sm">
-            {info.row.original.seqBuyQuantity}/{info.getValue()}
-          </span>
-        ),
+      // ✅ 优化 3: 进度条可视化
+      columnHelper.accessor('buyQuantityRate', {
+        header: 'Sales Progress',
+        size: 140,
+        cell: (info) => {
+          const rate = info.getValue() || 0;
+          return (
+            <div className="w-full max-w-[120px]">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-gray-900 font-medium">{rate}%</span>
+                <span className="text-gray-400 text-[10px]">
+                  {info.row.original.seqBuyQuantity}/
+                  {info.row.original.seqShelvesQuantity}
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-orange-500 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min(rate, 100)}%` }}
+                />
+              </div>
+            </div>
+          );
+        },
       }),
       columnHelper.accessor('unitAmount', {
         header: 'Unit Price',
         cell: (info) => (
-          <span className="font-mono text-sm">₱{info.getValue()}</span>
+          <span className="font-mono text-sm font-medium">
+            ₱{info.getValue()}
+          </span>
         ),
       }),
+      // ✅ 优化 4: 状态展示增强 (Pre-sale 标签)
       columnHelper.accessor('state', {
         header: 'Status',
+        cell: (info) => {
+          const isOnline = info.getValue() === TREASURE_STATE.ACTIVE;
+          const tag = info.row.original.statusTag;
+
+          return (
+            <div className="flex flex-col items-start gap-1.5">
+              <Badge color={isOnline ? 'green' : 'gray'}>
+                {isOnline ? 'Online' : 'Offline'}
+              </Badge>
+
+              {/* 只有上架状态才显示业务标签 */}
+              {isOnline && tag === 'PRE_SALE' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                  Pre-sale
+                </span>
+              )}
+              {isOnline && tag === 'ON_SALE' && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-700 border border-orange-200">
+                  Hot Sale
+                </span>
+              )}
+            </div>
+          );
+        },
+      }),
+      // ✅ 优化 5: 增加时间列，方便运营查看
+      columnHelper.accessor('createdAt', {
+        header: 'Created At',
         cell: (info) => (
-          <Badge color={info.getValue() === 1 ? 'green' : 'gray'}>
-            {info.getValue() === 1 ? 'Online' : 'Offline'}
-          </Badge>
+          <span className="text-xs text-gray-500 whitespace-nowrap">
+            {info.getValue()
+              ? format(new Date(info.getValue()), 'yyyy-MM-dd HH:mm')
+              : '-'}
+          </span>
         ),
       }),
       columnHelper.display({
         id: 'actions',
         header: 'Actions',
         cell: (info) => (
-          <div className="flex  gap-2">
+          <div className="flex gap-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleRemove(info.row.original)}
+              className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
+              onClick={() => handleOpenEdit(info.row.original)}
+              title="Edit"
             >
-              <Trash2 size={16} />
+              <Edit3 size={16} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleOpenEdit(info.row.original)}
+              className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+              onClick={() => handleRemove(info.row.original)}
+              title="Delete"
             >
-              <Edit3 size={16} />
+              <Trash2 size={16} />
             </Button>
 
             <Button
               variant="ghost"
               size="sm"
+              className={`h-8 w-8 p-0 ${info.row.original.state === TREASURE_STATE.ACTIVE ? 'text-gray-500 hover:text-orange-600' : 'text-gray-500 hover:text-green-600'}`}
               onClick={() => handleTreasureState(info.row.original)}
+              title={
+                info.row.original.state === TREASURE_STATE.ACTIVE
+                  ? 'Take Offline'
+                  : 'Put Online'
+              }
             >
               {info.row.original.state === TREASURE_STATE.ACTIVE ? (
                 <Ban size={16} />
@@ -265,7 +345,7 @@ export const ProductManagement: React.FC = () => {
         action={
           <Button
             variant="outline"
-            className="mr-2 border-orange-200 text-orange-600 hover:bg-orange-50"
+            className="mr-2 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300"
             isLoading={purgeCacheReq.loading}
             onClick={() => purgeCacheReq.run()}
           >
@@ -289,7 +369,7 @@ export const ProductManagement: React.FC = () => {
                 type: 'select',
                 key: 'categoryId',
                 label: 'Category',
-                defaultValue: 'ALL', // 支持默认值
+                defaultValue: 'ALL',
                 options: [
                   { label: 'All Categories', value: 'ALL' },
                   ...categories.map((c) => ({
@@ -303,10 +383,15 @@ export const ProductManagement: React.FC = () => {
                 key: 'filterType',
                 label: 'Filter Type',
                 defaultValue: 'ALL',
-                options: Object.values(TreasureFilterType).map((type) => ({
-                  label: type,
-                  value: type,
-                })),
+                // ✅ 优化 6: 严谨处理 Enum，防止出现数字 key
+                options: [
+                  ...Object.keys(TreasureFilterType)
+                    .filter((k) => isNaN(Number(k))) // 过滤掉数字反向映射
+                    .map((type) => ({
+                      label: type.replace(/_/g, ' '), // PRE_SALE -> PRE SALE
+                      value: type,
+                    })),
+                ],
               },
             ]}
             onSearch={handleSearch}
@@ -317,6 +402,8 @@ export const ProductManagement: React.FC = () => {
         <BaseTable
           data={dataSource}
           columns={columns}
+          // ✅ 优化 7: 加上 Loading 状态
+          loading={tableProps.loading}
           rowKey="treasureId"
           pagination={{
             ...tableProps.pagination,
