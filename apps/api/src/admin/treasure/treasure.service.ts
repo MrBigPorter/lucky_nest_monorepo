@@ -225,6 +225,8 @@ export class TreasureService {
         }),
         ...(rest.unitAmount && { unitAmount: rest.unitAmount }),
         ...(rest.desc && { desc: rest.desc }),
+        ...(rest.costAmount && { costAmount: rest.costAmount }),
+        ...(rest.ruleContent && { ruleContent: rest.ruleContent }),
 
         // 兼容旧字段传参
         seqShelvesQuantity: rest.seqShelvesQuantity,

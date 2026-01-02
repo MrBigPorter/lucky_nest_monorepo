@@ -58,13 +58,17 @@ export class AddressService {
       return ctx.userAddress.create({
         data: {
           userId: userId,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
+          firstName: dto.firstName ?? null,
+          lastName: dto.lastName ?? null,
+          contactName: dto.contactName,
           phone: dto.phone,
+          provinceId: dto.provinceId,
+          cityId: dto.cityId,
+          barangayId: dto.barangayId,
           province: geo.province,
           city: geo.city,
           barangay: geo.barangay,
-          postalCode: geo.postalCode,
+          postalCode: dto.postalCode ?? geo.postalCode,
           fullAddress: dto.fullAddress,
           label: dto.label,
           isDefault: isDefault,
@@ -112,13 +116,17 @@ export class AddressService {
             userId,
           },
           data: {
-            firstName: dto.firstName,
-            lastName: dto.lastName,
+            firstName: dto.firstName ?? null,
+            lastName: dto.lastName ?? null,
+            contactName: dto.contactName,
             phone: dto.phone,
+            provinceId: dto.provinceId,
+            cityId: dto.cityId,
+            barangayId: dto.barangayId,
             province: geo.province,
             city: geo.city,
             barangay: geo.barangay,
-            postalCode: geo.postalCode,
+            postalCode: dto.postalCode ?? geo.postalCode,
             fullAddress: dto.fullAddress,
             label: dto.label,
             isDefault: isDefault,
@@ -149,7 +157,7 @@ export class AddressService {
           userId,
         },
       });
-      return { success: true };
+      return true;
     } catch (error: any) {
       if (
         error instanceof PrismaClientKnownRequestError &&
@@ -184,6 +192,7 @@ export class AddressService {
           addressId: true,
           firstName: true,
           lastName: true,
+          contactName: true,
           phone: true,
           province: true,
           city: true,
@@ -194,6 +203,9 @@ export class AddressService {
           isDefault: true,
           createdAt: true,
           updatedAt: true,
+          provinceId: true,
+          cityId: true,
+          barangayId: true,
         },
       }),
     ]);

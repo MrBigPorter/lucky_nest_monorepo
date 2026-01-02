@@ -69,7 +69,7 @@ export class AddressController {
     @CurrentUserId() userId: string,
     @Param('addressId') addressId: string,
   ) {
-    const data = await this.AddressService.delete(userId, addressId);
+    return await this.AddressService.delete(userId, addressId);
   }
 
   /**

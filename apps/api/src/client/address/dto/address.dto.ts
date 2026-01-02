@@ -12,30 +12,39 @@ import {
 } from 'class-validator';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
-import { ToInt } from '@api/common/dto/transforms';
+import {
+  DateToTimestamp,
+  IsSmartPhone,
+  ToInt,
+} from '@api/common/dto/transforms';
 
 @Exclude()
 export class CreateAddressDto {
-  @ApiProperty({ description: 'Last name', maxLength: 50 })
+  @ApiPropertyOptional({ description: 'Last name', maxLength: 50 })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(50)
   @Expose()
-  lastName!: string;
+  lastName?: string;
 
-  @ApiProperty({ description: 'First name', maxLength: 50 })
+  @ApiPropertyOptional({ description: 'First name', maxLength: 50 })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(50)
   @Expose()
-  firstName!: string;
+  firstName?: string;
+
+  @ApiProperty({ description: 'Contact name', maxLength: 100 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Expose()
+  contactName!: string;
 
   @ApiProperty({ description: 'Phone number', maxLength: 20 })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(20)
-  // 简单的 PH 手机号正则
-  @Matches(/^(09|\+639)\d{9}$/, { message: 'Invalid phone number format' })
+  @IsSmartPhone()
   @Expose()
   phone!: string;
 
@@ -68,6 +77,13 @@ export class CreateAddressDto {
   @IsNotEmpty()
   @Expose()
   fullAddress!: string;
+
+  @ApiPropertyOptional({ description: 'Postal code', maxLength: 12 })
+  @IsString()
+  @IsOptional()
+  @MaxLength(12)
+  @Expose()
+  postalCode?: string;
 
   @ApiPropertyOptional({
     description: 'Address label (e.g., Home, Office)',
@@ -123,9 +139,9 @@ export class AddressResponseDto {
   @Expose()
   addressId!: string;
 
-  @ApiProperty({ description: 'First name' })
+  @ApiProperty({ description: 'Contact Name' })
   @Expose()
-  firstName!: string;
+  contactName?: string;
 
   @ApiProperty({ description: 'Province Name' })
   @Expose()
@@ -138,6 +154,30 @@ export class AddressResponseDto {
   @ApiProperty({ description: 'Barangay Name' })
   @Expose()
   barangay!: string;
+
+  @ApiProperty({ description: 'Full Address' })
+  @Expose()
+  fullAddress!: string;
+
+  @ApiProperty({ description: 'Phone Number' })
+  @Expose()
+  phone!: string;
+
+  @ApiProperty({ description: 'Label' })
+  @Expose()
+  label?: string;
+
+  @ApiProperty({ description: 'Province ID' })
+  @Expose()
+  provinceId!: number;
+
+  @ApiProperty({ description: 'City ID' })
+  @Expose()
+  cityId!: number;
+
+  @ApiProperty({ description: 'Barangay ID' })
+  @Expose()
+  barangayId!: number;
 
   @ApiProperty({ description: 'Postal Code' })
   @Expose()

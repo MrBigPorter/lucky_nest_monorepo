@@ -665,8 +665,9 @@ model UserAddress {
   addressId   String   @id @default(cuid()) @map("address_id") @db.VarChar(32)
   userId      String   @map("user_id") @db.VarChar(32)
 
-  firstName   String   @map("first_name") @db.VarChar(50)
-  lastName    String   @map("last_name") @db.VarChar(50)
+  firstName   String?   @map("first_name") @db.VarChar(50)
+  lastName    String?   @map("last_name") @db.VarChar(50)
+  contactName String   @map("contact_name") @db.VarChar(100)
   phone       String   @db.VarChar(20)
 
   province    String   @db.VarChar(50)
@@ -675,6 +676,11 @@ model UserAddress {
 
   fullAddress String   @map("full_address") @db.Text
   postalCode  String?  @map("postal_code") @db.VarChar(10)
+
+  // 1. 存储 ID (用于外键关联、逻辑计算)
+  provinceId  Int      @map("province_id")
+  cityId      Int      @map("city_id")
+  barangayId  Int      @map("barangay_id")
 
   // 地址标签 (Home, Office, Other)
   label       String?  @db.VarChar(20)
@@ -686,9 +692,16 @@ model UserAddress {
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // 建立地理位置关联
+  provinceRel Province @relation(fields: [provinceId], references: [provinceId])
+  cityRel     City     @relation(fields: [cityId], references: [cityId])
+  barangayRel Barangay @relation(fields: [barangayId], references: [barangayId])
+
   // deliveries  Delivery[]
 
   @@index([userId])
+  @@index([provinceId])
+  @@index([cityId])
   @@map("user_addresses")
 }
 
@@ -980,6 +993,7 @@ model Province {
   status       Int      @default(1) @db.SmallInt // 1=启用
 
   cities       City[]
+  userAddresses UserAddress[]
 
   @@map("provinces")
 }
@@ -995,6 +1009,7 @@ model City {
 
   province   Province @relation(fields: [provinceId], references: [provinceId])
   barangays  Barangay[] // 关联下级社区
+  userAddresses UserAddress[]
 
   @@index([provinceId])
   @@map("cities")
@@ -1008,6 +1023,7 @@ model Barangay {
   status       Int      @default(1) @db.SmallInt
 
   city         City     @relation(fields: [cityId], references: [cityId])
+  userAddresses UserAddress[]
 
   @@unique([cityId, barangayName])
 

@@ -16,6 +16,7 @@ import { ApiOkResponse } from '@nestjs/swagger';
 import {
   TreasureListResponseDto,
   TreasureResponseDto,
+  TreasureStatusDto,
 } from '@api/client/treasure/dto/treasure-response-dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -48,5 +49,13 @@ export class TreasureController {
     const item = await this.svc.detail(id);
     if (!item) throwBiz(ERROR_KEYS.NOT_FOUND);
     return plainToInstance(TreasureResponseDto, item);
+  }
+
+  @Get('status/:id')
+  @ApiOkResponse({ type: TreasureStatusDto })
+  async getStatus(@Param('id') id: string) {
+    const status = await this.svc.getStatus(id);
+    if (status === null) throwBiz(ERROR_KEYS.NOT_FOUND);
+    return status;
   }
 }

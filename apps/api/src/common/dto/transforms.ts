@@ -1,6 +1,9 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform, Type } from 'class-transformer';
+import { IsPhoneNumber } from 'class-validator';
 import { Decimal } from 'decimal.js';
+import parsePhoneNumberFromString from 'libphonenumber-js';
+import { ValidationOptions } from 'joi';
 
 // ==========================================
 //   基础工具函数 (Internal Helpers)
@@ -344,6 +347,68 @@ export function ToUrl(prefix: string) {
       const cleanPrefix = prefix.replace(/\/$/, '');
       const cleanValue = str.replace(/^\//, '');
       return `${cleanPrefix}/${cleanValue}`;
+    }),
+  );
+}
+
+// 定义配置接口
+export interface PhoneOptions extends ValidationOptions {
+  /**
+   * 是否严格限制为菲律宾号码？
+   * - true (默认): 只允许 PH 号码，拒绝其他国家号码
+   * - false: 允许全球号码，但如果无法识别国家，优先尝试解析为 PH
+   */
+  strictPH?: boolean;
+}
+
+export function IsSmartPhone(options?: PhoneOptions) {
+  // 提取 strictPH，剩余的作为 class-validator 的选项
+  const { strictPH = true, ...validationOptions } = options || {};
+
+  return applyDecorators(
+    // 1. 数据清洗 (Normalization)
+    Transform(({ value }) => {
+      if (typeof value !== 'string') return value;
+
+      // 核心逻辑：
+      // 即使允许国际号码，我们依然把 'PH' 作为 "默认兜底地区"。
+      // 效果：
+      // 1. 输入 "+86 138..." -> 自动识别为 CN (中国)，忽略默认值 'PH'
+      // 2. 输入 "917..."     -> 没有国家码，使用默认值 'PH' 解析 -> 成功补全
+      const phoneNumber = parsePhoneNumberFromString(value, 'PH');
+
+      if (phoneNumber && phoneNumber.isValid()) {
+        // 如果开启了严格模式，且解析出来的国家不是 PH，则不进行转换（让 validator 报错）
+        if (strictPH && phoneNumber.country !== 'PH') {
+          return value;
+        }
+
+        if (phoneNumber && phoneNumber.isValid()) {
+          // 【新增】严格检查：必须是移动电话 (MOBILE)
+          // 这样 02-8123-4567 (座机) 就会被拒绝
+          if (
+            phoneNumber.getType() !== 'MOBILE' &&
+            phoneNumber.getType() !== 'FIXED_LINE_OR_MOBILE'
+          ) {
+            // 不是手机号，原样返回，让 validator 报错
+            return value;
+          }
+        }
+
+        // 返回 E.164 标准格式 (例如: +63917... 或 +86138...)
+        return phoneNumber.number;
+      }
+
+      return value;
+    }),
+
+    // 2. 数据验证 (Validation)
+    // 如果 strictPH 为 true，传 'PH' 给校验器；否则传 undefined (表示允许任意国家)
+    IsPhoneNumber(strictPH ? 'PH' : undefined, {
+      message: strictPH
+        ? 'Invalid Philippines phone number format'
+        : 'Invalid phone number format',
+      ...validationOptions,
     }),
   );
 }

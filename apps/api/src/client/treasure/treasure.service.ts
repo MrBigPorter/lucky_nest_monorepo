@@ -4,6 +4,7 @@ import { TreasureQueryDto } from '@api/client/treasure/dto/treasure-query.dto';
 import { RedisService } from '@api/common/redis/redis.service';
 import { TreasureFilterType } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
+import { Max } from 'class-validator';
 
 @Injectable()
 export class TreasureService {
@@ -114,10 +115,10 @@ export class TreasureService {
           maxUnitCoins: true,
           maxUnitAmount: true,
           maxPerBuyQuantity: true,
-          shippingType: true,
           groupSize: true,
           salesStartAt: true,
           salesEndAt: true,
+
           categories: {
             select: {
               category: {
@@ -185,6 +186,7 @@ export class TreasureService {
         groupSize: true,
         salesStartAt: true,
         salesEndAt: true,
+        bonusConfig: true,
       },
     });
 
@@ -206,6 +208,41 @@ export class TreasureService {
         result.salesStartAt && result.salesStartAt > now
           ? 'PRE_SALE'
           : 'ON_SALE',
+    };
+  }
+
+  /**
+   * 获取商品的最新状态（库存、价格、上下架、过期等）
+   * @param id
+   */
+  async getStatus(id: string) {
+    const result = await this.prisma.treasure.findUnique({
+      where: { treasureId: id },
+      select: {
+        treasureId: true,
+        state: true, // 上下架状态
+        seqShelvesQuantity: true, // 总库存
+        seqBuyQuantity: true, // 已买数量 (用于计算剩余库存)
+        unitAmount: true, // 价格 (防止价格变动)
+        salesEndAt: true, // 检查是否过期
+        groupSize: true, // 拼团人数状态
+      },
+    });
+
+    if (!result) {
+      throw new Error('Treasure not found');
+    }
+
+    // 实时计算最新的进度/库存
+    const stockLeft = (result?.seqShelvesQuantity ?? 0) - result.seqBuyQuantity;
+    const isSoldOut = stockLeft <= 0;
+    return {
+      id: result.treasureId,
+      stock: Math.max(1, stockLeft), // 剩余库存
+      price: result.unitAmount,
+      isSoldOut: isSoldOut, // 直接告诉前端是否卖完
+      state: result.state, // 1=上架, 0=下架
+      isExpired: result.salesEndAt && new Date() > result.salesEndAt,
     };
   }
 }
