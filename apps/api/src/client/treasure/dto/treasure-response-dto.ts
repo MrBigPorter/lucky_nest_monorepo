@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CategoryItemDto {
   @ApiProperty({ example: 'uuid-123' })
@@ -68,9 +69,31 @@ export class TreasureResponseDto {
 
   @ApiProperty({ type: [CategoryItemDto], required: false })
   categories?: CategoryItemDto[];
+
+  @ApiProperty({ description: '奖金配置', required: false })
+  bonusConfig: any;
 }
 
 export class TreasureListResponseDto extends PaginatedResponseDto<TreasureResponseDto> {
   @ApiProperty({ type: [TreasureResponseDto] })
   override list!: TreasureResponseDto[];
+}
+
+export class TreasureStatusDto {
+  @ApiProperty({ description: '产品ID' })
+  id!: string;
+  @ApiProperty({ description: '是否售罄' })
+  stock!: number; // 剩余库存
+
+  @ApiProperty({ description: '价格' })
+  @DecimalToString()
+  price!: string;
+
+  @ApiProperty({ description: '是否售罄' })
+  isSoldOut!: boolean; // 直接告诉前端是否卖完
+
+  @ApiProperty({ description: '上下架状态' })
+  state!: number; // 1=上架, 0=下架
+  @ApiProperty({ description: '是否过期' })
+  isExpired!: boolean;
 }

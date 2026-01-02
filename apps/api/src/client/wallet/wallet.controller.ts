@@ -41,7 +41,8 @@ export class WalletController {
    * Get wallet balance
    * @param userId
    */
-  @Get('balance')
+  @Post('balance')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: WalletBalanceResponseDto })
   async balance(@CurrentUserId() userId: string) {
     const data = await this.wallet.balance(userId);

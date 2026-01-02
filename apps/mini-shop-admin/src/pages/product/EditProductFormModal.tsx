@@ -58,6 +58,7 @@ export const EditProductFormModal = (
       categoryIds: product.categories?.[0]?.categoryId, // 取第一个分类ID
       treasureCoverImg: product.treasureCoverImg,
       desc: product.desc,
+      ruleContent: product.ruleContent,
 
       // --- 2. 物流与拼团回填 ---
       shippingType: product.shippingType ?? 1,
@@ -117,6 +118,7 @@ export const EditProductFormModal = (
         categoryIds: [Number(values.categoryIds)],
         treasureCoverImg: coverUrl,
         desc: values.desc,
+        ruleContent: values.ruleContent,
 
         // 新增字段
         shippingType: Number(values.shippingType),
@@ -287,6 +289,14 @@ export const EditProductFormModal = (
               onUpload={handleEditorUpload}
               // 这里的 className 可以帮助我们通过 CSS 限制高度
               className="min-h-[300px]"
+            />
+
+            <FormRichTextField
+              name="ruleContent"
+              label="Rules Content"
+              onUpload={handleEditorUpload}
+              className="min-h-[200px]"
+              placeholder="Write the lucky draw rules or prize details here..."
             />
           </div>
 

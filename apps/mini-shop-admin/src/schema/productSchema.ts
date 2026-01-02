@@ -22,6 +22,7 @@ export const createProductSchema = z.object({
     .min(1, 'Category is required'), // 确保选了分类
 
   desc: z.string().optional(),
+  ruleContent: z.string().optional(),
 
   treasureCoverImg: imageFileSchema,
 

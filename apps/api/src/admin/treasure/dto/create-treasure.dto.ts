@@ -59,6 +59,11 @@ export class CreateTreasureDto {
   @IsString()
   desc?: string;
 
+  @ApiPropertyOptional({ description: 'Rule content (deprecated)' })
+  @IsOptional()
+  @IsString()
+  ruleContent?: string;
+
   @ApiProperty({ description: 'Category IDs', example: [1, 2] })
   @IsArray()
   @IsNotEmpty()

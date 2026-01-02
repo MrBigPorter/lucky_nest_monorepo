@@ -2748,6 +2748,7 @@ __metadata:
     express: "npm:^5.1.0"
     helmet: "npm:^8.1.0"
     joi: "npm:^18.0.1"
+    libphonenumber-js: "npm:^1.12.33"
     morgan: "npm:^1.10.1"
     morgan-body: "npm:^2.6.9"
     p-limit: "npm:^7.2.0"
@@ -11250,6 +11251,13 @@ __metadata:
   version: 1.12.25
   resolution: "libphonenumber-js@npm:1.12.25"
   checksum: 10c0/071c942e34e32d7883fb08a3c6f53003eca7067d06d19511c8ba7312fefe5420b998479afd078a5be6958bac163481072ba2560b4ccb5c680b7c6aa67b6810c2
+  languageName: node
+  linkType: hard
+
+"libphonenumber-js@npm:^1.12.33":
+  version: 1.12.33
+  resolution: "libphonenumber-js@npm:1.12.33"
+  checksum: 10c0/8a2ae4884da48bb28bf3651ff23bb896eb5f12ea0600bb1ca321538458805f5f22b860ff6eaaed42f897212fa9edfa1d62fe1fa0755a44c707cc465a7975c246
   languageName: node
   linkType: hard
 

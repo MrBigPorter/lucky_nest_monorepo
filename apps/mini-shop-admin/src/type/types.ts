@@ -93,6 +93,7 @@ export interface Product {
   createdAt: number;
   updatedAt: number;
   desc: string;
+  ruleContent?: string;
 
   categories: (Pick<Category, 'id' | 'name'> & {
     categoryId: number;
@@ -122,6 +123,7 @@ export interface CreateProduct {
   categoryIds: number[];
   treasureCoverImg: string;
   desc?: string;
+  ruleContent?: string;
 
   // --- [新增] 必须加这些，否则前端表单的数据传不过去 ---
   shippingType?: number;

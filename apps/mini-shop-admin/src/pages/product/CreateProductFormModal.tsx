@@ -276,6 +276,14 @@ export const CreateProductFormModal = (
               placeholder="Enter details, insert images..."
               onUpload={handleEditorUpload}
             />
+
+            <FormRichTextField
+              name="ruleContent"
+              label="Rules Content"
+              onUpload={handleEditorUpload}
+              className="min-h-[200px]"
+              placeholder="Write the lucky draw rules or prize details here..."
+            />
           </div>
 
           {/* 右侧：主图上传区 */}
