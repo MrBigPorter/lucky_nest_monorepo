@@ -1,0 +1,11 @@
+{
+  "name": "config",
+  "packageManager": "yarn@4.9.2",
+  "scripts": {
+    "gen:shop": "node gen-codes.js shop",
+    "gen:admin": "node gen-codes.js admin"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}

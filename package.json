@@ -12,6 +12,8 @@
     "clean": "turbo run clean && rimraf .turbo node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
+    "gen:shop:api": "node packages/config/gen-codes.js shop api",
+    "gen:shop:client": "node packages/config/gen-codes.js shop client",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:clean": "docker compose down -v",
