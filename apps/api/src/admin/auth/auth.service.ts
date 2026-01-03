@@ -7,8 +7,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-import { AdminLoginDto } from '@api/client/auth/dto/admin-login.dto';
 import { PasswordService } from '@api/common/service/password.service';
+import { AdminLoginDto } from './dto/admin-login.dto';
 
 interface JwtPayload {
   sub: string;

@@ -19,8 +19,8 @@ import {
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
-import { AdminLoginDto } from '@api/client/auth/dto/admin-login.dto';
 import { RealIp, UserAgent } from '@api/common/decorators/http.decorators';
+import { AdminLoginDto } from './dto/admin-login.dto';
 
 @ApiTags('admin Auth Management')
 @Controller('auth')
