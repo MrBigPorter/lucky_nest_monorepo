@@ -1,8 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose, Type, Transform } from 'class-transformer';
-import { DateToTimestamp } from '@api/common/dto/transforms';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import {
+  DateToTimestamp,
+  DecimalToNumber,
+  DecimalToString,
+} from '@api/common/dto/transforms';
 
 //  定义简化的分类信息
+@Exclude()
 export class TreasureCategoryResponseDto {
   @ApiProperty({ description: '分类ID' })
   @Expose()
@@ -15,9 +20,9 @@ export class TreasureCategoryResponseDto {
 
 //  定义商品主体返回信息
 @Exclude()
-export class TreasureResponseDto {
+export class TreasureResponseClientDto {
   // ==========================
-  // 1. 基础信息 (原有)
+  // 1. 基础信息
   // ==========================
   @ApiProperty({ description: '产品ID' })
   @Expose()
@@ -31,15 +36,17 @@ export class TreasureResponseDto {
   @Expose()
   productName?: string;
 
-  @ApiProperty({ description: '成本价' })
+  // ✅统一：Decimal -> String(2位)（永不炸）
+  @ApiProperty({ description: '成本价', example: '200.00' })
   @Expose()
-  @Transform(({ value }) => (value ? Number(value) : 0))
-  costAmount!: number;
+  @DecimalToString(2, '0.00')
+  costAmount!: string;
 
-  @ApiProperty({ description: '单价' })
+  //  统一：Decimal -> String(2位)（永不炸）
+  @ApiProperty({ description: '单价', example: '100.00' })
   @Expose()
-  @Transform(({ value }) => (value ? Number(value) : 0))
-  unitAmount!: number;
+  @DecimalToString(2, '0.00')
+  unitAmount!: string;
 
   @ApiProperty({ description: '总库存' })
   @Expose()
@@ -49,9 +56,16 @@ export class TreasureResponseDto {
   @Expose()
   seqBuyQuantity!: number;
 
+  /**
+   * buyQuantityRate 在 Prisma 里是 Decimal(5,2) 可空：
+   * - 你如果前端要 number，就用 DecimalToNumber
+   * - 如果前端要字符串显示，就用 DecimalToString
+   *
+   * 我这里按你 swagger 写的 example: 50.5 => number
+   */
   @ApiProperty({ description: '购买进度(%)', example: 50.5 })
   @Expose()
-  @Transform(({ value }) => (value ? Number(value) : 0))
+  @DecimalToNumber(0)
   buyQuantityRate!: number;
 
   @ApiProperty({ description: '封面图' })
@@ -63,16 +77,21 @@ export class TreasureResponseDto {
   state!: number;
 
   // ==========================
-  // 2. [新增] 物流与拼团配置 (必须加，否则前端看不见)
+  // 2. 物流与拼团配置
   // ==========================
-
   @ApiProperty({ description: '物流类型: 1-实物 2-无需物流', example: 1 })
   @Expose()
   shippingType?: number;
 
+  /**
+   * weight 在 Prisma 里是 Decimal(10,3) 可空
+   * 你现在写的 (value ? Number(value) : 0) 会把 0 当成 false -> 0（还好）
+   * 但 value 可能是 Prisma.Decimal 对象，Number(decimalObj) 有时是 NaN（取决于实现）
+   *  建议统一走 DecimalToNumber
+   */
   @ApiProperty({ description: '重量(kg)', example: 0.5 })
   @Expose()
-  @Transform(({ value }) => (value ? Number(value) : 0))
+  @DecimalToNumber(0)
   weight?: number;
 
   @ApiProperty({ description: '成团人数', example: 5 })
@@ -85,12 +104,11 @@ export class TreasureResponseDto {
 
   @ApiProperty({ description: '赠品配置JSON' })
   @Expose()
-  bonusConfig?: any; // 这里直接透传 JSON 对象给前端
+  bonusConfig?: any; // 直接透传 JSON
 
   // ==========================
-  // 3. [新增] 预售时间 (必须加，用于前端倒计时)
+  // 3. 预售时间
   // ==========================
-
   @ApiProperty({ description: '销售开始时间戳', example: 1709628000000 })
   @Expose()
   @DateToTimestamp()
@@ -104,7 +122,6 @@ export class TreasureResponseDto {
   // ==========================
   // 4. 系统时间
   // ==========================
-
   @ApiProperty({ description: '创建时间', example: 1709628000000 })
   @Expose()
   @DateToTimestamp()
@@ -122,12 +139,12 @@ export class TreasureResponseDto {
   @ApiProperty({ type: [TreasureCategoryResponseDto], description: '所属分类' })
   @Expose()
   @Transform(({ value }) => {
+    //  value 可能是 undefined/null，直接返回 []
     return (
       value?.map((item: any) => ({
-        // 兼容处理：这里处理 prisma 多级 include 返回的结构
-        id: item.category?.products_category_id || item.category?.id,
-        name: item.category?.name,
-      })) || []
+        id: item?.category?.products_category_id ?? item?.category?.id,
+        name: item?.category?.name,
+      })) ?? []
     );
   })
   categories!: TreasureCategoryResponseDto[];
