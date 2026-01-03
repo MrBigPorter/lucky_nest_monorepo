@@ -1,4 +1,4 @@
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, randomInt, randomBytes } from 'node:crypto';
 
 export function md5(text: string) {
   return createHash('md5').update(text).digest('hex');
@@ -10,4 +10,8 @@ export function sha256(text: string) {
 
 export function gen6Code() {
   return String(randomInt(0, 1000000)).padStart(6, '0');
+}
+
+export function genRandomSuffix(length: number = 8) {
+  return randomBytes(length).toString('hex');
 }

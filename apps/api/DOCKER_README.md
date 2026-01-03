@@ -165,7 +165,7 @@ DATABASE_URL=postgresql://dev:dev@db:5432/app
 
 # JWT
 JWT_SECRET=please_change_me_very_secret
-JWT_EXPIRES_IN=15m
+JWT_ACCESS_EXPIRATION=15m
 
 # 可选：启动时执行 seed（仅开发/预发建议开启）
 SEED=false
@@ -266,7 +266,7 @@ yarn dlx prisma db seed
 ## 生产加固（上线前必做）
 
 - **关闭或保护 Swagger**：生产环境禁用 `/docs` 或加 Basic Auth，仅内网可访问。
-- **JWT**：使用强随机 `JWT_SECRET`，合理设置 `JWT_EXPIRES_IN`；考虑加入 Refresh Token 旋转/失效管理。
+- **JWT**：使用强随机 `JWT_SECRET`，合理设置 `JWT_ACCESS_EXPIRATION`；考虑加入 Refresh Token 旋转/失效管理。
 - **CORS**：严格白名单，多域用逗号分隔；不要在 `credentials:true` 下使用 `*`。
 - **TLS**：通过反向代理（Nginx/Ingress/Cloudflare）终止 TLS；容器仅暴露内网端口。
 - **日志**：输出结构化 JSON；为探针准备 `/api/health`（liveness/readiness）。

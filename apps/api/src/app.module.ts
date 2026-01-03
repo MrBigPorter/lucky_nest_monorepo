@@ -26,12 +26,21 @@ import { RedisLockModule } from '@api/common/redis/redis-lock.module';
       isGlobal: true,
       validationSchema: Joi.object({
         JWT_SECRET: Joi.string().required(),
-        JWT_EXPIRES_IN: Joi.alternatives()
+        // Access Token 过期时间 (默认 15分钟)
+        JWT_ACCESS_EXPIRATION: Joi.alternatives()
+          .try(
+            Joi.number().integer().positive(), // 支持纯数字(秒)
+            Joi.string().pattern(/^\d+(ms|s|m|h|d|w|y)$/), // 支持 '15m' 格式
+          )
+          .default('15m'),
+
+        // Refresh Token 过期时间 (默认 7天)
+        JWT_REFRESH_EXPIRATION: Joi.alternatives()
           .try(
             Joi.number().integer().positive(),
             Joi.string().pattern(/^\d+(ms|s|m|h|d|w|y)$/),
           )
-          .default('15m'),
+          .default('7d'),
         DATABASE_URL: Joi.string().required(),
 
         CACHE_TTL: Joi.number().integer().positive().default(300),

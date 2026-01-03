@@ -4,9 +4,16 @@ import {
   MinLength,
   IsOptional,
   IsNumber,
+  Length,
 } from 'class-validator';
-import { ApiAcceptedResponse, ApiProperty } from '@nestjs/swagger';
-import { ToNumber } from '@api/common/dto/transforms';
+import {
+  ApiAcceptedResponse,
+  ApiProperty,
+  ApiPropertyOptional,
+} from '@nestjs/swagger';
+import { IsSmartPhone, ToNumber } from '@api/common/dto/transforms';
+import { TokenResponseDto } from '@api/client/auth/dto/token-response.dto';
+import { UserProfileResponseDto } from '@api/client/auth/dto/user-profile.response.dto';
 
 export class LoginDto {
   @IsString()
@@ -20,8 +27,8 @@ export class LoginDto {
 
 export class LoginOtpDto {
   @ApiProperty({ example: '9878129723', description: 'phone number' })
-  @IsString()
   @IsNotEmpty()
+  @IsSmartPhone()
   phone!: string;
 
   @ApiProperty({ example: 1, description: 'country code', required: false })
@@ -30,9 +37,18 @@ export class LoginOtpDto {
   @IsNumber()
   countryCode?: number;
 
-  @ApiProperty({ example: 123456, description: 'invite code', required: false })
+  @ApiProperty({ example: '123456', description: 'OTP code' })
   @IsOptional()
-  @ToNumber()
-  @IsNumber()
+  @IsString()
+  @Length(4, 20)
   inviteCode?: number;
+}
+
+/**
+ * 登录/注册 聚合响应结果
+ * 包含 Tokens 和 UserInfo
+ */
+export class LoginResultResponseDto extends UserProfileResponseDto {
+  @ApiProperty({ type: TokenResponseDto })
+  tokens!: TokenResponseDto;
 }

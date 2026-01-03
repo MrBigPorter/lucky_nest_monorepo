@@ -43,6 +43,11 @@ export class UserProfileResponseDto {
   @Expose()
   kycStatus!: number;
 
+  @ApiProperty({ description: 'Last login timestamp (ms)', nullable: true })
+  @Expose()
+  @DateToTimestamp()
+  lastLoginAt!: number | null;
+
   @ApiProperty({
     example: '199009999',
     nullable: true,
