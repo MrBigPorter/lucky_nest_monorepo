@@ -3,6 +3,8 @@ import { PrismaService } from '@api/common/prisma/prisma.service';
 import { DeviceInfo } from '@api/common/decorators/http.decorators';
 import { TimeHelper } from '@lucky/shared';
 import { RedisService } from '@api/common/redis/redis.service';
+import { throwBiz } from '@api/common/exceptions/biz.exception';
+import { ERROR_KEYS } from '@api/common/error-codes.gen';
 
 @Injectable()
 export class DeviceSecurityService {
@@ -32,10 +34,7 @@ export class DeviceSecurityService {
       this.logger.warn(
         `[Risk] Blocked Redis-blacklisted device: ${info.deviceId}`,
       );
-      throw new ForbiddenException({
-        code: 'DEVICE_BANNED',
-        message: 'Your device has been restricted. Please contact support.',
-      });
+      throwBiz(ERROR_KEYS.DEVICE_BLACKLISTED);
     }
 
     //  2. 性能核心：检查 "活跃缓存" (Throttling)
@@ -60,7 +59,7 @@ export class DeviceSecurityService {
     if (dbBanned) {
       // 同步回 Redis，防止下次请求再次穿透到 DB
       await this.redisService.sadd('security:device:blacklist', info.deviceId);
-      throw new ForbiddenException('Access from this device is banned.');
+      throwBiz(ERROR_KEYS.DEVICE_BLACKLISTED);
     }
 
     // 4. 查 "一机多号" (关联用户数)
@@ -82,9 +81,7 @@ export class DeviceSecurityService {
           info.deviceId,
           'Auto-block: Device farming detected (Multi-account)',
         );
-        throw new ForbiddenException(
-          'This device is linked to too many accounts.',
-        );
+        throwBiz(ERROR_KEYS.DEVICE_BLACKLISTED);
       }
     }
 
@@ -122,7 +119,8 @@ export class DeviceSecurityService {
     });
 
     if (!device) {
-      throw new ForbiddenException('Device not recognized for withdrawals.');
+      throwBiz(ERROR_KEYS.DEVICE_NOT_TRUSTED);
+      return;
     }
 
     const hoursSinceCreated = TimeHelper.isOlderThan(
@@ -132,9 +130,7 @@ export class DeviceSecurityService {
     );
 
     if (!hoursSinceCreated) {
-      throw new ForbiddenException(
-        'For security, sensitive actions are disabled for 24h on new devices.',
-      );
+      throwBiz(ERROR_KEYS.DEVICE_NOT_TRUSTED);
     }
 
     return true;
