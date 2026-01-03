@@ -109,6 +109,8 @@ export const EditProductFormModal = (
         bonusImgUrl = (values.bonusItemImg as string) || '';
       }
 
+      console.log(values.categoryIds);
+
       // 3. 组装 Payload
       const payload: CreateProduct = {
         treasureName: values.treasureName,

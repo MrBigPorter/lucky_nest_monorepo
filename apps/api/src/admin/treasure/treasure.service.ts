@@ -113,6 +113,17 @@ export class TreasureService {
 
     const now = new Date();
 
+    if (filterType === TreasureFilterType.NOT_EXPIRED) {
+      whereCondition.AND = [
+        {
+          OR: [
+            { salesEndAt: null }, // 没有设置结束时间(永久售卖)
+            { salesEndAt: { gt: now } }, // 或者 还没有结束
+          ],
+        },
+      ];
+    }
+
     if (filterType === TreasureFilterType.PRE_SALE) {
       //只看预售：开始时间 > 现在
       whereCondition.salesStartAt = {
@@ -152,13 +163,13 @@ export class TreasureService {
         skip,
         take,
         orderBy,
-        /*  include: {
+        include: {
           categories: {
             include: {
               category: true,
             },
           },
-        },*/
+        },
       }),
       this.prisma.treasure.count({ where: whereCondition }),
     ]);

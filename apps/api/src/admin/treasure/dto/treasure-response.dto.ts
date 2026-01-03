@@ -36,7 +36,7 @@ export class TreasureResponseClientDto {
   @Expose()
   productName?: string;
 
-  // ✅统一：Decimal -> String(2位)（永不炸）
+  // 统一：Decimal -> String(2位)（永不炸）
   @ApiProperty({ description: '成本价', example: '200.00' })
   @Expose()
   @DecimalToString(2, '0.00')
@@ -136,16 +136,15 @@ export class TreasureResponseClientDto {
   @Expose()
   statusTag!: string;
 
+  @ApiProperty({ description: '描述' })
+  @Expose()
+  desc?: string;
+
+  @ApiProperty({ description: '规则内容' })
+  @Expose()
+  ruleContent?: string;
+
   @ApiProperty({ type: [TreasureCategoryResponseDto], description: '所属分类' })
   @Expose()
-  @Transform(({ value }) => {
-    //  value 可能是 undefined/null，直接返回 []
-    return (
-      value?.map((item: any) => ({
-        id: item?.category?.products_category_id ?? item?.category?.id,
-        name: item?.category?.name,
-      })) ?? []
-    );
-  })
   categories!: TreasureCategoryResponseDto[];
 }

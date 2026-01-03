@@ -54,32 +54,12 @@ export class TreasureController {
   async findAll(@Query() dto: QueryTreasureDto) {
     const result = await this.treasureService.findAll(dto);
 
-    // ✅ 先确认代码跑到了这里
-    console.log('[debug] list len =', result.list?.length);
-
-    // ✅ 用和返回一致的 DTO 来逐条转
-    for (let i = 0; i < result.list.length; i++) {
-      try {
-        plainToInstance(TreasureResponseClientDto, result.list[i], {
-          excludeExtraneousValues: true,
-        });
-      } catch (e) {
-        console.error(
-          '💥 TreasureResponseClientDto transform failed at index =',
-          i,
-        );
-        console.error('bad item keys =', Object.keys(result.list[i]));
-        console.error('bad item =', result.list[i]);
-        throw e;
-      }
-    }
-
-    // ✅ 再整体转换（也给同样的 options，避免“你 debug 用了 A 配置，真实用 B 配置”）
-    const list = plainToInstance(TreasureResponseClientDto, result.list, {
-      excludeExtraneousValues: true,
-    });
-
-    return { ...result, list };
+    return {
+      list: plainToInstance(TreasureResponseClientDto, result.list),
+      page: result.page,
+      pageSize: result.pageSize,
+      total: result.total,
+    };
   }
   /**
    * get treasure detail
