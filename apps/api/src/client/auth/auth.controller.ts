@@ -17,13 +17,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginOtpDto } from './dto/login.dto';
+import { LoginOtpDto, LoginResultResponseDto } from './dto/login.dto';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { RefreshTokenDto } from '@api/client/auth/dto/refresh-token.dto';
 import { TokenResponseDto } from '@api/client/auth/dto/token-response.dto';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { UserProfileResponseDto } from '@api/client/auth/dto/user-profile.response.dto';
+import {
+  CurrentDevice,
+  DeviceInfo,
+} from '@api/common/decorators/http.decorators';
 
 //@ApiTags('auth') Swagger 里把这些接口归到 auth 组。
 //@Controller('auth')：这组接口的前缀是 /auth/*。
@@ -36,11 +40,16 @@ export class AuthController {
   @Post('login/otp')
   @ApiOperation({ summary: 'login with OTP' })
   @Throttle({ otpRequest: { limit: 20, ttl: 60_000 } })
+  @ApiOkResponse({ type: LoginResultResponseDto })
   @HttpCode(HttpStatus.OK)
-  async loginWithOtp(@Body() dto: LoginOtpDto, @Req() req: any) {
+  async loginWithOtp(
+    @Body() dto: LoginOtpDto,
+    @CurrentDevice() device: DeviceInfo,
+    @Req() req: any,
+  ) {
     return await this.auth.loginWithOtp(dto.phone, {
-      ip: req.ip,
-      ua: req.headers['user-agent'],
+      ip: device.ip,
+      ua: device.userAgent,
       countryCode: req.headers['x-country-code'],
     });
   }

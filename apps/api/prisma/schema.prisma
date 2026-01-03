@@ -74,6 +74,7 @@ model User {
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
   @@index([kycStatus], map: "idx_user_kyc_status")
+  @@index([createdAt], map: "idx_user_created_at") //  新增：用于统计新增用户
   @@map("users")
 }
 
