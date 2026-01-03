@@ -71,4 +71,5 @@ export enum TreasureFilterType {
   ALL = "ALL", // 全部 (默认)
   ON_SALE = "ON_SALE", // 正在热卖 (排除预售和过期)
   PRE_SALE = "PRE_SALE", // 即将开始 (预售)
+  NOT_EXPIRED = "NOT_EXPIRED", // 未过期 (包含热卖和预售)
 }
