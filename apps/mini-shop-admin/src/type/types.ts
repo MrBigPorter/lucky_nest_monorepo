@@ -113,6 +113,12 @@ export interface Product {
   salesEndAt?: number; // 时间戳
 }
 
+export type ProductListParams = PaginationParams & {
+  treasureName?: string;
+  categoryId?: number;
+  filterType?: string;
+};
+
 // 3. 更新创建商品参数类型 (对应 CreateTreasureDto)
 export interface CreateProduct {
   treasureName: string;

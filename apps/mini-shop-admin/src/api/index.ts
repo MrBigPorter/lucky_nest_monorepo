@@ -43,6 +43,7 @@ import {
   Barangay,
   KycRecordListParams,
   AuditKycParams,
+  ProductListParams,
 } from '@/type/types.ts';
 
 /**
@@ -73,9 +74,8 @@ export const userApi = {
  */
 export const productApi = {
   // 获取商品列表
-  getProducts: (
-    params?: PaginationParams & { categoryId?: number; treasureName?: string },
-  ) => http.get<PaginatedResponse<Product>>('/v1/admin/treasure/list', params),
+  getProducts: (params?: ProductListParams) =>
+    http.get<PaginatedResponse<Product>>('/v1/admin/treasure/list', params),
 
   // 获取商品详情
   getProductById: (id: string) => http.get<Product>(`/v1/admin/treasure/${id}`),

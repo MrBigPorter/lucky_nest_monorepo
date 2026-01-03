@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
-import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CategoryItemDto {
   @ApiProperty({ example: 'uuid-123' })

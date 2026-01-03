@@ -1,17 +1,53 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform, Type } from 'class-transformer';
-import { IsPhoneNumber } from 'class-validator';
-import { Decimal } from 'decimal.js';
+import { IsPhoneNumber, ValidationOptions } from 'class-validator';
+import Decimal from 'decimal.js';
 import parsePhoneNumberFromString from 'libphonenumber-js';
-import { ValidationOptions } from 'joi';
 
 // ==========================================
 //   基础工具函数 (Internal Helpers)
 // ==========================================
 
-/** 判断值是否为空 (undefined, null, 空字符串) */
+/** 判断值是否为空 (undefined, null, 空字符串, 纯空格) */
 const isEmpty = (v: unknown): boolean =>
   v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+
+/** 安全转 Number */
+const safeNumber = (v: unknown): number | undefined => {
+  if (isEmpty(v)) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+/** 安全转 Int */
+const safeInt = (v: unknown): number | undefined => {
+  const n = safeNumber(v);
+  if (n === undefined) return undefined;
+  const i = Math.trunc(n);
+  return Number.isFinite(i) ? i : undefined;
+};
+
+/** 安全转 Decimal string */
+const safeDecimalToFixedString = (
+  value: unknown,
+  fractionDigits: number,
+  defaultValue: string,
+): string => {
+  if (isEmpty(value)) return defaultValue;
+
+  try {
+    // Prisma.Decimal / Decimal.js 实例大多有 toFixed
+    if (typeof value === 'object' && value !== null && 'toFixed' in value) {
+      return (value as any).toFixed(fractionDigits);
+    }
+
+    // string / number
+    const d = new Decimal(value as any);
+    return d.toFixed(fractionDigits);
+  } catch {
+    return defaultValue;
+  }
+};
 
 // ==========================================
 //  Input DTO 专用 (Query / Body -> DTO)
@@ -22,16 +58,18 @@ const isEmpty = (v: unknown): boolean =>
 /** 数字转换：'1' -> 1, '1.5' -> 1.5, '' -> undefined */
 export function ToNumber() {
   return applyDecorators(
-    Transform(({ value }) => (isEmpty(value) ? undefined : Number(value)), {
-      toClassOnly: true,
-    }),
+    Transform(({ value }) => safeNumber(value), { toClassOnly: true }),
   );
 }
 
+/** 整数转换 */
 export function ToInt() {
-  return ToNumber();
+  return applyDecorators(
+    Transform(({ value }) => safeInt(value), { toClassOnly: true }),
+  );
 }
 
+/** 浮点转换 */
 export function ToFloat() {
   return ToNumber();
 }
@@ -43,11 +81,13 @@ export function ToBool() {
       ({ value }) => {
         if (isEmpty(value)) return undefined;
         if (typeof value === 'boolean') return value;
+
         if (typeof value === 'number') {
           if (value === 1) return true;
           if (value === 0) return false;
           return undefined;
         }
+
         const v = String(value).trim().toLowerCase();
         if (['true', '1', 'yes', 'on'].includes(v)) return true;
         if (['false', '0', 'no', 'off'].includes(v)) return false;
@@ -60,27 +100,17 @@ export function ToBool() {
 
 /**
  * 将空字符串 ''、纯空格 '   ' 或字符串 'null' 转换为真正的 null
- * 用于 DTO 清洗，特别是 Unique 字段
+ * 用于 DTO 清洗（例如 unique 字段）
  */
 export function ToNull() {
   return applyDecorators(
     Transform(
       ({ value }) => {
-        // 1. 如果本来就是 null 或 undefined，统一返回 null (或者保持原样，视业务需求定)
-        if (value === undefined || value === null) {
-          return null;
-        }
-
-        // 2. 如果是字符串，进行清洗
+        if (value === undefined || value === null) return null;
         if (typeof value === 'string') {
           const v = value.trim();
-          // 如果是空字符串，或者是字符串 "null" (忽略大小写)
-          if (v === '' || v.toLowerCase() === 'null') {
-            return null;
-          }
+          if (v === '' || v.toLowerCase() === 'null') return null;
         }
-
-        // 3. 其他情况保持原值 (比如传的是数字或其他有效值)
         return value;
       },
       { toClassOnly: true },
@@ -106,8 +136,10 @@ export function ToTrimmedString() {
 export function ToLowerCase() {
   return applyDecorators(
     Transform(
-      ({ value }) =>
-        isEmpty(value) ? undefined : String(value).trim().toLowerCase(),
+      ({ value }) => {
+        if (isEmpty(value)) return undefined;
+        return String(value).trim().toLowerCase();
+      },
       { toClassOnly: true },
     ),
   );
@@ -117,8 +149,10 @@ export function ToLowerCase() {
 export function ToUpperCase() {
   return applyDecorators(
     Transform(
-      ({ value }) =>
-        isEmpty(value) ? undefined : String(value).trim().toUpperCase(),
+      ({ value }) => {
+        if (isEmpty(value)) return undefined;
+        return String(value).trim().toUpperCase();
+      },
       { toClassOnly: true },
     ),
   );
@@ -144,12 +178,15 @@ export function ToIntArray(opts: { delimiter?: string } = {}) {
     Transform(
       ({ value }) => {
         if (isEmpty(value)) return undefined;
+
         const arr = Array.isArray(value)
           ? value
           : String(value).split(delimiter);
+
         const nums = arr
-          .map((v) => Number(v))
-          .filter((n) => Number.isFinite(n) && Number.isInteger(n));
+          .map((v) => safeInt(v))
+          .filter((n): n is number => typeof n === 'number');
+
         return Array.from(new Set(nums));
       },
       { toClassOnly: true },
@@ -163,7 +200,7 @@ export function ToDate() {
     Transform(
       ({ value }) => {
         if (isEmpty(value)) return undefined;
-        const d = new Date(value);
+        const d = new Date(value as any);
         return isNaN(d.getTime()) ? undefined : d;
       },
       { toClassOnly: true },
@@ -179,7 +216,7 @@ export function ToJsonObject() {
         if (isEmpty(value)) return undefined;
         if (typeof value === 'object') return value;
         try {
-          return JSON.parse(value);
+          return JSON.parse(String(value));
         } catch {
           return undefined;
         }
@@ -190,53 +227,43 @@ export function ToJsonObject() {
 }
 
 // ==========================================
-//  Output DTO 专用 (DTO -> Response)
+//  Output DTO 专用 (DB/Plain -> Response DTO)
 //    原则: 绝对安全，处理 Prisma Decimal/BigInt，格式化输出
-//    注意：为了配合 plainToInstance，通常不加 { toPlainOnly: true }
+//    注意：你们当前用 plainToInstance 输出，所以 Transform 默认即可（不要 toPlainOnly）
 // ==========================================
 
 /**
- * Decimal / Number -> String (保留小数位)
- *  核心修复：
- * 1. 使用 @Type(() => String) 覆盖元数据，防止底层尝试 new Decimal(undefined)
- * 2. 内部 try-catch 兜底
+ * Decimal / Number / String -> String (保留小数位，永不炸)
  */
 export function DecimalToString(
   fractionDigits: number = 2,
   defaultValue: string = '0.00',
 ) {
   return applyDecorators(
-    // 关键：告诉 class-transformer 这是一个字符串，别瞎猜类型
+    // 提示 class-transformer：目标是 string
     Type(() => String),
     Transform(({ value }) => {
-      // 1) 空值拦截
-      if (value === null || value === undefined) {
-        return defaultValue;
-      }
-
-      try {
-        // 2) Prisma Decimal 对象 (自带 toFixed)
-        if (typeof value === 'object' && 'toFixed' in value) {
-          return (value as any).toFixed(fractionDigits);
-        }
-
-        // 3) 普通数字或字符串 -> Decimal -> toFixed
-        // 使用 new Decimal 确保精度，且它能处理 string/number
-        const d = new Decimal(value);
-        return d.toFixed(fractionDigits);
-      } catch (error) {
-        return defaultValue;
-      }
+      return safeDecimalToFixedString(value, fractionDigits, defaultValue);
     }),
   );
 }
 
-/** Decimal / String -> Number (注意精度风险) */
+/** Decimal / String / Number -> Number (注意精度风险) */
 export function DecimalToNumber(defaultValue: number | null = 0) {
   return applyDecorators(
     Type(() => Number),
     Transform(({ value }) => {
-      if (value === null || value === undefined) return defaultValue;
+      if (isEmpty(value)) return defaultValue;
+
+      // Prisma.Decimal / Decimal.js 实例
+      if (typeof value === 'object' && value !== null && 'toNumber' in value) {
+        try {
+          return (value as any).toNumber();
+        } catch {
+          return defaultValue;
+        }
+      }
+
       const n = Number(value);
       return Number.isFinite(n) ? n : defaultValue;
     }),
@@ -255,42 +282,38 @@ export function BigIntToString() {
 }
 
 /**
- * 强力转换：任意格式 (Date | string) -> Timestamp (毫秒 number)
+ * 强力转换：任意格式 (Date | string | number) -> Timestamp (毫秒 number)
+ * 无效日期返回 null（不会 NaN）
  */
 export function DateToTimestamp() {
   return applyDecorators(
-    // 1. 依然保留 Type，辅助 class-transformer 识别
     Type(() => Date),
-
-    // 2. 升级 Transform 逻辑，手动兼容 String 情况
     Transform(({ value }) => {
       if (value === null || value === undefined) return null;
 
-      // 情况 A: 已经是 Date 对象 (比如数据库直接读出的)
       if (value instanceof Date) {
-        return value.getTime();
+        const t = value.getTime();
+        return Number.isFinite(t) ? t : null;
       }
 
-      // 情况 B: 是字符串 (比如 ISO 时间 "2023-12-16T...") -> 核心修复点 🔥
-      if (typeof value === 'string') {
-        const date = new Date(value);
-        // 稍微做个校验，防止无效日期变成 NaN
-        return isNaN(date.getTime()) ? null : date.getTime();
-      }
-
-      // 情况 C: 已经是数字了 (时间戳)，直接返回
       if (typeof value === 'number') {
-        return value;
+        return Number.isFinite(value) ? value : null;
       }
 
-      return value;
+      if (typeof value === 'string') {
+        const d = new Date(value);
+        const t = d.getTime();
+        return Number.isFinite(t) ? t : null;
+      }
+
+      return null;
     }),
   );
 }
 
 /** 字符串脱敏 (手机号/邮箱/卡号) */
 export function MaskString(
-  type: 'phone' | 'email' | 'idcard' | 'bankcard' = 'phone', // 🔥 增加 bankcard 类型
+  type: 'phone' | 'email' | 'idcard' | 'bankcard' = 'phone',
 ) {
   return applyDecorators(
     Type(() => String),
@@ -298,35 +321,24 @@ export function MaskString(
       if (isEmpty(value)) return null;
       const str = String(value);
 
-      // 手机号脱敏逻辑 (保留前三后四)
       if (type === 'phone' && str.length >= 7) {
-        // 修正正则表达式以匹配常见的手机号格式 (例如 11 位)
-        // 保留前三位和后四位
         return str.replace(/(\d{3})\d{3,4}(\d{4})/, '$1****$2');
       }
 
-      // 邮箱脱敏逻辑
       if (type === 'email' && str.includes('@')) {
         const [name, domain] = str.split('@');
         if (name.length <= 2) return `${name}***@${domain}`;
         return `${name.slice(0, 2)}***${name.slice(-1)}@${domain}`;
       }
 
-      // 银行卡/账号脱敏逻辑 (保留前四后四)
       if (type === 'bankcard' && str.length > 8) {
         const prefix = str.slice(0, 4);
         const suffix = str.slice(-4);
         const maskLength = str.length - 8;
-
-        // 生成星号字符串
-        const masked = '*'.repeat(maskLength);
-
-        return `${prefix}${masked}${suffix}`;
+        return `${prefix}${'*'.repeat(maskLength)}${suffix}`;
       }
 
-      // 身份证脱敏逻辑 (如果需要)
       if (type === 'idcard') {
-        // 假设保留前六后四
         return str.replace(/^(\d{6})\d{8}(\w{4})$/, '$1********$2');
       }
 
@@ -334,6 +346,7 @@ export function MaskString(
     }),
   );
 }
+
 /** URL 拼前缀 (CDN) */
 export function ToUrl(prefix: string) {
   return applyDecorators(
@@ -341,9 +354,9 @@ export function ToUrl(prefix: string) {
     Transform(({ value }) => {
       if (isEmpty(value)) return null;
       const str = String(value);
-      if (str.startsWith('http://') || str.startsWith('https://')) {
-        return str;
-      }
+
+      if (str.startsWith('http://') || str.startsWith('https://')) return str;
+
       const cleanPrefix = prefix.replace(/\/$/, '');
       const cleanValue = str.replace(/^\//, '');
       return `${cleanPrefix}/${cleanValue}`;
@@ -351,7 +364,10 @@ export function ToUrl(prefix: string) {
   );
 }
 
-// 定义配置接口
+// ==========================================
+// Phone Validation (Input)
+// ==========================================
+
 export interface PhoneOptions extends ValidationOptions {
   /**
    * 是否严格限制为菲律宾号码？
@@ -362,48 +378,35 @@ export interface PhoneOptions extends ValidationOptions {
 }
 
 export function IsSmartPhone(options?: PhoneOptions) {
-  // 提取 strictPH，剩余的作为 class-validator 的选项
   const { strictPH = true, ...validationOptions } = options || {};
 
   return applyDecorators(
-    // 1. 数据清洗 (Normalization)
-    Transform(({ value }) => {
-      if (typeof value !== 'string') return value;
+    // ✅ 只在入参时清洗
+    Transform(
+      ({ value }) => {
+        if (typeof value !== 'string') return value;
 
-      // 核心逻辑：
-      // 即使允许国际号码，我们依然把 'PH' 作为 "默认兜底地区"。
-      // 效果：
-      // 1. 输入 "+86 138..." -> 自动识别为 CN (中国)，忽略默认值 'PH'
-      // 2. 输入 "917..."     -> 没有国家码，使用默认值 'PH' 解析 -> 成功补全
-      const phoneNumber = parsePhoneNumberFromString(value, 'PH');
-
-      if (phoneNumber && phoneNumber.isValid()) {
-        // 如果开启了严格模式，且解析出来的国家不是 PH，则不进行转换（让 validator 报错）
-        if (strictPH && phoneNumber.country !== 'PH') {
-          return value;
-        }
+        const phoneNumber = parsePhoneNumberFromString(value, 'PH');
 
         if (phoneNumber && phoneNumber.isValid()) {
-          // 【新增】严格检查：必须是移动电话 (MOBILE)
-          // 这样 02-8123-4567 (座机) 就会被拒绝
-          if (
-            phoneNumber.getType() !== 'MOBILE' &&
-            phoneNumber.getType() !== 'FIXED_LINE_OR_MOBILE'
-          ) {
-            // 不是手机号，原样返回，让 validator 报错
+          if (strictPH && phoneNumber.country !== 'PH') {
             return value;
           }
+
+          // 严格检查：必须是移动电话
+          const t = phoneNumber.getType();
+          if (t !== 'MOBILE' && t !== 'FIXED_LINE_OR_MOBILE') {
+            return value;
+          }
+
+          return phoneNumber.number; // E.164
         }
 
-        // 返回 E.164 标准格式 (例如: +63917... 或 +86138...)
-        return phoneNumber.number;
-      }
+        return value;
+      },
+      { toClassOnly: true },
+    ),
 
-      return value;
-    }),
-
-    // 2. 数据验证 (Validation)
-    // 如果 strictPH 为 true，传 'PH' 给校验器；否则传 undefined (表示允许任意国家)
     IsPhoneNumber(strictPH ? 'PH' : undefined, {
       message: strictPH
         ? 'Invalid Philippines phone number format'

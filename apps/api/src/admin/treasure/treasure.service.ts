@@ -152,13 +152,13 @@ export class TreasureService {
         skip,
         take,
         orderBy,
-        include: {
+        /*  include: {
           categories: {
             include: {
               category: true,
             },
           },
-        },
+        },*/
       }),
       this.prisma.treasure.count({ where: whereCondition }),
     ]);
