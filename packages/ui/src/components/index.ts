@@ -6,3 +6,6 @@ export * from "./Modal/ModalFixed.tsx";
 export * from "./Modal/modal-manager.tsx";
 export * from "./ui/table.tsx";
 export * from "./ui/checkbox.tsx";
+export * from "./ui/badge.tsx";
+export * from "./ui/switch.tsx";
+export * from "./ui/tooltip.tsx";

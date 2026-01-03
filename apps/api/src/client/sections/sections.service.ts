@@ -165,7 +165,7 @@ export class SectionsService implements OnModuleInit {
       return [];
     }
 
-    return await Promise.all(
+    const allSections = await Promise.all(
       sections.map(async (s) =>
         this.limitRunner(async () => {
           const takeRaw = Number(s.limit ?? limit);
@@ -200,6 +200,9 @@ export class SectionsService implements OnModuleInit {
         }),
       ),
     );
+
+    // 过滤掉没有商品的楼层
+    return allSections.filter((section) => section.treasureResp.length > 0);
   }
 
   /**
