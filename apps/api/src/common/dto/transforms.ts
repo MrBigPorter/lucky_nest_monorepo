@@ -33,18 +33,27 @@ const safeDecimalToFixedString = (
   fractionDigits: number,
   defaultValue: string,
 ): string => {
-  if (isEmpty(value)) return defaultValue;
+  // 1. 彻底拦截空值，不进入任何 Decimal 逻辑
+  if (value === undefined || value === null) return defaultValue;
 
   try {
-    // Prisma.Decimal / Decimal.js 实例大多有 toFixed
-    if (typeof value === 'object' && value !== null && 'toFixed' in value) {
+    // 2. 针对 Prisma 返回的对象（带有 toFixed 的 Decimal 实例）
+    if (
+      typeof value === 'object' &&
+      'toFixed' in value &&
+      typeof (value as any).toFixed === 'function'
+    ) {
       return (value as any).toFixed(fractionDigits);
     }
 
-    // string / number
-    const d = new Decimal(value as any);
+    // 3. 针对字符串或数字，确保 new Decimal 不会因为非法输入炸掉
+    const d = new Decimal(String(value)); // 强制转 string 传给 Decimal 构造函数更稳
+    if (d.isNaN()) return defaultValue;
+
     return d.toFixed(fractionDigits);
-  } catch {
+  } catch (err) {
+    // 如果 value 还是让 Decimal 炸了（比如 value 是个莫名其妙的 object），返回默认值
+    console.warn('[DecimalTransform] Error parsing value:', value);
     return defaultValue;
   }
 };

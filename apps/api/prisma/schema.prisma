@@ -18,6 +18,7 @@ model User {
   /// 更新时间
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  status      Int      @default(1) @map("status") @db.SmallInt
   /// 昵称
   nickname   String? @map("nickname") @db.VarChar(100)
   /// 头像URL
@@ -71,6 +72,7 @@ model User {
   // devices
   devices               UserDevice[]
 
+  @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
   @@index([kycStatus], map: "idx_user_kyc_status")

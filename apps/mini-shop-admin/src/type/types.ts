@@ -637,6 +637,77 @@ export interface AuditKycParams {
   remark: string;
 }
 
+/** 钱包信息 */
+export interface ClientUserWallet {
+  realBalance: string; // 现金余额 (对应 @DecimalToString)
+  coinBalance: string; // 金币余额 (对应 @DecimalToString)
+}
+
+/** 登录日志 */
+export interface ClientUserLoginLog {
+  loginTime: number; // 登录时间戳 (对应 @DateToTimestamp)
+  loginIp: string;
+  loginDevice: string;
+  createdAt: number; // 创建时间戳
+}
+
+/** 设备信息 */
+export interface ClientUserDevice {
+  id: string; // 记录ID
+  deviceId: string; // 硬件指纹
+  deviceModel: string;
+  lastActiveAt: number; // 最后活跃时间戳
+  ipAddress: string;
+  isBanned: boolean; // 是否拉黑
+  banReason?: string;
+}
+
+/** 用户列表项 (ListItem) */
+export interface ClientUserListItem {
+  id: string;
+  nickname: string;
+  phone: string;
+  avatar: string;
+  vipLevel: number;
+  kycStatus: number; // 0-未认证 1-审核中 4-已认证
+  inviteCode: string;
+  createdAt: number; // 注册时间戳
+  lastLoginAt: number; // 最后登录时间戳
+  status: number; // 0-冻结 1-正常
+  wallet: ClientUserWallet;
+}
+
+/** 用户详情 (Detail) */
+export interface ClientUserDetail extends ClientUserListItem {
+  loginLogs: ClientUserLoginLog[];
+  devices: ClientUserDevice[];
+}
+
+/** 查询用户列表参数 */
+export interface QueryClientUserParams {
+  page: number;
+  pageSize: number;
+  phone?: string;
+  userId?: string;
+  kycStatus?: number;
+  status?: number;
+  startTime?: string; // ISO 日期字符串 (对应 @IsDateString)
+  endTime?: string; // ISO 日期字符串
+  dateRange?: dateRange;
+}
+
+/** 更新用户状态请求 */
+export interface UpdateUserStatusParams {
+  status: 0 | 1; // 0-冻结, 1-正常
+  remark?: string;
+}
+
+/** 拉黑设备请求 */
+export interface BanDeviceParams {
+  deviceId: string;
+  reason: string;
+}
+
 export interface Banner {
   id: string;
   title: string;

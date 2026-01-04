@@ -44,6 +44,12 @@ import {
   KycRecordListParams,
   AuditKycParams,
   ProductListParams,
+  QueryClientUserParams,
+  ClientUserListItem,
+  ClientUserDevice,
+  ClientUserDetail,
+  BanDeviceParams,
+  UpdateUserStatusParams,
 } from '@/type/types.ts';
 
 /**
@@ -67,6 +73,37 @@ export const userApi = {
 
   // 删除用户
   deleteUser: (id: string) => http.delete(`/v1/admin/user/${id}`),
+};
+
+export const clientUserApi = {
+  // 获取用户列表
+  getUsers: (params?: QueryClientUserParams) =>
+    http.get<PaginatedResponse<ClientUserListItem>>(
+      '/v1/admin/client-user/list',
+      params,
+    ),
+
+  // 获取用户设备列表
+  getDevices: (userId: string) =>
+    http.get<PaginatedResponse<ClientUserDevice>>(
+      `/v1/admin/client-user/${userId}/devices`,
+    ),
+
+  // 获取用户详情
+  getUserById: (id: string) =>
+    http.get<ClientUserDetail>(`/v1/admin/client-user/${id}`),
+
+  // 封禁设备
+  banDevice: (data: BanDeviceParams) =>
+    http.post<User>('/v1/admin/client-user/device/bane', data),
+
+  // 更新用户
+  updateUser: (id: string, data: Partial<UpdateUserStatusParams>) =>
+    http.patch<AdminUser>(`/v1/admin/client-user/${id}/status`, data),
+
+  // 解封设备
+  unbanDevice: (id: string) =>
+    http.delete(`/v1/admin/client-user/device/unban/${id}`),
 };
 
 /**

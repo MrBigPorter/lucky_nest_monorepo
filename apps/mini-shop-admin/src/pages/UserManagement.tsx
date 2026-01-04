@@ -1,837 +1,345 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { Button, ModalManager, cn } from '@repo/ui';
 import {
-  Search,
-  ShieldCheck,
-  Ban,
-  CheckCircle,
-  Crown,
-  Edit3,
-  Wallet,
-  User as UserIcon,
-  Gamepad2,
-  Users,
-  History,
-  Lock,
-  Key,
-  ShieldAlert,
-} from 'lucide-react';
-import {
-  Card,
-  Button,
-  Badge,
-  Modal,
-  Input,
-  Select,
-} from '@/components/UIComponents';
-import { useToastStore } from '@/store/useToastStore';
-import {
-  User,
-  RechargeOrder,
-  Withdrawal,
-  Transaction,
-  BettingRecord,
-  LoginLog,
-  ReferralUser,
-} from '@/type/types.ts';
-import { userApi } from '@/api';
-import { useAntdTable } from 'ahooks';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+  ActionType,
+  ProColumns,
+  SmartTable,
+} from '@/components/scaffold/SmartTable';
+import { User as UserIcon, Eye, Ban, CheckCircle } from 'lucide-react';
+import { FormSchema } from '@/type/search';
+import { ClientUserListItem, QueryClientUserParams } from '@/type/types.ts';
+import { KYC_STATUS } from '@lucky/shared';
+import { Badge, BadgeVariant } from '@repo/ui/components/ui/badge.tsx';
+import { clientUserApi } from '@/api';
+import { Card } from '@/components/UIComponents.tsx';
+import { useToastStore } from '@/store/useToastStore.ts';
+import { UserDetailModal } from '@/pages/user-management/UserDetailModal.tsx';
 
 export const UserManagement: React.FC = () => {
+  const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
 
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    'profile' | 'finance' | 'gameplay' | 'team' | 'security'
-  >('profile');
-  const [banModal, setBanModal] = useState<User | null>(null);
-  const [banReason, setBanReason] = useState('');
-  const [auditUser, setAuditUser] = useState<User | null>(null);
-  const [adjustForm, setAdjustForm] = useState({
-    type: 'add',
-    amount: 0,
-    remark: '',
-  });
-
-  const { tableProps, search } = useAntdTable(userApi.getUsers, {
-    defaultPageSize: 10,
-    form: {
-      setFieldsValue: (values: any) => {
-        if (values.searchTerm !== undefined) {
-          search.changeForm({ searchTerm: values.searchTerm });
-        }
-      },
-      getFieldsValue: () => ({ searchTerm: search.getForm().searchTerm }),
-      resetFields: () => search.changeForm({ searchTerm: '' }),
-    },
-  });
-
-  const { submit, reset, getForm } = search;
-
-  const updateUserInState = (id: string, updates: Partial<User>) => {
-    submit();
-  };
-
-  const handleAudit = (status: 2 | 4) => {
-    if (!auditUser) return;
-    updateUserInState(auditUser.id, { kycStatus: status });
-    addToast(
-      'success',
-      status === 4
-        ? `KYC approved for ${auditUser.nickname}`
-        : `KYC rejected for ${auditUser.nickname}`,
-    );
-    setAuditUser(null);
-  };
-
-  const handleBanUser = () => {
-    if (!banModal) return;
-    updateUserInState(banModal.id, { status: 'banned', banReason });
-    addToast('success', `User ${banModal.nickname} has been banned.`);
-    setBanModal(null);
-    setBanReason('');
-  };
-
-  const handleUnbanUser = (id: string) => {
-    updateUserInState(id, { status: 'active', banReason: undefined });
-    addToast('success', `User unbanned.`);
-  };
-
-  const handleUpdateProfile = (id: string, updates: Partial<User>) => {
-    updateUserInState(id, updates);
-    addToast('success', 'User profile updated.');
-  };
-
-  const handleAdjustBalance = () => {
-    if (!selectedUser) return;
-    const change =
-      adjustForm.type === 'add' ? adjustForm.amount : -adjustForm.amount;
-    updateUserInState(selectedUser.id, {
-      realBalance: selectedUser.realBalance + change,
+  // 1. 查看详情弹窗
+  const handleView = useCallback((record: ClientUserListItem) => {
+    ModalManager.open({
+      title: 'User Comprehensive Profile',
+      size: 'xl',
+      renderChildren: ({ close }) => (
+        <UserDetailModal
+          userId={record.id}
+          close={close}
+          reload={() => actionRef.current?.reload()}
+        />
+      ),
     });
-    addToast('success', `Balance updated successfully.`);
-    setAdjustForm({ type: 'add', amount: 0, remark: '' });
-  };
+  }, []);
 
-  const getKycBadge = (status: number) => {
-    switch (status) {
-      case 4:
-        return <Badge color="green">Verified</Badge>;
-      case 1:
-        return <Badge color="yellow">Pending</Badge>;
-      case 2:
-        return <Badge color="red">Failed</Badge>;
-      default:
-        return <Badge color="gray">Unverified</Badge>;
+  // 2. 封禁/解禁逻辑（带备注输入）
+  const handleStatusChange = useCallback(
+    async (record: ClientUserListItem) => {
+      const isBanning = record.status === 1; // 1 为活跃，0 为封禁
+      const targetStatus = isBanning ? 0 : 1;
+
+      ModalManager.open({
+        title: isBanning ? 'Freeze User Account' : 'Restore User Account',
+        renderChildren: ({ close }) => (
+          <div className="p-6 space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Confirm action for:
+              <span className="font-bold text-slate-900 dark:text-white ml-1 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">
+                {record.nickname || record.phone}
+              </span>
+            </p>
+            <textarea
+              id="op-remark"
+              placeholder="Please enter the reason (Required for freezing)..."
+              className="w-full h-24 text-xs border border-slate-200 rounded-xl p-3 outline-none focus:ring-4 focus:ring-red-500/10 transition-all dark:bg-gray-800 dark:border-slate-700"
+            />
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={close} className="font-medium">
+                Cancel
+              </Button>
+              <Button
+                variant={isBanning ? 'danger' : 'primary'}
+                className="font-bold"
+                onClick={async () => {
+                  const remark = (
+                    document.getElementById('op-remark') as HTMLTextAreaElement
+                  )?.value;
+                  if (isBanning && !remark?.trim()) {
+                    addToast('error', 'Remark is required for freezing');
+                    return;
+                  }
+                  try {
+                    await clientUserApi.updateUser(record.id, {
+                      status: targetStatus,
+                      remark:
+                        remark?.trim() ||
+                        (isBanning ? 'Admin manual ban' : 'Admin manual unban'),
+                    });
+                    addToast(
+                      'success',
+                      `User ${isBanning ? 'frozen' : 'restored'} successfully`,
+                    );
+                    actionRef.current?.reload();
+                    close();
+                  } catch (error) {
+                    addToast('error', 'Operation failed');
+                  }
+                }}
+              >
+                Confirm {isBanning ? 'Freeze' : 'Restore'}
+              </Button>
+            </div>
+          </div>
+        ),
+      });
+    },
+    [addToast],
+  );
+
+  // KYC 状态映射
+  const kycStatusConfig: Record<number, { label: string; color: string }> =
+    useMemo(
+      () => ({
+        [KYC_STATUS.DRAFT]: { label: 'Unverified', color: 'secondary' },
+        [KYC_STATUS.REVIEWING]: { label: 'Reviewing', color: 'primary' },
+        [KYC_STATUS.APPROVED]: { label: 'Verified', color: 'success' },
+        [KYC_STATUS.REJECTED]: { label: 'Rejected', color: 'danger' },
+      }),
+      [],
+    );
+
+  const columns: ProColumns<ClientUserListItem>[] = useMemo(
+    () => [
+      {
+        title: 'User Info',
+        dataIndex: 'nickname',
+        render: (_, row) => {
+          const isBanned = row.status === 0;
+          return (
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'h-10 w-10 rounded-full flex items-center justify-center overflow-hidden border shrink-0 transition-all',
+                  isBanned
+                    ? 'grayscale opacity-60 border-red-300'
+                    : 'border-slate-200 bg-slate-100 shadow-sm',
+                )}
+              >
+                {row.avatar ? (
+                  <img
+                    src={row.avatar}
+                    className="h-full w-full object-cover"
+                    alt=""
+                  />
+                ) : (
+                  <span className="text-slate-400 text-xs font-bold uppercase">
+                    {row.nickname?.slice(0, 1) || 'U'}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span
+                    className={cn(
+                      'font-bold truncate max-w-[120px] transition-colors',
+                      isBanned
+                        ? 'text-slate-400'
+                        : 'text-slate-900 dark:text-slate-100',
+                    )}
+                  >
+                    {row.nickname || 'Guest'}
+                  </span>
+                  {isBanned && (
+                    <Badge
+                      variant="warning"
+                      className="h-4 text-[9px] px-1.5 font-black uppercase tracking-tighter"
+                    >
+                      FROZEN
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-[11px] text-slate-500 font-mono tracking-tight">
+                  {row.phone}
+                </span>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Wallet Assets',
+        dataIndex: 'wallet',
+        render: (_, row) => (
+          <div className="text-[11px] space-y-0.5 bg-slate-50/50 dark:bg-white/5 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-slate-400 font-medium uppercase tracking-tighter scale-90">
+                Cash
+              </span>
+              <span className="font-mono font-bold text-emerald-600">
+                ${Number(row.wallet?.realBalance || 0).toFixed(2)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-slate-400 font-medium uppercase tracking-tighter scale-90">
+                Coin
+              </span>
+              <span className="font-mono font-bold text-amber-600">
+                {Math.floor(Number(row.wallet?.coinBalance || 0))}
+              </span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: 'KYC & Level',
+        dataIndex: 'kycStatus',
+        render: (_, row) => (
+          <div className="flex flex-col gap-1.5 t">
+            <Badge
+              variant="outline"
+              className="w-fit py-0 h-4 text-[9px] border-slate-300 text-red-500 font-bold"
+            >
+              VIP {row.vipLevel}
+            </Badge>
+            {kycStatusConfig[row.kycStatus] && (
+              <Badge
+                className="w-fit text-[10px] font-bold py-0 h-5"
+                variant={kycStatusConfig[row.kycStatus].color as BadgeVariant}
+              >
+                {kycStatusConfig[row.kycStatus].label}
+              </Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        title: 'Register Time',
+        dataIndex: 'createdAt',
+        valueType: 'dateTime',
+        width: 160,
+        render: (dom) => (
+          <span className="text-[11px] font-medium text-slate-500">{dom}</span>
+        ),
+      },
+      {
+        title: 'Action',
+        valueType: 'option',
+        width: 120,
+        fixed: 'right',
+        render: (_, row) => {
+          const isActive = row.status === 1;
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 hover:bg-slate-50 dark:hover:bg-slate-100 font-bold text-xs"
+                onClick={() => handleView(row)}
+              >
+                <Eye size={14} className="mr-1.5" /> Detail
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                title={isActive ? 'Freeze User' : 'Restore User'}
+                className={cn('h-8 w-8 p-0 transition-all shadow-sm')}
+                onClick={() => handleStatusChange(row)}
+              >
+                {isActive ? <Ban size={15} /> : <CheckCircle size={15} />}
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [handleView, handleStatusChange, kycStatusConfig],
+  );
+
+  const searchSchema: FormSchema[] = useMemo(
+    () => [
+      {
+        type: 'input',
+        key: 'userId',
+        label: 'User ID',
+        placeholder: 'Enter ID',
+      },
+      {
+        type: 'input',
+        key: 'phone',
+        label: 'Phone',
+        placeholder: 'Enter Phone',
+      },
+      {
+        type: 'select',
+        key: 'status',
+        label: 'Account Status',
+        options: [
+          { label: 'Active', value: '1' },
+          { label: 'Frozen', value: '0' },
+        ],
+      },
+      {
+        type: 'select',
+        key: 'kycStatus',
+        label: 'KYC Status',
+        options: Object.entries(kycStatusConfig).map(([k, v]) => ({
+          label: v.label,
+          value: k,
+        })),
+      },
+      {
+        type: 'date',
+        key: 'dateRange',
+        label: 'Register Time',
+        mode: 'range',
+      },
+    ],
+    [kycStatusConfig],
+  );
+
+  const requestUsers = useCallback(async (params: QueryClientUserParams) => {
+    // 适配后端：确保 status 是 number 或 undefined
+    const queryParams: QueryClientUserParams = {
+      ...params,
+      status: params.status !== undefined ? Number(params.status) : undefined,
+    };
+
+    if (params.dateRange) {
+      queryParams.startTime = params.dateRange.from;
+      queryParams.endTime = params.dateRange.to;
     }
-  };
 
-  const getVipColor = (level: number) => {
-    if (level >= 4) return 'border-cyan-400 text-cyan-500';
-    if (level === 3) return 'border-indigo-400 text-indigo-500';
-    if (level === 2) return 'border-yellow-400 text-yellow-500';
-    if (level === 1) return 'border-slate-300 text-slate-500';
-    return 'border-transparent text-gray-400';
-  };
+    const res = await clientUserApi.getUsers(queryParams);
 
-  const userDeposits: RechargeOrder[] = [];
-  const userWithdrawals: Withdrawal[] = [];
-  const userTransactions: Transaction[] = [];
-  const userBets: BettingRecord[] = [];
-  const userLogs: LoginLog[] = [];
-  const userReferrals: ReferralUser[] = [];
+    return {
+      data: res.list,
+      total: res.total,
+      success: true,
+    };
+  }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            User Management
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            CRM, risk control, and detailed user insights
-          </p>
-        </div>
+    <Card className="border-none shadow-md overflow-hidden rounded-xl">
+      <div className="p-4 bg-white dark:bg-gray-950">
+        <SmartTable<ClientUserListItem>
+          headerTitle={
+            <div className="flex items-center gap-3 font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+              <div className="p-1.5 bg-blue-500 rounded-lg">
+                <UserIcon className="text-white" size={18} strokeWidth={3} />
+              </div>
+              <span>Client Database</span>
+            </div>
+          }
+          rowKey="id"
+          ref={actionRef}
+          columns={columns}
+          searchSchema={searchSchema}
+          request={requestUsers}
+        />
       </div>
-
-      <Card>
-        <div className="flex items-center bg-gray-50 dark:bg-black/20 p-2.5 rounded-xl border border-gray-100 dark:border-white/5 mb-6 w-full md:w-96 transition-all focus-within:ring-2 focus-within:ring-primary-500/50">
-          <Search size={20} className="text-gray-400 ml-2" />
-          <input
-            type="text"
-            placeholder="Search by nickname, phone or email..."
-            className="bg-transparent border-none outline-none flex-1 ml-2 text-gray-700 dark:text-white placeholder-gray-400"
-            value={getForm().searchTerm}
-            onChange={(e) => search.changeForm({ searchTerm: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submit();
-            }}
-          />
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr
-                  key={headerGroup.id}
-                  className="border-b border-gray-100 dark:border-white/5 text-gray-400 text-xs font-semibold uppercase tracking-wider"
-                >
-                  {headerGroup.headers.map((header) => (
-                    <th key={header.id} className="pb-4 pl-4">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-              {table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="py-4 pl-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex justify-between items-center mt-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              tableProps.pagination.changeCurrent(
-                tableProps.pagination.current - 1,
-              )
-            }
-            disabled={tableProps.pagination.current === 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-gray-500">
-            Page {tableProps.pagination.current} of{' '}
-            {tableProps.pagination.totalPage}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              tableProps.pagination.changeCurrent(
-                tableProps.pagination.current + 1,
-              )
-            }
-            disabled={
-              tableProps.pagination.current === tableProps.pagination.totalPage
-            }
-          >
-            Next
-          </Button>
-        </div>
-      </Card>
-
-      {/* COMPREHENSIVE USER DETAIL MODAL */}
-      <Modal
-        isOpen={!!selectedUser}
-        onClose={() => setSelectedUser(null)}
-        title="User Profile"
-        size="lg"
-      >
-        {selectedUser && (
-          <div className="flex flex-col h-[650px]">
-            {/* Modal Header Profile */}
-            <div className="flex items-start gap-6 mb-6 pb-6 border-b border-gray-100 dark:border-white/5">
-              <div
-                className={`p-1 rounded-full border-2 ${getVipColor(selectedUser.vipLevel)}`}
-              >
-                <img
-                  src={selectedUser.avatar}
-                  className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 shadow-xl"
-                />
-              </div>
-              <div className="flex-1 pt-2">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {selectedUser.nickname}
-                  </h2>
-                  <Badge
-                    color={selectedUser.status === 'active' ? 'green' : 'red'}
-                  >
-                    {selectedUser.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <UserIcon size={14} /> ID:{' '}
-                    <span className="font-mono">{selectedUser.id}</span>
-                  </div>
-                  <div className="text-sm text-gray-500 flex items-center gap-1">
-                    <Users size={14} /> Inviter: {selectedUser.inviterId || '-'}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 min-w-[180px]">
-                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                  Wallet Balance
-                </p>
-                <p className="text-3xl font-bold text-primary-500">
-                  ₱{selectedUser.realBalance.toLocaleString()}
-                </p>
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-1">
-                  {selectedUser.coinBalance} Coins
-                </p>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b border-gray-100 dark:border-white/5 mb-6 overflow-x-auto no-scrollbar">
-              {[
-                {
-                  id: 'profile',
-                  label: 'Settings',
-                  icon: <UserIcon size={16} />,
-                },
-                { id: 'finance', label: 'Finance', icon: <Wallet size={16} /> },
-                {
-                  id: 'gameplay',
-                  label: 'Gameplay',
-                  icon: <Gamepad2 size={16} />,
-                },
-                { id: 'team', label: 'Referrals', icon: <Users size={16} /> },
-                {
-                  id: 'security',
-                  label: 'Security',
-                  icon: <ShieldCheck size={16} />,
-                },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTab(t.id as any)}
-                  className={`px-5 py-3 flex items-center gap-2 text-sm font-medium transition-all border-b-2 whitespace-nowrap ${activeTab === t.id ? 'border-primary-500 text-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                >
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
-              {/* TAB: PROFILE */}
-              {activeTab === 'profile' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Edit3 size={18} /> Basic Info
-                      </h3>
-                      <Input
-                        label="Nickname"
-                        defaultValue={selectedUser.nickname}
-                        onBlur={(e) =>
-                          handleUpdateProfile(selectedUser.id, {
-                            nickname: e.target.value,
-                          })
-                        }
-                      />
-                      <Input
-                        label="Phone Number"
-                        defaultValue={selectedUser.phone}
-                        onBlur={(e) =>
-                          handleUpdateProfile(selectedUser.id, {
-                            phone: e.target.value,
-                          })
-                        }
-                      />
-                      <Input
-                        label="Email"
-                        defaultValue={selectedUser.email}
-                        onBlur={(e) =>
-                          handleUpdateProfile(selectedUser.id, {
-                            email: e.target.value,
-                          })
-                        }
-                      />
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          VIP Level
-                        </label>
-                        <select
-                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-lg outline-none dark:text-white"
-                          value={selectedUser.vipLevel}
-                          onChange={(e) =>
-                            handleUpdateProfile(selectedUser.id, {
-                              vipLevel: Number(e.target.value),
-                            })
-                          }
-                        >
-                          {[0, 1, 2, 3, 4, 5].map((l) => (
-                            <option key={l} value={l}>
-                              VIP {l}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Wallet size={18} /> Admin Adjustment
-                      </h3>
-                      <div className="p-5 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 space-y-4">
-                        <Select
-                          label="Operation Type"
-                          value={adjustForm.type}
-                          onChange={(e) =>
-                            setAdjustForm({
-                              ...adjustForm,
-                              type: e.target.value,
-                            })
-                          }
-                          options={[
-                            { label: 'Add Balance (Deposit)', value: 'add' },
-                            {
-                              label: 'Deduct Balance (Penalty)',
-                              value: 'deduct',
-                            },
-                          ]}
-                        />
-                        <Input
-                          label="Amount ($)"
-                          type="number"
-                          value={adjustForm.amount}
-                          onChange={(e) =>
-                            setAdjustForm({
-                              ...adjustForm,
-                              amount: Number(e.target.value),
-                            })
-                          }
-                        />
-                        <Input
-                          label="Remark / Reason"
-                          value={adjustForm.remark}
-                          onChange={(e) =>
-                            setAdjustForm({
-                              ...adjustForm,
-                              remark: e.target.value,
-                            })
-                          }
-                          placeholder="Admin manual adjustment"
-                        />
-                        <Button
-                          onClick={handleAdjustBalance}
-                          className="w-full mt-2"
-                        >
-                          Confirm Adjustment
-                        </Button>
-                      </div>
-
-                      <div className="pt-4 border-t border-gray-100 dark:border-white/5">
-                        <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                          <Lock size={18} /> Security
-                        </h3>
-                        <div className="flex gap-3">
-                          <Button
-                            variant="outline"
-                            className="flex-1"
-                            size="sm"
-                          >
-                            <Key size={14} /> Reset Password
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="flex-1"
-                            size="sm"
-                          >
-                            Clear Sessions
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: FINANCE */}
-              {activeTab === 'finance' && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-900/20">
-                      <div className="text-xs text-green-600 font-bold uppercase tracking-wider mb-1">
-                        Total Deposit
-                      </div>
-                      <div className="text-2xl font-bold text-green-700 dark:text-green-500">
-                        ₱
-                        {userDeposits
-                          .reduce((acc, cur) => acc + cur.amount, 0)
-                          .toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/20">
-                      <div className="text-xs text-red-600 font-bold uppercase tracking-wider mb-1">
-                        Total Withdrawal
-                      </div>
-                      <div className="text-2xl font-bold text-red-700 dark:text-red-500">
-                        ₱
-                        {userWithdrawals
-                          .reduce((acc, cur) => acc + cur.amount, 0)
-                          .toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold mb-3 text-sm uppercase text-gray-500">
-                      Recent Transactions
-                    </h4>
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-gray-100 dark:bg-white/5 text-gray-500">
-                        <tr>
-                          <th className="p-3 rounded-tl-lg">Date</th>
-                          <th className="p-3">Type</th>
-                          <th className="p-3">Amount</th>
-                          <th className="p-3 rounded-tr-lg">Balance After</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                        {userTransactions.map((t) => (
-                          <tr
-                            key={t.id}
-                            className="hover:bg-gray-50 dark:hover:bg-white/5"
-                          >
-                            <td className="p-3 text-gray-500">{t.date}</td>
-                            <td className="p-3 capitalize">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${t.type === 'deposit' ? 'bg-green-100 text-green-700 dark:bg-green-900/30' : 'bg-gray-100 text-gray-700 dark:bg-white/10'}`}
-                              >
-                                {t.type}
-                              </span>
-                            </td>
-                            <td
-                              className={`p-3 font-bold ${t.amount > 0 ? 'text-green-600' : 'text-red-600'}`}
-                            >
-                              {t.amount > 0 ? '+' : ''}₱
-                              {t.amount.toLocaleString()}
-                            </td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">
-                              ₱{t.balanceAfter.toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: GAMEPLAY */}
-              {activeTab === 'gameplay' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex gap-4 mb-6">
-                    <div className="flex-1 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center">
-                      <div className="text-xs text-gray-500 uppercase font-bold">
-                        Total Bets
-                      </div>
-                      <div className="text-xl font-bold mt-1">128</div>
-                    </div>
-                    <div className="flex-1 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center">
-                      <div className="text-xs text-gray-500 uppercase font-bold">
-                        Win Rate
-                      </div>
-                      <div className="text-xl font-bold text-primary-500 mt-1">
-                        32%
-                      </div>
-                    </div>
-                    <div className="flex-1 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center">
-                      <div className="text-xs text-gray-500 uppercase font-bold">
-                        Net Profit
-                      </div>
-                      <div className="text-xl font-bold text-green-500 mt-1">
-                        +₱4,200
-                      </div>
-                    </div>
-                  </div>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-100 dark:bg-white/5 text-gray-500">
-                      <tr>
-                        <th className="p-3 rounded-tl-lg">Time</th>
-                        <th className="p-3">Game</th>
-                        <th className="p-3">Round ID</th>
-                        <th className="p-3">Bet Amount</th>
-                        <th className="p-3">Result</th>
-                        <th className="p-3 rounded-tr-lg">Payout</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {userBets.map((b) => (
-                        <tr
-                          key={b.id}
-                          className="hover:bg-gray-50 dark:hover:bg-white/5"
-                        >
-                          <td className="p-3 text-gray-500">{b.date}</td>
-                          <td className="p-3 font-medium">{b.gameName}</td>
-                          <td className="p-3 font-mono text-xs opacity-70">
-                            {b.roundId}
-                          </td>
-                          <td className="p-3">₱{b.amount}</td>
-                          <td className="p-3">
-                            <Badge
-                              color={
-                                b.status === 'win'
-                                  ? 'green'
-                                  : b.status === 'loss'
-                                    ? 'red'
-                                    : 'yellow'
-                              }
-                            >
-                              {b.status}
-                            </Badge>
-                          </td>
-                          <td
-                            className={`p-3 font-bold ${b.payout > 0 ? 'text-green-600' : 'text-gray-400'}`}
-                          >
-                            ₱{b.payout}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* TAB: TEAM */}
-              {activeTab === 'team' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex justify-between items-center mb-4 p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/20">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 dark:bg-indigo-800 rounded-lg text-indigo-600 dark:text-indigo-300">
-                        <Users size={20} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900 dark:text-white">
-                          Direct Referrals
-                        </h4>
-                        <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                          Level 1 Downlines
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500">
-                        Total Commission
-                      </div>
-                      <div className="text-xl font-bold text-green-600">
-                        ₱450
-                      </div>
-                    </div>
-                  </div>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-100 dark:bg-white/5 text-gray-500">
-                      <tr>
-                        <th className="p-3 rounded-tl-lg">User ID</th>
-                        <th className="p-3">Nickname</th>
-                        <th className="p-3">Join Date</th>
-                        <th className="p-3 rounded-tr-lg">Commission Earned</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {userReferrals.map((r) => (
-                        <tr
-                          key={r.id}
-                          className="hover:bg-gray-50 dark:hover:bg-white/5"
-                        >
-                          <td className="p-3 font-mono text-xs">{r.id}</td>
-                          <td className="p-3 font-medium">{r.nickname}</td>
-                          <td className="p-3 text-gray-500">{r.joinDate}</td>
-                          <td className="p-3 text-green-600 font-bold">
-                            +₱{r.totalContribution}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* TAB: SECURITY */}
-              {activeTab === 'security' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-100 dark:bg-white/5 text-gray-500">
-                      <tr>
-                        <th className="p-3 rounded-tl-lg">Time</th>
-                        <th className="p-3">IP Address</th>
-                        <th className="p-3">Device / OS</th>
-                        <th className="p-3">Location</th>
-                        <th className="p-3 rounded-tr-lg">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                      {userLogs.map((log) => (
-                        <tr
-                          key={log.id}
-                          className="hover:bg-gray-50 dark:hover:bg-white/5"
-                        >
-                          <td className="p-3 text-gray-500">{log.date}</td>
-                          <td className="p-3 font-mono text-xs">{log.ip}</td>
-                          <td className="p-3">{log.device}</td>
-                          <td className="p-3">{log.location}</td>
-                          <td className="p-3">
-                            <Badge
-                              color={log.status === 'success' ? 'green' : 'red'}
-                            >
-                              {log.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* KYC Audit Modal */}
-      <Modal
-        isOpen={!!auditUser}
-        onClose={() => setAuditUser(null)}
-        title="KYC Audit Request"
-      >
-        {auditUser && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
-              <img src={auditUser.avatar} className="w-16 h-16 rounded-full" />
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {auditUser.nickname}
-                </h3>
-                <p className="text-gray-500">{auditUser.phone}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  ID Front
-                </label>
-                <div className="aspect-video bg-gray-100 dark:bg-black/40 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 group relative">
-                  {auditUser.kycImages?.front ? (
-                    <>
-                      <img
-                        src={auditUser.kycImages.front}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs">
-                        Click to Zoom
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      No Image
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  ID Back
-                </label>
-                <div className="aspect-video bg-gray-100 dark:bg-black/40 rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 group relative">
-                  {auditUser.kycImages?.back ? (
-                    <>
-                      <img
-                        src={auditUser.kycImages.back}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs">
-                        Click to Zoom
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      No Image
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4 border-t border-gray-100 dark:border-white/5">
-              <Button
-                variant="danger"
-                className="flex-1"
-                onClick={() => handleAudit(2)}
-              >
-                <XCircle size={18} /> Reject
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1 bg-green-600 hover:bg-green-700 border-green-600"
-                onClick={() => handleAudit(4)}
-              >
-                <CheckCircle size={18} /> Approve
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Ban User Modal */}
-      <Modal
-        isOpen={!!banModal}
-        onClose={() => setBanModal(null)}
-        title={`Ban User: ${banModal?.nickname}`}
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg flex items-start gap-3 border border-red-100 dark:border-red-900/20">
-            <ShieldAlert className="text-red-500 flex-shrink-0" size={24} />
-            <p className="text-sm text-red-800 dark:text-red-200">
-              Are you sure you want to ban this user? They will not be able to
-              login or withdraw funds.
-            </p>
-          </div>
-          <Input
-            label="Ban Reason"
-            value={banReason}
-            onChange={(e) => setBanReason(e.target.value)}
-            placeholder="e.g. Fraudulent activity detected"
-          />
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setBanModal(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleBanUser}
-              disabled={!banReason}
-            >
-              Confirm Ban
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+    </Card>
   );
 };

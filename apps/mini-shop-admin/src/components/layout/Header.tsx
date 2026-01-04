@@ -1,9 +1,7 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import {
   Menu,
   Search,
-  Sparkles,
   Moon,
   Sun,
   User,
@@ -73,23 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:border-indigo-500/40 transition-all text-sm font-medium"
-          onClick={() =>
-            addToast(
-              'info',
-              'AI Assistant: I can help analyze your sales data.',
-            )
-          }
-        >
-          <Sparkles size={16} />
-          <span>AI Assist</span>
-        </motion.button>
-
         <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1"></div>
-
         <button
           onClick={toggleLang}
           className="p-2 text-gray-500 hover:text-primary-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/5"
