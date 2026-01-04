@@ -324,23 +324,21 @@ export const UserManagement: React.FC = () => {
 
   return (
     <Card className="border-none shadow-md overflow-hidden rounded-xl">
-      <div className="p-4 bg-white dark:bg-gray-950">
-        <SmartTable<ClientUserListItem>
-          headerTitle={
-            <div className="flex items-center gap-3 font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-              <div className="p-1.5 bg-blue-500 rounded-lg">
-                <UserIcon className="text-white" size={18} strokeWidth={3} />
-              </div>
-              <span>Client Database</span>
+      <SmartTable<ClientUserListItem>
+        headerTitle={
+          <div className="flex items-center gap-3 font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+            <div className="p-1.5 bg-blue-500 rounded-lg">
+              <UserIcon className="text-white" size={18} strokeWidth={3} />
             </div>
-          }
-          rowKey="id"
-          ref={actionRef}
-          columns={columns}
-          searchSchema={searchSchema}
-          request={requestUsers}
-        />
-      </div>
+            <span>Client Database</span>
+          </div>
+        }
+        rowKey="id"
+        ref={actionRef}
+        columns={columns}
+        searchSchema={searchSchema}
+        request={requestUsers}
+      />
     </Card>
   );
 };
