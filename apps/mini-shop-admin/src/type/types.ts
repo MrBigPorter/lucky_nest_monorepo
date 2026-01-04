@@ -509,6 +509,7 @@ export interface AddressResponse {
   addressId: string;
   userId: string;
   userNickname?: string;
+  contactName: string;
   firstName: string;
   lastName: string;
   phone: string;

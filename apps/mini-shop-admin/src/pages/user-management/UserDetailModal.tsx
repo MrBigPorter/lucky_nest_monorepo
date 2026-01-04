@@ -260,7 +260,7 @@ export const UserDetailModal: React.FC<Props> = ({ userId, reload, close }) => {
               className="m-0 animate-in fade-in slide-in-from-bottom-2 duration-300"
             >
               {data.loginLogs && data.loginLogs.length > 0 ? (
-                <div className="border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+                <div className="overflow-x-auto border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
                   <table className="w-full text-left text-[11px]">
                     <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-bold uppercase tracking-widest">
                       <tr>
@@ -276,8 +276,8 @@ export const UserDetailModal: React.FC<Props> = ({ userId, reload, close }) => {
                           className="hover:bg-blue-50/20 transition-colors"
                         >
                           <td className="p-5 text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
-                            {log.createdAt
-                              ? new Date(log.createdAt).toLocaleString()
+                            {log.loginTime
+                              ? new Date(log.loginTime).toLocaleString()
                               : '--'}
                           </td>
                           <td className="p-5 font-mono text-center">

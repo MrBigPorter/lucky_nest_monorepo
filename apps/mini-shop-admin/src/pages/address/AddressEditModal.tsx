@@ -15,8 +15,9 @@ import { useToastStore } from '@/store/useToastStore';
 import { AddressResponse } from '@/type/types.ts';
 
 const AddressEditSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  contactName: z.string().min(1, 'Last name is required'),
   phone: z.string().min(1, 'Phone is required'),
   fullAddress: z.string().min(1, 'Full address is required'),
   isDefault: z.coerce.number(),
@@ -41,6 +42,7 @@ export const AddressEditModal: React.FC<Props> = ({ data, close }) => {
     defaultValues: {
       firstName: data?.firstName || '',
       lastName: data?.lastName || '',
+      contactName: data?.contactName || '',
       phone: data?.phone || '',
       fullAddress: data?.fullAddress || '',
       isDefault: data?.isDefault || 0,
@@ -117,8 +119,6 @@ export const AddressEditModal: React.FC<Props> = ({ data, close }) => {
     }
   }, [cityId, fetchBarangays, data?.barangay, form]);
 
-  // --- 💾 Submit Logic ---
-
   const { run: submit, loading } = useRequest(
     async (formData: AddressEditFormInput) => {
       if (data?.addressId) {
@@ -143,13 +143,12 @@ export const AddressEditModal: React.FC<Props> = ({ data, close }) => {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(submit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FormTextField name="firstName" label="First Name" />
-            <FormTextField name="lastName" label="Last Name" />
+            <FormTextField name="contactName" label="Contact Name" />
           </div>
 
           <FormTextField name="phone" label="Phone" />
 
-          {/* ✅ Region Selectors */}
+          {/*  Region Selectors */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/10">
             <div className="md:col-span-3 text-xs text-gray-500 font-medium mb-1 uppercase tracking-wider">
               Area Selection

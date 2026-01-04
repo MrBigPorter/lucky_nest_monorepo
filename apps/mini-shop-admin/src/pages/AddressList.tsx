@@ -78,12 +78,10 @@ export const AddressList: React.FC = () => {
       },
       {
         title: 'Recipient',
-        dataIndex: 'firstName',
+        dataIndex: 'contactName',
         render: (_, row) => (
           <div>
-            <div className="font-medium">
-              {row.firstName} {row.lastName}
-            </div>
+            <div className="font-medium">{row.contactName}</div>
             <div className="text-xs text-gray-500">{row.phone}</div>
           </div>
         ),

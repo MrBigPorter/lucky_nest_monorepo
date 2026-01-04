@@ -75,6 +75,9 @@ export const userApi = {
   deleteUser: (id: string) => http.delete(`/v1/admin/user/${id}`),
 };
 
+/**
+ * 客户端用户相关 API
+ */
 export const clientUserApi = {
   // 获取用户列表
   getUsers: (params?: QueryClientUserParams) =>
@@ -95,7 +98,7 @@ export const clientUserApi = {
 
   // 封禁设备
   banDevice: (data: BanDeviceParams) =>
-    http.post<User>('/v1/admin/client-user/device/bane', data),
+    http.post<User>('/v1/admin/client-user/device/ban', data),
 
   // 更新用户
   updateUser: (id: string, data: Partial<UpdateUserStatusParams>) =>
@@ -409,7 +412,7 @@ export const regionApi = {
 
   // 获取城市列表
   cities: (provinceId: number) => {
-    return http.get<City[]>(`/api/v1/admin/region/cities/${provinceId}`);
+    return http.get<City[]>(`/v1/admin/region/cities/${provinceId}`);
   },
 
   // 获取区/镇列表
