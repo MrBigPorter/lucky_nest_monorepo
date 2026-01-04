@@ -62,6 +62,8 @@ export class QueryClientUserDto {
 // --- 2. 修改用户状态 (封号/解冻) ---
 export class UpdateUserStatusDto {
   @ApiProperty({ description: '状态: 1-正常 0-冻结/封禁' })
+  @IsNotEmpty()
+  @ToInt()
   @IsInt()
   @IsEnum([0, 1])
   status!: number; // 假设 User 表未来会加 status 字段，或者用 kycStatus 模拟
@@ -101,11 +103,16 @@ export class ClientUserWalletVo {
 }
 
 @Exclude()
-export class AdminUserLoginLogVo {
+export class ClientUserLoginVo {
   @Expose()
   @ApiProperty({ description: '登录时间' })
   @DateToTimestamp()
   loginTime!: number;
+
+  @ApiProperty({ description: '创建时间' })
+  @Expose()
+  @DateToTimestamp()
+  createAt!: number;
 
   @Expose()
   @ApiProperty({ description: '登录IP' })
@@ -168,6 +175,10 @@ export class ClientUserListItemVo {
   phone!: string;
 
   @Expose()
+  @ApiProperty({ description: '状态: 1-正常 0-冻结/封禁' })
+  status!: number;
+
+  @Expose()
   @ApiProperty({ description: '头像' })
   avatar!: string;
 
@@ -196,15 +207,16 @@ export class ClientUserListItemVo {
   // 嵌套对象转换
   @Expose()
   @ApiProperty({ description: '钱包简要信息' })
+  @Type(() => ClientUserWalletVo)
   wallet!: ClientUserWalletVo;
 }
 
 @Exclude()
 export class ClientUserDetailVo extends ClientUserListItemVo {
   @Expose()
-  @ApiProperty({ description: '最近登录日志列表', type: [AdminUserLoginLogVo] })
-  @Type(() => AdminUserLoginLogVo)
-  loginLogs!: AdminUserLoginLogVo[];
+  @ApiProperty({ description: '最近登录日志列表', type: [ClientUserLoginVo] })
+  @Type(() => ClientUserLoginVo)
+  loginLogs!: ClientUserLoginVo[];
 
   @Expose()
   @ApiProperty({ description: '最近使用设备列表', type: [ClientUserDeviceVo] })

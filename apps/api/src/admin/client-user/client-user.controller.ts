@@ -1,6 +1,5 @@
 import {
   Body,
-  ClassSerializerInterceptor,
   Controller,
   Delete,
   Get,
@@ -8,9 +7,7 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ClientUserService } from '@api/admin/client-user/client-user.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -28,12 +25,12 @@ import {
 import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 import { OpAction, OpModule } from '@lucky/shared';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
+import { plainToInstance } from 'class-transformer';
 
 @ApiTags('admin/client-user')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('admin/client-user')
-@UseInterceptors(ClassSerializerInterceptor) // 启用 VO 序列化
 export class ClientUserController {
   constructor(private readonly clientUserService: ClientUserService) {}
 
@@ -45,7 +42,11 @@ export class ClientUserController {
   @RequirePermission(OpModule.USER, OpAction.USER.VIEW)
   @ApiOkResponse({ type: ClientUserListResultVo })
   async findAll(@Query() dto: QueryClientUserDto) {
-    return this.clientUserService.findAll(dto);
+    const data = await this.clientUserService.findAll(dto);
+    return {
+      ...data,
+      list: plainToInstance(ClientUserListItemVo, data.list),
+    };
   }
 
   /**
@@ -55,8 +56,9 @@ export class ClientUserController {
   @Get(':id')
   @RequirePermission(OpModule.USER, OpAction.USER.VIEW)
   @ApiOkResponse({ type: ClientUserDetailVo })
-  async findOne(@Query('id') id: string) {
-    return this.clientUserService.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const data = await this.clientUserService.findOne(id);
+    return plainToInstance(ClientUserDetailVo, data);
   }
 
   /**
@@ -67,7 +69,7 @@ export class ClientUserController {
   @Patch(':id/status')
   @RequirePermission(OpModule.USER, OpAction.USER.UPDATE)
   async updateStatus(
-    @Query() dto: UpdateUserStatusDto,
+    @Body() dto: UpdateUserStatusDto,
     @Param('id') id: string,
   ) {
     return this.clientUserService.updateUserStatus(id, dto);
@@ -81,7 +83,8 @@ export class ClientUserController {
   @ApiOkResponse({ type: ClientUserDeviceVo })
   @RequirePermission(OpModule.USER, OpAction.USER.VIEW)
   async getUserDevices(@Param('id') id: string) {
-    return this.clientUserService.getUserDevices(id);
+    const data = await this.clientUserService.getUserDevices(id);
+    return plainToInstance(ClientUserDeviceVo, data);
   }
 
   /**

@@ -75,6 +75,7 @@ export class ClientUserService {
           kycStatus: true,
           selfExclusionExpireAt: true,
           createdAt: true,
+          status: true,
           // Add other fields as necessary
           wallet: {
             select: {
@@ -87,7 +88,10 @@ export class ClientUserService {
     ]);
     return {
       total,
-      list: users,
+      list: users.map((user) => ({
+        ...user,
+        wallet: user.wallet || { realBalance: 0, coinBalance: 0 },
+      })),
       page,
       pageSize,
     };
@@ -119,7 +123,13 @@ export class ClientUserService {
       },
     });
     if (!user) throw new NotFoundException(`User with ID ${userId} not found`);
-    return user;
+    const enrichedDevices = await this.getUserDevices(userId);
+    return {
+      ...user,
+      wallet: user.wallet || { realBalance: 0, coinBalance: 0 },
+      // 覆盖原始 devices，确保前端拿到的是带有 isBanned 的数据
+      devices: enrichedDevices.slice(0, 5),
+    };
   }
 
   /**
@@ -128,13 +138,19 @@ export class ClientUserService {
    * @param dto
    */
   async updateUserStatus(id: string, dto: UpdateUserStatusDto) {
-    /*const { status } = dto;
-    await this.prismaService.user.update({
-      where: { id },
-      data: {
-        status,
-      },
-    });*/
+    const { status } = dto;
+    try {
+      return await this.prismaService.user.update({
+        where: { id },
+        data: {
+          status,
+        },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+    }
   }
 
   /**

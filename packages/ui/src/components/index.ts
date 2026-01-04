@@ -9,3 +9,5 @@ export * from "./ui/checkbox.tsx";
 export * from "./ui/badge.tsx";
 export * from "./ui/switch.tsx";
 export * from "./ui/tooltip.tsx";
+export * from "./ui/tabs.tsx";
+export * from "./ui/dropdown-menu.tsx";
