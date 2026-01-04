@@ -11,10 +11,14 @@ import {
 } from '@api/admin/client-user/dto/client-user.dto';
 import { Prisma } from '@prisma/client';
 import { TimeHelper } from '@lucky/shared';
+import { RedisService } from '@api/common/redis/redis.service';
 
 @Injectable()
 export class ClientUserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly redisService: RedisService,
+  ) {}
 
   /**
    * 查询用户列表
@@ -206,14 +210,25 @@ export class ClientUserService {
           // operator: adminId // 如果表里加了操作人字段
         },
       });
+
+      // 2.  同步写入 Redis 黑名单集合 (对应 DeviceSecurityService 的第一道防线)
+      await this.redisService.sadd('security:device:blacklist', deviceId);
+
+      // 3. 清理该设备可能的“活跃缓存” (强制该设备下次请求必须走安全校验)
+      // 因为 active 缓存 Key 包含 userId，如果是管理员手动封禁，
+      // 最稳妥的方法是配合黑名单拦截，或者清理该设备相关的模式匹配 Key
+      const pattern = `security:device:active:*:${deviceId}`;
+      const keys = await this.redisService.keys(pattern);
+      if (keys.length > 0) {
+        await this.redisService.del(...keys);
+      }
       return { success: true };
     } catch (error: any) {
       if (error.code === 'P2002') {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Device is already banned');
-        }
-        throw error;
+        await this.redisService.sadd('security:device:blacklist', deviceId);
+        throw new ConflictException('Device is already banned');
       }
+      throw error;
     }
   }
 
@@ -223,9 +238,13 @@ export class ClientUserService {
    */
   async unbanDevice(deviceId: string) {
     try {
+      // 1. 从数据库中删除
       await this.prismaService.deviceBlacklist.delete({
         where: { deviceId },
       });
+      // 关键：从 Redis 黑名单集合中移除
+      // 必须与 DeviceSecurityService 中使用的 Key 保持一致
+      await this.redisService.srem('security:device:blacklist', deviceId);
       return { success: true };
     } catch (error: any) {
       if (error.code === 'P2025') {

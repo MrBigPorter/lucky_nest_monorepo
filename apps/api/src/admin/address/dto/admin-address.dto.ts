@@ -12,7 +12,11 @@ import {
 } from 'class-validator';
 import { Type, Exclude, Expose, Transform } from 'class-transformer';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
-import { DateToTimestamp, ToInt } from '@api/common/dto/transforms';
+import {
+  DateToTimestamp,
+  IsSmartPhone,
+  ToInt,
+} from '@api/common/dto/transforms';
 
 export class AdminQueryAddressDto {
   @ApiProperty({ description: 'page number, default is 1' })
@@ -66,11 +70,17 @@ export class AdminUpdateAddressDto {
   @MaxLength(50)
   firstName?: string;
 
+  @ApiProperty({ description: 'contactName' })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  contactName!: string;
+
   @ApiPropertyOptional({ description: 'phone' })
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  @Matches(/^(09|\+639)\d{9}$/, { message: 'Invalid phone format' })
+  @IsSmartPhone()
   phone?: string;
 
   @ApiProperty({ description: 'provinceId' })
@@ -129,6 +139,10 @@ export class AdminAddressResponseDto {
   @ApiProperty()
   @Expose()
   lastName!: string;
+
+  @ApiProperty()
+  @Expose()
+  contactName!: string;
 
   @ApiProperty()
   @Expose()

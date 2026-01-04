@@ -215,7 +215,7 @@ export class AuthService {
       },
     });
     return {
-      Id: user.id,
+      id: user.id,
       nickname: user.nickname ?? `ms${user.id}`,
       avatar: user.avatar,
       phoneMd5: user.phoneMd5,
@@ -224,7 +224,7 @@ export class AuthService {
       vipLevel: user.vipLevel,
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.getTime() : null,
       kycStatus: user.kycStatus,
-      deliveryAddress_id: 0,
+      deliveryAddressId: 0,
       selfExclusionExpireAt: user.selfExclusionExpireAt
         ? user.selfExclusionExpireAt.getTime()
         : 0,

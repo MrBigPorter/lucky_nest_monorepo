@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -151,6 +152,16 @@ export class KycProviderService {
       const result = await this.extractWithGemini(imageBuffer);
 
       if (result) {
+        // 只要是 UNKNOWN (0) 或者 AI 明确标记了不支持，就直接在 OCR 阶段拦截
+        if (
+          result.type === KycIdCardType.UNKNOWN ||
+          result.typeText === 'UNKNOWN' ||
+          result.fraudReason === 'STUDENT_OR_INVALID_ID_TYPE'
+        ) {
+          throw new BadRequestException(
+            'The document type is not supported. Please use a valid Government ID (Passport, National ID, or Driver’s License).',
+          );
+        }
         this.logger.log(`Gemini Extraction Success: [${result.type}]`);
         return result;
       } else {
@@ -177,10 +188,23 @@ export class KycProviderService {
           rawText: '',
         };
       }
-    } catch (error) {
-      this.logger.error('Gemini OCR Process Error', error);
+    } catch (error: any) {
+      // 1. 先打印真正的错误，别只看 500
+      this.logger.error('Gemini OCR Detail Error:', error);
+
+      // 2. 如果是 Gemini 抛出的错误，通常包含 "safety" 或 "blocked"
+      if (
+        error.message?.includes('SAFETY') ||
+        error.message?.includes('blocked')
+      ) {
+        throw new BadRequestException(
+          'Image rejected by AI safety filter. Please use a clear, official ID photo.',
+        );
+      }
+
+      // 3. 别一棍子打死，保留原始错误的关键信息
       throw new InternalServerErrorException(
-        'could not perform OCR on ID card',
+        `OCR failed: ${error.message || 'Unknown error'}`,
       );
     }
   }
@@ -209,30 +233,32 @@ export class KycProviderService {
   ): Promise<IdCardResult | null> {
     if (!this.geminiModel) return null;
 
-    // 🔥 优化后的 Prompt：增加了对字体容错的指令
+    //  优化后的 Prompt：增加了对字体容错的指令
     const prompt = `
 Act as a KYC Security Expert. Analyze this ID card image for OCR and FRAUD detection.
 Return ONLY a single valid JSON object (no markdown, no explanation).
 
-RULES FOR FRAUD CHECK:
+RULES:
 1. Detect screen recapture, photocopies, or obvious photoshop edits.
-2. **IGNORE FONT ARTIFACTS**: Official IDs often use custom anti-counterfeit fonts. Do NOT flag text as "Cyrillic", "Mixed Script", or "Non-standard font" unless it is blatantly fake.
-3. If the card looks physically real (has texture, holograms), lower the fraud score even if OCR is imperfect.
+2. **IGNORE FONT ARTIFACTS**: Do not misidentify custom security fonts as "Cyrillic".
+3. **STRICT ELIGIBILITY**: We ONLY support Government-issued IDs.
+4. **REJECT STUDENT/SCHOOL/EMPLOYEE IDS**: If the image is a Student ID, School ID, or non-government ID, you MUST set "type": "UNSUPPORTED", "isSuspicious": true, "fraudScore": 100, and "fraudReason": "STUDENT_OR_INVALID_ID_TYPE".
+5. If the card is physically real government ID but OCR is blurry, still try to extract but keep fraudScore low.
 
 Fields:
-- type: one of PASSPORT, PH_DRIVER_LICENSE, PH_UMID, PH_NATIONAL_ID, PH_PRC_ID, PH_POSTAL_ID, CN_ID, VN_ID, UNKNOWN
+- type: one of PASSPORT, PH_DRIVER_LICENSE, PH_UMID, PH_NATIONAL_ID, PH_PRC_ID, PH_POSTAL_ID, CN_ID, VN_ID, UNSUPPORTED
 - country: PH, CN, VN, GLOBAL, or UNKNOWN
 - idNumber: remove spaces/dashes
 - name: full name on card
 - firstName, middleName, lastName, realName
-- birthday: YYYY-MM-DD (IMPORTANT: must be a string)
+- birthday: YYYY-MM-DD
 - gender: MALE or FEMALE
 - expiryDate: YYYY-MM-DD or null
 
 Fraud fields:
 - isSuspicious: boolean
 - fraudScore: number 0-100
-- fraudReason: string or null
+- fraudReason: string or null (e.g., "STUDENT_ID_NOT_ALLOWED" or "SCREEN_RECAPTURE")
 `.trim();
 
     try {

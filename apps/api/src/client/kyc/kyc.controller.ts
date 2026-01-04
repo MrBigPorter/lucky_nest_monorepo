@@ -44,7 +44,6 @@ import { KycOcrResponseDto } from '@api/client/kyc/dto/kyc-id-card-orc.dto';
 import {
   FileFieldsInterceptor,
   FileInterceptor,
-  FilesInterceptor,
 } from '@nestjs/platform-express';
 
 @ApiTags('KYC')
