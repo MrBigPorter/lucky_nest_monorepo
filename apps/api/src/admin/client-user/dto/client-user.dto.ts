@@ -48,6 +48,13 @@ export class QueryClientUserDto {
   @IsInt()
   kycStatus?: number;
 
+  @ApiPropertyOptional({ description: '用户状态: 1-正常 0-冻结/封禁' })
+  @IsOptional()
+  @ToInt()
+  @IsInt()
+  @IsEnum([0, 1])
+  status?: number;
+
   @ApiPropertyOptional({ description: '注册开始时间' })
   @IsOptional()
   @IsDateString()

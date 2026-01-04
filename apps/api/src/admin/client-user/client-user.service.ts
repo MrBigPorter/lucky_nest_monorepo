@@ -44,6 +44,11 @@ export class ClientUserService {
       whereConditions.kycStatus = kycStatus;
     }
 
+    // 用户状态精确查询
+    if (query.status !== undefined) {
+      whereConditions.status = query.status;
+    }
+
     // 注册时间范围查询
     if (startTime || endTime) {
       whereConditions.createdAt = {};
