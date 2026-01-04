@@ -9,14 +9,16 @@ const PROJECT_CONFIG = {
   shop: {
     sheetId: "1E1otNTsU-GVKPvEf7qaC3dsBidGQ4rROhMCrsup0qUA", // 商城的表格 ID
     api: "../../apps/api/src/common/error-codes.gen.ts", // 后端输出路径
-    client: "../../apps/client/lib/core/constants/app_errors.dart", // 前端输出路径
+    client:
+      "/Volumes/MySSD/work/dev/flutter_happy_app/lib/core/constants/app_errors.dart", // 前端输出路径
   },
 
   // 项目 B: 管理后台 (示例)
   admin: {
     sheetId: "ANOTHER_SHEET_ID_HERE", // 假如有一个不同的表格
     api: "../../apps/admin-api/src/common/error-codes.gen.ts",
-    client: "../../apps/admin-web/src/constants/errors.ts", // 假如后台是 React web
+    client:
+      "/Volumes/MySSD/work/dev/flutter_happy_app/lib/core/constants/app_errors.dart",
   },
 
   // 也可以同一个 Sheet，但是只输出到不同位置

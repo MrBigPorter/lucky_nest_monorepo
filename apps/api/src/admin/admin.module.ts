@@ -11,6 +11,7 @@ import { FinanceModule } from '@api/admin/finance/finance.module';
 import { KycModule } from '@api/admin/kyc/kyc.module';
 import { AddressModule } from '@api/admin/address/address.module';
 import { AdminRegionModule } from '@api/admin/region/admin-region.module';
+import { ClientUserModule } from '@api/admin/client-user/client-user.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AdminRegionModule } from '@api/admin/region/admin-region.module';
     KycModule,
     AddressModule,
     AdminRegionModule,
+    ClientUserModule,
   ],
   providers: [],
   controllers: [],
