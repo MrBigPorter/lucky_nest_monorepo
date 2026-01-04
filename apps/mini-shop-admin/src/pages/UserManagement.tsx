@@ -310,6 +310,7 @@ export const UserManagement: React.FC = () => {
     if (params.dateRange) {
       queryParams.startTime = params.dateRange.from;
       queryParams.endTime = params.dateRange.to;
+      delete queryParams.dateRange;
     }
 
     const res = await clientUserApi.getUsers(queryParams);
