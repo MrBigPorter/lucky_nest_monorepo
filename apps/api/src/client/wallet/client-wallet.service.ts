@@ -16,10 +16,10 @@ import {
   WITHDRAW_STATUS,
 } from '@lucky/shared';
 import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
-import { TransactionQueryDto } from '@api/client/wallet/dto/transaction-query.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
 import { PaymentService } from '@api/common/payment/payment.service';
 import { TRANSACTION_STATUS } from '@lucky/shared/dist/types/wallet';
+import { GetRechargeHistoryDto } from '@api/client/wallet/dto/recharge.dto';
 
 @Injectable()
 export class ClientWalletService {
@@ -352,36 +352,45 @@ export class ClientWalletService {
     }
   }
 
-  /** Get transaction history
-   *
+  /**
+   * Get recharge history
    * @param userId
    * @param dto
    */
-  async getTransactionHistory(userId: string, dto: TransactionQueryDto) {
-    const { page = 1, pageSize = 10, balanceType, transactionType } = dto;
+  async getRechargeHistory(userId: string, dto: GetRechargeHistoryDto) {
+    const { page = 1, pageSize = 10, status } = dto;
     const skip = (page - 1) * pageSize;
 
-    const whereConditions: Prisma.WalletTransactionScalarWhereInput = {};
+    const whereConditions: Prisma.RechargeOrderWhereInput = {
+      userId,
+    };
 
-    if (balanceType) {
-      whereConditions.balanceType = balanceType;
-    }
-
-    if (transactionType) {
-      whereConditions.transactionType = transactionType;
+    if (status) {
+      whereConditions.rechargeStatus = status;
     }
 
     const [list, total] = await this.prismaService.$transaction([
-      this.prismaService.walletTransaction.findMany({
-        where: { userId, ...whereConditions },
+      this.prismaService.rechargeOrder.findMany({
+        where: whereConditions,
         skip,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
+        select: {
+          rechargeNo: true,
+          rechargeAmount: true,
+          actualAmount: true,
+          rechargeStatus: true,
+          paymentMethod: true,
+          createdAt: true,
+          paidAt: true,
+        },
       }),
-      this.prismaService.walletTransaction.count({
-        where: { userId, ...whereConditions },
+      this.prismaService.rechargeOrder.count({
+        where: whereConditions,
       }),
     ]);
+
+    console.log('Recharge history list:', list);
 
     return {
       total,

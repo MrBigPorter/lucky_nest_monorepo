@@ -17,6 +17,16 @@ export class WithdrawalItemResponseDto {
   @DecimalToString()
   amount!: string;
 
+  @ApiProperty({ example: 'Bank Transfer', description: 'Withdrawal Method' })
+  @Expose()
+  @DecimalToString()
+  withdrawAmount!: string;
+
+  @ApiProperty({ example: 'Bank Transfer', description: 'Withdrawal Method' })
+  @Expose()
+  @DecimalToString()
+  actualAmount!: string;
+
   @ApiProperty({ example: '100.00', description: 'Withdrawal Amount' })
   @Expose()
   @DecimalToString()

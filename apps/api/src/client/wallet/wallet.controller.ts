@@ -1,6 +1,5 @@
 import {
   Body,
-  ClassSerializerInterceptor,
   Controller,
   Get,
   HttpCode,
@@ -8,7 +7,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { WalletService } from '@api/client/wallet/wallet.service';
 
@@ -22,12 +20,14 @@ import { WithdrawApplyResponseDto } from '@api/client/wallet/dto/withdraw-apply-
 import { RechargeCreateResponseDto } from '@api/client/wallet/dto/recharge-create-response.dto';
 import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { WalletBalanceResponseDto } from '@api/client/wallet/dto/wallet-balance.response.dto';
-import { TransactionQueryDto } from '@api/client/wallet/dto/transaction-query.dto';
-import { TransactionListResponseDto } from '@api/client/wallet/dto/transaction-list-response.dto';
 import { WithdrawalItemResponseDto } from '@api/client/wallet/dto/withdrawal-item-response.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
 import { WithdrawalHistoryResponseDto } from '@api/client/wallet/dto/withdrawal-history-response.dto';
-import { TransactionResponseDto } from '@api/client/wallet/dto/transaction-response.dto';
+import {
+  GetRechargeHistoryDto,
+  RechargeHistoryItemDto,
+  RechargeHistoryResponseDto,
+} from '@api/client/wallet/dto/recharge.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -87,20 +87,17 @@ export class WalletController {
    * @param userId
    * @param dto
    */
-  @Get('transactions')
-  @ApiOkResponse({ type: TransactionListResponseDto })
+  @Get('recharge/history')
+  @ApiOkResponse({ type: RechargeHistoryResponseDto })
   async getTransactions(
     @CurrentUserId() userId: string,
-    @Query() dto: TransactionQueryDto,
+    @Query() dto: GetRechargeHistoryDto,
   ) {
-    const data = await this.clientWallet.getTransactionHistory(userId, dto);
+    const data = await this.clientWallet.getRechargeHistory(userId, dto);
+
     return {
-      total: data.total,
-      page: dto.page,
-      pageSize: dto.pageSize,
-      list: plainToInstance(TransactionResponseDto, data.list, {
-        excludeExtraneousValues: true,
-      }),
+      ...data,
+      list: plainToInstance(RechargeHistoryItemDto, data.list),
     };
   }
 
