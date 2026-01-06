@@ -69,11 +69,12 @@ export class WalletService {
       amount: number | string | Prisma.Decimal;
       related?: { id: string; type: string };
       desc?: string;
+      type?: number;
     },
     tx?: Tx,
   ) {
     const db = this.orm(tx);
-    const { userId, amount, related, desc } = params;
+    const { userId, amount, related, desc, type } = params;
     const amt = D(amount);
 
     if (amt.lte(0)) throw new BadRequestException('amount must be positive');
@@ -85,7 +86,12 @@ export class WalletService {
       where: { userId },
       data: {
         realBalance: { increment: amt },
-        totalRecharge: { increment: amt },
+        // 注意：如果是退款，通常不应该增加 totalRecharge (累计充值额)
+        // 只有当 type 是 RECHARGE 时才加，
+        totalRecharge:
+          type === TRANSACTION_TYPE.RECHARGE || !type
+            ? { increment: amt }
+            : undefined,
       },
       select: {
         realBalance: true,
@@ -102,7 +108,7 @@ export class WalletService {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
         walletId: updateWallet.id,
-        transactionType: TRANSACTION_TYPE.RECHARGE,
+        transactionType: type ?? TRANSACTION_TYPE.RECHARGE,
         balanceType: BALANCE_TYPE.CASH,
         amount: amt,
         beforeBalance: before,
@@ -187,14 +193,15 @@ export class WalletService {
   async creditCoin(
     params: {
       userId: string;
-      coins: number | string;
+      coins: number | string | Prisma.Decimal;
       related?: { id: string; type: string };
       desc?: string;
+      type?: number;
     },
     tx?: Tx,
   ): Promise<{ coinBalance: Prisma.Decimal; transactionId: string }> {
     const db = this.orm(tx);
-    const { userId, coins, related, desc } = params;
+    const { userId, coins, related, desc, type } = params;
     const amt = D(coins);
 
     if (amt.lte(0)) throw new BadRequestException('coins must be positive');
@@ -220,7 +227,7 @@ export class WalletService {
         transactionNo: OrderNoHelper.generate(BizPrefix.TRANSFER),
         userId,
         walletId: updateWallet.id,
-        transactionType: TRANSACTION_TYPE.REWARD,
+        transactionType: type ?? TRANSACTION_TYPE.REWARD,
         balanceType: BALANCE_TYPE.COIN,
         amount: amt,
         beforeBalance: before,

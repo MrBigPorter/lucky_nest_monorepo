@@ -371,7 +371,7 @@ export class ClientWalletService {
       whereConditions.transactionType = transactionType;
     }
 
-    const [total, list] = await this.prismaService.$transaction([
+    const [list, total] = await this.prismaService.$transaction([
       this.prismaService.walletTransaction.findMany({
         where: { userId, ...whereConditions },
         skip,
@@ -406,7 +406,7 @@ export class ClientWalletService {
       whereConditions.withdrawStatus = status;
     }
 
-    const [total, list] = await this.prismaService.$transaction([
+    const [list, total] = await this.prismaService.$transaction([
       this.prismaService.withdrawOrder.findMany({
         where: { userId, ...whereConditions },
         skip,

@@ -1,7 +1,6 @@
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms'; // 确保安装了 decimal.js
-import { applyDecorators } from '@nestjs/common';
+import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 
 export class OrderUserDto {
   @Expose() id!: string;
@@ -63,7 +62,7 @@ export class OrderResponseDto {
   @ApiProperty()
   @Expose()
   @DateToTimestamp()
-  paidAt!: number | null;
+  paidAt!: number;
 
   @ApiProperty()
   @Expose()

@@ -27,6 +27,7 @@ import { TransactionListResponseDto } from '@api/client/wallet/dto/transaction-l
 import { WithdrawalItemResponseDto } from '@api/client/wallet/dto/withdrawal-item-response.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
 import { WithdrawalHistoryResponseDto } from '@api/client/wallet/dto/withdrawal-history-response.dto';
+import { TransactionResponseDto } from '@api/client/wallet/dto/transaction-response.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -97,7 +98,7 @@ export class WalletController {
       total: data.total,
       page: dto.page,
       pageSize: dto.pageSize,
-      list: plainToInstance(TransactionListResponseDto, data.list, {
+      list: plainToInstance(TransactionResponseDto, data.list, {
         excludeExtraneousValues: true,
       }),
     };
@@ -112,7 +113,7 @@ export class WalletController {
   @ApiOkResponse({ type: WithdrawalHistoryResponseDto })
   async getWithdrawHistory(
     @CurrentUserId() userId: string,
-    @Body() dto: WithdrawalHistoryQueryDto,
+    @Query() dto: WithdrawalHistoryQueryDto,
   ) {
     const data = await this.clientWallet.getWithdrawalHistory(userId, dto);
     return {

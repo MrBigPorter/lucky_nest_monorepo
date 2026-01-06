@@ -10,30 +10,30 @@ export class WalletBalanceResponseDto {
 
   @ApiProperty({ example: 'user_123456', description: 'User ID' })
   @Expose()
-  user_id!: string;
+  userId!: string;
 
   @ApiProperty({ example: '1000.00', description: 'Available cash balance' })
   @Expose()
   @DecimalToString()
-  real_balance!: string;
+  realBalance!: string;
 
   @ApiProperty({ example: '1500.00', description: 'Total recharge amount' })
   @Expose()
   @DecimalToString()
-  total_recharge!: string;
+  totalRecharge!: string;
 
   @ApiProperty({ example: '200.00', description: 'Coin balance' })
   @Expose()
   @DecimalToString()
-  coin_balance!: string;
+  coinBalance!: string;
 
   @ApiProperty({ example: '0.00', description: 'Frozen cash balance' })
   @Expose()
   @DecimalToString()
-  frozen_balance!: string;
+  frozenBalance!: string;
 
   @ApiProperty({ example: '0.00', description: 'Total withdraw amount' })
   @Expose()
   @DecimalToString()
-  total_withdraw!: string;
+  totalWithdraw!: string;
 }
