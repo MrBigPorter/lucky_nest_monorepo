@@ -765,6 +765,23 @@ model Order {
   orderStatus Int      @default(1) @map("order_status") @db.SmallInt
   payStatus   Int      @default(0) @map("pay_status") @db.SmallInt
   refundStatus Int      @default(0) @map("refund_status") @db.SmallInt
+  /// 退款原因
+  refundReason String?  @map("refund_reason") @db.VarChar(255)
+  /// 实际退款金额 (记录财务流水)
+  refundAmount Decimal? @map("refund_amount") @db.Decimal(10, 2)
+  /// 退款时间
+  refundedAt   DateTime? @map("refunded_at")
+  // 记录操作人
+  refundAppliedBy  String?  @map("refund_applied_by") // 申请人ID
+  refundAuditedBy  String?  @map("refund_audited_by") // 审核人ID
+  refundRejectReason String? @map("refund_reject_reason") // 拒绝原因
+
+  //：支付方式 (1=余额, 2=Xendit)
+  // 加了问号 ? 表示可选，旧数据的这个字段会自动变成 null
+  paymentMethod Int?     @map("payment_method") @db.SmallInt
+
+  // 第三方流水号 (退款用)
+  transactionId String?  @map("transaction_id") @db.VarChar(100)
 
   groupId     String?  @map("group_id") @db.VarChar(32)
   isGroupOwner Int      @default(0) @map("is_group_owner") @db.SmallInt

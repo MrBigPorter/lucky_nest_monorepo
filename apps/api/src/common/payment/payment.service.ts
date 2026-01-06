@@ -46,10 +46,11 @@ export class PaymentService {
     userEmail?: string, //用户邮箱 (可选，用于发回执)
   ) {
     try {
-      const frontendUrl = this.configService.get<string>(
+      /*const frontendUrl = this.configService.get<string>(
         'FRONTEND_URL',
         'http://localhost:3000',
-      );
+      );*/
+      const frontendUrl = 'luckyapp://';
 
       const response = await this.xenditClient.Invoice.createInvoice({
         data: {
@@ -59,8 +60,8 @@ export class PaymentService {
           invoiceDuration: 86400, // 24 hour,
           currency: 'PHP',
           payerEmail: userEmail,
-          successRedirectUrl: `${frontendUrl}/wallet/recharge/success`,
-          failureRedirectUrl: `${frontendUrl}/wallet/recharge/failure`,
+          successRedirectUrl: `${frontendUrl}wallet/recharge/success`,
+          failureRedirectUrl: `${frontendUrl}wallet/recharge/failure`,
         },
       });
 

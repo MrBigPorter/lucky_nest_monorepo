@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
 import { Prisma } from '@prisma/client';
@@ -16,6 +20,7 @@ import { GroupService } from '@api/common/group/group.service';
 import { ERROR_KEYS } from '@api/common/error-codes.gen';
 import { throwBiz } from '@api/common/exceptions/biz.exception';
 import { OrderItemDto } from '@api/client/orders/dto/order-item.dto';
+import { RefundApplyDto } from '@api/client/orders/dto/refund-apply.dto';
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -293,6 +298,58 @@ export class OrderService {
     }
   }
 
+  /**
+   * 申请退款 - apply for a refund
+   * @param userId
+   * @param dto
+   */
+  async applyRefund(userId: string, dto: RefundApplyDto) {
+    const { orderId, reason } = dto;
+
+    if (!userId) return throwBiz(ERROR_KEYS.UNAUTHORIZED);
+    if (!orderId) return throwBiz(ERROR_KEYS.ORDER_NUMBER_ERROR);
+    const order = await this.prisma.order.findUnique({
+      where: { orderId },
+    });
+    if (!order) {
+      return throwBiz(
+        ERROR_KEYS.ORDER_NUMBER_OR_THIRD_PARTY_ORDER_NUMBER_ERROR,
+      );
+    }
+
+    // only paid orders can be refunded
+    if (order.userId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to refund this order',
+      );
+    }
+
+    // only paid orders can be refunded
+    if (
+      order.payStatus !== PAY_STATUS.PAID ||
+      order.orderStatus !== ORDER_STATUS.PAID
+    ) {
+      throw new BadRequestException('Only paid orders can be refunded');
+    }
+
+    // already refunded
+    if (order.refundStatus !== REFUND_STATUS.NO_REFUND) {
+      throw new BadRequestException(
+        'Refund is already in progress or completed.',
+      );
+    }
+
+    // update order to refunding status
+    return this.prisma.order.update({
+      where: { orderId },
+      data: {
+        refundStatus: REFUND_STATUS.REFUNDING,
+        refundReason: reason,
+        refundAppliedBy: userId, // 申请退款用户
+        refundedAt: null,
+      },
+    });
+  }
   // order list
   async listOrders(
     userId: string,
@@ -361,13 +418,11 @@ export class OrderService {
       }),
     ]);
 
-    const list = rows.map((o) => this.buildOrderView(o));
-
     return {
       page,
       pageSize,
       total,
-      list,
+      list: rows,
     };
   }
 
@@ -379,7 +434,23 @@ export class OrderService {
     // check order
     const row = await this.prisma.order.findFirst({
       where: { orderId, userId },
-      include: {
+      select: {
+        orderId: true,
+        orderNo: true,
+        createdAt: true,
+        updatedAt: true,
+        buyQuantity: true,
+        treasureId: true,
+        unitPrice: true,
+        originalAmount: true,
+        discountAmount: true,
+        couponAmount: true,
+        coinAmount: true,
+        finalAmount: true,
+        orderStatus: true,
+        payStatus: true,
+        refundStatus: true,
+        paidAt: true,
         treasure: {
           select: {
             treasureName: true,
@@ -426,14 +497,9 @@ export class OrderService {
       },
     });
 
-    const base = this.buildOrderView(row);
-
     return {
-      ...base,
-      transactions: transactions.map((t) => ({
-        ...t,
-        createdAt: t.createdAt.getTime(),
-      })),
+      ...row,
+      transactions,
     };
   }
 
@@ -458,6 +524,8 @@ export class OrderService {
           ...base,
           payStatus: PS.PAID,
           orderStatus: OS.PAID,
+          // 保持现状：只有“未退款”的才算纯粹的“已支付”订单
+          // 如果你想让“审核中”的订单依然显示在已支付里，可以把下面这行注释掉，或者改为 { in: [RS.NO_REFUND, RS.REFUND_FAILED] }
           refundStatus: RS.NO_REFUND,
         };
       case 'unpaid':
@@ -467,60 +535,18 @@ export class OrderService {
           orderStatus: OS.PENDING_PAYMENT,
         };
       case 'refunded':
-        return { ...base, refundStatus: RS.REFUNDED };
+        // 只要是 "退款中(1)"、"已退款(2)" 或 "退款失败(3)"，都算作“退款/售后”列表
+        return {
+          ...base,
+          refundStatus: {
+            in: [RS.REFUNDING, RS.REFUNDED, RS.REFUND_FAILED],
+          },
+        };
       case 'cancelled':
         return { ...base, orderStatus: OS.CANCELED };
       case 'all':
       default:
         return base;
     }
-  }
-
-  /**
-   * 构建订单视图 - build order view
-   * @param o 订单对象 - order object
-   * @private
-   */
-  private buildOrderView(o: any): OrderItemDto {
-    return {
-      orderId: o.orderId,
-      orderNo: o.orderNo,
-      createdAt: o.createdAt.getTime(),
-      updatedAt: o.updatedAt.getTime(),
-      paidAt: o.paidAt ? Number(o.paidAt) : null,
-
-      buyQuantity: o.buyQuantity,
-      treasureId: o.treasureId,
-
-      unitPrice: o.unitPrice,
-      originalAmount: o.originalAmount,
-      discountAmount: o.discountAmount,
-      couponAmount: o.couponAmount,
-      coinAmount: o.coinAmount,
-      finalAmount: o.finalAmount,
-
-      orderStatus: o.orderStatus,
-      payStatus: o.payStatus,
-      refundStatus: o.refundStatus,
-
-      treasure: {
-        treasureName: o.treasure.treasureName,
-        treasureCoverImg: o.treasure.treasureCoverImg,
-        productName: o.treasure.productName,
-        virtual: o.treasure.virtual,
-        cashAmount: o.treasure.cashAmount,
-        cashState: o.treasure.cashState,
-        seqBuyQuantity: o.treasure.seqBuyQuantity,
-        seqShelvesQuantity: o.treasure.seqShelvesQuantity,
-      },
-      group: o.group
-        ? {
-            groupId: o.group.groupId,
-            currentMembers: o.group.currentMembers,
-            maxMembers: o.group.maxMembers,
-            groupStatus: o.group.groupStatus,
-          }
-        : null,
-    };
   }
 }

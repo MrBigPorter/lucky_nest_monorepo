@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
   UseInterceptors,
@@ -28,6 +29,9 @@ import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 import { UpdateOrderStatusDto } from '@api/admin/order/dto/update-order-status.dto';
 import 'reflect-metadata';
 import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
+import { CurrentUserId } from '@api/common/decorators/user.decorator';
+import { RefundAuditDto } from '@api/admin/order/dto/refund-audit.dto';
+import { RefundResponseAdminDto } from '@api/admin/order/dto/refund-response.admin.dto';
 
 @ApiTags('Admin Order Management')
 @ApiBearerAuth()
@@ -67,6 +71,7 @@ export class OrderController {
   @ApiOkResponse({ type: OrderResponseDto })
   async findOne(@Param('id') id: string) {
     const order = await this.OrderService.finOne(id);
+    console.log(order);
     return plainToInstance(OrderResponseDto, order);
   }
 
@@ -96,5 +101,40 @@ export class OrderController {
   @RequirePermission(OpModule.ORDER, OpAction.ORDER.DELETE)
   async remove(@Param('id') id: string) {
     return this.OrderService.remove(id);
+  }
+
+  /**
+   * Approve a refund request for an order
+   * @param orderId
+   * @param adminId
+   * @returns Updated order with refund approved
+   */
+  @Post('refund/approve')
+  @RequirePermission(OpModule.ORDER, OpAction.ORDER.UPDATE)
+  @ApiOkResponse({ type: RefundResponseAdminDto })
+  async approveRefund(
+    @Body('orderId') orderId: string,
+    @CurrentUserId() adminId: string,
+  ) {
+    const data = await this.OrderService.approveRefundByAdmin(adminId, orderId);
+    return plainToInstance(RefundResponseAdminDto, data);
+  }
+
+  /**
+   * Reject a refund request for an order
+   * @param dto
+   * @param adminId
+   * @returns Updated order with refund rejected
+   */
+
+  @Post('refund/reject')
+  @RequirePermission(OpModule.ORDER, OpAction.ORDER.UPDATE)
+  @ApiOkResponse({ type: RefundResponseAdminDto })
+  async rejectRefund(
+    @Body() dto: RefundAuditDto,
+    @CurrentUserId() adminId: string,
+  ) {
+    const data = await this.OrderService.rejectRefundByAdmin(adminId, dto);
+    return plainToInstance(RefundResponseAdminDto, data);
   }
 }

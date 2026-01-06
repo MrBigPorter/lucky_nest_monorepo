@@ -42,3 +42,9 @@ export const REFUND_STATUS_LABEL: Record<number, string> = {
   [REFUND_STATUS.REFUNDED]: "Refunded",
   [REFUND_STATUS.REFUND_FAILED]: "Refund failed",
 };
+
+export enum PaymentMethod {
+  BALANCE = 1,
+  XENDIT = 2,
+  // APPLE_PAY = 3...
+}

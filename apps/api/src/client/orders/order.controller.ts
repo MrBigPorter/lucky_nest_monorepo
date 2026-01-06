@@ -16,6 +16,10 @@ import { ListOrdersDto } from '@api/client/orders/dto/list-orders.dto';
 import { OrderDetailDto } from '@api/client/orders/dto/order-detail.dto';
 import { ListOrdersResponseDto } from '@api/client/orders/dto/list-orders-response.dto';
 import { OrderDetailResponseDto } from '@api/client/orders/dto/order-detail-response.dto';
+import { RefundApplyDto } from '@api/client/orders/dto/refund-apply.dto';
+import { RefundResponseClientDto } from '@api/client/orders/dto/refund-response.client.dto';
+import { plainToInstance } from 'class-transformer';
+import { OrderItemDto } from '@api/client/orders/dto/order-item.dto';
 
 @Controller('orders')
 export class OrderController {
@@ -32,7 +36,8 @@ export class OrderController {
     @Body() dto: CheckoutDto,
     @CurrentUserId() userId: string,
   ): Promise<CheckoutResponseDto> {
-    return await this.orders.checkOut(userId, dto);
+    const data = await this.orders.checkOut(userId, dto);
+    return plainToInstance(CheckoutResponseDto, data);
   }
 
   // List orders endpoint
@@ -42,7 +47,11 @@ export class OrderController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: ListOrdersResponseDto })
   async list(@CurrentUserId() userId: string, @Body() body: ListOrdersDto) {
-    return await this.orders.listOrders(userId, body);
+    const data = await this.orders.listOrders(userId, body);
+    return {
+      ...data,
+      list: plainToInstance(OrderItemDto, data.list),
+    };
   }
 
   // order details endpoint
@@ -52,6 +61,21 @@ export class OrderController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: OrderDetailResponseDto })
   async detail(@Body() body: OrderDetailDto, @CurrentUserId() userId: string) {
-    return await this.orders.getOrderDetail(userId, body.orderId);
+    const data = await this.orders.getOrderDetail(userId, body.orderId);
+    return plainToInstance(OrderDetailResponseDto, data);
+  }
+
+  // apply for a refund endpoint
+  @Post('refund/apply')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOkResponse({ type: RefundResponseClientDto })
+  async applyRefund(
+    @Body() dto: RefundApplyDto,
+    @CurrentUserId() userId: string,
+  ) {
+    const data = await this.orders.applyRefund(userId, dto);
+    return plainToInstance(RefundResponseClientDto, data);
   }
 }
