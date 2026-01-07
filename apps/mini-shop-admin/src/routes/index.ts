@@ -38,6 +38,7 @@ import { BannerManagement } from '@/pages/BannerManagement.tsx';
 import { FinancePage } from '@/pages/FinancePage.tsx';
 import { AddressList } from '@/pages/AddressList.tsx';
 import { KycList } from '@/pages/KycList.tsx';
+import { PaymentChannelList } from '@/pages/PaymentChannelList.tsx';
 
 export interface RouteConfig {
   path: string;
@@ -182,6 +183,13 @@ export const routes: RouteConfig[] = [
   },
 
   // System
+  {
+    path: '/payment/channels',
+    name: 'paymentChannels',
+    component: PaymentChannelList,
+    icon: CreditCard,
+    group: 'System',
+  },
   {
     path: '/finance',
     name: 'finance',

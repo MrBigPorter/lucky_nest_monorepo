@@ -36,13 +36,23 @@ export class PaymentChannelService {
    * @param page
    * @param pageSize
    * @param type
+   * @param status
    */
-  async findAll(page: number, pageSize: number, type?: number) {
+  async findAll(
+    page: number,
+    pageSize: number,
+    type?: number,
+    status?: number,
+  ) {
     const skip = (page - 1) * pageSize;
     const whereConditions: Prisma.PaymentChannelWhereInput = {};
 
     if (type !== undefined) {
       whereConditions.type = type;
+    }
+
+    if (status !== undefined) {
+      whereConditions.status = status;
     }
 
     const [total, list] = await this.prismaService.$transaction([

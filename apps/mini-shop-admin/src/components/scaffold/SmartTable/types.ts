@@ -11,9 +11,21 @@ export type ValueType =
   | 'option'
   | 'index';
 
+// 修复点 2：更新 valueEnumType 定义
+// 使用索引签名 [key: string | number]，同时支持数字和字符串 Key
 export type valueEnumType = {
-  [key: string]: { text: string; status?: string; color?: string };
+  [key: string | number]: ValueEnumItem;
 };
+
+// 修复点 1：定义统一的枚举项类型
+// 既可以是简单的 ReactNode (字符串/组件)，也可以是配置对象
+export type ValueEnumItem =
+  | ReactNode
+  | {
+      text: string;
+      status?: string;
+      color?: string;
+    };
 
 // 2. ActionRef 定义
 export type ActionType = {
@@ -25,6 +37,7 @@ export type ActionType = {
 export type RequestData<T> = (params: {
   pageSize: number;
   page: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }) => Promise<{
   data: T[];
@@ -33,6 +46,7 @@ export type RequestData<T> = (params: {
 }>;
 
 // 4. 列定义 (增加了 copyable 和 formItemProps)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ProColumns<T = any> = {
   title: string;
   dataIndex?: keyof T | string;
@@ -43,10 +57,7 @@ export type ProColumns<T = any> = {
   copyable?: boolean;
 
   // 枚举映射
-  valueEnum?: Record<
-    string | number,
-    { text: string; status?: string; color?: string }
-  >;
+  valueEnum?: valueEnumType;
 
   // 搜索配置
   search?:
@@ -55,8 +66,9 @@ export type ProColumns<T = any> = {
         order?: number;
         title?: string;
         valueType?: ValueType;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         transform?: (value: any) => any;
-        // ✨ 新增：透传给 FormItem 的属性 (如 placeholder)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         formItemProps?: Record<string, any>;
       };
 

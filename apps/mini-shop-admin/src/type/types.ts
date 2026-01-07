@@ -181,6 +181,52 @@ export interface actSectionBindProducts {
   treasureIds: string[];
 }
 
+// 基础实体
+export interface PaymentChannel {
+  id: number;
+
+  // 核心配置
+  code: string; // "PH_GCASH", "PH_PAYMAYA"
+  name: string; // "GCash"
+  icon: string; // URL
+  type: number; // 1=充值(Money In), 2=提现(Money Out)
+
+  // 金额限制
+  minAmount: number;
+  maxAmount: number;
+
+  // 充值专用：快捷金额卡片 (后端 JSON -> 前端 number[])
+  fixedAmounts?: number[];
+
+  // 提现专用：手续费
+  feeFixed: number; // 固定手续费
+  feeRate: number; // 费率 (0.02)
+
+  // 控制开关
+  isCustom: boolean; // 是否允许自定义输入
+  sortOrder: number; // 排序
+  status: number; // 1=启用 0=禁用 2=维护
+
+  createdAt: number; // 时间戳
+}
+
+// 创建/更新参数
+// Omit 掉系统自动生成的字段
+export type CreatePaymentChannelPayload = Omit<
+  PaymentChannel,
+  'id' | 'createdAt'
+> & {
+  // 覆盖一下可选属性，表单提交时可能某些字段是可选的
+  fixedAmounts?: number[];
+};
+
+// 列表查询参数
+export interface PaymentChannelListParams extends PaginationParams {
+  name?: string;
+  type?: number; // 筛选充值或提现
+  status?: number; // 筛选状态
+}
+
 // Banner 广告位
 export interface Banner {
   /** 唯一 ID */

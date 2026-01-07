@@ -12,7 +12,7 @@ import {
   IsIn,
   IsNotEmpty,
 } from 'class-validator';
-import { ToInt, ToNumber } from '@api/common/dto/transforms';
+import { ToInt, ToNumber, ToTrimmedString } from '@api/common/dto/transforms';
 
 export class CreateChannelDto {
   @ApiProperty({ description: '渠道编码 (Xendit Code)', example: 'PH_GCASH' })
@@ -26,7 +26,8 @@ export class CreateChannelDto {
   name!: string;
 
   @ApiProperty({ description: '图标URL', example: 'https://cdn.com/gcash.png' })
-  @IsNotEmpty()
+  @IsOptional()
+  @ToTrimmedString()
   @IsUrl()
   icon!: string;
 
@@ -88,4 +89,9 @@ export class CreateChannelDto {
   @IsInt()
   @IsIn([0, 1, 2]) // 0-禁用 1-启用 2-维护
   status!: number;
+
+  @ApiProperty({ description: '是否允许自定义金额', example: true })
+  @IsNotEmpty()
+  @IsBoolean()
+  isCustom!: boolean;
 }

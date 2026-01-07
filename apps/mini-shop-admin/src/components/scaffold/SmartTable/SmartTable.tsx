@@ -28,13 +28,8 @@ import { FormSchema } from '@/type/search.ts';
 interface SmartTableProps<T extends Record<string, any>> {
   rowKey: keyof T;
   headerTitle?: React.ReactNode;
-
-  // 表格列定义 (主要负责展示)
   columns: ProColumns<T>[];
-
-  // 独立的搜索表单配置 (如果有它，就不从 columns 生成搜索项)
   searchSchema?: FormSchema[];
-
   request?: RequestData<T>;
   dataSource?: T[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,14 +41,14 @@ interface SmartTableProps<T extends Record<string, any>> {
 }
 
 // ------------------------------------
-// 渲染单元格内容
+// 1. 修复：渲染单元格内容
 // ------------------------------------
 const renderSmartCell = (
   text: string | number | null | undefined,
   type?: ValueType,
   valueEnum?: valueEnumType,
 ) => {
-  console.log('Rendering cell:', { text, type });
+  // console.log('Rendering cell:', { text, type });
   if (text === null || text === undefined || text === '') return '-';
 
   switch (type) {
@@ -72,10 +67,26 @@ const renderSmartCell = (
         </span>
       );
     case 'select':
-      if (valueEnum && valueEnum[text]) {
-        const { text: label, status, color } = valueEnum[text];
-        const badgeColor = color || status || 'default';
-        return <Badge color={badgeColor as BadgeColor}>{label}</Badge>;
+      if (valueEnum) {
+        // 强制转换为合法的 key 类型
+        const item = valueEnum[text as string | number];
+        if (item) {
+          // 🛠️ 修复点：判断 item 是对象配置还是直接的 ReactNode
+          if (
+            typeof item === 'object' &&
+            item !== null &&
+            'text' in item &&
+            !React.isValidElement(item)
+          ) {
+            // 是配置对象 { text: '...', status: '...' }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { text: label, status, color } = item as any;
+            const badgeColor = color || status || 'default';
+            return <Badge color={badgeColor as BadgeColor}>{label}</Badge>;
+          }
+          // 是 ReactNode (例如 JSX 或 字符串)
+          return item as React.ReactNode;
+        }
       }
       return text;
     default:
@@ -84,10 +95,10 @@ const renderSmartCell = (
 };
 
 // ------------------------------------
-// Columns -> Search Schema (默认生成逻辑)
+// 2. 修复：Columns -> Search Schema
 // ------------------------------------
 const transformColumnsToSchema = (columns: ProColumns[]): FormSchema[] => {
-  console.log('Transforming columns to search schema...', columns);
+  // console.log('Transforming columns to search schema...', columns);
   return columns
     .filter(
       (col) =>
@@ -103,10 +114,18 @@ const transformColumnsToSchema = (columns: ProColumns[]): FormSchema[] => {
 
       if (valueType === 'select' && col.valueEnum) {
         type = 'select';
-        options = Object.entries(col.valueEnum).map(([k, v]) => ({
-          label: (v as typeof v).text,
-          value: k,
-        }));
+        options = Object.entries(col.valueEnum).map(([k, v]) => {
+          // 🛠️ 修复点：兼容 ReactNode 类型的值
+          let label = v;
+          if (typeof v === 'object' && v !== null && 'text' in v) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            label = (v as any).text;
+          }
+          return {
+            label: label,
+            value: k,
+          };
+        });
         options.unshift({ label: 'All', value: 'ALL' });
       } else if (valueType === 'date' || valueType === 'dateTime') {
         type = 'date';
@@ -136,7 +155,7 @@ const transformColumnsToSchema = (columns: ProColumns[]): FormSchema[] => {
 };
 
 // ------------------------------------
-// 内部组件
+// 内部组件 (逻辑保持不变)
 // ------------------------------------
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SmartTableInner = <T extends Record<string, any>>(
@@ -197,8 +216,6 @@ const SmartTableInner = <T extends Record<string, any>>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const transformedParams: Record<string, any> = { ...searchParams };
 
-        // 只有在没有使用独立 searchSchema 时，才尝试从 columns 里自动转换参数
-        // 如果使用了 explicitSearchSchema，建议在 request 函数里手动处理转换
         if (!explicitSearchSchema) {
           columns.forEach((col) => {
             const searchConfig =
@@ -270,7 +287,6 @@ const SmartTableInner = <T extends Record<string, any>>(
     [fetchData, pagination, formParams],
   );
 
-  //  核心逻辑：优先使用传入的 searchSchema，否则从 columns 生成
   const finalSearchSchema = useMemo(
     () => explicitSearchSchema || transformColumnsToSchema(columns),
     [columns, explicitSearchSchema],
@@ -311,7 +327,6 @@ const SmartTableInner = <T extends Record<string, any>>(
       return { ...p, page: 1 };
     });
 
-    // 简单的清理逻辑
     for (const key in values) {
       if (
         values[key] === '' ||

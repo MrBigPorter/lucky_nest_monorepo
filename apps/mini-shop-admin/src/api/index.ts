@@ -50,6 +50,9 @@ import {
   ClientUserDetail,
   BanDeviceParams,
   UpdateUserStatusParams,
+  PaymentChannelListParams,
+  PaymentChannel,
+  CreatePaymentChannelPayload,
 } from '@/type/types.ts';
 
 /**
@@ -289,6 +292,35 @@ export const actSectionApi = {
   /* updateSortOrder: (data: UpdateSortOrderDto) => {
     return request.post('/admin/act-section/sort-order', data);
   },*/
+};
+
+/**
+ * 支付渠道管理列表页 API
+ */
+export const paymentChannelApi = {
+  // 获取列表
+  getList: (params: PaymentChannelListParams) => {
+    console.log('Fetching act section list with params:', params);
+    return http.get<PaginatedResponse<PaymentChannel>>(
+      '/v1/admin/payment/channels/list',
+      params,
+    );
+  },
+
+  // 创建
+  create: (data: CreatePaymentChannelPayload) => {
+    return http.post('/v1/admin/payment/channels/create', data);
+  },
+
+  // 更新
+  update: (id: number, data: Partial<CreatePaymentChannelPayload>) => {
+    return http.patch(`/v1/admin/payment/channels/${id}`, data);
+  },
+
+  // 删除
+  delete: (id: number, status: number) => {
+    return http.delete(`/v1/admin/payment/channels/${id}/${status}`);
+  },
 };
 
 /**
