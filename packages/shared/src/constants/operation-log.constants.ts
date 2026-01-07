@@ -73,6 +73,9 @@ export const OpAction = {
     WITHDRAW_AUDIT: "audit_withdraw", // 提现审核
     RECHARGE_AUDIT: "audit_recharge", // 充值审核/补单
     EXPORT: "export_finance", // 导出报表
+    CREATE_PAYMENT_CHANNEL: "create_payment_channel", // 创建支付渠道
+    CHANNEL_VIEW: "view_payment_channel", // 查看渠道列表
+    CHANNEL_UPDATE: "update_payment_channel", // 修改渠道(开关/限额/费率)
   },
 
   // ---  营销模块 ---

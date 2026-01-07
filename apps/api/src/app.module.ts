@@ -15,6 +15,7 @@ import { UploadModule } from '@api/common/upload/upload.module';
 import { PaymentModule } from '@api/common/payment/payment.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisLockModule } from '@api/common/redis/redis-lock.module';
+import { PaymentChannelModule } from '@api/common/payment-channel/payment-channel.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -81,6 +82,7 @@ import { RedisLockModule } from '@api/common/redis/redis-lock.module';
     ClientModule,
     AdminModule,
     PaymentModule,
+    PaymentChannelModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],
