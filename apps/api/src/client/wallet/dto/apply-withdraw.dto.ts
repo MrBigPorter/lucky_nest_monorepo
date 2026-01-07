@@ -17,16 +17,6 @@ export class ApplyWithdrawDto {
   @Min(100, { message: 'Minimum withdrawal amount is 100' })
   amount!: number;
 
-  @ApiProperty({
-    description: 'Withdrawal method:1-GCash 2-PayMaya 3-Bank',
-    example: 'bank_transfer',
-  })
-  @IsNotEmpty()
-  @ToNumber()
-  @IsNumber()
-  @IsIn([1, 2, 3])
-  withdrawMethod!: number;
-
   @ApiProperty({ description: 'Withdrawal account', example: '1234567890' })
   @IsNotEmpty()
   @IsString()
@@ -38,6 +28,12 @@ export class ApplyWithdrawDto {
   @IsString()
   @MaxLength(100)
   accountName!: string;
+
+  @ApiProperty({ description: 'Payment channel ID', example: 2 })
+  @IsNotEmpty()
+  @ToNumber()
+  @IsNumber()
+  channelId!: number;
 
   @ApiProperty({
     description: 'Bank name (required if method is Bank)',

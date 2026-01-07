@@ -78,4 +78,18 @@ export class WithdrawalItemResponseDto {
   @Expose()
   @MaskString('bankcard')
   withdrawAccount!: string;
+
+  @ApiPropertyOptional({
+    example: 'GCash',
+    description: 'Channel Name (was bankName)',
+  })
+  @Expose()
+  channelName?: string; // 对应 Service 里的 formattedList 映射
+
+  @ApiPropertyOptional({
+    example: 'PH_GCASH',
+    description: 'Channel Code for Icon',
+  })
+  @Expose()
+  channelCode?: string; // 对应数据库 channelCode
 }
