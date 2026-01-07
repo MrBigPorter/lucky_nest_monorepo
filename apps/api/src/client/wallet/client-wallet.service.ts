@@ -20,6 +20,7 @@ import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-his
 import { PaymentService } from '@api/common/payment/payment.service';
 import { TRANSACTION_STATUS } from '@lucky/shared/dist/types/wallet';
 import { GetRechargeHistoryDto } from '@api/client/wallet/dto/recharge.dto';
+import { PaymentChannelService } from '@api/common/payment-channel/payment-channel.service';
 
 @Injectable()
 export class ClientWalletService {
@@ -317,6 +318,27 @@ export class ClientWalletService {
   async createRecharge(userId: string, dto: CreateRechargeDto) {
     const amount = new Prisma.Decimal(dto.amount);
 
+    //  1. 核心逻辑：先校验渠道是否存在、是否可用
+    const channel = await this.prismaService.paymentChannel.findUnique({
+      where: { id: dto.channelId, status: 1 },
+    });
+    if (!channel) {
+      throw new NotFoundException('Payment channel not found or inactive');
+    }
+
+    //检验充值金额是否在允许范围内
+    if (channel.minAmount && amount.lessThan(channel.minAmount)) {
+      throw new NotFoundException(
+        `Recharge amount is below the minimum of ${channel.minAmount}`,
+      );
+    }
+
+    if (channel.maxAmount && amount.greaterThan(channel.maxAmount)) {
+      throw new NotFoundException(
+        `Recharge amount exceeds the maximum of ${channel.maxAmount}`,
+      );
+    }
+
     // Generate a unique recharge order number
     const rechargeNo = OrderNoHelper.generate(BizPrefix.DEPOSIT);
 
@@ -328,7 +350,14 @@ export class ClientWalletService {
         rechargeAmount: amount,
         actualAmount: amount,
         rechargeStatus: RECHARGE_STATUS.PENDING,
-        paymentMethod: 1, // EWallet online
+        //  2. 记录渠道信息
+        // RechargeOrder 表里最好加一个 channelId 字段来关联
+        // 如果没有，暂时可以用 paymentMethod 存 channel.type
+        // 建议：在 rechargeOrder 表加 channelId Int
+        paymentMethod: channel.type, // EWallet online
+        channelCode: channel.code,
+        channelId: channel.id,
+        paymentChannel: channel.name,
       },
     });
 
@@ -337,7 +366,7 @@ export class ClientWalletService {
       let paymentUrl = await this.paymentService.createRechargeLink(
         order.rechargeNo,
         amount.toNumber(),
-        // user.email,
+        channel.code,
       );
       // return { payUrl: order.payUrl, orderId: order.rechargeId };
       return {
@@ -345,6 +374,7 @@ export class ClientWalletService {
         rechargeAmount: order.rechargeAmount.toString(),
         payUrl: paymentUrl,
         rechargeStatus: order.rechargeStatus,
+        channelId: channel.id,
       };
     } catch (e) {
       // In case of failure, we might want to handle it (e.g., log, cleanup)
@@ -383,14 +413,14 @@ export class ClientWalletService {
           paymentMethod: true,
           createdAt: true,
           paidAt: true,
+          channelCode: true,
+          paymentChannel: true,
         },
       }),
       this.prismaService.rechargeOrder.count({
         where: whereConditions,
       }),
     ]);
-
-    console.log('Recharge history list:', list);
 
     return {
       total,

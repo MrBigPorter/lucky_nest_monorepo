@@ -10,18 +10,8 @@ export class CreateRechargeDto {
   amount!: number;
 
   @ApiProperty({ description: 'Payment channel code', example: 'PAYPAL' })
-  @IsOptional()
+  @IsNotEmpty()
   @IsNumber()
   @ToNumber()
-  channelCode?: number;
-
-  @ApiProperty({
-    description: 'Payment method: 1-EWallet 2-BankTransfer 3-QRCode',
-    example: 1,
-  })
-  @IsOptional()
-  @IsNumber()
-  @ToNumber()
-  @IsIn([1, 2, 3])
-  paymentMethod?: number;
+  channelId!: number;
 }

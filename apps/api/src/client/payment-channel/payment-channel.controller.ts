@@ -18,7 +18,7 @@ export class PaymentClientController {
    * Get payment configuration for recharge or withdraw
    */
   @Get('recharge')
-  @ApiOkResponse({ type: PaymentConfigItemDto })
+  @ApiOkResponse({ type: [PaymentConfigItemDto] })
   async getRechargeConfig() {
     const data = await this.paymentService.getClientConfig(1); // 1 = Recharge
     return plainToInstance(PaymentConfigItemDto, data);

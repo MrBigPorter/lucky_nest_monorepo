@@ -47,6 +47,16 @@ export class RechargeHistoryItemDto {
   })
   paymentMethod!: number;
 
+  @ApiProperty({ description: '渠道名称', example: 'GCash', required: false })
+  paymentChannel?: string;
+
+  @ApiProperty({
+    description: '渠道编码',
+    example: 'PH_GCASH',
+    required: false,
+  })
+  channelCode?: string;
+
   @ApiProperty({ description: '创建时间 (毫秒时间戳)', example: 1704067200000 })
   @DateToTimestamp()
   createdAt!: number;

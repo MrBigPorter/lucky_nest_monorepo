@@ -123,7 +123,7 @@ export class PaymentChannelService {
    * @param type
    */
   async getClientConfig(type: number) {
-    const channels = await this.prismaService.paymentChannel.findMany({
+    return this.prismaService.paymentChannel.findMany({
       where: { type, status: 1 },
       orderBy: {
         createdAt: 'desc',
