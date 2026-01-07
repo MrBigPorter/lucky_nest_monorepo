@@ -50,6 +50,7 @@ export class PaymentChannelController {
    * @param page
    * @param limit
    * @param type
+   * @param status
    */
   @Get('list')
   @RequirePermission(OpModule.FINANCE, OpAction.FINANCE.CHANNEL_VIEW)
@@ -63,8 +64,9 @@ export class PaymentChannelController {
     @Query('page', new ParseIntPipe({ optional: true })) page = 1,
     @Query('pageSize', new ParseIntPipe({ optional: true })) limit = 20,
     @Query('type', new ParseIntPipe({ optional: true })) type?: number,
+    @Query('status', new ParseIntPipe({ optional: true })) status?: number,
   ) {
-    const data = await this.paymentService.findAll(page, limit, type);
+    const data = await this.paymentService.findAll(page, limit, type, status);
     return {
       ...data,
       list: plainToInstance(PaymentChannelDto, data.list),
