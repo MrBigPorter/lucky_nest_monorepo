@@ -12,6 +12,7 @@ import { KycModule } from '@api/admin/kyc/kyc.module';
 import { AddressModule } from '@api/admin/address/address.module';
 import { AdminRegionModule } from '@api/admin/region/admin-region.module';
 import { ClientUserModule } from '@api/admin/client-user/client-user.module';
+import { AdminPaymentChannelModule } from '@api/admin/payment-channel/payment-channel.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ClientUserModule } from '@api/admin/client-user/client-user.module';
     AddressModule,
     AdminRegionModule,
     ClientUserModule,
+    AdminPaymentChannelModule,
   ],
   providers: [],
   controllers: [],

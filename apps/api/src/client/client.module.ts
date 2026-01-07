@@ -13,6 +13,7 @@ import { HealthController } from '@api/client/health/health.controller';
 import { KycModule } from '@api/client/kyc/kyc.module';
 import { AddressModule } from '@api/client/address/address.module';
 import { ClientRegionModule } from '@api/client/region/client-region.module';
+import { PaymentChannelClientModule } from '@api/client/payment-channel/payment-channel.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ClientRegionModule } from '@api/client/region/client-region.module';
     KycModule,
     AddressModule,
     ClientRegionModule,
+    PaymentChannelClientModule,
   ],
   providers: [],
   controllers: [HealthController],

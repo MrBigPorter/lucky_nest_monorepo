@@ -937,6 +937,9 @@ model RechargeOrder {
   paymentChannel String?  @map("payment_channel") @db.VarChar(50)
   paymentId      String?  @map("payment_id") @db.VarChar(32)
 
+  //  支付链接 (方便用户在历史记录里重新打开支付)
+  payUrl         String?  @map("pay_url") @db.Text
+
   // 状态: 1-待支付 2-支付中 3-充值成功 4-充值失败 5-已取消
   rechargeStatus Int      @default(1) @map("recharge_status") @db.SmallInt
 
@@ -947,6 +950,15 @@ model RechargeOrder {
   // 数据
   thirdPartyOrderNo String? @map("third_party_order_no") @db.VarChar(100)
   callbackData      Json?   @map("callback_data")
+
+  //channelCode，方便直接关联到 PaymentChannel
+  channelCode    String?  @map("channel_code") @db.VarChar(50) // 存 "PH_GCASH"
+
+  //  支付链接过期时间 (Xendit Invoice 有效期)
+  expiresAt      DateTime? @map("expires_at")
+
+  // 手续费 (记录这笔订单平台扣了多少钱，或者用户付了多少手续费)
+  feeAmount      Decimal  @default(0) @map("fee_amount") @db.Decimal(10, 2)
 
   paidAt        DateTime? @map("paid_at")
   completedAt   DateTime? @map("completed_at")
@@ -959,6 +971,57 @@ model RechargeOrder {
   @@index([rechargeNo])
   @@index([rechargeStatus])
   @@map("recharge_orders")
+}
+
+/// 支付渠道配置表 (控制收银台显示)
+model PaymentChannel {
+  id          Int      @id @default(autoincrement())
+
+  /// 渠道编码: "PH_GCASH", "PH_PAYMAYA", "PH_BDO" (对应 Xendit)
+  code        String   @unique @db.VarChar(50)
+
+  /// 显示名称: "GCash", "PayMaya"
+  name        String   @db.VarChar(100)
+
+  /// 图标 URL
+  icon        String?  @db.VarChar(255)
+
+  /// 渠道类型: 1-充值(Money In) 2-提现(Money Out)
+  type        Int      @default(1) @db.SmallInt
+
+  /// 货币单位
+  currency    String   @default("PHP") @db.VarChar(10)
+
+  /// 最小金额限制
+  minAmount   Decimal  @default(0) @map("min_amount") @db.Decimal(10, 2)
+
+  /// 最大金额限制
+  maxAmount   Decimal  @default(50000) @map("max_amount") @db.Decimal(10, 2)
+
+  /// 固定金额选项 (JSON数组)
+  /// 存: [100, 200, 500, 1000] 或者带 Bonus: [{"val":100, "bonus":"+2%"}]
+  fixedAmounts Json?   @map("fixed_amounts")
+
+  /// 是否允许自定义输入金额
+  isCustom    Boolean  @default(true) @map("is_custom")
+
+  /// 费率 (百分比，例如 0.02 代表 2%) - 用于后台计算成本
+  feeRate     Decimal  @default(0) @map("fee_rate") @db.Decimal(5, 4)
+
+  /// 固定手续费 (例如每笔 10 PHP)
+  feeFixed    Decimal  @default(0) @map("fee_fixed") @db.Decimal(10, 2)
+
+  /// 排序 (越小越靠前)
+  sortOrder   Int      @default(0) @map("sort_order")
+
+  /// 状态: 1-启用 0-禁用 2-维护中
+  status      Int      @default(1) @db.SmallInt
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("payment_channels")
 }
 
 /// 22. 提现订单表
@@ -984,6 +1047,10 @@ model WithdrawOrder {
   auditResult     String? @map("audit_result") @db.VarChar(500)
   rejectReason    String? @map("reject_reason") @db.VarChar(500)
   auditorId       String? @map("auditor_id") @db.VarChar(32)
+
+  //  渠道编码: "PH_GCASH", "PH_BPI", "PH_BDO"
+  // 必须存这个，不然调用 createDisbursement 时不知道传给 Xendit 哪个银行
+  channelCode    String?  @map("channel_code") @db.VarChar(50)
 
   thirdPartyOrderNo String? @map("third_party_order_no") @db.VarChar(100)
   transferVoucher   String? @map("transfer_voucher") @db.VarChar(255)
