@@ -381,25 +381,41 @@ export interface WithdrawOrder {
   withdrawNo: string;
   userId: string;
 
+  // 金额相关
   withdrawAmount: string; // 申请金额
   feeAmount: string; // 手续费
-  actualAmount: string; // 实际到账
+  actualAmount: string; // 实际打款
 
   withdrawStatus: WithdrawStatus;
 
-  withdrawMethod: number; // 提现方式枚举
-  withdrawAccount: string; // 账号
-  accountName?: string; // 户名
-  bankName?: string; // 银行名
+  // 渠道相关 (后端映射过的字段)
+  withdrawMethod: number;
+  bankName?: string;
+  channelCode?: string;
 
-  auditResult?: string; // 审核意见
-  rejectReason?: string; // 拒绝原因
+  // 账户信息
+  withdrawAccount: string;
+  accountName: string; // 户名
 
-  createdAt: string | number; // 申请时间
-  completedAt?: string | number;
-  appliedAt?: string | number;
+  // 审核相关
+  auditResult?: string;
+  rejectReason?: string;
+  auditorId?: string;
 
-  user?: Pick<User, 'nickname' | 'avatar' | 'phone'>;
+  // 三方信息
+  thirdPartyOrderNo?: string;
+
+  // 时间
+  createdAt: number;
+  appliedAt: number;
+  completedAt?: number;
+
+  // 用户信息
+  user?: {
+    nickname: string;
+    phone: string;
+    avatar?: string;
+  };
 }
 
 export interface WithdrawSearchForm {
@@ -407,6 +423,7 @@ export interface WithdrawSearchForm {
   status: string;
   startDate: string;
   endDate: string;
+  dateRange?: dateRange;
 }
 
 export interface WithdrawListParams

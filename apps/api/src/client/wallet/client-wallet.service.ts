@@ -274,29 +274,74 @@ export class ClientWalletService {
    * @param dto
    */
   async applyWithdraw(userId: string, dto: ApplyWithdrawDto) {
-    const { amount: amountNum, account, accountName, withdrawMethod } = dto;
+    const { amount: amountNum, account, accountName } = dto;
 
-    const amount = new Prisma.Decimal(amountNum);
+    // check channel existence
+    const channel = await this.prismaService.paymentChannel.findUnique({
+      where: { id: dto.channelId, status: 1 },
+    });
+
+    if (!channel) {
+      throw new NotFoundException('Payment channel not found or inactive');
+    }
+
+    //检验提现金额是否在允许范围内
+    if (channel.minAmount && amountNum < channel.minAmount.toNumber()) {
+      throw new NotFoundException(
+        `Withdrawal amount is below the minimum of ${channel.minAmount}`,
+      );
+    }
+
+    if (channel.maxAmount && amountNum > channel.maxAmount.toNumber()) {
+      throw new NotFoundException(
+        `Withdrawal amount exceeds the maximum of ${channel.maxAmount}`,
+      );
+    }
+
+    const withdrawAmount = new Prisma.Decimal(amountNum);
+
+    // 4. 核心修改：计算手续费
+    // 逻辑：提现金额 100，手续费 5块，实际到账 95块。冻结用户 100块。
+    const feeRate = channel.feeRate || new Prisma.Decimal(0);
+    const feeFixed = channel.feeFixed || new Prisma.Decimal(0);
+
+    // Fee = (Amount * Rate) + Fixed
+    const calcFee = withdrawAmount.mul(feeRate).add(feeFixed);
+
+    // Actual = Amount - Fee
+    // 兜底逻辑：如果算出来实际到账小于0，这笔单不能提
+    const actualAmount = withdrawAmount.sub(calcFee);
+
+    if (actualAmount.lessThanOrEqualTo(0)) {
+      throw new InternalServerErrorException(
+        'Calculated actual amount is zero or negative due to fees',
+      );
+    }
 
     return this.prismaService.$transaction(async (ctx) => {
       const order = await ctx.withdrawOrder.create({
         data: {
           withdrawNo: OrderNoHelper.generate(BizPrefix.WITHDRAW),
           userId,
-          withdrawAmount: amount,
-          actualAmount: amount,
-          feeAmount: new Prisma.Decimal(0),
+          withdrawAmount: withdrawAmount,
+          actualAmount: actualAmount,
+          feeAmount: calcFee,
           withdrawStatus: WITHDRAW_STATUS.PENDING_AUDIT,
           accountName,
-          withdrawMethod,
           withdrawAccount: account,
+          channelCode: channel.code, // 'PH_GCASH'
+          // 1. 复用 withdrawMethod 存类型 (假设 channel.type 也是 Int)
+          withdrawMethod: channel.type,
+          // 2. 复用 bankName 存 "GCash" / "BDO" 这种名字
+          // 这样前端历史记录直接读 bankName 显示即可
+          bankName: channel.name,
         },
       });
 
       await this.walletService.freezeCash(
         {
           userId,
-          amount,
+          amount: withdrawAmount,
           related: {
             id: order.withdrawId,
             type: RelatedType.WITHDRAWAL,
@@ -453,16 +498,17 @@ export class ClientWalletService {
         orderBy: { createdAt: 'desc' },
         select: {
           withdrawNo: true,
-          withdrawAmount: true,
-          actualAmount: true,
+          withdrawAmount: true, // 申请金额
+          actualAmount: true, // 实际到账
+          feeAmount: true, // 手续费
           withdrawStatus: true,
           accountName: true,
-          withdrawMethod: true,
           withdrawAccount: true,
           createdAt: true,
           completedAt: true,
-          auditedAt: true,
           rejectReason: true,
+          bankName: true,
+          channelCode: true,
         },
       }),
       this.prismaService.withdrawOrder.count({
@@ -470,11 +516,16 @@ export class ClientWalletService {
       }),
     ]);
 
+    const formattedList = list.map((item) => ({
+      ...item,
+      channelName: item.bankName, // 把存进去的 "GCash" 拿出来
+    }));
+
     return {
       total,
       page,
       pageSize,
-      list,
+      list: formattedList,
     };
   }
 }
