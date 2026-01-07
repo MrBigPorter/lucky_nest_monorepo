@@ -936,6 +936,8 @@ model RechargeOrder {
   paymentMethod  Int      @map("payment_method") @db.SmallInt // 1-GCash 2-PayMaya...
   paymentChannel String?  @map("payment_channel") @db.VarChar(50)
   paymentId      String?  @map("payment_id") @db.VarChar(32)
+  // 渠道 ID (对应 PaymentChannel.id, 如 1)
+  channelId      Int?     @map("channel_id")
 
   //  支付链接 (方便用户在历史记录里重新打开支付)
   payUrl         String?  @map("pay_url") @db.Text

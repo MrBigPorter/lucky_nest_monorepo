@@ -7,6 +7,7 @@ import { Xendit } from 'xendit-node';
 import { ConfigService } from '@nestjs/config';
 import { RelatedType } from '@lucky/shared';
 import { GetPayouts200ResponseDataInner } from 'xendit-node/payout/models/GetPayouts200ResponseDataInner';
+import { CreateInvoiceRequest } from 'xendit-node/invoice/models';
 
 @Injectable()
 export class PaymentService {
@@ -38,11 +39,13 @@ export class PaymentService {
   /** Create a recharge payment link using Xendit Invoice
    * @param orderNo
    * @param amount
+   * @param channelCode
    * @param userEmail
    */
   async createRechargeLink(
     orderNo: string, //业务订单号
     amount: number, //金额 (数字类型)
+    channelCode?: string, //支付渠道代码 (可选，用于指定支付方式)
     userEmail?: string, //用户邮箱 (可选，用于发回执)
   ) {
     try {
@@ -52,17 +55,25 @@ export class PaymentService {
       );*/
       const frontendUrl = 'luckyapp://';
 
+      // 构造基础 Payload
+      const invoiceData: CreateInvoiceRequest = {
+        externalId: orderNo,
+        amount: amount,
+        description: `${RelatedType.RECHARGE} - ${orderNo}`,
+        invoiceDuration: 86400, // 24 hour,
+        currency: 'PHP',
+        payerEmail: userEmail,
+        successRedirectUrl: `${frontendUrl}wallet/recharge/success`,
+        failureRedirectUrl: `${frontendUrl}wallet/recharge/failure`,
+      };
+
+      if (channelCode) {
+        let method = channelCode.replace('PH_', '');
+        invoiceData.paymentMethods = [method];
+      }
+
       const response = await this.xenditClient.Invoice.createInvoice({
-        data: {
-          externalId: orderNo,
-          amount: amount,
-          description: `${RelatedType.RECHARGE} - ${orderNo}`,
-          invoiceDuration: 86400, // 24 hour,
-          currency: 'PHP',
-          payerEmail: userEmail,
-          successRedirectUrl: `${frontendUrl}wallet/recharge/success`,
-          failureRedirectUrl: `${frontendUrl}wallet/recharge/failure`,
-        },
+        data: invoiceData,
       });
 
       this.logger.log(`[Xendit] Invoice created: ${response.invoiceUrl}`);
@@ -189,11 +200,14 @@ export class PaymentService {
    */
   private handleXenditError(error: any, context: string) {
     this.logger.error(`[Xendit Error - ${context}] ${error.message}`);
-    if (error.response?.data) {
+    if (error.response) {
       console.error(
-        'Xendit Raw Error Details:',
-        JSON.stringify(error.response.data, null, 2),
+        'Xendit Response Body:',
+        JSON.stringify(error.response, null, 2),
       );
+    }
+    if (error.issues) {
+      console.error('Xendit Issues:', JSON.stringify(error.issues, null, 2));
     }
     throw new InternalServerErrorException(`Payment Gateway Error: ${context}`);
   }
