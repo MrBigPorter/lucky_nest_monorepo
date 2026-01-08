@@ -454,12 +454,21 @@ model TreasureGroup {
   maxMembers        Int     @default(9999) @map("max_members")
   ///当前成员数
   currentMembers    Int     @default(1) @map("current_members")
+  ///  乐观锁版本号 (并发控制核心)
+  /// 每次有人加入时，update ... set version = version + 1 where version = oldVersion
+  version           Int     @default(0) @map("version")
   ///组内中奖次数
   luckyWinnersCount Int     @default(0) @map("lucky_winners_count")
   ///总中奖次数
   totalWinningTimes Int     @default(0) @map("total_winning_times")
-  ///状态: 1-进行中 2-已结束
+  /// 状态更清晰的定义
+  /// 1-进行中(拼团中)
+  /// 2-拼团成功(待发货/待开奖)
+  /// 3-拼团失败(已过期/库存不足)
   groupStatus       Int     @default(1) @map("group_status") @db.SmallInt /// 1=进行中 2=已结束
+
+  ///  是否由系统/机器人自动补齐 (用于分析运营质量)
+  isSystemFilled    Boolean @default(false) @map("is_system_filled")
 
   // ---  机器人计数 ---
   robotCount     Int      @default(0) @map("robot_count")
@@ -467,6 +476,8 @@ model TreasureGroup {
   // 确保 status 字段存在，如果以前有 groupStatus，建议统一用一个，或者做映射
   status         Int      @default(0) @map("status") @db.SmallInt
 
+  /// 结束时间 (成团时间 或 失败时间)
+  endedAt        DateTime? @map("ended_at")
   expireAt       DateTime @default(now()) @map("expire_at")
   successAt      DateTime? @map("success_at")
   drawnAt        DateTime? @map("drawn_at")
@@ -479,6 +490,7 @@ model TreasureGroup {
   @@index([treasureId], map: "idx_treasure")
   @@index([creatorId], map: "idx_creator")
   @@index([groupStatus], map: "idx_status")
+  @@index([expireAt], map: "idx_expire_at") //方便 Cron Job 快速查找过期团
   @@map("treasure_groups")
 }
 
@@ -495,6 +507,8 @@ model TreasureGroupMember {
 
   ///是否团长: 0-否 1-是
   isOwner     Int       @default(0) @map("is_owner") @db.SmallInt
+  /// 成员类型: 0-真实用户 1-机器人
+  memberType  Int       @default(0) @map("member_type") @db.SmallInt
   ///分享获得金额
   shareCoin   Decimal   @default(0) @map("share_coin") @db.Decimal(18, 2)
   ///分享获得金额
