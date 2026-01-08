@@ -21,44 +21,6 @@ import { GroupMembersResponseDto } from '@api/common/group/dto/group-members-res
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 
-  // 开团：leaderUserId 不信前端，强制用登录用户
-  @UseGuards(JwtAuthGuard)
-  @Post('create')
-  async create(@Body() dto: GroupCreateDto, @CurrentUserId() userId: string) {
-    return await this.groupService.createGroup({
-      ...dto,
-      leaderUserId: userId,
-    });
-  }
-
-  //加入团：groupId 走URL，userId 不信前端，强制用登录用户
-  @UseGuards(JwtAuthGuard)
-  @Post(':groupId/join')
-  async join(
-    @Param('groupId') groupId: string,
-    @Body() body: GroupCreateDto,
-    @CurrentUserId() userId: string,
-  ) {
-    return await this.groupService.joinGroup({
-      groupId,
-      userId,
-      orderId: body.orderId,
-    });
-  }
-
-  // 退团：groupId 走 URL，userId 用登录用户
-  @UseGuards(JwtAuthGuard)
-  @Post(':groupId/leave')
-  async leave(
-    @Param('groupId') groupId: string,
-    @CurrentUserId() userId: string,
-  ) {
-    return await this.groupService.leaveGroup({
-      groupId,
-      userId,
-    });
-  }
-
   @Get('list')
   @ApiOkResponse({ type: GroupListForTreasureResponseDto })
   async list(@Query() query: GroupListForTreasureDto) {

@@ -1,19 +1,23 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '@api/common/prisma/prisma.service';
-import { GROUP_STATUS, IS_OWNER } from '@lucky/shared/dist/types/treasure';
 import { Prisma } from '@prisma/client';
 import { GroupListForTreasureDto } from '@api/common/group/dto/group-list-for-treasure.dto';
-import { PAY_STATUS } from '@lucky/shared/src/types/order';
-import { REFUND_STATUS } from '@lucky/shared/dist/types/order';
 import { WalletService } from '@api/client/wallet/wallet.service';
-import { ORDER_STATUS } from '@lucky/shared';
+import {
+  ORDER_STATUS,
+  PAY_STATUS,
+  GROUP_STATUS,
+  IS_OWNER,
+  REFUND_STATUS,
+} from '@lucky/shared';
+import { DistributedLock } from '@api/common/decorators/distributed-lock.decorator';
+import { RedisLockService } from '@api/common/redis/redis-lock.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -24,6 +28,7 @@ export class GroupService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    public readonly lockService: RedisLockService,
   ) {}
 
   private orm(tx?: Tx) {
@@ -54,10 +59,6 @@ export class GroupService {
     const db = this.orm(tx);
 
     const { userId, treasureId, groupId, orderId } = params;
-    let finalGroupId: string | null = null;
-    let isOwner: number = IS_OWNER.NO;
-    let alreadyInGroup = false;
-
     // 场景 A: 加入现有的团 (拼团)
     if (groupId) {
       // 1. 先查团的信息
@@ -305,7 +306,9 @@ export class GroupService {
   /**
    *  定时任务：每分钟执行一次
    * 扫描过期团，触发自动退款
+   * throwOnFail = false，抢不到锁就跳过，不报错
    */
+  @DistributedLock('group:expired:handler', 3000, false)
   @Cron(CronExpression.EVERY_MINUTE)
   async handleExpiredGroups() {
     // 1. 找出所有过期且未处理的团
