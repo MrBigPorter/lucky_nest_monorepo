@@ -41,11 +41,14 @@ export const LOTTERY_DELAY_STATE = {
 /**
  * TreasureGroupStatus
  * 1: ACTIVE
- * 2: INACTIVE
+ * 2: SUCCESS
+ * 3: FAILED
+ *
  */
 export const GROUP_STATUS = {
   ACTIVE: 1,
-  INACTIVE: 2,
+  SUCCESS: 2,
+  FAILED: 3,
 } as const;
 
 /**
