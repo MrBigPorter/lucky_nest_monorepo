@@ -1,9 +1,14 @@
 /**
- * 分布式锁装饰器 (Proxy模式)
- * @param keyPattern 锁Key模板，支持 {0.prop} 语法。例: 'withdraw:{0.withdrawId}'
- * @param ttl 锁超时时间，默认 10秒
+ * 分布式锁装饰器
+ * @param keyPattern 锁 Key 模板
+ * @param ttl 超时时间
+ * @param throwOnFail 抢不到锁是否报错？Cron 填 false，API 填 true (默认)
  */
-export function DistributedLock(keyPattern: string, ttl: number = 10000) {
+export function DistributedLock(
+  keyPattern: string,
+  ttl: number = 10000,
+  throwOnFail: boolean = true,
+) {
   return function (
     target: any,
     propertyKey: string,
@@ -11,39 +16,37 @@ export function DistributedLock(keyPattern: string, ttl: number = 10000) {
   ) {
     const originalMethod = descriptor.value;
 
-    // 显式声明 this 的类型，并捕获 args
     descriptor.value = async function (this: any, ...args: any[]) {
+      // 关键点：装饰器默认去找名为 'lockService' 的属性
       const lockService = this.lockService;
 
       if (!lockService) {
         throw new Error(
-          `Class ${target.constructor.name} is missing 'public readonly lockService' property for @DistributedLock`,
+          `Class ${target.constructor.name} missing 'lockService'`,
         );
       }
 
-      // 解析 Key
+      // 解析 Key (保持之前的逻辑)
       const finalKey = keyPattern.replace(
         /{(\d+)(\.[\w\.]+)?}/g,
         (match, indexStr, path) => {
           const index = parseInt(indexStr);
-          const arg = args[index]; // 这里引用的 args 是上面传入的 ...args
-
-          if (arg === undefined || arg === null) {
-            return 'undefined';
-          }
-
+          const arg = args[index];
+          if (arg === undefined || arg === null) return 'undefined';
           if (!path) return String(arg);
-
-          const propName = path.substring(1);
-          return String(arg[propName]);
+          return String(arg[path.substring(1)]);
         },
       );
 
-      // 执行锁逻辑
-      // 使用箭头函数以保留外部的 this 上下文
-      return await lockService.runWithLock(finalKey, ttl, async () => {
-        return originalMethod.apply(this, args);
-      });
+      //  传入 throwOnFail 参数
+      return await lockService.runWithLock(
+        finalKey,
+        ttl,
+        async () => {
+          return originalMethod.apply(this, args);
+        },
+        throwOnFail,
+      );
     };
 
     return descriptor;

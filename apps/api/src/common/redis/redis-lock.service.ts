@@ -59,34 +59,42 @@ export class RedisLockService implements OnModuleInit, OnModuleDestroy {
    * @param key 锁的 Key
    * @param ttl 锁的超时时间（毫秒）
    * @param callback 要执行的异步回调函数
+   * @param throwOnFail 获取锁失败时是否抛出异常 (默认 true)。Cron 任务建议传 false。
    */
   async runWithLock<T>(
     key: string,
     ttl: number,
     callback: () => Promise<T>,
-  ): Promise<T> {
+    throwOnFail = true,
+  ): Promise<T | undefined> {
+    // 返回值可能为 undefined
     if (!this.client?.isOpen) {
       throw new Error('Redis Lock Client is not connected');
     }
 
     const lockValue = crypto.randomUUID();
 
-    // 1. 加锁 (SET NX PX)
+    // 1. 加锁
     const result = await this.client.set(key, lockValue, {
       NX: true,
       PX: ttl,
     });
 
+    // 2. 抢锁失败的处理逻辑
     if (result !== 'OK') {
-      throw new Error(`Lock busy: ${key}`);
+      if (throwOnFail) {
+        throw new Error(`Lock busy: ${key}`); // API 场景：报错
+      } else {
+        return undefined; // Cron 场景：静默跳过
+      }
     }
 
     try {
-      // 2. 执行业务逻辑
+      // 3. 执行业务
       return await callback();
     } finally {
+      // 4. 解锁
       try {
-        // 3. 解锁 (Lua 脚本)
         await this.client.eval(UNLOCK_SCRIPT, {
           keys: [key],
           arguments: [lockValue],
