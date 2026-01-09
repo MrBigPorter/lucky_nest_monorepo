@@ -35,6 +35,8 @@ const TREASURE_SELECT = `
 
   t.cost_amount,
   t.unit_amount,
+  t.market_amount, 
+  t.solo_amount,
   t.max_unit_coins,
   t.max_unit_amount,
   t.charity_amount,
@@ -54,16 +56,13 @@ const TREASURE_SELECT = `
   t."desc",
   t.state,
 
-  -- ✨ [新增] 物流与拼团相关字段
   t.shipping_type,
   t.weight,
   t.group_size,
   t.group_time_limit,
 
-  -- [新增] 赠品配置 (通常存为 JSONB)
   t.bonus_config,
-
-  -- [新增] 销售/预售时间
+  t.group_size, 
   t.sales_start_at,
   t.sales_end_at,
 

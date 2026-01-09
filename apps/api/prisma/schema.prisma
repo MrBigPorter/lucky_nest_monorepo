@@ -304,6 +304,16 @@ model Treasure {
   ///现金奖励金额
   cashAmount Decimal? @map("cash_amount") @db.Decimal(10, 2)
 
+  marketAmount Decimal? @map("market_amount") @db.Decimal(10, 2) // 划线价 (展示用)
+  soloAmount   Decimal? @map("solo_amount") @db.Decimal(10, 2)   // 单买价 (不拼团的价格)
+  enableRobot  Boolean  @default(false) @map("enable_robot")     // 机器人开关
+
+  /// 机器人介入延迟 (秒): 开团多久后未满则机器人介入
+  robotDelay     Int      @default(300) @map("robot_delay")
+  // --- 3. 激励配置 (Incentives) ---
+  // 虽然有 bonusConfig，但提取关键字段有助于筛选
+  /// 团长奖励类型: 0-无 1-现金 2-金币 3-免单
+  leaderBonusType Int     @default(0) @map("leader_bonus_type") @db.SmallInt
   ///总库存/总份数
   seqShelvesQuantity Int?     @map("seq_shelves_quantity")
   ///已购买数量

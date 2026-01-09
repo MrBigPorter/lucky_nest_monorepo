@@ -102,6 +102,8 @@ export class TreasureService {
           productName: true,
           treasureCoverImg: true,
           unitAmount: true,
+          marketAmount: true, // 划线价
+          soloAmount: true, // 单买价
           seqShelvesQuantity: true,
           seqBuyQuantity: true,
           lotteryMode: true,
@@ -164,6 +166,10 @@ export class TreasureService {
         productName: true,
         treasureCoverImg: true,
         unitAmount: true,
+        marketAmount: true, // 划线价
+        soloAmount: true, // 单买价
+        enableRobot: true, // 机器人开关 (前端可能不需要，但查出来备用无妨)
+        leaderBonusType: true, // 团长奖励类型 (前端可用于展示 "团长免单" 标签)
         seqShelvesQuantity: true,
         seqBuyQuantity: true,
         lotteryMode: true,
@@ -224,6 +230,7 @@ export class TreasureService {
         seqShelvesQuantity: true, // 总库存
         seqBuyQuantity: true, // 已买数量 (用于计算剩余库存)
         unitAmount: true, // 价格 (防止价格变动)
+        soloAmount: true,
         salesEndAt: true, // 检查是否过期
         groupSize: true, // 拼团人数状态
       },
@@ -241,6 +248,7 @@ export class TreasureService {
       stock: Math.max(1, stockLeft), // 剩余库存
       price: result.unitAmount,
       isSoldOut: isSoldOut, // 直接告诉前端是否卖完
+      soloPrice: result.soloAmount, // 返回单买价，前端可以再次校验
       state: result.state, // 1=上架, 0=下架
       isExpired: result.salesEndAt && new Date() > result.salesEndAt,
     };

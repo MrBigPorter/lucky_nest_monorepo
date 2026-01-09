@@ -11,6 +11,7 @@ import {
   Gift,
   Clock,
   Calendar,
+  Bot,
 } from 'lucide-react';
 import {
   SmartTable,
@@ -40,7 +41,7 @@ import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 import { FormSchema } from '@/type/search.ts';
 
 // -----------------------------------------------------------------------------
-// 辅助函数 (保持不变)
+// 辅助函数
 // -----------------------------------------------------------------------------
 const getOperationStatus = (product: Product) => {
   if (product.state !== TREASURE_STATE.ACTIVE) {
@@ -113,9 +114,6 @@ export const ProductManagement: React.FC = () => {
   // 1. 数据请求
   const { data: categories = [] } = useRequest(categoryApi.getCategories);
 
-  //  关键修复 1: 解构 useRequest 返回值
-  // 不要直接把 deleteProduct 这种对象放入 useEffect/useCallback 依赖
-  // 只取 runAsync (它是稳定的函数引用)
   const { runAsync: deleteProductRun } = useRequest(productApi.deleteProduct, {
     manual: true,
   });
@@ -156,7 +154,6 @@ export const ProductManagement: React.FC = () => {
     [categories],
   );
 
-  //  关键修复 2: 依赖项改为 deleteProductRun
   const handleDelete = useCallback(
     (record: Product) => {
       ModalManager.open({
@@ -172,7 +169,6 @@ export const ProductManagement: React.FC = () => {
     [deleteProductRun, addToast],
   );
 
-  //  关键修复 3: 依赖项改为 updateStateRun
   const handleToggleState = useCallback(
     (record: Product) => {
       const isOnline = record.state === TREASURE_STATE.ACTIVE;
@@ -197,8 +193,7 @@ export const ProductManagement: React.FC = () => {
     [updateStateRun, addToast],
   );
 
-  // 3. Columns 定义
-  // 由于上面的 handler 稳定了，columns 也稳定了，不会触发 SmartTable 无限重置
+  // 3. Columns 定义 (已更新价格结构和机器人图标)
   const columns: ProColumns<Product>[] = useMemo(
     () => [
       {
@@ -250,6 +245,16 @@ export const ProductManagement: React.FC = () => {
                       {row.groupSize}P Group
                     </Badge>
                   )}
+                  {/*  机器人状态标签 */}
+                  {row.enableRobot && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1 py-0 h-auto border-cyan-200 text-cyan-700 bg-cyan-50 gap-1"
+                      title="Robot Auto-fill Enabled"
+                    >
+                      <Bot size={10} /> Auto
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -287,17 +292,46 @@ export const ProductManagement: React.FC = () => {
         },
       },
       {
-        title: 'Price',
+        title: 'Price Structure', // 更新了列标题
         dataIndex: 'unitAmount',
-        width: 110,
+        width: 150, // 更新了宽度
         render: (val, row) => (
-          <div className="flex flex-col">
-            <span className="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100">
-              ₱{val}
-            </span>
-            <span className="text-[10px] text-gray-400 font-mono">
-              Cost: ₱{row.costAmount}
-            </span>
+          <div className="flex flex-col gap-0.5">
+            {/* 1. 核心拼团价 */}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-gray-500 uppercase">Group</span>
+              <span className="font-mono text-sm font-bold text-red-600">
+                ₱{val}
+              </span>
+            </div>
+
+            {/* 2. 单独购买价 (如果有) */}
+            {row.soloAmount && (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-gray-400">Solo</span>
+                <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
+                  ₱{row.soloAmount}
+                </span>
+              </div>
+            )}
+
+            {/* 3. 市场划线价 (如果有) */}
+            {row.marketAmount && (
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-gray-400">MSRP</span>
+                <span className="font-mono text-[10px] text-gray-400 line-through">
+                  ₱{row.marketAmount}
+                </span>
+              </div>
+            )}
+
+            {/* 4. 成本价 (虚线分隔) */}
+            <div className="mt-1 pt-1 border-t border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-between opacity-50 hover:opacity-100 transition-opacity">
+              <span className="text-[10px] text-gray-400">Cost</span>
+              <span className="text-[10px] font-mono text-gray-400">
+                ₱{row.costAmount}
+              </span>
+            </div>
           </div>
         ),
       },
@@ -374,7 +408,6 @@ export const ProductManagement: React.FC = () => {
   );
 
   // 4. 配置搜索表单
-  // categories 改变时才会更新 schema，这是正常的
   const searchSchema: FormSchema[] = useMemo(
     () => [
       {
@@ -438,8 +471,6 @@ export const ProductManagement: React.FC = () => {
     }
   }, []);
 
-  // 关键修复 4: 稳定工具栏渲染函数
-  // 使用 useCallback 避免每次渲染都生成新的函数，导致 Table 认为 toolbar 配置变了
   const toolBarRender = useCallback(
     () => [
       <Button

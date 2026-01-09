@@ -83,6 +83,13 @@ export interface Product {
   costAmount: number;
   unitAmount: number;
 
+  marketAmount?: number; // 划线价/原价
+  soloAmount?: number; // 单买价
+
+  enableRobot?: boolean;
+  robotDelay?: number;
+  leaderBonusType?: number;
+
   // 库存相关
   seqShelvesQuantity: number;
   seqBuyQuantity: number;
@@ -134,6 +141,11 @@ export interface CreateProduct {
   // --- [新增] 必须加这些，否则前端表单的数据传不过去 ---
   shippingType?: number;
   weight?: number;
+  marketAmount?: number;
+  soloAmount?: number;
+  enableRobot?: boolean;
+  robotDelay?: number;
+  leaderBonusType?: number;
 
   groupSize?: number;
   groupTimeLimit?: number;
