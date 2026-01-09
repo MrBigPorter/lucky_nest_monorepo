@@ -37,6 +37,17 @@ export class TreasureService {
           costAmount: rest.costAmount,
           unitAmount: rest.unitAmount,
 
+          //  价格配置
+          marketAmount: rest.marketAmount, // 划线价
+          soloAmount: rest.soloAmount, // 单买价
+
+          //  自动化配置
+          enableRobot: rest.enableRobot ?? false, // 默认关
+          robotDelay: rest.robotDelay ?? 300, // 默认300秒
+
+          // 团长奖励
+          leaderBonusType: rest.leaderBonusType ?? 0,
+
           // 2. 库存处理 (DTO的 stockQuantity -> DB的 seqShelvesQuantity)
           // 如果前端没传 stockQuantity，尝试取旧字段，或者默认为 0
           seqShelvesQuantity: rest.seqShelvesQuantity ?? 0,
@@ -256,6 +267,23 @@ export class TreasureService {
         // [类型修复] 只有当 bonusConfig 存在时才更新，并强转 any
         ...(rest.bonusConfig && {
           bonusConfig: rest.bonusConfig as any,
+        }),
+
+        //  价格更新
+        ...(rest.marketAmount !== undefined && {
+          marketAmount: rest.marketAmount,
+        }),
+        ...(rest.soloAmount !== undefined && { soloAmount: rest.soloAmount }),
+
+        // 自动化配置更新
+        ...(rest.enableRobot !== undefined && {
+          enableRobot: rest.enableRobot,
+        }),
+        ...(rest.robotDelay !== undefined && { robotDelay: rest.robotDelay }),
+
+        // 团长奖励更新
+        ...(rest.leaderBonusType !== undefined && {
+          leaderBonusType: rest.leaderBonusType,
         }),
 
         // --- 分类关联更新 ---

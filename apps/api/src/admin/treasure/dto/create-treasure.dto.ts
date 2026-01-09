@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
+  IsBoolean,
   IsDate,
   IsEnum,
   IsInt,
@@ -83,6 +84,30 @@ export class CreateTreasureDto {
   @IsNumber()
   @Min(0.01)
   unitAmount!: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  marketAmount?: number; // 划线价
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  soloAmount?: number; // 单买价
+
+  @IsOptional()
+  @IsBoolean()
+  enableRobot?: boolean; // 机器人开关
+
+  @IsOptional()
+  @ToNumber()
+  @IsNumber()
+  robotDelay?: number;
+
+  @IsOptional()
+  @ToNumber()
+  @IsNumber()
+  leaderBonusType?: number;
 
   @ApiProperty({
     description: 'Initial stock quantity when listed',
