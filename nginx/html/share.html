@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Lucky App</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 85vh; margin: 0; background: #fafafa; }
+        .logo { width: 80px; height: 80px; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .loading-text { font-size: 16px; color: #666; margin-bottom: 30px; font-weight: 400; }
+        .open-btn { display: block; width: 220px; height: 50px; line-height: 50px; background: #FF5722; color: white; text-align: center; border-radius: 25px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 10px rgba(255,87,34,0.3); transition: transform 0.1s; }
+        .open-btn:active { transform: scale(0.96); }
+    </style>
+</head>
+<body>
+<div class="logo" style="background: #FF5722; display: flex; align-items: center; justify-content: center;">
+    <span style="color: white; font-size: 40px; font-weight: bold;">L</span>
+</div>
+
+<div class="loading-text">Redirecting to Lucky App...</div>
+
+<a href="javascript:void(0);" id="jumpBtn" class="open-btn">Open in App</a>
+
+<script>
+    function getAppScheme() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pid = urlParams.get('pid');
+        const gid = urlParams.get('gid');
+
+        if (!pid) return null;
+
+        // Matches your Xcode configuration: luckyapp://product/[ID]
+        let scheme = `luckyapp://product/${pid}`;
+        if (gid) {
+            scheme += `?groupId=${gid}`;
+        }
+        return scheme;
+    }
+
+    const scheme = getAppScheme();
+
+    function doJump() {
+        if (scheme) {
+            window.location.href = scheme;
+        } else {
+            alert("Invalid sharing link.");
+        }
+    }
+
+    // Auto-jump attempt
+    window.onload = function() {
+        if (scheme) {
+            setTimeout(doJump, 800);
+        }
+    };
+
+    // Guaranteed trigger via user interaction
+    document.getElementById('jumpBtn').onclick = doJump;
+</script>
+</body>
+</html>

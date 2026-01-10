@@ -698,6 +698,30 @@ export interface KycRecord {
   updatedAt?: string | number;
 }
 
+// ==========================================
+// 1. 新增：管理员手动创建 KYC 的参数
+// ==========================================
+export interface AdminCreateKycParams {
+  userId: string; // 必填
+  realName: string; // 必填
+  idNumber: string; // 必填
+  idType?: number; // 选填 (默认1)
+  idCardFront?: string; // 选填 (图片URL)
+  idCardBack?: string; // 选填
+  faceImage?: string; // 选填
+  remark?: string; // 选填 (备注)
+}
+
+// ==========================================
+// 2. 新增：管理员修改 KYC 的参数 (部分更新)
+// ==========================================
+// 使用 Partial 让所有字段变可选，但排除 remark 单独定义
+export interface AdminUpdateKycParams extends Partial<
+  Omit<AdminCreateKycParams, 'userId'>
+> {
+  remark?: string; // 修改原因
+}
+
 export interface KycRecordListParams {
   page?: number;
   pageSize?: number;

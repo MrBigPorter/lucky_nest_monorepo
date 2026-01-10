@@ -14,6 +14,10 @@ import {
 } from '@lucky/shared';
 import { AuditKycDto } from '@api/admin/kyc/dto/audit-kyc.dto';
 import { UploadService } from '@api/common/upload/upload.service';
+import {
+  AdminCreateKycDto,
+  AdminUpdateKycDto,
+} from '@api/admin/kyc/dto/admin-create-kyc.dto';
 
 @Injectable()
 export class KycService {
@@ -266,5 +270,269 @@ export class KycService {
       throw new BadRequestException('KYC record not found');
     }
     return record;
+  }
+
+  /**
+   * Admin manually create KYC record (Directly Approved)
+   * @param dto
+   * @param adminId
+   * @param ip
+   */
+  async createKycByAdmin(dto: AdminCreateKycDto, adminId: string, ip: string) {
+    return this.prismaService.$transaction(async (ctx) => {
+      // 1. Check Admin
+      const admin = await ctx.adminUser.findUnique({
+        where: { id: adminId },
+      });
+      if (!admin) {
+        throw new BadRequestException('Admin user not found');
+      }
+
+      // 2. Check User
+      const user = await ctx.user.findUnique({
+        where: { id: dto.userId },
+      });
+      if (!user) {
+        throw new BadRequestException('Target user not found');
+      }
+
+      // 3. Check if already verified (Optional safety check)
+      if (user.kycStatus === KYC_STATUS.APPROVED) {
+        throw new BadRequestException('User is already KYC verified');
+      }
+
+      // 4. Create KYC Record (Status = APPROVED)
+      const newRecord = await ctx.kycRecord.create({
+        data: {
+          userId: dto.userId,
+          realName: dto.realName,
+          idNumber: dto.idNumber,
+          idType: dto.idType || 1, // Default ID Card
+
+          // Handle images: Admin might not upload images for manual entry
+          // Use a placeholder or empty string if allowed by DB
+          idCardFront: dto.idCardFront || '',
+          idCardBack: dto.idCardBack || '',
+          faceImage: dto.faceImage || '',
+
+          // Directly Approve
+          kycStatus: KYC_STATUS.APPROVED,
+
+          // Audit Info
+          auditorId: adminId,
+          auditResult: dto.remark || 'Manually created by Admin',
+          auditedAt: new Date(),
+        },
+      });
+
+      // 5. Update User Status
+      await ctx.user.update({
+        where: { id: dto.userId },
+        data: {
+          kycStatus: KYC_STATUS.APPROVED,
+        },
+      });
+
+      // 6. Log Operation
+      await ctx.adminOperationLog.create({
+        data: {
+          adminId,
+          adminName: admin.username,
+          module: OpModule.USER,
+          action: OpAction.USER.KYC_AUDIT, // Or define a specific KYC_CREATE action
+          details: JSON.stringify({
+            userId: dto.userId,
+            action: 'MANUAL_CREATE',
+            kycRecordId: newRecord.id,
+            remark: dto.remark,
+          }),
+          requestIp: ip,
+          createdAt: new Date(),
+        },
+      });
+
+      return newRecord;
+    });
+  }
+  /**
+   * Admin update KYC info
+   * @param userId
+   * @param dto
+   * @param adminId
+   * @param ip
+   */
+  async updateKycInfo(
+    userId: string,
+    dto: AdminUpdateKycDto,
+    adminId: string,
+    ip: string,
+  ) {
+    return this.prismaService.$transaction(async (ctx) => {
+      //check if record exists\
+      const record = await ctx.kycRecord.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!record) {
+        throw new BadRequestException('KYC record not found');
+      }
+      const admin = await ctx.adminUser.findUnique({
+        where: { id: adminId },
+      });
+      if (!admin) {
+        throw new BadRequestException('Admin user not found');
+      }
+      // update kyc record
+      const updatedRecord = await ctx.kycRecord.update({
+        where: { id: record.id },
+        data: {
+          ...dto,
+          auditedAt: new Date(),
+          auditorId: adminId,
+          auditResult: dto.remark || `Info updated by admin: ${admin.username}`,
+        },
+      });
+
+      // log admin action
+      await ctx.adminOperationLog.create({
+        data: {
+          adminId,
+          adminName: admin.username,
+          module: OpModule.USER,
+          action: OpAction.USER.KYC_AUDIT,
+          details: JSON.stringify({
+            kycId: record.id,
+            userId: record.userId,
+            updates: dto,
+          }),
+          requestIp: ip,
+          createdAt: new Date(),
+        },
+      });
+
+      return updatedRecord;
+    });
+  }
+
+  /**
+   * Admin revoke KYC approval
+   * @param userId
+   * @param reason
+   * @param adminId
+   * @param ip
+   */
+  async revokeKyc(userId: string, reason: string, adminId: string, ip: string) {
+    return this.prismaService.$transaction(async (ctx) => {
+      //check if record exists\
+      const record = await ctx.kycRecord.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!record) {
+        throw new BadRequestException('KYC record not found');
+      }
+      // update kyc record
+      const updatedRecord = await ctx.kycRecord.update({
+        where: { id: record.id },
+        data: {
+          kycStatus: KYC_STATUS.REJECTED,
+          auditedAt: new Date(),
+          auditorId: adminId,
+          auditResult: reason,
+          rejectReason: reason,
+        },
+      });
+
+      // update user's kyc status
+      await ctx.user.update({
+        where: { id: record.userId },
+        data: {
+          kycStatus: KYC_STATUS.REJECTED,
+        },
+      });
+
+      // log admin action
+      const admin = await ctx.adminUser.findUnique({
+        where: { id: adminId },
+      });
+      if (!admin) {
+        throw new BadRequestException('Admin user not found');
+      }
+      await ctx.adminOperationLog.create({
+        data: {
+          adminId,
+          adminName: admin.username,
+          module: OpModule.USER,
+          action: OpAction.USER.KYC_AUDIT,
+          details: JSON.stringify({
+            kycId: record.id,
+            action: OP_ACTION.REJECT,
+            userId: record.userId,
+            from: record.kycStatus,
+            to: KYC_STATUS.REJECTED,
+            remark: reason,
+          }),
+          requestIp: ip,
+          createdAt: new Date(),
+        },
+      });
+
+      return updatedRecord;
+    });
+  }
+
+  /**
+   * Admin delete KYC record
+   * @param userId
+   * @param adminId
+   * @param ip
+   */
+  async deleteKyc(userId: string, adminId: string, ip: string) {
+    return this.prismaService.$transaction(async (ctx) => {
+      //check if record exists\
+      const record = await ctx.kycRecord.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!record) {
+        throw new BadRequestException('KYC record not found');
+      }
+
+      // delete kyc record
+      await ctx.kycRecord.delete({
+        where: { id: record.id },
+      });
+
+      // update user's kyc status
+      await ctx.user.update({
+        where: { id: record.userId },
+        data: {
+          kycStatus: KYC_STATUS.DRAFT,
+        },
+      });
+
+      // log admin action
+      const admin = await ctx.adminUser.findUnique({
+        where: { id: adminId },
+      });
+      if (!admin) {
+        throw new BadRequestException('Admin user not found');
+      }
+      await ctx.adminOperationLog.create({
+        data: {
+          adminId,
+          adminName: admin.username,
+          module: OpModule.USER,
+          action: OpAction.USER.KYC_AUDIT,
+          details: JSON.stringify({
+            kycId: record.id,
+            action: 'DELETE',
+            userId: record.userId,
+          }),
+          requestIp: ip,
+          createdAt: new Date(),
+        },
+      });
+    });
   }
 }

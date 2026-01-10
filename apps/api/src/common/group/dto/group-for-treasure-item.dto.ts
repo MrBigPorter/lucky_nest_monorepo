@@ -1,5 +1,6 @@
 import { GroupUserDto } from './group-user.dto';
 import { ApiProperty } from '@nestjs/swagger';
+import { DateToTimestamp } from '@api/common/dto/transforms';
 
 class MemberPreview {
   @ApiProperty({ description: 'isOwner', example: 1, type: Number })
@@ -9,6 +10,7 @@ class MemberPreview {
     example: 1704067200000,
     type: Number,
   })
+  @DateToTimestamp()
   joinedAt!: number;
   @ApiProperty({ description: 'user', type: GroupUserDto })
   user!: GroupUserDto;
@@ -31,6 +33,7 @@ export class GroupForTreasureItemDto {
     example: 1704067200000,
     type: Number,
   })
+  @DateToTimestamp()
   updatedAt!: number; // 用于排序 / 展示
 
   @ApiProperty({ description: 'creator', type: GroupUserDto })

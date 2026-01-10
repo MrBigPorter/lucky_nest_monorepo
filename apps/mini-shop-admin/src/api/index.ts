@@ -53,6 +53,8 @@ import {
   PaymentChannelListParams,
   PaymentChannel,
   CreatePaymentChannelPayload,
+  AdminCreateKycParams,
+  AdminUpdateKycParams,
 } from '@/type/types.ts';
 
 /**
@@ -185,7 +187,7 @@ export const orderApi = {
 
   // 更新订单状态
   updateState: (id: string, state: number) =>
-    http.patch<Order>(`/v1/admin/order/${id}/status`, { state }),
+    http.patch<Order>(`/v1/admin/order/${id}/status`, state),
 
   // 删除order
   delete: (id: string) => http.delete<Order>(`/v1/admin/order/${id}`),
@@ -457,6 +459,8 @@ export const regionApi = {
  * kyc API
  */
 export const kycApi = {
+  // ==================== 原有接口 ====================
+
   // 获取 KYC 列表
   getRecords: (params: KycRecordListParams) => {
     return http.get('/v1/admin/kyc/records', params);
@@ -467,9 +471,46 @@ export const kycApi = {
     return http.get(`/v1/admin/kyc/records/${id}`);
   },
 
-  // 审核
+  // 审核 (Pass / Reject)
+  // 注意：这里 id 通常是 kycId
   audit: (id: string, data: AuditKycParams) => {
     return http.post(`/v1/admin/kyc/${id}/audit`, data);
+  },
+
+  // ==================== 新增接口 ====================
+
+  /**
+   * [增] 管理员手动创建 (直接通过)
+   * 场景：线下审核、人工录入
+   */
+  create: (data: AdminCreateKycParams) => {
+    return http.post('/v1/admin/kyc/create', data);
+  },
+
+  /**
+   * [改] 修正 KYC 信息
+   * @param userId 注意这里传的是 userId
+   * @param data 修改的数据
+   */
+  updateInfo: (userId: string, data: AdminUpdateKycParams) => {
+    return http.put(`/v1/admin/kyc/update/${userId}`, data);
+  },
+
+  /**
+   * [撤] 撤销/作废认证 (变回 Rejected)
+   * @param userId 目标用户ID
+   * @param reason 撤销原因
+   */
+  revoke: (userId: string, reason: string) => {
+    return http.post(`/v1/admin/kyc/revoke/${userId}`, { reason });
+  },
+
+  /**
+   * [删] 物理删除记录 (重置为 Not Verified)
+   * @param userId 目标用户ID
+   */
+  delete: (userId: string) => {
+    return http.delete(`/v1/admin/kyc/delete/${userId}`);
   },
 };
 

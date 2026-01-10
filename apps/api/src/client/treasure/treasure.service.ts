@@ -247,10 +247,82 @@ export class TreasureService {
       id: result.treasureId,
       stock: Math.max(1, stockLeft), // 剩余库存
       price: result.unitAmount,
+      seqBuyQuantity: result.seqBuyQuantity, // 返回最新的已买数量
       isSoldOut: isSoldOut, // 直接告诉前端是否卖完
       soloPrice: result.soloAmount, // 返回单买价，前端可以再次校验
       state: result.state, // 1=上架, 0=下架
       isExpired: result.salesEndAt && new Date() > result.salesEndAt,
     };
+  }
+
+  /**
+   *  获取热门拼团列表 (独立接口专用)
+   * 逻辑：正在热卖 + 还没卖完 + 进度最快(或者剩余库存最少)
+   * 缓存：建议在 Controller 层做 5秒 短缓存
+   */
+  /**
+   * 获取热门拼团列表 (独立接口专用)
+   * 逻辑：正在热卖 + 还没卖完 + 进度最快(或者剩余库存最少)
+   * 缓存：建议在 Controller 层做 5秒 短缓存
+   */
+  async getHotGroups(limit = 10) {
+    // 使用 SQL Raw 查询以获得最佳性能和复杂的排序逻辑
+    const items = await this.prisma.$queryRawUnsafe<any[]>(
+      `
+      SELECT 
+        t.treasure_id,
+        t.treasure_name,
+        t.product_name,
+        t.treasure_cover_img,
+        t.unit_amount,         -- 价格
+        t.market_amount,       -- 原价
+        t.seq_shelves_quantity,-- 总库存
+        t.seq_buy_quantity,    -- 已买
+        
+        -- 计算进度 (0-100)
+        ROUND((t.seq_buy_quantity::numeric / NULLIF(t.seq_shelves_quantity, 0)::numeric) * 100, 2) as progress_percent,
+
+        -- 拿最近参与的3个用户头像 (如果有 user_treasure_participations 表关联的话，没有的话前端用假数据)
+        -- 这里假设不需要关联，只查商品表
+        
+        t.group_size,
+        t.sales_end_at
+      FROM treasures t
+      WHERE 
+        t.state = 1 -- 上架中
+        -- 必须是正在开售的 (排除预售)
+        AND (t.sales_start_at IS NULL OR t.sales_start_at <= NOW()) 
+        -- 必须是没过期的
+        AND (t.sales_end_at IS NULL OR t.sales_end_at > NOW())
+        -- 必须是还有库存的 (没卖完)
+        AND (t.seq_shelves_quantity - t.seq_buy_quantity) > 0
+      ORDER BY 
+        -- 第一优先级：进度条越高越好 (营造疯抢感)
+        (t.seq_buy_quantity::numeric / NULLIF(t.seq_shelves_quantity, 0)::numeric) DESC,
+        -- 第二优先级：热度分 (如果有的话)
+        t.hot_score_3d DESC,
+        -- 第三优先级：最新创建
+        t.created_at DESC
+      LIMIT $1
+    `,
+      limit,
+    );
+
+    // 格式化数据返回给前端
+    return items.map((item) => ({
+      treasureId: item.treasure_id,
+      treasureName: item.treasure_name,
+      treasureCoverImg: item.treasure_cover_img,
+      unitAmount: item.unit_amount,
+      marketAmount: item.market_amount,
+      // 进度条 (数据库算好了，转成 number)
+      buyQuantityRate: Number(item.progress_percent) / 100, // 转回 0.xx 格式给前端
+      // 剩余库存 (用于显示 "仅剩 x 件")
+      stockLeft: item.seq_shelves_quantity - item.seq_buy_quantity,
+      // 参与人数 (用 seq_buy_quantity 模拟)
+      joinCount: item.seq_buy_quantity,
+      // 模拟头像 (如果数据库没有关联表，这里可以先返回空，前端做 Mock，或者在这里 Mock)
+      recentJoinAvatars: [],
+    }));
   }
 }

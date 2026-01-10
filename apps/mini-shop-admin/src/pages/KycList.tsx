@@ -6,23 +6,32 @@ import {
   SmartTable,
 } from '@/components/scaffold/SmartTable';
 import { KycAuditModal } from './kyc/KycAuditModal';
-import { Eye, Shield } from 'lucide-react';
+import { KycFormModal } from './kyc/KycFormModal'; // 👈 引入新组件
+import { Eye, Shield, Edit2, Trash2, Ban, MoreHorizontal } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { KycRecord, KycRecordListParams } from '@/type/types.ts';
-import {
-  KYC_STATUS,
-  KycIdCardType,
-  KycIdCardTypeLabel,
-  KycIdTypesList,
-} from '@lucky/shared';
+import { KYC_STATUS, KycIdCardType, KycIdCardTypeLabel } from '@lucky/shared';
 import { Badge, BadgeVariant } from '@repo/ui/components/ui/badge.tsx';
 import { kycApi } from '@/api';
 import { Card } from '@/components/UIComponents.tsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@repo/ui';
+import { useToastStore } from '@/store/useToastStore';
+import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 
 export const KycList: React.FC = () => {
   const actionRef = useRef<ActionType>(null);
+  const addToast = useToastStore((state) => state.addToast);
 
-  // 打开审核弹窗
+  // --- Actions ---
+
+  // 1. 打开审核/查看详情弹窗
   const handleView = useCallback((record: KycRecord) => {
     ModalManager.open({
       title: 'KYC Audit Detail',
@@ -37,15 +46,87 @@ export const KycList: React.FC = () => {
     });
   }, []);
 
-  // 状态映射配置
+  // 2. 打开 [创建] 弹窗
+  const handleCreate = useCallback(() => {
+    ModalManager.open({
+      title: 'Manual Create KYC', // ModalManager 可能会覆盖 KycFormModal 内部的 title，这没关系
+      renderChildren: ({ close }) => (
+        <KycFormModal
+          mode="create"
+          close={close}
+          reload={() => actionRef.current?.reload()}
+        />
+      ),
+    });
+  }, []);
+
+  // 3. 打开 [编辑] 弹窗
+  const handleEdit = useCallback((record: KycRecord) => {
+    ModalManager.open({
+      title: 'Edit KYC Info',
+      renderChildren: ({ close }) => (
+        <KycFormModal
+          mode="edit"
+          initialData={record}
+          close={close}
+          reload={() => actionRef.current?.reload()}
+        />
+      ),
+    });
+  }, []);
+
+  // 4. 执行 [撤销]
+  const handleRevoke = useCallback(
+    async (record: KycRecord) => {
+      // 简单起见使用 prompt，建议换成 ModalManager.confirm 配合 input
+      const reason = window.prompt(
+        `Revoke KYC for ${record.realName}?\nEnter reason:`,
+      );
+      if (reason === null) return; // Cancelled
+      if (!reason.trim()) return addToast('error', 'Reason is required');
+
+      try {
+        await kycApi.revoke(record.userId, reason);
+        addToast('success', 'KYC revoked successfully');
+        actionRef.current?.reload();
+      } catch (err: any) {
+        addToast('error', err.message || 'Revoke failed');
+      }
+    },
+    [addToast],
+  );
+
+  // 5. 执行 [删除]
+  const handleDelete = useCallback(
+    async (record: KycRecord) => {
+      if (
+        !window.confirm(
+          `⚠️ DANGER: Physically delete record for ${record.userId}?\nThis cannot be undone.`,
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await kycApi.delete(record.userId);
+        addToast('success', 'Record deleted successfully');
+        actionRef.current?.reload();
+      } catch (err: any) {
+        addToast('error', err.message || 'Delete failed');
+      }
+    },
+    [addToast],
+  );
+
+  // --- Configs ---
   const statusConfig = useMemo(
     () => ({
       [KYC_STATUS.DRAFT]: { label: 'Draft', color: 'secondary' },
-      [KYC_STATUS.REVIEWING]: { label: 'Reviewing', color: 'primary' }, // Blue
-      [KYC_STATUS.APPROVED]: { label: 'Approved', color: 'success' }, // Green
-      [KYC_STATUS.REJECTED]: { label: 'Rejected', color: 'danger' }, // Red
-      [KYC_STATUS.NEED_MORE]: { label: 'Need More', color: 'warning' }, // Orange
-      [KYC_STATUS.AUTO_REJECTED]: { label: 'Auto Rejected', color: 'danger' }, // Red
+      [KYC_STATUS.REVIEWING]: { label: 'Reviewing', color: 'primary' },
+      [KYC_STATUS.APPROVED]: { label: 'Approved', color: 'success' },
+      [KYC_STATUS.REJECTED]: { label: 'Rejected', color: 'danger' },
+      [KYC_STATUS.NEED_MORE]: { label: 'Need More', color: 'warning' },
+      [KYC_STATUS.AUTO_REJECTED]: { label: 'Auto Rejected', color: 'danger' },
     }),
     [],
   );
@@ -112,29 +193,71 @@ export const KycList: React.FC = () => {
       {
         title: 'Action',
         valueType: 'option',
-        width: 100,
+        width: 140, // 稍微宽一点
+        fixed: 'right',
         render: (_, row) => (
-          <Button
-            variant={
-              row.kycStatus === KYC_STATUS.REVIEWING ? 'primary' : 'outline'
-            }
-            size="sm"
-            onClick={() => handleView(row)}
-          >
-            {row.kycStatus === KYC_STATUS.REVIEWING ? (
-              <>
-                <Shield size={14} className="mr-1" /> Audit
-              </>
-            ) : (
-              <>
-                <Eye size={14} className="mr-1" /> View
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* 1. 主要按钮：Audit 或 View */}
+            <Button
+              variant={
+                row.kycStatus === KYC_STATUS.REVIEWING ? 'primary' : 'outline'
+              }
+              size="sm"
+              onClick={() => handleView(row)}
+            >
+              {row.kycStatus === KYC_STATUS.REVIEWING ? (
+                <>
+                  <Shield size={14} className="mr-1" /> Audit
+                </>
+              ) : (
+                <>
+                  <Eye size={14} className="mr-1" /> View
+                </>
+              )}
+            </Button>
+
+            {/* 2. 更多操作下拉菜单 (Dropdown) */}
+            {/* 如果你的项目没有 DropdownMenu 组件，可以暂时只显示 View 按钮，或者把 Delete 按钮直接放出来 */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+                {/* Edit: 任何状态都能修数据 */}
+                <DropdownMenuItem onClick={() => handleEdit(row)}>
+                  <Edit2 size={14} className="mr-2" /> Edit Info
+                </DropdownMenuItem>
+
+                {/* Revoke: 只有 Approved 状态能撤销 */}
+                {row.kycStatus === KYC_STATUS.APPROVED && (
+                  <DropdownMenuItem
+                    onClick={() => handleRevoke(row)}
+                    className="text-amber-600 focus:text-amber-600"
+                  >
+                    <Ban size={14} className="mr-2" /> Revoke
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+
+                {/* Delete: 危险操作 */}
+                <DropdownMenuItem
+                  onClick={() => handleDelete(row)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 size={14} className="mr-2" /> Delete Record
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ),
       },
     ],
-    [handleView, statusConfig],
+    [handleView, handleEdit, handleRevoke, handleDelete, statusConfig],
   );
 
   const searchSchema: FormSchema[] = useMemo(
@@ -155,15 +278,6 @@ export const KycList: React.FC = () => {
         })),
       },
       {
-        type: 'select',
-        key: 'idType',
-        label: 'ID Type',
-        options: KycIdTypesList.map((item) => ({
-          label: item.label,
-          value: String(item.value),
-        })),
-      },
-      {
         type: 'date',
         key: 'dateRange',
         label: 'Submit Date',
@@ -174,7 +288,6 @@ export const KycList: React.FC = () => {
   );
 
   const requestKyc = useCallback(async (params: KycRecordListParams) => {
-    // 转换 SmartTable 的参数适配后端 DTO
     const reqData = { ...params };
     if (reqData.dateRange) {
       reqData.startDate = reqData.dateRange.from;
@@ -190,22 +303,31 @@ export const KycList: React.FC = () => {
   }, []);
 
   return (
-    <Card>
-      <div className="p-4">
-        <SmartTable<KycRecord>
-          headerTitle={
-            <div className="flex items-center gap-2">
-              <Shield className="text-primary-600" size={20} />
-              <span>KYC Applications</span>
-            </div>
-          }
-          rowKey="id"
-          ref={actionRef}
-          columns={columns}
-          searchSchema={searchSchema}
-          request={requestKyc}
-        />
-      </div>
-    </Card>
+    <div>
+      {/* 顶部操作按钮 */}
+      <PageHeader
+        title="KYC Applications"
+        description="Manage and audit KYC applications from users."
+        buttonText="Manual Create KYC"
+        buttonOnClick={handleCreate}
+      />
+      <Card>
+        <div className="p-4">
+          <SmartTable<KycRecord>
+            headerTitle={
+              <div className="flex items-center gap-2">
+                <Shield className="text-primary-600" size={20} />
+                <span>KYC Applications</span>
+              </div>
+            }
+            rowKey="id"
+            ref={actionRef}
+            columns={columns}
+            searchSchema={searchSchema}
+            request={requestKyc}
+          />
+        </div>
+      </Card>
+    </div>
   );
 };
