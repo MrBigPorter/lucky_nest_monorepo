@@ -1,7 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  // native = 在当前环境生成；另外显式包含 Mac 和 Alpine
-  binaryTargets = ["native", "darwin-arm64", "linux-musl-arm64-openssl-3.0.x","linux-arm64-openssl-1.1.x"]
+  binaryTargets = ["native", "darwin-arm64", "linux-musl-arm64-openssl-3.0.x", "linux-arm64-openssl-1.1.x"]
 }
 
 datasource db {
@@ -9,146 +8,100 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========= User =========
 model User {
   /// 用户ID
-  id        String   @id @default(cuid()) @map("id") @db.VarChar(32)
+  id                    String                @id @default(cuid()) @map("id") @db.VarChar(32)
   /// 创建时间
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt             DateTime              @default(now()) @map("created_at")
   /// 更新时间
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  status      Int      @default(1) @map("status") @db.SmallInt
+  updatedAt             DateTime              @updatedAt @map("updated_at")
   /// 昵称
-  nickname   String? @map("nickname") @db.VarChar(100)
+  nickname              String?               @map("nickname") @db.VarChar(100)
   /// 头像URL
-  avatar     String? @map("avatar") @db.VarChar(255)
-  phone      String  @unique @map("phone") @db.VarChar(20)
-  phoneMd5   String  @map("phone_md5") @db.VarChar(32)
+  avatar                String?               @map("avatar") @db.VarChar(255)
+  phone                 String                @unique @map("phone") @db.VarChar(20)
+  phoneMd5              String                @map("phone_md5") @db.VarChar(32)
   /// 邀请码
-  inviteCode String? @unique @map("invite_code") @db.VarChar(20)
-
+  inviteCode            String?               @unique @map("invite_code") @db.VarChar(20)
   /// VIP等级
-  vipLevel              Int       @default(0) @map("vip_level") @db.SmallInt
+  vipLevel              Int                   @default(0) @map("vip_level") @db.SmallInt
   /// KYC状态: 0-未认证 1-审核中 2-审核失败 3-待补充 4-已认证
-  kycStatus             Int       @default(0) @map("kyc_status") @db.SmallInt
-  deliveryAddressId     String?   @map("delivery_address_id")
+  kycStatus             Int                   @default(0) @map("kyc_status") @db.SmallInt
+  deliveryAddressId     String?               @map("delivery_address_id")
   /// 自我排除过期时间戳
-  selfExclusionExpireAt DateTime? @map("self_exclusion_expire_at") @db.Timestamptz(3)
+  selfExclusionExpireAt DateTime?             @map("self_exclusion_expire_at") @db.Timestamptz(3)
   /// 最后登录时间戳
-  lastLoginAt           DateTime? @map("last_login_at") @db.Timestamptz(3)
-
-  /// 登录日志
-  loginLogs             UserLoginLog[]
-  /// 第三方账户
-  oauthAccounts         OauthAccount[]
-  /// 组团
-  treasureGroupMembers  TreasureGroupMember[]
-  /// 创建的组团
-  createdTreasureGroups TreasureGroup[]
-  /// 用户钱包
-  wallet                UserWallet?
-  /// 钱包流水
-  transactions          WalletTransaction[]
-  /// 订单
-  orders                Order[]
-
-  /// 存款单
-  rechargeOrders      RechargeOrder[]
-
-  /// 提现单
-  withdrawOrders      WithdrawOrder[]
-  /// user coupons
-  userCoupons           UserCoupon[]
-
-  // kyc records
+  lastLoginAt           DateTime?             @map("last_login_at") @db.Timestamptz(3)
+  status                Int                   @default(1) @map("status") @db.SmallInt
+  KycLivenessAttempts   KycLivenessAttempt?
   kycRecords            KycRecord[]
-
-  KycLivenessAttempts KycLivenessAttempt[]
-
-  // addresses
+  oauthAccounts         OauthAccount[]
+  orders                Order[]
+  rechargeOrders        RechargeOrder[]
+  treasureGroupMembers  TreasureGroupMember[]
+  createdTreasureGroups TreasureGroup[]
   addresses             UserAddress[]
-
-  // devices
+  userCoupons           UserCoupon[]
   devices               UserDevice[]
+  loginLogs             UserLoginLog[]
+  wallet                UserWallet?
+  transactions          WalletTransaction[]
+  withdrawOrders        WithdrawOrder[]
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
   @@index([inviteCode], map: "idx_user_invite_code")
   @@index([kycStatus], map: "idx_user_kyc_status")
-  @@index([createdAt], map: "idx_user_created_at") //  新增：用于统计新增用户
+  @@index([createdAt], map: "idx_user_created_at")
   @@map("users")
 }
 
-
 model UserDevice {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id") @db.VarChar(32)
-
-  // 核心指纹
-  deviceId    String   @map("device_id") @db.VarChar(64) // 唯一硬件码
-  deviceModel String?  @map("device_model") @db.VarChar(100) // 例如 iPhone 14
-  ipAddress   String?  @map("ip_address") @db.VarChar(45)
-
-  // 风控状态
-  isTrusted   Boolean  @default(false) @map("is_trusted") // 是否信任（老设备）
-  status      Int      @default(1) // 1-正常 0-冻结(该用户禁止在此设备登录)
-
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id") @db.VarChar(32)
+  deviceId     String   @map("device_id") @db.VarChar(64)
+  deviceModel  String?  @map("device_model") @db.VarChar(100)
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  isTrusted    Boolean  @default(false) @map("is_trusted")
+  status       Int      @default(1)
   lastActiveAt DateTime @default(now()) @map("last_active_at")
   createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // 1. 快速查某个用户是否拥有某台设备
   @@unique([userId, deviceId])
-  // 2. 查这台设备被多少个不同用户使用过 (检测一机多号)
   @@index([deviceId])
   @@map("user_devices")
 }
 
-
 model DeviceBlacklist {
-  id          String   @id @default(cuid())
-  deviceId    String   @unique @map("device_id")
-  reason      String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  deviceId  String   @unique @map("device_id")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("device_blacklist")
 }
 
-
-
-// ======== 用户登录日志 login=========
 model UserLoginLog {
-  id        String   @id @default(cuid()) @map("log_id") @db.VarChar(32)
-  userId    String   @map("user_id") @db.VarChar(32)
-  loginTime DateTime @map("login_time") @db.Timestamptz(3)
-  createdAt DateTime @default(now()) @map("created_at")
-
+  id          String   @id @default(cuid()) @map("log_id") @db.VarChar(32)
+  userId      String   @map("user_id") @db.VarChar(32)
+  loginTime   DateTime @map("login_time") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at")
   /// 登录类型: 1-密码登录 2-短信验证码 3-第三方登录
-  loginType   Int     @map("login_type") @db.SmallInt
+  loginType   Int      @map("login_type") @db.SmallInt
   /// 登录方式: password/google/facebook
-  loginMethod String? @map("login_method") @db.VarChar(50)
-
-  // 登录信息
-  loginIp     String? @map("login_ip") @db.VarChar(50)
-  loginDevice String? @map("login_device") @db.VarChar(100)
-  userAgent   String? @map("user_agent") @db.Text
-  deviceId    String? @map("device_id") @db.VarChar(100)
-
-  // 位置信息
-  countryCode String? @map("country_code") @db.VarChar(10)
-  city        String? @map("city") @db.VarChar(100)
-
-  // 登录状态
-  loginStatus Int     @default(1) @map("login_status") @db.SmallInt
-  failReason  String? @map("fail_reason") @db.VarChar(200)
-
+  loginMethod String?  @map("login_method") @db.VarChar(50)
+  loginIp     String?  @map("login_ip") @db.VarChar(50)
+  loginDevice String?  @map("login_device") @db.VarChar(100)
+  userAgent   String?  @map("user_agent")
+  deviceId    String?  @map("device_id") @db.VarChar(100)
+  countryCode String?  @map("country_code") @db.VarChar(10)
+  city        String?  @map("city") @db.VarChar(100)
+  loginStatus Int      @default(1) @map("login_status") @db.SmallInt
+  failReason  String?  @map("fail_reason") @db.VarChar(200)
   /// 是否颁发Token: 0-否 1-是
-  tokenIssued Int @default(1) @map("token_issued") @db.SmallInt
-
-  // 关系
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenIssued Int      @default(1) @map("token_issued") @db.SmallInt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_login_log_user")
   @@index([loginTime], map: "idx_login_log_time")
@@ -158,20 +111,17 @@ model UserLoginLog {
 }
 
 model AdminUser {
-  id        String  @id @default(cuid()) @map("admin_id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  deletedAt DateTime? @map("deleted_at")
-
-  username  String  @unique @map("username") @db.VarChar(50)
-  password  String  @map("password") @db.VarChar(255)
-  realName  String? @map("real_name") @db.VarChar(100)
-  role      String  @default("viewer") @map("role") @db.VarChar(50)
-  status    Int     @default(1) @map("status") @db.SmallInt
-  lastLoginAt DateTime? @map("last_login_at")
-  lastLoginIp String? @map("last_login_ip") @db.VarChar(50)
-
+  id            String              @id @default(cuid()) @map("admin_id") @db.VarChar(32)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  deletedAt     DateTime?           @map("deleted_at")
+  username      String              @unique @map("username") @db.VarChar(50)
+  password      String              @map("password") @db.VarChar(255)
+  realName      String?             @map("real_name") @db.VarChar(100)
+  role          String              @default("viewer") @map("role") @db.VarChar(50)
+  status        Int                 @default(1) @map("status") @db.SmallInt
+  lastLoginAt   DateTime?           @map("last_login_at")
+  lastLoginIp   String?             @map("last_login_ip") @db.VarChar(50)
   operationLogs AdminOperationLog[]
 
   @@index([status], map: "idx_admin_status")
@@ -179,56 +129,47 @@ model AdminUser {
 }
 
 model AdminOperationLog {
-  id          String  @id @default(cuid()) @map("log_id") @db.VarChar(32)
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  adminId     String?  @map("admin_id")
-  adminName   String @map("admin_name") @db.VarChar(100)
-  module      String @map("module") @db.VarChar(100)
-  action      String @map("action") @db.VarChar(100)
-  details     String? @map("details") @db.Text
-  requestIp   String? @map("request_ip") @db.VarChar(50)
-
-  /// avoid cascade delete admin user
-  admin        AdminUser? @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  id        String     @id @default(cuid()) @map("log_id") @db.VarChar(32)
+  createdAt DateTime   @default(now()) @map("created_at")
+  adminId   String?    @map("admin_id")
+  adminName String     @map("admin_name") @db.VarChar(100)
+  module    String     @map("module") @db.VarChar(100)
+  action    String     @map("action") @db.VarChar(100)
+  details   String?    @map("details")
+  requestIp String?    @map("request_ip") @db.VarChar(50)
+  admin     AdminUser? @relation(fields: [adminId], references: [id], onDelete: Restrict)
 
   @@index([adminId])
-  @@index([module,action])
+  @@index([module, action])
   @@index([createdAt])
   @@map("admin_operation_logs")
 }
 
-// ======== 第三方登录账户 third part login=========
 model OauthAccount {
-  id        String   @id @default(cuid()) @map("oauth_id") @db.VarChar(32)
-  userId    String   @map("user_id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
+  id               String    @id @default(cuid()) @map("oauth_id") @db.VarChar(32)
+  userId           String    @map("user_id") @db.VarChar(32)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
   /// 第三方平台: google/facebook/apple
-  provider       String @map("provider") @db.VarChar(50)
+  provider         String    @map("provider") @db.VarChar(50)
   /// 第三方用户ID
-  providerUserId String @map("provider_user_id") @db.VarChar(255)
-
+  providerUserId   String    @map("provider_user_id") @db.VarChar(255)
   /// 第三方邮箱
-  providerEmail    String? @map("provider_email") @db.VarChar(255)
+  providerEmail    String?   @map("provider_email") @db.VarChar(255)
   /// 第三方昵称
-  providerNickname String? @map("provider_nickname") @db.VarChar(100)
+  providerNickname String?   @map("provider_nickname") @db.VarChar(100)
   /// 第三方头像
-  providerAvatar   String? @map("provider_avatar") @db.VarChar(255)
-
+  providerAvatar   String?   @map("provider_avatar") @db.VarChar(255)
   /// 访问令牌
-  accessToken    String?   @map("access_token") @db.Text
+  accessToken      String?   @map("access_token")
   /// 刷新令牌
-  refreshToken   String?   @map("refresh_token") @db.Text
-  tokenExpiresAt DateTime? @map("token_expires_at") @db.Timestamptz(3)
+  refreshToken     String?   @map("refresh_token")
+  tokenExpiresAt   DateTime? @map("token_expires_at") @db.Timestamptz(3)
   /// 绑定状态: 0-已解绑 1-已绑定
-  bindStatus     Int       @default(1) @map("bind_status") @db.SmallInt
-
-  firstBindAt DateTime? @map("first_bind_at")
-  lastLoginAt DateTime? @map("last_login_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bindStatus       Int       @default(1) @map("bind_status") @db.SmallInt
+  firstBindAt      DateTime? @map("first_bind_at")
+  lastLoginAt      DateTime? @map("last_login_at")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerUserId], map: "uk_oauth_provider_user")
   @@index([userId], map: "idx_oauth_user")
@@ -236,40 +177,33 @@ model OauthAccount {
   @@map("oauth_accounts")
 }
 
-// ======== 短信验证码 sms verification code=========
 model SmsVerificationCode {
-  id        String   @id @default(cuid()) @map("code_id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  phone       String @map("phone") @db.VarChar(20)
-  countryCode String @default("63") @map("country_code") @db.VarChar(10)
-
+  id             String    @id @default(cuid()) @map("code_id") @db.VarChar(32)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  phone          String    @map("phone") @db.VarChar(20)
+  countryCode    String    @default("63") @map("country_code") @db.VarChar(10)
   /// 验证码
-  codeHash String @map("code_hash") @db.VarChar(100)
+  codeHash       String    @map("code_hash") @db.VarChar(100)
   /// 验证码类型: 1-注册 2-登录 3-修改密码 4-绑定手机 5-提现
-  codeType Int    @map("code_type") @db.SmallInt
-
+  codeType       Int       @map("code_type") @db.SmallInt
   /// 发送状态: 1-待发送 2-已发送 3-发送失败
-  sendStatus   Int     @default(1) @map("send_status") @db.SmallInt
+  sendStatus     Int       @default(1) @map("send_status") @db.SmallInt
   /// 发送结果
-  sendResult   String? @map("send_result") @db.Text
+  sendResult     String?   @map("send_result")
   /// 短信服务商
-  smsProvider  String? @map("sms_provider") @db.VarChar(50)
+  smsProvider    String?   @map("sms_provider") @db.VarChar(50)
   /// 短信消息ID
-  smsMessageId String? @map("sms_message_id") @db.VarChar(100)
-
+  smsMessageId   String?   @map("sms_message_id") @db.VarChar(100)
   /// 验证状态: 0-未验证 1-已验证 2-已过期
-  verifyStatus   Int @default(0) @map("verify_status") @db.SmallInt
+  verifyStatus   Int       @default(0) @map("verify_status") @db.SmallInt
   /// 验证次数
-  verifyTimes    Int @default(0) @map("verify_times")
+  verifyTimes    Int       @default(0) @map("verify_times")
   /// 最大验证次数
-  maxVerifyTimes Int @default(5) @map("max_verify_times")
-
-  expiresAt  DateTime  @map("expires_at")
-  verifiedAt DateTime? @map("verified_at")
-
+  maxVerifyTimes Int       @default(5) @map("max_verify_times")
+  expiresAt      DateTime  @map("expires_at")
+  verifiedAt     DateTime? @map("verified_at")
   /// 请求IP
-  requestIp String? @map("request_ip") @db.VarChar(100)
+  requestIp      String?   @map("request_ip") @db.VarChar(100)
 
   @@index([phone], map: "idx_sms_phone")
   @@index([codeType], map: "idx_sms_code_type")
@@ -282,119 +216,99 @@ model SmsVerificationCode {
 /// ======= 抽奖产品列表=========
 /// 抽奖产品表
 model Treasure {
-  treasureId        String   @id @default(cuid()) @map("treasure_id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  ///产品序列号
-  treasureSeq      String? @unique @map("treasure_seq") @db.VarChar(50)
-  ///产品名称
-  treasureName     String  @map("treasure_name") @db.VarChar(200)
-  ///实物产品名称
-  productName      String? @map("product_name") @db.VarChar(200)
-  ///封面图URL
-  treasureCoverImg String? @map("treasure_cover_img") @db.VarChar(255)
-  ///主图列表（JSON数组）
-  mainImageList    Json?   @map("main_image_list")
-
-  ///产品成本（PHP）
-  costAmount Decimal? @map("cost_amount") @db.Decimal(10, 2)
-  ///单价/每份（PHP）
-  unitAmount Decimal  @default(1.00) @map("unit_amount") @db.Decimal(10, 2)
-  ///现金奖励金额
-  cashAmount Decimal? @map("cash_amount") @db.Decimal(10, 2)
-
-  marketAmount Decimal? @map("market_amount") @db.Decimal(10, 2) // 划线价 (展示用)
-  soloAmount   Decimal? @map("solo_amount") @db.Decimal(10, 2)   // 单买价 (不拼团的价格)
-  enableRobot  Boolean  @default(false) @map("enable_robot")     // 机器人开关
-
-  /// 机器人介入延迟 (秒): 开团多久后未满则机器人介入
-  robotDelay     Int      @default(300) @map("robot_delay")
-  // --- 3. 激励配置 (Incentives) ---
-  // 虽然有 bonusConfig，但提取关键字段有助于筛选
-  /// 团长奖励类型: 0-无 1-现金 2-金币 3-免单
-  leaderBonusType Int     @default(0) @map("leader_bonus_type") @db.SmallInt
-  ///总库存/总份数
-  seqShelvesQuantity Int?     @map("seq_shelves_quantity")
-  ///已购买数量
-  seqBuyQuantity     Int      @default(0) @map("seq_buy_quantity")
-  ///最小购买量（开奖所需份数）
-  minBuyQuantity     Int?     @map("min_buy_quantity")
-  ///单人最大购买量
-  maxPerBuyQuantity  Int?     @map("max_per_buy_quantity")
-  ///购买率百分比
-  buyQuantityRate    Decimal? @map("buy_quantity_rate") @db.Decimal(5, 2)
-
-  ///抽奖模式: 1-售罄模式 2-定时模式
-  lotteryMode       Int?      @map("lottery_mode") @db.SmallInt
-  ///开奖时间戳
-  lotteryTime       DateTime? @map("lottery_time") @db.Timestamp(3)
-  ///延迟开奖时间
-  lotteryDelayTime  DateTime? @map("lottery_delay_time") @db.Timestamp(3)
-  ///'是否延迟: 0-否 1-是
-  lotteryDelayState Int       @default(0) @map("lottery_delay_state") @db.SmallInt /// 0=否 1=是
-
-  ///图片样式类型
-  imgStyleType Int @default(0) @map("img_style_type") @db.SmallInt
-  ///是否虚拟产品: 1-虚拟 2-实物
-  virtual      Int @default(2) @map("virtual") @db.SmallInt /// 1=虚拟 2=实物
-
-  ///组团最大人数
-  groupMaxNum Int @default(9999) @map("group_max_num")
-
-  ///单份最大使用金币数
-  maxUnitCoins  Decimal? @map("max_unit_coins") @db.Decimal(10, 4)
-  ///最大折扣金额
-  maxUnitAmount Decimal? @map("max_unit_amount") @db.Decimal(10, 2)
-
+  treasureId         String             @id @default(cuid()) @map("treasure_id") @db.VarChar(32)
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  /// 产品序列号
+  treasureSeq        String?            @unique @map("treasure_seq") @db.VarChar(50)
+  /// 产品名称
+  treasureName       String             @map("treasure_name") @db.VarChar(200)
+  /// 实物产品名称
+  productName        String?            @map("product_name") @db.VarChar(200)
+  /// 封面图URL
+  treasureCoverImg   String?            @map("treasure_cover_img") @db.VarChar(255)
+  /// 主图列表（JSON数组）
+  mainImageList      Json?              @map("main_image_list")
+  /// 产品成本（PHP）
+  costAmount         Decimal?           @map("cost_amount") @db.Decimal(10, 2)
+  /// 单价/每份（PHP）
+  unitAmount         Decimal            @default(1.00) @map("unit_amount") @db.Decimal(10, 2)
+  /// 现金奖励金额
+  cashAmount         Decimal?           @map("cash_amount") @db.Decimal(10, 2)
+  /// 总库存/总份数
+  seqShelvesQuantity Int?               @map("seq_shelves_quantity")
+  /// 已购买数量
+  seqBuyQuantity     Int                @default(0) @map("seq_buy_quantity")
+  /// 最小购买量（开奖所需份数）
+  minBuyQuantity     Int?               @map("min_buy_quantity")
+  /// 单人最大购买量
+  maxPerBuyQuantity  Int?               @map("max_per_buy_quantity")
+  /// 购买率百分比
+  buyQuantityRate    Decimal?           @map("buy_quantity_rate") @db.Decimal(5, 2)
+  /// 抽奖模式: 1-售罄模式 2-定时模式
+  lotteryMode        Int?               @map("lottery_mode") @db.SmallInt
+  /// 开奖时间戳
+  lotteryTime        DateTime?          @map("lottery_time")
+  /// 延迟开奖时间
+  lotteryDelayTime   DateTime?          @map("lottery_delay_time")
+  /// '是否延迟: 0-否 1-是
+  /// 0=否 1=是
+  lotteryDelayState  Int                @default(0) @map("lottery_delay_state") @db.SmallInt
+  /// 图片样式类型
+  imgStyleType       Int                @default(0) @map("img_style_type") @db.SmallInt
+  /// 是否虚拟产品: 1-虚拟 2-实物
+  /// 1=虚拟 2=实物
+  virtual            Int                @default(2) @map("virtual") @db.SmallInt
+  /// 组团最大人数
+  groupMaxNum        Int                @default(9999) @map("group_max_num")
+  /// 单份最大使用金币数
+  maxUnitCoins       Decimal?           @map("max_unit_coins") @db.Decimal(10, 4)
+  /// 最大折扣金额
+  maxUnitAmount      Decimal?           @map("max_unit_amount") @db.Decimal(10, 2)
   /// 慈善金额
-  charityAmount Decimal? @map("charity_amount") @db.Decimal(10, 2)
+  charityAmount      Decimal?           @map("charity_amount") @db.Decimal(10, 2)
   /// 现金状态
-  cashState     Int?     @map("cash_state") @db.SmallInt
-  ///规则说明（HTML）
-  ruleContent   String?  @map("rule_content") @db.Text
-  ///产品描述（HTML）
-  desc          String?  @map("desc") @db.Text
-  ///状态: 0-下架 1-上架
-  state         Int      @default(1) @map("state") @db.SmallInt /// 0=下架 1=上架
-  status  String  @default("ACTIVE") @map("lifecycle_status") @db.VarChar(20)
-  hotScore3d           Float    @default(0) @map("hot_score_3d")
-  hotScore7d           Float    @default(0) @map("hot_score_7d")
-
-  // ---物流与实物属性 ---
-  /// 物流类型: 1-实物 2-无需物流
-  shippingType     Int      @default(1) @map("shipping_type") @db.SmallInt
-  /// 重量
-  weight           Decimal? @map("weight") @db.Decimal(10, 3)
-
-  // ---  拼团与赠礼 ---
-  /// 成团人数
-  groupSize        Int      @default(5) @map("group_size")
-  /// 成团时效
-  groupTimeLimit   Int      @default(86400) @map("group_time_limit")
-
+  cashState          Int?               @map("cash_state") @db.SmallInt
+  /// 规则说明（HTML）
+  ruleContent        String?            @map("rule_content")
+  /// 产品描述（HTML）
+  desc               String?            @map("desc")
+  /// 状态: 0-下架 1-上架
+  /// 0=下架 1=上架
+  state              Int                @default(1) @map("state") @db.SmallInt
+  hotScore3d         Float              @default(0) @map("hot_score_3d")
+  hotScore7d         Float              @default(0) @map("hot_score_7d")
   /// 奖励配置
-  bonusConfig      Json?    @map("bonus_config")
-
-  // --- 时间与状态  ---
-  salesStartAt     DateTime? @map("sales_start_at")
-  salesEndAt       DateTime? @map("sales_end_at")
-
+  bonusConfig        Json?              @map("bonus_config")
+  /// 成团人数
+  groupSize          Int                @default(5) @map("group_size")
+  /// 成团时效
+  groupTimeLimit     Int                @default(86400) @map("group_time_limit")
+  salesEndAt         DateTime?          @map("sales_end_at")
+  salesStartAt       DateTime?          @map("sales_start_at")
+  /// 物流类型: 1-实物 2-无需物流
+  shippingType       Int                @default(1) @map("shipping_type") @db.SmallInt
   /// 乐观锁版本号
-  version          Int       @default(0) @map("version")
+  version            Int                @default(0) @map("version")
+  /// 重量
+  weight             Decimal?           @map("weight") @db.Decimal(10, 3)
   /// 虚拟销量 (基数，比如设为 1000，前端显示 1000 + seqBuyQuantity)
-  fakeSalesCount Int @default(0) @map("fake_sales_count")
+  fakeSalesCount     Int                @default(0) @map("fake_sales_count")
+  status             String             @default("ACTIVE") @map("lifecycle_status") @db.VarChar(20)
   /// 虚拟头像列表 (存一堆头像 URL，前端直接展示)
-  virtualAvatars Json? @map("virtual_avatars")
-
-  flashSaleProducts FlashSaleProduct[]
-
-
-  // 关系
-  categories TreasureCategory[]
-  groups     TreasureGroup[]
-  sectionItems ActSectionItem[]
-  orders     Order[]
+  virtualAvatars     Json?              @map("virtual_avatars")
+  enableRobot        Boolean            @default(false) @map("enable_robot")
+  marketAmount       Decimal?           @map("market_amount") @db.Decimal(10, 2)
+  soloAmount         Decimal?           @map("solo_amount") @db.Decimal(10, 2)
+  /// 团长奖励类型: 0-无 1-现金 2-金币 3-免单
+  leaderBonusType    Int                @default(0) @map("leader_bonus_type") @db.SmallInt
+  /// 机器人介入延迟 (秒): 开团多久后未满则机器人介入
+  robotDelay         Int                @default(300) @map("robot_delay")
+  sectionItems       ActSectionItem[]
+  flashSaleProducts  FlashSaleProduct[]
+  orders             Order[]
+  categories         TreasureCategory[]
+  groups             TreasureGroup[]
 
   @@index([status, salesEndAt], map: "idx_treasure_cron")
   @@index([lotteryMode])
@@ -406,21 +320,19 @@ model Treasure {
 
 /// 产品分类表
 model ProductCategory {
-  id        Int      @id @default(autoincrement()) @map("products_category_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  ///分类名称
-  name      String  @db.VarChar(100)
-  ///分类英文名
-  nameEn    String? @map("name_en") @db.VarChar(100)
-  ///分类图标URL
-  icon      String? @db.VarChar(255)
-  ///排序值（越小越靠前）
-  sortOrder Int     @default(0) @map("sort_order")
-  ///状态: 0-禁用 1-启用
-  state     Int     @default(1) @db.SmallInt
-
+  id        Int                @id @default(autoincrement()) @map("products_category_id")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+  /// 分类名称
+  name      String             @db.VarChar(100)
+  /// 分类英文名
+  nameEn    String?            @map("name_en") @db.VarChar(100)
+  /// 分类图标URL
+  icon      String?            @db.VarChar(255)
+  /// 排序值（越小越靠前）
+  sortOrder Int                @default(0) @map("sort_order")
+  /// 状态: 0-禁用 1-启用
+  state     Int                @default(1) @db.SmallInt
   treasures TreasureCategory[]
 
   @@index([state], map: "idx_state")
@@ -430,16 +342,14 @@ model ProductCategory {
 
 /// 产品-分类 多对多
 model TreasureCategory {
-  id        String   @id @default(cuid()) @map("id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  ///产品ID
-  treasureId String @map("treasure_id") @db.VarChar(32)
-  ///分类ID
-  categoryId Int    @map("category_id")
-
-  treasure Treasure        @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
-  category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id         String          @id @default(cuid()) @map("id") @db.VarChar(32)
+  createdAt  DateTime        @default(now()) @map("created_at")
+  /// 产品ID
+  treasureId String          @map("treasure_id") @db.VarChar(32)
+  /// 分类ID
+  categoryId Int             @map("category_id")
+  category   ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  treasure   Treasure        @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
 
   @@unique([treasureId, categoryId], map: "uk_treasure_category")
   @@index([treasureId], map: "idx_treasure_id")
@@ -449,84 +359,74 @@ model TreasureCategory {
 
 /// 组团表
 model TreasureGroup {
-  groupId        String   @id @default(cuid()) @map("group_id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  ///产品ID
-  treasureId String @map("treasure_id") @db.VarChar(32)
-  ///创建人用户ID（团长）
-  creatorId  String @map("creator_id") @db.VarChar(32)
-
-  ///组团名称
-  groupName         String? @map("group_name") @db.VarChar(100)
-  ///最大成员数
-  maxMembers        Int     @default(9999) @map("max_members")
-  ///当前成员数
-  currentMembers    Int     @default(1) @map("current_members")
-  ///  乐观锁版本号 (并发控制核心)
-  /// 每次有人加入时，update ... set version = version + 1 where version = oldVersion
-  version           Int     @default(0) @map("version")
-  ///组内中奖次数
-  luckyWinnersCount Int     @default(0) @map("lucky_winners_count")
-  ///总中奖次数
-  totalWinningTimes Int     @default(0) @map("total_winning_times")
+  groupId           String                @id @default(cuid()) @map("group_id") @db.VarChar(32)
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  /// 产品ID
+  treasureId        String                @map("treasure_id") @db.VarChar(32)
+  /// 创建人用户ID（团长）
+  creatorId         String                @map("creator_id") @db.VarChar(32)
+  /// 组团名称
+  groupName         String?               @map("group_name") @db.VarChar(100)
+  /// 最大成员数
+  maxMembers        Int                   @default(9999) @map("max_members")
+  /// 当前成员数
+  currentMembers    Int                   @default(1) @map("current_members")
+  /// 组内中奖次数
+  luckyWinnersCount Int                   @default(0) @map("lucky_winners_count")
+  /// 总中奖次数
+  totalWinningTimes Int                   @default(0) @map("total_winning_times")
   /// 状态更清晰的定义
   /// 1-进行中(拼团中)
   /// 2-拼团成功(待发货/待开奖)
   /// 3-拼团失败(已过期/库存不足)
-  groupStatus       Int     @default(1) @map("group_status") @db.SmallInt /// 1=进行中 2=已结束
-
-  ///  是否由系统/机器人自动补齐 (用于分析运营质量)
-  isSystemFilled    Boolean @default(false) @map("is_system_filled")
-
-  // ---  机器人计数 ---
-  robotCount     Int      @default(0) @map("robot_count")
-
-  // 确保 status 字段存在，如果以前有 groupStatus，建议统一用一个，或者做映射
-  status         Int      @default(0) @map("status") @db.SmallInt
-
+  /// 1=进行中 2=已结束
+  groupStatus       Int                   @default(1) @map("group_status") @db.SmallInt
+  drawnAt           DateTime?             @map("drawn_at")
+  expireAt          DateTime              @default(now()) @map("expire_at")
+  robotCount        Int                   @default(0) @map("robot_count")
+  status            Int                   @default(0) @map("status") @db.SmallInt
+  successAt         DateTime?             @map("success_at")
   /// 结束时间 (成团时间 或 失败时间)
-  endedAt        DateTime? @map("ended_at")
-  expireAt       DateTime @default(now()) @map("expire_at")
-  successAt      DateTime? @map("success_at")
-  drawnAt        DateTime? @map("drawn_at")
+  endedAt           DateTime?             @map("ended_at")
+  /// 是否由系统/机器人自动补齐 (用于分析运营质量)
+  isSystemFilled    Boolean               @default(false) @map("is_system_filled")
+  /// 乐观锁版本号 (并发控制核心)
+  /// 每次有人加入时，update ... set version = version + 1 where version = oldVersion
+  version           Int                   @default(0) @map("version")
+  orders            Order[]
+  members           TreasureGroupMember[]
+  creator           User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  treasure          Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
 
-  treasure Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
-  creator  User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  members  TreasureGroupMember[]
-  orders   Order[]
-
+  tempField Int?
   @@index([treasureId], map: "idx_treasure")
   @@index([creatorId], map: "idx_creator")
   @@index([groupStatus], map: "idx_status")
-  @@index([expireAt], map: "idx_expire_at") //方便 Cron Job 快速查找过期团
+  @@index([expireAt], map: "idx_expire_at")
   @@map("treasure_groups")
 }
 
 /// 组团成员
 model TreasureGroupMember {
-  ///成员记录ID
-  id        String   @id @default(cuid()) @map("id") @db.VarChar(32)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  ///组团ID
-  groupId String  @map("group_id") @db.VarChar(32)
-  userId  String  @map("user_id") @db.VarChar(32)
-  orderId String? @map("order_id") @db.VarChar(32)
-
-  ///是否团长: 0-否 1-是
-  isOwner     Int       @default(0) @map("is_owner") @db.SmallInt
+  /// 成员记录ID
+  id          String        @id @default(cuid()) @map("id") @db.VarChar(32)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  /// 组团ID
+  groupId     String        @map("group_id") @db.VarChar(32)
+  userId      String        @map("user_id") @db.VarChar(32)
+  orderId     String?       @map("order_id") @db.VarChar(32)
+  /// 是否团长: 0-否 1-是
+  isOwner     Int           @default(0) @map("is_owner") @db.SmallInt
+  /// 分享获得金额
+  shareCoin   Decimal       @default(0) @map("share_coin") @db.Decimal(18, 2)
+  /// 分享获得金额
+  shareAmount Decimal       @default(0) @map("share_amount") @db.Decimal(18, 2)
+  joinedAt    DateTime      @default(now()) @map("joined_at")
   /// 成员类型: 0-真实用户 1-机器人
-  memberType  Int       @default(0) @map("member_type") @db.SmallInt
-  ///分享获得金额
-  shareCoin   Decimal   @default(0) @map("share_coin") @db.Decimal(18, 2)
-  ///分享获得金额
-  shareAmount Decimal   @default(0) @map("share_amount") @db.Decimal(18, 2)
-  joinedAt    DateTime  @default(now()) @map("joined_at") @db.Timestamp(3)
-
-  group TreasureGroup @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberType  Int           @default(0) @map("member_type") @db.SmallInt
+  group       TreasureGroup @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId], map: "uk_group_user")
   @@index([groupId], map: "idx_group")
@@ -537,194 +437,157 @@ model TreasureGroupMember {
 
 /// banner
 model Banner {
-  id              String   @id @default(cuid())                     @map("banner_id")         @db.VarChar(32)
-  createdAt       DateTime @default(now())                          @map("created_at")
-  updatedAt       DateTime @updatedAt                                @map("updated_at")
-
-  // 基本信息
-  title           String?                                           @db.VarChar(200)
-  bannerImgUrl    String?  @map("banner_img_url")                   @db.VarChar(255)
-  videoUrl        String?  @map("video_url")                        @db.VarChar(255)
-  fileType        Int      @default(1)  @map("file_type")           @db.SmallInt /// 1=图片 2=视频
-
-  // 分类与位置
-  bannerCate      Int      @map("banner_cate")                      @db.SmallInt /// 1=首页 2=活动页 3=产品页
-  position        Int      @default(0) @map("position")             @db.SmallInt /// 0=顶部 1=中部 2=底部
-  sortType        Int      @default(1) @map("sort_type")            @db.SmallInt
-  sortOrder       Int      @default(0) @map("sort_order")
-
-  // 跳转
-  jumpCate        Int?     @map("jump_cate")                        @db.SmallInt /// 1=无 2=APP内页 3=产品详情 5=外链
-  jumpUrl         String?  @map("jump_url")                         @db.VarChar(500)
-  relatedTitleId  String?  @map("related_title_id")                 @db.VarChar(32) /// 比如 treasure_id
-
-  // 显示
-  showType        Int      @default(1) @map("show_type")            @db.SmallInt /// 1=单图 2=轮播
-  imgStyleType    Int      @default(0) @map("img_style_type")       @db.SmallInt
-  gridId          String?  @map("grid_id")                          @db.VarChar(32)
-  bannerArray     Json?    @map("banner_array")                     /// 轮播图数组：[{img,url,...},...]
-
-  // 时间窗（生效期）
+  id              String    @id @default(cuid()) @map("banner_id") @db.VarChar(32)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  title           String?   @db.VarChar(200)
+  bannerImgUrl    String?   @map("banner_img_url") @db.VarChar(255)
+  videoUrl        String?   @map("video_url") @db.VarChar(255)
+  /// 1=图片 2=视频
+  fileType        Int       @default(1) @map("file_type") @db.SmallInt
+  /// 1=首页 2=活动页 3=产品页
+  bannerCate      Int       @map("banner_cate") @db.SmallInt
+  /// 0=顶部 1=中部 2=底部
+  position        Int       @default(0) @map("position") @db.SmallInt
+  sortType        Int       @default(1) @map("sort_type") @db.SmallInt
+  sortOrder       Int       @default(0) @map("sort_order")
+  /// 1=无 2=APP内页 3=产品详情 5=外链
+  jumpCate        Int?      @map("jump_cate") @db.SmallInt
+  jumpUrl         String?   @map("jump_url") @db.VarChar(500)
+  /// 比如 treasure_id
+  relatedTitleId  String?   @map("related_title_id") @db.VarChar(32)
+  /// 1=单图 2=轮播
+  showType        Int       @default(1) @map("show_type") @db.SmallInt
+  imgStyleType    Int       @default(0) @map("img_style_type") @db.SmallInt
+  gridId          String?   @map("grid_id") @db.VarChar(32)
+  /// 轮播图数组：[{img,url,...},...]
+  bannerArray     Json?     @map("banner_array")
   activityAtStart DateTime? @map("activity_at_start")
   activityAtEnd   DateTime? @map("activity_at_end")
-
-  // 状态
-  state           Int      @default(1) @map("state")                @db.SmallInt /// 0=禁用 1=启用
-  validState      Int      @default(1) @map("valid_state")          @db.SmallInt /// 0=无效 1=有效
-
-  // 审计 & 扩展
-  createdBy       String?  @map("created_by")                       @db.VarChar(50)
-  updatedBy       String?  @map("updated_by")                       @db.VarChar(50)
-  extra           Json?                                                /// 兜底扩展
+  /// 0=禁用 1=启用
+  state           Int       @default(1) @map("state") @db.SmallInt
+  /// 0=无效 1=有效
+  validState      Int       @default(1) @map("valid_state") @db.SmallInt
+  createdBy       String?   @map("created_by") @db.VarChar(50)
+  updatedBy       String?   @map("updated_by") @db.VarChar(50)
+  /// 兜底扩展
+  extra           Json?
 
   @@index([bannerCate], map: "idx_banner_cate")
-  @@index([position],   map: "idx_position_banner")
-  @@index([state],      map: "idx_state_banner")
-  @@index([sortOrder],  map: "idx_sort_order_banner")
+  @@index([position], map: "idx_position_banner")
+  @@index([state], map: "idx_state_banner")
+  @@index([sortOrder], map: "idx_sort_order_banner")
   @@index([activityAtStart, activityAtEnd], map: "idx_activity_time")
   @@map("banners")
 }
 
-// advertisements
-
 model Advertisement {
-  id         String   @id @default(cuid())                   @map("ad_id")     @db.VarChar(32)
-  createdAt  DateTime @default(now())                        @map("created_at")
-  updatedAt  DateTime @updatedAt                             @map("updated_at")
-
-  // 基本
-  title      String?                                         @db.VarChar(200)
-  img        String?   @map("img")                    @db.VarChar(255)
-  videoUrl   String?   @map("video_url")                     @db.VarChar(255)
-  fileType   Int       @default(1) @map("file_type")         @db.SmallInt /// 1=图片 2=视频
-
-
-
-  // 位置
-  adPosition Int       @map("ad_position")                   @db.SmallInt /// 1-首页顶 2-首页中 3-分类页 4-详情页
-  sortType   Int       @default(1) @map("sort_type")         @db.SmallInt /// 1=单图 2=三图
-  sortOrder  Int       @default(0) @map("sort_order")
-
-  imgStyleType Int     @default(0) @map("img_style_type")  @db.SmallInt
-  bannerArray  Json?   @map("banner_array")
-
-  // 跳转
-  jumpCate   Int?      @map("jump_cate")                     @db.SmallInt
-  jumpUrl    String?   @map("jump_url")                      @db.VarChar(500)
-  relatedId  String?   @map("related_id")                    @db.VarChar(32)
-
-  // 时间窗
-  startTime  DateTime?  @map("start_time")
-  endTime    DateTime?  @map("end_time")
-
-  // 状态
-  status     Int       @default(1) @map("status")            @db.SmallInt /// 0=禁用 1=启用
-
-  // 统计（V1 可先不用）
-  viewCount  Int       @default(0) @map("view_count")
-  clickCount Int       @default(0) @map("click_count")
-
-  extra      Json?
+  id           String    @id @default(cuid()) @map("ad_id") @db.VarChar(32)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  title        String?   @db.VarChar(200)
+  videoUrl     String?   @map("video_url") @db.VarChar(255)
+  /// 1=图片 2=视频
+  fileType     Int       @default(1) @map("file_type") @db.SmallInt
+  /// 1-首页顶 2-首页中 3-分类页 4-详情页
+  adPosition   Int       @map("ad_position") @db.SmallInt
+  sortOrder    Int       @default(0) @map("sort_order")
+  jumpCate     Int?      @map("jump_cate") @db.SmallInt
+  jumpUrl      String?   @map("jump_url") @db.VarChar(500)
+  relatedId    String?   @map("related_id") @db.VarChar(32)
+  startTime    DateTime? @map("start_time")
+  endTime      DateTime? @map("end_time")
+  /// 0=禁用 1=启用
+  status       Int       @default(1) @map("status") @db.SmallInt
+  viewCount    Int       @default(0) @map("view_count")
+  clickCount   Int       @default(0) @map("click_count")
+  extra        Json?
+  bannerArray  Json?     @map("banner_array")
+  imgStyleType Int       @default(0) @map("img_style_type") @db.SmallInt
+  /// 1=单图 2=三图
+  sortType     Int       @default(1) @map("sort_type") @db.SmallInt
+  img          String?   @map("img") @db.VarChar(255)
 
   @@index([adPosition], map: "idx_position_ad")
-  @@index([status],     map: "idx_status_ad")
+  @@index([status], map: "idx_status_ad")
   @@index([startTime, endTime], map: "idx_time_ad")
   @@map("advertisements")
 }
 
-
 /// 活动专区表
 model ActSection {
-  id            String   @id @default(cuid()) @db.VarChar(32)
-  key           String   @unique @db.VarChar(64)
-  title         String   @db.VarChar(128)
-  imgStyleType  Int
-  status        Int      @default(1) // 1 启用 0 关闭
-  startAt       DateTime?
-  endAt         DateTime?
-  sortOrder     Int      @default(0)
-  limit         Int      @default(10)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String           @id @default(cuid()) @db.VarChar(32)
+  key          String           @unique @db.VarChar(64)
+  title        String           @db.VarChar(128)
+  imgStyleType Int
+  status       Int              @default(1)
+  startAt      DateTime?
+  endAt        DateTime?
+  sortOrder    Int              @default(0)
+  limit        Int              @default(10)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  items        ActSectionItem[]
 
-  items         ActSectionItem[]
-
-  @@map("act_sections")
   @@index([imgStyleType, status, sortOrder], map: "idx_style_status_sort")
+  @@map("act_sections")
 }
 
 /// 活动专区-产品关联表
 model ActSectionItem {
-  id         String  @id @default(cuid()) @db.VarChar(32)
-  sectionId  String  @db.VarChar(32)
-  treasureId String  @db.VarChar(32)
-  sortOrder  Int     @default(0)
-
+  id         String     @id @default(cuid()) @db.VarChar(32)
+  sectionId  String     @db.VarChar(32)
+  treasureId String     @db.VarChar(32)
+  sortOrder  Int        @default(0)
   section    ActSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   treasure   Treasure   @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
 
-  @@map("act_section_items")
-  @@index([sectionId, sortOrder], map: "idx_section_sort")
   @@unique([sectionId, treasureId], map: "uk_section_treasure")
+  @@index([sectionId, sortOrder], map: "idx_section_sort")
+  @@map("act_section_items")
 }
 
-// 钱包快照
 model UserWallet {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  realBalance        Decimal  @default(0)     @map("real_balance")         // 现金
-  coinBalance        Decimal  @default(0)     @map("coin_balance")         // 金币（先用 Decimal，之后可切 Int）
-  frozenBalance      Decimal  @default(0)     @map("frozen_balance")       // 冻结（先留着）
-  totalRecharge      Decimal  @default(0)     @map("total_recharge")
-  totalWithdraw      Decimal  @default(0)     @map("total_withdraw")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt      @map("updated_at")
+  id            String              @id @default(cuid())
+  userId        String              @unique
+  realBalance   Decimal             @default(0) @map("real_balance")
+  coinBalance   Decimal             @default(0) @map("coin_balance")
+  frozenBalance Decimal             @default(0) @map("frozen_balance")
+  totalRecharge Decimal             @default(0) @map("total_recharge")
+  totalWithdraw Decimal             @default(0) @map("total_withdraw")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions  WalletTransaction[]
 
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions WalletTransaction[]
-
-  @@map("user_wallets")
   @@index([userId], map: "idx_user_id")
+  @@map("user_wallets")
 }
 
 /// 用户收货地址
 model UserAddress {
   addressId   String   @id @default(cuid()) @map("address_id") @db.VarChar(32)
   userId      String   @map("user_id") @db.VarChar(32)
-
-  firstName   String?   @map("first_name") @db.VarChar(50)
-  lastName    String?   @map("last_name") @db.VarChar(50)
-  contactName String   @map("contact_name") @db.VarChar(100)
+  firstName   String?  @map("first_name") @db.VarChar(50)
+  lastName    String?  @map("last_name") @db.VarChar(50)
   phone       String   @db.VarChar(20)
-
   province    String   @db.VarChar(50)
   city        String   @db.VarChar(50)
   barangay    String   @db.VarChar(50)
-
-  fullAddress String   @map("full_address") @db.Text
+  fullAddress String   @map("full_address")
   postalCode  String?  @map("postal_code") @db.VarChar(10)
-
-  // 1. 存储 ID (用于外键关联、逻辑计算)
-  provinceId  Int      @map("province_id")
-  cityId      Int      @map("city_id")
-  barangayId  Int      @map("barangay_id")
-
-  // 地址标签 (Home, Office, Other)
   label       String?  @db.VarChar(20)
-
   isDefault   Int      @default(0) @map("is_default") @db.SmallInt
-
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // 建立地理位置关联
-  provinceRel Province @relation(fields: [provinceId], references: [provinceId])
-  cityRel     City     @relation(fields: [cityId], references: [cityId])
+  contactName String   @map("contact_name") @db.VarChar(100)
+  barangayId  Int      @map("barangay_id")
+  cityId      Int      @map("city_id")
+  provinceId  Int      @map("province_id")
   barangayRel Barangay @relation(fields: [barangayId], references: [barangayId])
-
-  // deliveries  Delivery[]
+  cityRel     City     @relation(fields: [cityId], references: [cityId])
+  provinceRel Province @relation(fields: [provinceId], references: [provinceId])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([provinceId])
@@ -732,175 +595,133 @@ model UserAddress {
   @@map("user_addresses")
 }
 
-// 钱包流水
 model WalletTransaction {
-  id              String   @id @default(cuid()) @map("id") @db.VarChar(32)
-  transactionId   String?   @map("transaction_id_ext") @db.VarChar(32)
-  transactionNo   String   @unique @map("transaction_no")  @db.VarChar(50)
-  userId          String   @map("user_id") @db.VarChar(32)
-  walletId        String   @map("wallet_id") @db.VarChar(32)
+  id              String     @id @default(cuid()) @map("id") @db.VarChar(32)
+  transactionNo   String     @unique @map("transaction_no") @db.VarChar(50)
+  userId          String     @map("user_id") @db.VarChar(32)
+  walletId        String     @map("wallet_id") @db.VarChar(32)
+  transactionType Int        @map("transaction_type") @db.SmallInt
+  balanceType     Int        @map("balance_type") @db.SmallInt
+  amount          Decimal    @map("amount") @db.Decimal(10, 2)
+  relatedId       String?    @map("related_id") @db.VarChar(64)
+  relatedType     String?    @map("related_type") @db.VarChar(50)
+  description     String?    @map("description")
+  status          Int        @default(1) @map("status") @db.SmallInt
+  createdAt       DateTime   @default(now()) @map("created_at")
+  remark          String?    @map("remark") @db.VarChar(500)
+  transactionId   String?    @map("transaction_id_ext") @db.VarChar(32)
+  afterBalance    Decimal    @map("after_balance") @db.Decimal(10, 2)
+  beforeBalance   Decimal    @map("before_balance") @db.Decimal(10, 2)
+  updatedAt       DateTime   @default(now()) @updatedAt @map("updated_at")
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet          UserWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
-  beforeBalance  Decimal  @map("before_balance") @db.Decimal(10, 2)
-  afterBalance   Decimal  @map("after_balance")  @db.Decimal(10, 2)
-
-  // 1=充值 2=消费 3=退款 4=奖励 5=提现 6=金币兑换 7=邀请奖励
-  transactionType Int      @map("transaction_type")  @db.SmallInt
-  // 1=现金 2=金币
-  balanceType     Int      @map("balance_type")  @db.SmallInt
-  amount          Decimal  @map("amount") @db.Decimal(10, 2)
-  relatedId       String?  @map("related_id") @db.VarChar(64)
-  relatedType     String?  @map("related_type")  @db.VarChar(50)
-  description     String?  @map("description")   @db.Text
-  remark          String?  @map("remark")        @db.VarChar(500)
-  status          Int      @default(1) @map("status")  @db.SmallInt
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  wallet UserWallet? @relation(fields: [walletId], references: [id], onDelete: Cascade)
-
-  @@map("wallet_transactions")
   @@index([userId], map: "idx_user_id_txn")
   @@index([transactionNo], map: "idx_transaction_no")
   @@index([transactionType], map: "idx_type")
   @@index([balanceType], map: "idx_balance_type")
   @@index([createdAt], map: "idx_created_at")
   @@index([userId, transactionType], map: "idx_user_type")
+  @@map("wallet_transactions")
 }
 
-
-// order table
 model Order {
-  orderId      String   @id @default(cuid()) @map("order_id") @db.VarChar(32)
-  orderNo     String   @unique @map("order_no") @db.VarChar(50)
-  userId      String   @map("user_id") @db.VarChar(32)
-  treasureId  String   @map("treasure_id") @db.VarChar(32)
-
-  originalAmount Decimal  @map("original_amount") @db.Decimal(10, 2)
-  discountAmount Decimal  @map("discount_amount") @db.Decimal(10, 2)
-  couponAmount   Decimal  @map("coupon_amount") @db.Decimal(10, 2)
-  coinAmount    Decimal  @map("coin_amount") @db.Decimal(10, 2)
-  finalAmount   Decimal  @map("final_amount") @db.Decimal(10, 2)
-
-  buyQuantity  Int      @map("buy_quantity")
-  unitPrice    Decimal  @map("unit_price") @db.Decimal(10, 2)
-
+  orderId            String         @id @default(cuid()) @map("order_id") @db.VarChar(32)
+  orderNo            String         @unique @map("order_no") @db.VarChar(50)
+  userId             String         @map("user_id") @db.VarChar(32)
+  treasureId         String         @map("treasure_id") @db.VarChar(32)
+  originalAmount     Decimal        @map("original_amount") @db.Decimal(10, 2)
+  discountAmount     Decimal        @map("discount_amount") @db.Decimal(10, 2)
+  couponAmount       Decimal        @map("coupon_amount") @db.Decimal(10, 2)
+  coinAmount         Decimal        @map("coin_amount") @db.Decimal(10, 2)
+  finalAmount        Decimal        @map("final_amount") @db.Decimal(10, 2)
+  buyQuantity        Int            @map("buy_quantity")
+  unitPrice          Decimal        @map("unit_price") @db.Decimal(10, 2)
   /// // 1待支付 2已支付 3取消 4退款
-  orderStatus Int      @default(1) @map("order_status") @db.SmallInt
-  payStatus   Int      @default(0) @map("pay_status") @db.SmallInt
-  refundStatus Int      @default(0) @map("refund_status") @db.SmallInt
-  /// 退款原因
-  refundReason String?  @map("refund_reason") @db.VarChar(255)
-  /// 实际退款金额 (记录财务流水)
-  refundAmount Decimal? @map("refund_amount") @db.Decimal(10, 2)
-  /// 退款时间
-  refundedAt   DateTime? @map("refunded_at")
-  // 记录操作人
-  refundAppliedBy  String?  @map("refund_applied_by") // 申请人ID
-  refundAuditedBy  String?  @map("refund_audited_by") // 审核人ID
-  refundRejectReason String? @map("refund_reject_reason") // 拒绝原因
-
-  //：支付方式 (1=余额, 2=Xendit)
-  // 加了问号 ? 表示可选，旧数据的这个字段会自动变成 null
-  paymentMethod Int?     @map("payment_method") @db.SmallInt
-
-  // 第三方流水号 (退款用)
-  transactionId String?  @map("transaction_id") @db.VarChar(100)
-
-  groupId     String?  @map("group_id") @db.VarChar(32)
-  isGroupOwner Int      @default(0) @map("is_group_owner") @db.SmallInt
-
-  userCouponId String? @unique  @map("user_coupon_id") @db.VarChar(32)
-  coinUsed    Decimal  @default(0) @map("coin_used") @db.Decimal(10, 2)
-
-  paidAt     DateTime? @map("paid_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  // ---  物流状态  ---
+  orderStatus        Int            @default(1) @map("order_status") @db.SmallInt
+  payStatus          Int            @default(0) @map("pay_status") @db.SmallInt
+  refundStatus       Int            @default(0) @map("refund_status") @db.SmallInt
+  groupId            String?        @map("group_id") @db.VarChar(32)
+  isGroupOwner       Int            @default(0) @map("is_group_owner") @db.SmallInt
+  coinUsed           Decimal        @default(0) @map("coin_used") @db.Decimal(10, 2)
+  paidAt             DateTime?      @map("paid_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  userCouponId       String?        @unique @map("user_coupon_id") @db.VarChar(32)
+  hasBonus           Int            @default(0) @map("has_bonus") @db.SmallInt
+  logisticsCo        String?        @map("logistics_co") @db.VarChar(50)
+  shippingAddress    Json?          @map("shipping_address")
   /// 0-待发货 1-已发货 2-已签收
-  shippingStatus   Int      @default(0) @map("shipping_status") @db.SmallInt
-
-  // ---  收货地址快照
-  shippingAddress  Json?    @map("shipping_address")
-
-  // ---  快递单号  ---
-  logisticsCo      String?  @map("logistics_co") @db.VarChar(50)
-  trackingNo       String?  @map("tracking_no") @db.VarChar(50)
-
-  // ---  退款与奖励  ---
-  hasBonus         Int      @default(0) @map("has_bonus") @db.SmallInt
-
-  user       User    @relation(fields: [userId],references: [id], onDelete: Cascade)
-  treasure   Treasure @relation(fields: [treasureId],references: [treasureId], onDelete: Restrict)
-  group      TreasureGroup? @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
-
-  userCoupon UserCoupon?    @relation(fields: [userCouponId], references: [id])
+  shippingStatus     Int            @default(0) @map("shipping_status") @db.SmallInt
+  trackingNo         String?        @map("tracking_no") @db.VarChar(50)
+  /// 实际退款金额 (记录财务流水)
+  refundAmount       Decimal?       @map("refund_amount") @db.Decimal(10, 2)
+  /// 退款原因
+  refundReason       String?        @map("refund_reason") @db.VarChar(255)
+  /// 退款时间
+  refundedAt         DateTime?      @map("refunded_at")
+  refundAppliedBy    String?        @map("refund_applied_by")
+  refundAuditedBy    String?        @map("refund_audited_by")
+  refundRejectReason String?        @map("refund_reject_reason")
+  paymentMethod      Int?           @map("payment_method") @db.SmallInt
+  transactionId      String?        @map("transaction_id") @db.VarChar(100)
+  group              TreasureGroup? @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
+  treasure           Treasure       @relation(fields: [treasureId], references: [treasureId])
+  userCoupon         UserCoupon?    @relation(fields: [userCouponId], references: [id])
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_user_id_order")
   @@index([treasureId], map: "idx_treasure_id_order")
-  @@index([orderStatus,payStatus], map: "idx_order_status")
+  @@index([orderStatus, payStatus], map: "idx_order_status")
   @@index([groupId], map: "idx_group_id_order")
   @@map("orders")
 }
 
 model SystemConfig {
-  key       String   @id @map("config_key") @db.VarChar(100)
-  value     String   @map("config_value") @db.VarChar(255)
+  key   String @id @map("config_key") @db.VarChar(100)
+  value String @map("config_value") @db.VarChar(255)
 
   @@map("system_configs")
 }
 
-// ========= Marketing: Coupon System =========
-
 /// 优惠券模板表 (印钞模板)
 model Coupon {
-  id              String   @id @default(cuid()) @map("coupon_id") @db.VarChar(32)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
+  id             String       @id @default(cuid()) @map("coupon_id") @db.VarChar(32)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
   /// 优惠券名称
-  couponName      String   @map("coupon_name") @db.VarChar(200)
+  couponName     String       @map("coupon_name") @db.VarChar(200)
   /// 优惠券代码 (兑换码用)
-  couponCode      String?  @unique @map("coupon_code") @db.VarChar(50)
-
+  couponCode     String?      @unique @map("coupon_code") @db.VarChar(50)
   /// 类型: 1-满减券 2-折扣券 3-无门槛现金券
-  couponType      Int      @map("coupon_type") @db.SmallInt
+  couponType     Int          @map("coupon_type") @db.SmallInt
   /// 折扣类型: 1-固定金额(减10块) 2-百分比(打9折)
-  discountType    Int      @default(1) @map("discount_type") @db.SmallInt
-
+  discountType   Int          @default(1) @map("discount_type") @db.SmallInt
   /// 面额/折扣值 (如 10.00 或 0.90)
-  discountValue   Decimal  @map("discount_value") @db.Decimal(10, 2)
+  discountValue  Decimal      @map("discount_value") @db.Decimal(10, 2)
   /// 最低消费门槛 (0代表无门槛)
-  minPurchase     Decimal  @default(0) @map("min_purchase_amount") @db.Decimal(10, 2)
+  minPurchase    Decimal      @default(0) @map("min_purchase_amount") @db.Decimal(10, 2)
   /// 最高抵扣金额 (防止9折券买游艇亏死)
-  maxDiscount     Decimal? @map("max_discount_amount") @db.Decimal(10, 2)
-
+  maxDiscount    Decimal?     @map("max_discount_amount") @db.Decimal(10, 2)
   /// 发放类型: 1-系统发放 2-用户领取 3-兑换码 4-邀请奖励
-  issueType       Int      @default(2) @map("issue_type") @db.SmallInt
-
+  issueType      Int          @default(2) @map("issue_type") @db.SmallInt
   /// 发行总量 (-1代表不限量)
-  totalQuantity   Int      @default(-1) @map("total_quantity")
+  totalQuantity  Int          @default(-1) @map("total_quantity")
   /// 已发放数量
-  issuedQuantity  Int      @default(0) @map("issued_quantity")
+  issuedQuantity Int          @default(0) @map("issued_quantity")
   /// 每人限领 (-1代表不限)
-  perUserLimit    Int      @default(1) @map("per_user_limit")
-
+  perUserLimit   Int          @default(1) @map("per_user_limit")
   /// 有效期类型: 1-固定日期范围 2-领券后N天有效
-  validType       Int      @default(1) @map("valid_type") @db.SmallInt
-  validDays       Int?     @map("valid_days") // 领券后几天
-  validStartAt    DateTime? @map("valid_start_time")
-  validEndAt      DateTime? @map("valid_end_time")
-
+  validType      Int          @default(1) @map("valid_type") @db.SmallInt
+  validDays      Int?         @map("valid_days")
+  validStartAt   DateTime?    @map("valid_start_time")
+  validEndAt     DateTime?    @map("valid_end_time")
   /// 状态: 0-禁用/结束 1-进行中
-  status          Int      @default(1) @map("status") @db.SmallInt
-
-  description     String?  @map("description") @db.VarChar(500)
-
-  subTitle        String?  @map("sub_title") @db.VarChar(200)
-  ruleDesc        String?  @map("rule_desc") @db.Text
-  // 关系
-  userCoupons     UserCoupon[]
+  status         Int          @default(1) @map("status") @db.SmallInt
+  description    String?      @map("description") @db.VarChar(500)
+  ruleDesc       String?      @map("rule_desc")
+  subTitle       String?      @map("sub_title") @db.VarChar(200)
+  userCoupons    UserCoupon[]
 
   @@index([status])
   @@index([issueType])
@@ -910,88 +731,57 @@ model Coupon {
 
 /// 用户优惠券实例表 (用户手里的券)
 model UserCoupon {
-  id              String   @id @default(cuid()) @map("user_coupon_id") @db.VarChar(32)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  userId          String   @map("user_id") @db.VarChar(32)
-  couponId        String   @map("coupon_id") @db.VarChar(32)
-
+  id             String    @id @default(cuid()) @map("user_coupon_id") @db.VarChar(32)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  userId         String    @map("user_id") @db.VarChar(32)
+  couponId       String    @map("coupon_id") @db.VarChar(32)
   /// 领取方式: 1-系统 2-主动 3-兑换 4-邀请
-  receiveType     Int      @default(2) @map("receive_type") @db.SmallInt
-
+  receiveType    Int       @default(2) @map("receive_type") @db.SmallInt
   /// 使用状态: 0-未使用 1-已使用 2-已过期 3-作废
-  status          Int      @default(0) @map("use_status") @db.SmallInt
-
+  status         Int       @default(0) @map("use_status") @db.SmallInt
   /// 实际抵扣金额
-  discountAmount  Decimal? @map("discount_amount") @db.Decimal(10, 2)
-
+  discountAmount Decimal?  @map("discount_amount") @db.Decimal(10, 2)
   /// 使用时间
-  usedAt          DateTime? @map("used_at")
-
-
+  usedAt         DateTime? @map("used_at")
   /// 有效期 (领取时计算固化下来，方便查询)
-  validStartAt    DateTime  @map("valid_start_time")
-  validEndAt      DateTime  @map("valid_end_time")
+  validStartAt   DateTime  @map("valid_start_time")
+  validEndAt     DateTime  @map("valid_end_time")
+  order          Order?
+  coupon         Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // 关系
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  coupon  Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  order  Order?
-
-  @@index([userId, status]) // 查"我的可用优惠券"最常用
-  @@index([validEndAt])     // 查过期券
+  @@index([userId, status])
+  @@index([validEndAt])
   @@map("user_coupons")
 }
-// ========= Finance: Recharge & Withdraw (Missing Tables) =========
 
 /// 21. 充值订单表
 model RechargeOrder {
-  rechargeId     String   @id @default(cuid()) @map("recharge_id") @db.VarChar(32)
-  rechargeNo     String   @unique @map("recharge_no") @db.VarChar(50)
-  userId         String   @map("user_id") @db.VarChar(32)
-
-  // 金额
-  rechargeAmount Decimal  @map("recharge_amount") @db.Decimal(10, 2)
-  bonusAmount    Decimal  @default(0.00) @map("bonus_amount") @db.Decimal(10, 2)
-  actualAmount   Decimal  @map("actual_amount") @db.Decimal(10, 2)
-
-  // 支付
-  paymentMethod  Int      @map("payment_method") @db.SmallInt // 1-GCash 2-PayMaya...
-  paymentChannel String?  @map("payment_channel") @db.VarChar(50)
-  paymentId      String?  @map("payment_id") @db.VarChar(32)
-  // 渠道 ID (对应 PaymentChannel.id, 如 1)
-  channelId      Int?     @map("channel_id")
-
-  //  支付链接 (方便用户在历史记录里重新打开支付)
-  payUrl         String?  @map("pay_url") @db.Text
-
-  // 状态: 1-待支付 2-支付中 3-充值成功 4-充值失败 5-已取消
-  rechargeStatus Int      @default(1) @map("recharge_status") @db.SmallInt
-
-  // 营销
-  activityId     String?  @map("activity_id") @db.VarChar(32)
-  firstRecharge  Int      @default(0) @map("first_recharge") @db.SmallInt
-
-  // 数据
-  thirdPartyOrderNo String? @map("third_party_order_no") @db.VarChar(100)
-  callbackData      Json?   @map("callback_data")
-
-  //channelCode，方便直接关联到 PaymentChannel
-  channelCode    String?  @map("channel_code") @db.VarChar(50) // 存 "PH_GCASH"
-
-  //  支付链接过期时间 (Xendit Invoice 有效期)
-  expiresAt      DateTime? @map("expires_at")
-
-  // 手续费 (记录这笔订单平台扣了多少钱，或者用户付了多少手续费)
-  feeAmount      Decimal  @default(0) @map("fee_amount") @db.Decimal(10, 2)
-
-  paidAt        DateTime? @map("paid_at")
-  completedAt   DateTime? @map("completed_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rechargeId        String    @id @default(cuid()) @map("recharge_id") @db.VarChar(32)
+  rechargeNo        String    @unique @map("recharge_no") @db.VarChar(50)
+  userId            String    @map("user_id") @db.VarChar(32)
+  rechargeAmount    Decimal   @map("recharge_amount") @db.Decimal(10, 2)
+  bonusAmount       Decimal   @default(0.00) @map("bonus_amount") @db.Decimal(10, 2)
+  actualAmount      Decimal   @map("actual_amount") @db.Decimal(10, 2)
+  paymentMethod     Int       @map("payment_method") @db.SmallInt
+  paymentChannel    String?   @map("payment_channel") @db.VarChar(50)
+  paymentId         String?   @map("payment_id") @db.VarChar(32)
+  rechargeStatus    Int       @default(1) @map("recharge_status") @db.SmallInt
+  activityId        String?   @map("activity_id") @db.VarChar(32)
+  firstRecharge     Int       @default(0) @map("first_recharge") @db.SmallInt
+  thirdPartyOrderNo String?   @map("third_party_order_no") @db.VarChar(100)
+  callbackData      Json?     @map("callback_data")
+  paidAt            DateTime? @map("paid_at")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  channelCode       String?   @map("channel_code") @db.VarChar(50)
+  expiresAt         DateTime? @map("expires_at")
+  feeAmount         Decimal   @default(0) @map("fee_amount") @db.Decimal(10, 2)
+  payUrl            String?   @map("pay_url")
+  channelId         Int?      @map("channel_id")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([rechargeNo])
@@ -1001,50 +791,36 @@ model RechargeOrder {
 
 /// 支付渠道配置表 (控制收银台显示)
 model PaymentChannel {
-  id          Int      @id @default(autoincrement())
-
+  id           Int      @id @default(autoincrement())
   /// 渠道编码: "PH_GCASH", "PH_PAYMAYA", "PH_BDO" (对应 Xendit)
-  code        String   @unique @db.VarChar(50)
-
+  code         String   @unique @db.VarChar(50)
   /// 显示名称: "GCash", "PayMaya"
-  name        String   @db.VarChar(100)
-
+  name         String   @db.VarChar(100)
   /// 图标 URL
-  icon        String?  @db.VarChar(255)
-
+  icon         String?  @db.VarChar(255)
   /// 渠道类型: 1-充值(Money In) 2-提现(Money Out)
-  type        Int      @default(1) @db.SmallInt
-
+  type         Int      @default(1) @db.SmallInt
   /// 货币单位
-  currency    String   @default("PHP") @db.VarChar(10)
-
+  currency     String   @default("PHP") @db.VarChar(10)
   /// 最小金额限制
-  minAmount   Decimal  @default(0) @map("min_amount") @db.Decimal(10, 2)
-
+  minAmount    Decimal  @default(0) @map("min_amount") @db.Decimal(10, 2)
   /// 最大金额限制
-  maxAmount   Decimal  @default(50000) @map("max_amount") @db.Decimal(10, 2)
-
+  maxAmount    Decimal  @default(50000) @map("max_amount") @db.Decimal(10, 2)
   /// 固定金额选项 (JSON数组)
   /// 存: [100, 200, 500, 1000] 或者带 Bonus: [{"val":100, "bonus":"+2%"}]
-  fixedAmounts Json?   @map("fixed_amounts")
-
+  fixedAmounts Json?    @map("fixed_amounts")
   /// 是否允许自定义输入金额
-  isCustom    Boolean  @default(true) @map("is_custom")
-
+  isCustom     Boolean  @default(true) @map("is_custom")
   /// 费率 (百分比，例如 0.02 代表 2%) - 用于后台计算成本
-  feeRate     Decimal  @default(0) @map("fee_rate") @db.Decimal(5, 4)
-
+  feeRate      Decimal  @default(0) @map("fee_rate") @db.Decimal(5, 4)
   /// 固定手续费 (例如每笔 10 PHP)
-  feeFixed    Decimal  @default(0) @map("fee_fixed") @db.Decimal(10, 2)
-
+  feeFixed     Decimal  @default(0) @map("fee_fixed") @db.Decimal(10, 2)
   /// 排序 (越小越靠前)
-  sortOrder   Int      @default(0) @map("sort_order")
-
+  sortOrder    Int      @default(0) @map("sort_order")
   /// 状态: 1-启用 0-禁用 2-维护中
-  status      Int      @default(1) @db.SmallInt
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  status       Int      @default(1) @db.SmallInt
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@index([type, status])
   @@map("payment_channels")
@@ -1052,42 +828,29 @@ model PaymentChannel {
 
 /// 22. 提现订单表
 model WithdrawOrder {
-  withdrawId     String   @id @default(cuid()) @map("withdraw_id") @db.VarChar(32)
-  withdrawNo     String   @unique @map("withdraw_no") @db.VarChar(50)
-  userId         String   @map("user_id") @db.VarChar(32)
-
-  // 金额
-  withdrawAmount Decimal  @map("withdraw_amount") @db.Decimal(10, 2)
-  feeAmount      Decimal  @default(0.00) @map("fee_amount") @db.Decimal(10, 2)
-  actualAmount   Decimal  @map("actual_amount") @db.Decimal(10, 2)
-
-  // 方式
-  withdrawMethod Int      @map("withdraw_method") @db.SmallInt
-  withdrawAccount String  @map("withdraw_account") @db.VarChar(100)
-  accountName     String? @map("account_name") @db.VarChar(100)
-  bankName        String? @map("bank_name") @db.VarChar(100)
-
-  // 状态: 1-待审核 2-审核通过 3-处理中 4-提现成功 5-审核拒绝 6-提现失败
-  withdrawStatus  Int     @default(1) @map("withdraw_status") @db.SmallInt
-
-  auditResult     String? @map("audit_result") @db.VarChar(500)
-  rejectReason    String? @map("reject_reason") @db.VarChar(500)
-  auditorId       String? @map("auditor_id") @db.VarChar(32)
-
-  //  渠道编码: "PH_GCASH", "PH_BPI", "PH_BDO"
-  // 必须存这个，不然调用 createDisbursement 时不知道传给 Xendit 哪个银行
-  channelCode    String?  @map("channel_code") @db.VarChar(50)
-
-  thirdPartyOrderNo String? @map("third_party_order_no") @db.VarChar(100)
-  transferVoucher   String? @map("transfer_voucher") @db.VarChar(255)
-
-  appliedAt   DateTime  @default(now()) @map("applied_at") // 设置默认值方便
-  auditedAt   DateTime? @map("audited_at")
-  completedAt DateTime? @map("completed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  withdrawId        String    @id @default(cuid()) @map("withdraw_id") @db.VarChar(32)
+  withdrawNo        String    @unique @map("withdraw_no") @db.VarChar(50)
+  userId            String    @map("user_id") @db.VarChar(32)
+  withdrawAmount    Decimal   @map("withdraw_amount") @db.Decimal(10, 2)
+  feeAmount         Decimal   @default(0.00) @map("fee_amount") @db.Decimal(10, 2)
+  actualAmount      Decimal   @map("actual_amount") @db.Decimal(10, 2)
+  withdrawMethod    Int       @map("withdraw_method") @db.SmallInt
+  withdrawAccount   String    @map("withdraw_account") @db.VarChar(100)
+  accountName       String?   @map("account_name") @db.VarChar(100)
+  bankName          String?   @map("bank_name") @db.VarChar(100)
+  withdrawStatus    Int       @default(1) @map("withdraw_status") @db.SmallInt
+  auditResult       String?   @map("audit_result") @db.VarChar(500)
+  rejectReason      String?   @map("reject_reason") @db.VarChar(500)
+  auditorId         String?   @map("auditor_id") @db.VarChar(32)
+  thirdPartyOrderNo String?   @map("third_party_order_no") @db.VarChar(100)
+  transferVoucher   String?   @map("transfer_voucher") @db.VarChar(255)
+  appliedAt         DateTime  @default(now()) @map("applied_at")
+  auditedAt         DateTime? @map("audited_at")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  channelCode       String?   @map("channel_code") @db.VarChar(50)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([withdrawNo])
@@ -1095,17 +858,14 @@ model WithdrawOrder {
   @@map("withdraw_orders")
 }
 
-
-
 /// 省份配置 (Philippines Provinces)
 model Province {
-  provinceId   Int      @id @default(autoincrement()) @map("province_id")
-  provinceName String   @unique @map("province_name") @db.VarChar(100)
-  provinceCode String?  @map("province_code") @db.VarChar(50)
-  sortOrder    Int      @default(0) @map("sort_order")
-  status       Int      @default(1) @db.SmallInt // 1=启用
-
-  cities       City[]
+  provinceId    Int           @id @default(autoincrement()) @map("province_id")
+  provinceName  String        @unique @map("province_name") @db.VarChar(100)
+  provinceCode  String?       @map("province_code") @db.VarChar(50)
+  sortOrder     Int           @default(0) @map("sort_order")
+  status        Int           @default(1) @db.SmallInt
+  cities        City[]
   userAddresses UserAddress[]
 
   @@map("provinces")
@@ -1113,15 +873,14 @@ model Province {
 
 /// 城市配置 (Philippines Cities)
 model City {
-  cityId     Int      @id @default(autoincrement()) @map("city_id")
-  provinceId Int      @map("province_id")
-  cityName   String   @map("city_name") @db.VarChar(100)
-  cityCode   String?  @map("city_code") @db.VarChar(50)
-  postalCode String?  @map("postal_code") @db.VarChar(10)
-  status     Int      @default(1) @db.SmallInt // 1=启用
-
-  province   Province @relation(fields: [provinceId], references: [provinceId])
-  barangays  Barangay[] // 关联下级社区
+  cityId        Int           @id @default(autoincrement()) @map("city_id")
+  provinceId    Int           @map("province_id")
+  cityName      String        @map("city_name") @db.VarChar(100)
+  cityCode      String?       @map("city_code") @db.VarChar(50)
+  postalCode    String?       @map("postal_code") @db.VarChar(10)
+  status        Int           @default(1) @db.SmallInt
+  barangays     Barangay[]
+  province      Province      @relation(fields: [provinceId], references: [provinceId])
   userAddresses UserAddress[]
 
   @@index([provinceId])
@@ -1130,42 +889,27 @@ model City {
 
 /// 菲律宾最小行政单位 Barangay (物流必填)
 model Barangay {
-  barangayId   Int      @id @default(autoincrement()) @map("barangay_id")
-  cityId       Int      @map("city_id")
-  barangayName String   @map("barangay_name") @db.VarChar(100)
-  status       Int      @default(1) @db.SmallInt
-
-  city         City     @relation(fields: [cityId], references: [cityId])
+  barangayId    Int           @id @default(autoincrement()) @map("barangay_id")
+  cityId        Int           @map("city_id")
+  barangayName  String        @map("barangay_name") @db.VarChar(100)
+  status        Int           @default(1) @db.SmallInt
+  city          City          @relation(fields: [cityId], references: [cityId])
   userAddresses UserAddress[]
 
   @@unique([cityId, barangayName])
-
   @@index([cityId])
   @@map("barangays")
 }
 
-// 证件类型配置表
 model KycIdType {
-  // 这里直接用枚举的 Int 值作为主键，方便对应
-  id          Int      @id @map("id")
-
-  // 内部代号: "PH_DRIVER_LICENSE" (给开发者看)
-  code        String   @unique @db.VarChar(50)
-
-  // 展示名称: "Driver's License" (给用户看，支持随时改)
-  label       String   @db.VarChar(100)
-
-  // 国家代码: "PH", "CN", "GLOBAL" (用于前端筛选)
-  country     String   @default("GLOBAL") @db.VarChar(10)
-
-  // 排序权重 (数字越小越靠前)
-  sortOrder   Int      @default(0) @map("sort_order")
-
-  // 状态: 1-启用 0-禁用 (比如某个证件接口挂了，可以临时下架)
-  status      Int      @default(1) @db.SmallInt
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  sortOrder Int      @default(0) @map("sort_order")
+  status    Int      @default(1) @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at")
+  code      String   @unique @db.VarChar(50)
+  country   String   @default("GLOBAL") @db.VarChar(10)
+  id        Int      @id @map("id")
+  label     String   @db.VarChar(100)
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("kyc_id_types")
 }
@@ -1175,123 +919,80 @@ model KycOccupationType {
   occupationId   Int      @id @default(autoincrement()) @map("occupation_id")
   occupationName String   @map("occupation_name") @db.VarChar(200)
   category       String?  @map("occupation_category") @db.VarChar(50)
-
   sortOrder      Int      @default(0) @map("sort_order")
   status         Int      @default(1) @db.SmallInt
-
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@index([category])
   @@map("kyc_occupation_types")
 }
 
-
 /// KYC 认证记录
 model KycRecord {
-  id            String   @id @default(cuid()) @map("id") @db.VarChar(32)
-  userId        String   @map("user_id") @db.VarChar(32)
-  sessionId     String?  @unique @map("session_id")
-
-  // 状态: 0-未提交 1-审核中 2-审核失败 3-待补充 4-已通过 5-系统拒绝(自动风控)
-  kycStatus     Int      @default(0) @map("kyc_status") @db.SmallInt
-
-  // === 1. 证件核心信息 ===
-  idType        Int      @default(1) @map("id_type")
-  idNumber      String?  @map("id_number") @db.VarChar(50)
-  firstName     String?  @map("first_name") @db.VarChar(50)
-  middleName    String?  @map("middle_name") @db.VarChar(50)
-  lastName      String?  @map("last_name") @db.VarChar(50)
-  realName      String?  @map("real_name") @db.VarChar(150)
-
-  gender        String?  @db.VarChar(10)
-  birthday      DateTime? @map("birthday")
-
-  // [新增] 出生地 (AMLA 合规必填)
-  placeOfBirth  String?   @map("place_of_birth") @db.VarChar(100)
-  // [新增] 国籍 (区分外国人)
-  nationality   String?   @map("nationality") @db.VarChar(50)
-
-  expiryDate    DateTime? @map("expiry_date")
-  // [新增] 签发日期 (辅助验证证件真伪)
-  issueDate     DateTime? @map("issue_date")
-
-  countryCode   Int?      @map("country_code")
-
-  // === 2. 财务能力 ===
-  sourceOfIncome String? @map("source_of_income")
-  natureOfWork   String? @map("nature_of_work")
-  // [新增] 公司名称/雇主 (风控核查用)
-  employerName   String? @map("employer_name") @db.VarChar(100)
-
-  // === 3. 详细地址信息 (Philippines Standard) ===
-  province      String?  @db.VarChar(100)
-  city          String?  @db.VarChar(100)
-  barangay      String?  @db.VarChar(100)
-  postalCode    String?  @map("postal_code") @db.VarChar(20)
-  address       String?  @db.Text
-
-  // 当前居住地
-  isSameAddress Boolean  @default(true) @map("is_same_address")
-  currentAddress Json?   @map("current_address_json")
-
-  // === 4. 图片凭证 ===
-  idCardFront   String?  @map("id_card_front") @db.VarChar(255)
-  idCardBack    String?  @map("id_card_back") @db.VarChar(255)
-  selfiePhoto   String?  @map("selfie_photo") @db.VarChar(255)
-  assetProof    String?  @map("asset_proof") @db.VarChar(255)
-  optionalPhoto String?  @map("optional_photo") @db.VarChar(255)
-
-  // === 5. 活体与风控数据 ===
-  faceImage     String?  @map("face_image") @db.VarChar(255)
-  livenessScore Float?   @map("liveness_score")
-  securityFlags Json?    @map("security_flags")
-
-  // [新增] OCR 原始数据备份 (用于对比用户是否篡改了表单)
-  ocrRawData    Json?    @map("ocr_raw_data")
-
-  // [新增] 自动计算的风险等级 (0-Safe, 1-Review, 2-High Risk)
-  riskLevel     Int      @default(0) @map("risk_level") @db.SmallInt
-
-  // === 6. 设备指纹 ===
-  ipAddress     String?  @map("ip_address") @db.VarChar(50)
-  deviceId      String?  @map("device_id") @db.VarChar(100)
-  deviceModel   String?  @map("device_model") @db.VarChar(100)
-  // [新增] App 版本号 (用于排查旧版本兼容性问题)
-  appVersion    String?  @map("app_version") @db.VarChar(20)
-
-  // === 7. 审核结果 ===
-  auditResult   String?  @map("audit_result") @db.Text
-  rejectReason  String?  @map("reject_reason") @db.VarChar(255)
-  auditorId     String?  @map("auditor_id") @db.VarChar(32)
-
-  submittedAt   DateTime? @map("submitted_at")
-  auditedAt     DateTime? @map("audited_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid()) @map("id") @db.VarChar(32)
+  userId         String    @map("user_id") @db.VarChar(32)
+  kycStatus      Int       @default(0) @map("kyc_status") @db.SmallInt
+  idType         Int       @default(1) @map("id_type")
+  idNumber       String?   @map("id_number") @db.VarChar(50)
+  realName       String?   @map("real_name") @db.VarChar(150)
+  idCardFront    String?   @map("id_card_front") @db.VarChar(255)
+  idCardBack     String?   @map("id_card_back") @db.VarChar(255)
+  faceImage      String?   @map("face_image") @db.VarChar(255)
+  livenessScore  Float?    @map("liveness_score")
+  auditResult    String?   @map("audit_result")
+  rejectReason   String?   @map("reject_reason") @db.VarChar(255)
+  auditorId      String?   @map("auditor_id") @db.VarChar(32)
+  submittedAt    DateTime? @map("submitted_at")
+  auditedAt      DateTime? @map("audited_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  sessionId      String?   @unique @map("session_id")
+  deviceId       String?   @map("device_id") @db.VarChar(100)
+  deviceModel    String?   @map("device_model") @db.VarChar(100)
+  ipAddress      String?   @map("ip_address") @db.VarChar(50)
+  address        String?
+  assetProof     String?   @map("asset_proof") @db.VarChar(255)
+  barangay       String?   @db.VarChar(100)
+  birthday       DateTime? @map("birthday")
+  city           String?   @db.VarChar(100)
+  countryCode    Int?      @map("country_code")
+  currentAddress Json?     @map("current_address_json")
+  expiryDate     DateTime? @map("expiry_date")
+  firstName      String?   @map("first_name") @db.VarChar(50)
+  gender         String?   @db.VarChar(10)
+  isSameAddress  Boolean   @default(true) @map("is_same_address")
+  lastName       String?   @map("last_name") @db.VarChar(50)
+  middleName     String?   @map("middle_name") @db.VarChar(50)
+  optionalPhoto  String?   @map("optional_photo") @db.VarChar(255)
+  postalCode     String?   @map("postal_code") @db.VarChar(20)
+  province       String?   @db.VarChar(100)
+  securityFlags  Json?     @map("security_flags")
+  selfiePhoto    String?   @map("selfie_photo") @db.VarChar(255)
+  natureOfWork   String?   @map("nature_of_work")
+  sourceOfIncome String?   @map("source_of_income")
+  appVersion     String?   @map("app_version") @db.VarChar(20)
+  employerName   String?   @map("employer_name") @db.VarChar(100)
+  issueDate      DateTime? @map("issue_date")
+  nationality    String?   @map("nationality") @db.VarChar(50)
+  ocrRawData     Json?     @map("ocr_raw_data")
+  placeOfBirth   String?   @map("place_of_birth") @db.VarChar(100)
+  riskLevel      Int       @default(0) @map("risk_level") @db.SmallInt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  // 复合索引：同时查证件号 + 国家 + 证件类型
-  // 场景：查找“菲律宾(63)的护照(Type 1)号码为 A1234567”的记录
   @@index([countryCode, idType, idNumber])
   @@map("kyc_records")
 }
 
-
 model KycLivenessAttempt {
   id        String   @id @default(cuid()) @db.VarChar(32)
   userId    String   @unique @map("user_id") @db.VarChar(32)
-
-  attemptId String   @map("attempt_id") @db.VarChar(64)  // 第三方活体检测服务的尝试ID
-  token     String   @map("token") @db.VarChar(128) // 第三方活体检测服务的访问令牌
-  sessionId String?  @map("session_id") @db.VarChar(64) // 关联的KYC会话ID
-
+  attemptId String   @map("attempt_id") @db.VarChar(64)
+  token     String   @map("token") @db.VarChar(128)
+  sessionId String?  @map("session_id") @db.VarChar(64)
   expiresAt DateTime @map("expires_at")
-
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
@@ -1299,11 +1000,11 @@ model KycLivenessAttempt {
 }
 
 model KycLivenessSession {
-  id         String   @id @default(cuid()) @db.VarChar(32)
-  userId     String   @db.VarChar(32)
-  sessionId  String   @unique @map("session_id")
-  usedAt     DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid()) @db.VarChar(32)
+  userId    String    @db.VarChar(32)
+  sessionId String    @unique @map("session_id")
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
   @@map("kyc_liveness_sessions")
@@ -1311,34 +1012,27 @@ model KycLivenessSession {
 
 /// 秒杀/抢购场次表
 model FlashSaleSession {
-  id        String   @id @default(cuid())
-  title     String   @map("title") @db.VarChar(50) // 例如 "10:00 AM Rush"
-
-  startTime DateTime @map("start_time") // 2025-12-30 10:00:00
-  endTime   DateTime @map("end_time")   // 2025-12-30 12:00:00
-
-  status    Int      @default(1) // 1=启用
-
+  id        String             @id @default(cuid())
+  title     String             @map("title") @db.VarChar(50)
+  startTime DateTime           @map("start_time")
+  endTime   DateTime           @map("end_time")
+  status    Int                @default(1)
   products  FlashSaleProduct[]
 
-  @@map("flash_sale_sessions")
   @@index([startTime, endTime])
+  @@map("flash_sale_sessions")
 }
 
 /// 秒杀商品关联
 model FlashSaleProduct {
-  id        String @id @default(cuid())
-  sessionId String @map("session_id")
-  treasureId String @map("treasure_id")
-  // 秒杀库存 (独立于总库存，防止秒杀把正价库存卖空)
-  flashStock Int    @default(0) @map("flash_stock")
-  // 秒杀价格
-  flashPrice Decimal @map("flash_price") @db.Decimal(10, 2)
-
-  sortOrder Int    @default(0)
-
-  session   FlashSaleSession @relation(fields: [sessionId], references: [id])
-  treasure  Treasure         @relation(fields: [treasureId], references: [treasureId])
+  id         String           @id @default(cuid())
+  sessionId  String           @map("session_id")
+  treasureId String           @map("treasure_id")
+  flashStock Int              @default(0) @map("flash_stock")
+  flashPrice Decimal          @map("flash_price") @db.Decimal(10, 2)
+  sortOrder  Int              @default(0)
+  session    FlashSaleSession @relation(fields: [sessionId], references: [id])
+  treasure   Treasure         @relation(fields: [treasureId], references: [treasureId])
 
   @@map("flash_sale_products")
 }

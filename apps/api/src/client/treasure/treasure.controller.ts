@@ -19,6 +19,7 @@ import {
   TreasureStatusDto,
 } from '@api/client/treasure/dto/treasure-response-dto';
 import { plainToInstance } from 'class-transformer';
+import { HotGroupItemDto } from '@api/client/treasure/dto/hot_croup_item.dto';
 
 @Controller('treasure')
 export class TreasureController {
@@ -40,6 +41,20 @@ export class TreasureController {
   }
 
   /**
+   * 热门团列表
+   * @param limit
+   */
+  @Get('hot-groups')
+  @ApiOkResponse({ type: [HotGroupItemDto] })
+  async getHotGroups(@Query('limit') limit?: number) {
+    // 限制最大查询数量，防止前端传个 10000 把数据库搞挂
+    const take = Math.min(Number(limit) || 10, 20);
+    const list = await this.svc.getHotGroups(take);
+
+    return plainToInstance(HotGroupItemDto, list);
+  }
+
+  /**
    * 商品详情
    * @param id
    */
@@ -51,11 +66,15 @@ export class TreasureController {
     return plainToInstance(TreasureResponseDto, item);
   }
 
+  /**
+   * 商品状态
+   * @param id
+   */
   @Get('status/:id')
   @ApiOkResponse({ type: TreasureStatusDto })
   async getStatus(@Param('id') id: string) {
     const status = await this.svc.getStatus(id);
     if (status === null) throwBiz(ERROR_KEYS.NOT_FOUND);
-    return status;
+    return plainToInstance(TreasureStatusDto, status);
   }
 }

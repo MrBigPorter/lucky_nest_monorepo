@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -39,6 +40,16 @@ export class CheckoutDto {
   @IsString()
   @IsOptional()
   groupId?: string;
+
+  @ApiProperty({
+    description:
+      'Whether it is a group purchase (true) or solo purchase (false)',
+    example: true,
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isGroup?: boolean;
 
   @ApiPropertyOptional({
     description: 'Coupon ID to apply',

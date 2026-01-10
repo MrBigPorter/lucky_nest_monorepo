@@ -19,8 +19,8 @@ import {
 import { GroupService } from '@api/common/group/group.service';
 import { ERROR_KEYS } from '@api/common/error-codes.gen';
 import { throwBiz } from '@api/common/exceptions/biz.exception';
-import { OrderItemDto } from '@api/client/orders/dto/order-item.dto';
 import { RefundApplyDto } from '@api/client/orders/dto/refund-apply.dto';
+import { BizPrefix, OrderNoHelper } from '@lucky/shared';
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -43,15 +43,10 @@ export class OrderService {
       .catch(() => null as any);
     return D(cfg?.value ? Number(cfg.value) : 10);
   }
-  private genOrderNo() {
-    const d = new Date();
-    const p = (n: number, w = 2) => `${n}`.padStart(w, '0');
-    const ts = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${p(d.getMilliseconds(), 3)}`;
-    return `ORD${ts}${Math.floor(Math.random() * 1000)}`;
-  }
 
   async checkOut(userId: string, dto: CheckoutDto) {
-    const { treasureId, addressId, entries, groupId, paymentMethod } = dto;
+    const { treasureId, addressId, entries, groupId, paymentMethod, isGroup } =
+      dto;
     if (!entries || entries < 1) {
       throw new BadRequestException('entries must be at least 1');
     }
@@ -69,6 +64,7 @@ export class OrderService {
             treasureId: true,
             state: true,
             unitAmount: true,
+            soloAmount: true,
             seqShelvesQuantity: true,
             seqBuyQuantity: true,
             maxPerBuyQuantity: true,
@@ -138,9 +134,25 @@ export class OrderService {
           }
         }
 
-        // Calculate total amount
-        const unit = treasure.unitAmount as unknown as Prisma.Decimal;
-        const originalAmount = unit.mul(entries);
+        // 默认为拼团价
+        let finalUnitPrice = treasure.unitAmount as unknown as Prisma.Decimal;
+        // 修改后 (正确逻辑：只有明确传入 false 才是单买，默认是拼团)
+        const isSoloBuy = isGroup === false;
+
+        if (isSoloBuy) {
+          // 单买价
+          const soloPrice = treasure.soloAmount as unknown as Prisma.Decimal;
+          if (!soloPrice || soloPrice.lte(0)) {
+            throw new BadRequestException(
+              'solo purchase not available for this treasure',
+            );
+          }
+          // use solo price
+          finalUnitPrice = soloPrice;
+        }
+
+        // 计算总价 (使用选定后的 finalUnitPrice)
+        const originalAmount = finalUnitPrice.mul(entries);
 
         let couponAmount = D(0);
         let coinUsed = D(0);
@@ -230,7 +242,7 @@ export class OrderService {
         // create order record
         const order = await tx.order.create({
           data: {
-            orderNo: this.genOrderNo(),
+            orderNo: OrderNoHelper.generate(BizPrefix.ORDER),
             userId,
             treasureId,
             originalAmount,
@@ -239,7 +251,7 @@ export class OrderService {
             coinAmount,
             finalAmount,
             buyQuantity: entries,
-            unitPrice: unit,
+            unitPrice: finalUnitPrice,
             orderStatus: ORDER_STATUS.PAID,
             payStatus: PAY_STATUS.PAID,
             refundStatus: REFUND_STATUS.NO_REFUND,
@@ -265,12 +277,21 @@ export class OrderService {
           },
         });
 
-        // open group purchase if groupId is provided
-        const { finalGroupId, isOwner, alreadyInGroup } =
-          await this.group.joinOrCreateGroup(
+        //4. 分支逻辑：单买跳过拼团
+        let finalGroupId = null;
+        let isOwner = 0;
+        let alreadyInGroup = false;
+
+        // 只有【不是单买】时，才进入拼团逻辑
+        if (!isSoloBuy) {
+          const res = await this.group.joinOrCreateGroup(
             { userId, treasureId, orderId: order.orderId, groupId: groupId },
             tx,
           );
+          finalGroupId = res.finalGroupId;
+          isOwner = res.isOwner;
+          alreadyInGroup = res.alreadyInGroup;
+        }
         // update order with groupId and isOwner
         await tx.order.update({
           where: { orderId: order.orderId },

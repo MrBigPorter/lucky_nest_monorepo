@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -20,6 +22,7 @@ import { KycRecordListResponseDto } from '@api/admin/kyc/dto/kyc-record-list.res
 import { AuditKycDto } from '@api/admin/kyc/dto/audit-kyc.dto';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { RealIp } from '@api/common/decorators/http.decorators';
+import { AdminCreateKycDto } from '@api/admin/kyc/dto/admin-create-kyc.dto';
 
 @ApiTags('Admin KYC Management')
 @ApiBearerAuth()
@@ -79,5 +82,91 @@ export class KycController {
     return plainToInstance(KycRecordResponseDto, record, {
       excludeExtraneousValues: true,
     });
+  }
+
+  /**
+   * Update KYC information for a user
+   * @param userId
+   * @param dto
+   * @param adminId
+   * @param ip
+   */
+  @Put('update/:userId')
+  @RequirePermission(OpModule.USER, OpAction.USER.UPDATE)
+  @ApiOkResponse({ type: KycRecordResponseDto })
+  async updateKycInfo(
+    @Param('userId') userId: string,
+    @Body() dto: AuditKycDto,
+    @CurrentUserId() adminId: string,
+    @RealIp() ip: string,
+  ) {
+    const record = await this.kycService.updateKycInfo(
+      userId,
+      dto,
+      adminId,
+      ip,
+    );
+    return plainToInstance(KycRecordResponseDto, record, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  /**
+   * Revoke KYC approval for a user
+   * @param userId
+   * @param reason
+   * @param adminId
+   * @param ip
+   */
+  @Post('revoke/:userId')
+  @RequirePermission(OpModule.USER, OpAction.USER.UPDATE)
+  @ApiOkResponse({ type: KycRecordResponseDto })
+  async revokeKyc(
+    @Param('userId') userId: string,
+    @Body('reason') reason: string,
+    @CurrentUserId() adminId: string,
+    @RealIp() ip: string,
+  ) {
+    const record = await this.kycService.revokeKyc(userId, reason, adminId, ip);
+    return plainToInstance(KycRecordResponseDto, record, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  /**
+   * Delete KYC record for a user
+   * @param userId
+   * @param adminId
+   * @param ip
+   */
+  @Delete('delete/:userId')
+  @RequirePermission(OpModule.USER, OpAction.USER.DELETE)
+  @ApiOkResponse({ type: KycRecordResponseDto })
+  async deleteKyc(
+    @Param('userId') userId: string,
+    @CurrentUserId() adminId: string,
+    @RealIp() ip: string,
+  ) {
+    const record = await this.kycService.deleteKyc(userId, adminId, ip);
+    return plainToInstance(KycRecordResponseDto, record, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  /**
+   * Create a new KYC record for a user
+   * @param dto
+   * @param adminId
+   * @param ip
+   */
+  @Post('create')
+  @RequirePermission(OpModule.USER, OpAction.USER.CREATE)
+  @ApiOkResponse({ type: KycRecordResponseDto })
+  async create(
+    @Body() dto: AdminCreateKycDto,
+    @CurrentUserId() adminId: string,
+    @RealIp() ip: string,
+  ) {
+    return this.kycService.createKycByAdmin(dto, adminId, ip);
   }
 }

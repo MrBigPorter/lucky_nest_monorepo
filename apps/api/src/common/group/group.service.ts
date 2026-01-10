@@ -303,6 +303,41 @@ export class GroupService {
     };
   }
 
+  // 获取单个团的详情 (专门给 GroupRoomPage 使用)
+  async getGroupDetail(groupId: string) {
+    const group = await this.prisma.treasureGroup.findUnique({
+      where: { groupId },
+      include: {
+        // 1. 关联查出商品信息 (UI可能需要跳回商品页)
+        treasure: {
+          select: {
+            treasureId: true,
+            treasureName: true,
+            treasureCoverImg: true,
+          },
+        },
+        // 2. 关联查出所有成员 (UI用来画坑位)
+        members: {
+          // 顺序：团长在前，其余按加入时间
+          orderBy: [{ isOwner: 'desc' }, { joinedAt: 'asc' }],
+          include: {
+            user: {
+              select: {
+                id: true,
+                nickname: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+    return group;
+  }
+
   /**
    *  定时任务：每分钟执行一次
    * 扫描过期团，触发自动退款
