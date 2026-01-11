@@ -203,16 +203,40 @@ export class GroupService {
 
   // 组团列表
   async listGroupForTreasure(dto: GroupListForTreasureDto) {
-    const { treasureId, page, pageSize } = dto;
+    const { treasureId, page, pageSize, status, includeExpired } = dto;
+
+    const now = new Date();
+
+    const whereConditions: Prisma.TreasureGroupWhereInput = {
+      treasureId,
+    };
+    // 状态过滤
+    if (status === GROUP_STATUS.ACTIVE || (!status && !includeExpired)) {
+      // 只看进行中的
+      whereConditions.groupStatus = GROUP_STATUS.ACTIVE;
+
+      // 只看未过期的
+      if (!includeExpired) {
+        whereConditions.expireAt = { gt: now };
+      }
+    } else if (status) {
+      // 如果指定了状态 (比如查 FAILED)，就按指定的状态查
+      whereConditions.groupStatus = status;
+    } else {
+      // 默认：查所有状态
+    }
 
     const [total, groups] = await this.prisma.$transaction([
       this.prisma.treasureGroup.count({
         where: { treasureId, groupStatus: GROUP_STATUS.ACTIVE },
       }),
       this.prisma.treasureGroup.findMany({
-        where: { treasureId, groupStatus: GROUP_STATUS.ACTIVE },
+        where: whereConditions,
         // 优先展示快过期的，增加紧迫感
-        orderBy: [{ expireAt: 'asc' }],
+        orderBy:
+          !includeExpired && (!status || status === GROUP_STATUS.ACTIVE)
+            ? [{ expireAt: 'asc' }]
+            : [{ createdAt: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
