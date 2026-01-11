@@ -13,6 +13,7 @@ import { AddressModule } from '@api/admin/address/address.module';
 import { AdminRegionModule } from '@api/admin/region/admin-region.module';
 import { ClientUserModule } from '@api/admin/client-user/client-user.module';
 import { AdminPaymentChannelModule } from '@api/admin/payment-channel/payment-channel.module';
+import { GroupAdminModule } from '@api/admin/group/groups.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AdminPaymentChannelModule } from '@api/admin/payment-channel/payment-ch
     AdminRegionModule,
     ClientUserModule,
     AdminPaymentChannelModule,
+    GroupAdminModule,
   ],
   providers: [],
   controllers: [],

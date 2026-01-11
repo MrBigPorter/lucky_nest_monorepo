@@ -26,7 +26,10 @@ export class GroupController {
   @ApiOkResponse({ type: GroupListForTreasureResponseDto })
   async list(@Query() query: GroupListForTreasureDto) {
     const data = await this.groupService.listGroupForTreasure(query);
-    return plainToInstance(GroupForTreasureItemDto, data);
+    return {
+      ...data,
+      list: plainToInstance(GroupForTreasureItemDto, data.list),
+    };
   }
 
   @Get(':groupId/members')
@@ -42,7 +45,7 @@ export class GroupController {
   @Get(':groupId')
   @ApiOkResponse({ type: GroupDetailResponseDto })
   async getGroupDetail(@Param('groupId') groupId: string) {
-    const data = this.groupService.getGroupDetail(groupId);
+    const data = await this.groupService.getGroupDetail(groupId);
     console.log('group detail data', data);
     return plainToInstance(GroupDetailResponseDto, data);
   }
