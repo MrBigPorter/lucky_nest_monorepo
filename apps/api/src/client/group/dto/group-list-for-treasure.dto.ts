@@ -27,16 +27,4 @@ export class GroupListForTreasureDto {
   @Min(1)
   @Max(100)
   pageSize: number = 50;
-
-  // 允许指定查询状态 (App 不传，Admin 可能传)
-  @ApiPropertyOptional({ description: '拼团状态过滤', example: 1 })
-  @IsOptional()
-  @IsNumber()
-  status?: number;
-
-  // ：是否包含过期团 (Admin=true, App=false)
-  @ApiPropertyOptional({ description: '是否包含过期数据', example: false })
-  @IsOptional()
-  @IsBoolean()
-  includeExpired?: boolean;
 }

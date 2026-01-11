@@ -18,14 +18,14 @@ import { plainToInstance } from 'class-transformer';
 import { GroupForTreasureItemDto } from '@api/common/group/dto/group-for-treasure-item.dto';
 import { GroupDetailResponseDto } from '@api/common/group/dto/group-detail.response.dto';
 
-@Controller('groups')
+@Controller('admin/groups')
 export class GroupController {
   constructor(private readonly groupService: GroupService) {}
 
   @Get('list')
   @ApiOkResponse({ type: GroupListForTreasureResponseDto })
   async list(@Query() query: GroupListForTreasureDto) {
-    const data = await this.groupService.listGroupForTreasure(query);
+    const data = await this.groupService.listGroupForTreasure(null, query);
     return {
       ...data,
       list: plainToInstance(GroupForTreasureItemDto, data.list),
@@ -46,7 +46,6 @@ export class GroupController {
   @ApiOkResponse({ type: GroupDetailResponseDto })
   async getGroupDetail(@Param('groupId') groupId: string) {
     const data = await this.groupService.getGroupDetail(groupId);
-    console.log('group detail data', data);
     return plainToInstance(GroupDetailResponseDto, data);
   }
 }
