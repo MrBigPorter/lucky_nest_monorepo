@@ -202,14 +202,19 @@ export class GroupService {
   }
 
   // 组团列表
-  async listGroupForTreasure(dto: GroupListForTreasureDto) {
+  async listGroupForTreasure(
+    userId: string | null,
+    dto: GroupListForTreasureDto,
+  ) {
     const { treasureId, page, pageSize, status, includeExpired } = dto;
 
     const now = new Date();
 
-    const whereConditions: Prisma.TreasureGroupWhereInput = {
-      treasureId,
-    };
+    const whereConditions: Prisma.TreasureGroupWhereInput = {};
+
+    if (treasureId) {
+      whereConditions.treasureId = treasureId;
+    }
     // 状态过滤
     if (status === GROUP_STATUS.ACTIVE || (!status && !includeExpired)) {
       // 只看进行中的
@@ -222,13 +227,11 @@ export class GroupService {
     } else if (status) {
       // 如果指定了状态 (比如查 FAILED)，就按指定的状态查
       whereConditions.groupStatus = status;
-    } else {
-      // 默认：查所有状态
     }
 
     const [total, groups] = await this.prisma.$transaction([
       this.prisma.treasureGroup.count({
-        where: { treasureId, groupStatus: GROUP_STATUS.ACTIVE },
+        where: whereConditions,
       }),
       this.prisma.treasureGroup.findMany({
         where: whereConditions,
@@ -240,6 +243,14 @@ export class GroupService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
+          treasure: {
+            select: {
+              treasureId: true,
+              treasureName: true,
+              treasureCoverImg: true,
+              unitAmount: true,
+            },
+          },
           creator: {
             select: {
               id: true,
@@ -266,11 +277,22 @@ export class GroupService {
       }),
     ]);
 
+    const listWithStatus = groups.map((group) => {
+      let isJoined = false;
+      if (userId) {
+        isJoined = group.members.some((member) => member.user.id === userId);
+      }
+      return {
+        ...group,
+        isJoined,
+      };
+    });
+
     return {
       page,
       pageSize,
       total,
-      list: groups,
+      list: listWithStatus,
     };
   }
 
