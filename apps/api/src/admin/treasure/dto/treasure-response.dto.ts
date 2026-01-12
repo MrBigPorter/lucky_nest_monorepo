@@ -20,7 +20,7 @@ export class TreasureCategoryResponseDto {
 
 //  定义商品主体返回信息
 @Exclude()
-export class TreasureResponseClientDto {
+export class TreasureResponseDto {
   // ==========================
   // 1. 基础信息
   // ==========================
@@ -118,6 +118,10 @@ export class TreasureResponseClientDto {
   @Expose()
   @DateToTimestamp()
   salesEndAt?: number;
+
+  @ApiProperty({ description: '是否开启机器人补位', example: true })
+  @Expose()
+  enableRobot?: boolean;
 
   // ==========================
   // 4. 系统时间

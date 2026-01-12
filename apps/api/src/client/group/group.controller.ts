@@ -36,7 +36,6 @@ export class GroupClientController {
 
     const data = await this.groupService.listGroupForTreasure(userId, dto);
 
-    console.log('group list for treasure data', userId);
     return {
       ...data,
       list: plainToInstance(GroupForTreasureItemDto, data.list),

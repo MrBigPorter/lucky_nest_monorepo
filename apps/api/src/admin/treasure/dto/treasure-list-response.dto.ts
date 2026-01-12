@@ -1,11 +1,11 @@
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
-import { TreasureResponseClientDto } from '@api/admin/treasure/dto/treasure-response.dto';
 import { ApiProperty } from '@nestjs/swagger';
+import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
 
-export class TreasureListResponseClientDto extends PaginatedResponseDto<TreasureResponseClientDto> {
+export class TreasureListResponseDto extends PaginatedResponseDto<TreasureResponseDto> {
   @ApiProperty({
     description: 'list of treasures',
-    type: [TreasureResponseClientDto],
+    type: [TreasureResponseDto],
   })
-  override list!: TreasureResponseClientDto[];
+  override list!: TreasureResponseDto[];
 }

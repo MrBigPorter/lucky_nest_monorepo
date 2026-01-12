@@ -4,7 +4,6 @@ import { TreasureQueryDto } from '@api/client/treasure/dto/treasure-query.dto';
 import { RedisService } from '@api/common/redis/redis.service';
 import { TreasureFilterType } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
-import { Max } from 'class-validator';
 
 @Injectable()
 export class TreasureService {

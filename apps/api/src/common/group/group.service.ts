@@ -16,8 +16,9 @@ import {
   IS_OWNER,
   REFUND_STATUS,
 } from '@lucky/shared';
-import { DistributedLock } from '@api/common/decorators/distributed-lock.decorator';
 import { RedisLockService } from '@api/common/redis/redis-lock.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -29,19 +30,16 @@ export class GroupService {
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
     public readonly lockService: RedisLockService,
+    @InjectQueue('group_settlement') private readonly settlementQueue: Queue,
   ) {}
 
   private orm(tx?: Tx) {
     return (tx ?? this.prisma) as Tx;
   }
 
-  /**
-   * 组团逻辑：- create or join
-   * - 传了 groupId：尝试加团（满员/状态不对则报错） - join group if groupId provided (error if full/inactive)
-   * - 没传 groupId：自动开团 + 自己进成员表 - create group + add self as member if no groupId
-   *
-   * 注意：tx 一定是外面传进来的同一个事务 client - tx must be the same transaction client passed from outside
-   */
+  // ============================================================
+  // 1. 核心业务：加入或创建团 (真人入口)
+  // ============================================================
 
   async joinOrCreateGroup(
     params: {
@@ -57,11 +55,10 @@ export class GroupService {
     alreadyInGroup: boolean;
   }> {
     const db = this.orm(tx);
-
     const { userId, treasureId, groupId, orderId } = params;
-    // 场景 A: 加入现有的团 (拼团)
+
     if (groupId) {
-      // 1. 先查团的信息
+      // 场景 A: 加入现有的团
       const group = await db.treasureGroup.findUnique({
         where: { groupId },
         select: {
@@ -74,62 +71,42 @@ export class GroupService {
         },
       });
 
-      if (!group || group.treasureId !== treasureId) {
-        throw new NotFoundException('Group not found for this treasure');
-      }
+      if (!group || group.treasureId !== treasureId)
+        throw new NotFoundException('Group not found');
+      if (group.groupStatus !== GROUP_STATUS.ACTIVE)
+        throw new BadRequestException('Group is full or ended');
+      if (new Date() > group.expireAt)
+        throw new BadRequestException('Group expired');
+      if (group.currentMembers >= group.maxMembers)
+        throw new BadRequestException('Group already full');
 
-      if (group.groupStatus !== GROUP_STATUS.ACTIVE) {
-        throw new BadRequestException('Group is not active (expired or full)');
-      }
-
-      if (new Date() > group.expireAt) {
-        throw new BadRequestException('Group has expired');
-      }
-
-      if (group.currentMembers >= group.maxMembers) {
-        throw new BadRequestException('Group is already full');
-      }
-
-      // 4 核心：乐观锁更新 (CAS - Compare And Swap)
-      // 只有当 version 等于我刚才读到的 version 时，才执行更新
-      const updateResult = await tx?.treasureGroup.updateMany({
+      //  核心：乐观锁更新人数，防止瞬间超员
+      const updateResult = await db.treasureGroup.updateMany({
         where: {
           groupId: groupId,
-          version: group.version, // 乐观锁版本号
+          version: group.version,
           currentMembers: { lt: group.maxMembers },
         },
         data: {
-          currentMembers: { increment: 1 }, //再一次兜底防止超员
-          version: { increment: 1 }, // 版本号+1
+          currentMembers: { increment: 1 },
+          version: { increment: 1 },
         },
       });
 
-      // 没有行被更新，说明 version 不对（被并发改过）或满员
       if (!updateResult || updateResult.count === 0) {
-        this.logger.warn(
-          `Concurrency conflict for group ${groupId}, rolling back.`,
-        );
         throw new BadRequestException(
-          'Group is full or has been updated, please try again',
+          'System busy, please try again (Concurrency)',
         );
       }
 
-      // 5. 写入成员记录
-      await tx?.treasureGroupMember.create({
-        data: {
-          groupId,
-          userId,
-          isOwner: IS_OWNER.NO,
-          orderId,
-          memberType: 0,
-        },
+      // 写入成员表
+      await db.treasureGroupMember.create({
+        data: { groupId, userId, isOwner: IS_OWNER.NO, orderId, memberType: 0 },
       });
 
-      // 6. 判断是否刚刚满员 -> 触发成团成功
-      // 注意：这里用 (currentMembers + 1) 判断，因为刚才内存里的 group 还是旧数据
-      // 但其实最稳妥的是看 maxMembers
+      // 判断是否刚刚凑满
       if (group.currentMembers + 1 >= group.maxMembers) {
-        await this.handleGroupSuccess(groupId, db);
+        await this.handleGroupSuccessInTx(groupId, db);
       }
 
       return {
@@ -138,32 +115,24 @@ export class GroupService {
         alreadyInGroup: false,
       };
     } else {
-      // 场景 B: 创建新团 (开团)
-      // 1. 查商品配置 (几人团？多久过期？)
-      const treasure = await db.treasure.findUnique({
-        where: { treasureId },
-      });
-      if (!treasure) {
-        throw new BadRequestException('Treasure not found');
-      }
+      // 场景 B: 开新团
+      const treasure = await db.treasure.findUnique({ where: { treasureId } });
+      if (!treasure) throw new BadRequestException('Treasure not found');
 
-      const groupSize = treasure.groupSize || 5; // 默认5人团
-      const duration = (treasure.groupTimeLimit || 86400) * 1000; // 秒转毫秒
-
-      // 2. 创建团
       const newGroup = await db.treasureGroup.create({
         data: {
           treasureId,
           creatorId: userId,
-          maxMembers: groupSize,
-          currentMembers: 1, //自己先占一个名额
+          maxMembers: treasure.groupSize || 5,
+          currentMembers: 1,
           groupStatus: GROUP_STATUS.ACTIVE,
           version: 1,
-          expireAt: new Date(Date.now() + duration),
+          expireAt: new Date(
+            Date.now() + (treasure.groupTimeLimit || 86400) * 1000,
+          ),
         },
       });
 
-      // 3. 写入团长记录
       await db.treasureGroupMember.create({
         data: {
           groupId: newGroup.groupId,
@@ -173,6 +142,7 @@ export class GroupService {
           memberType: 0,
         },
       });
+
       return {
         finalGroupId: newGroup.groupId,
         isOwner: 1,
@@ -181,14 +151,15 @@ export class GroupService {
     }
   }
 
-  /**
-   * 私有方法：处理成团成功逻辑
-   * 1. 改变状态
-   * 2. (可选) 触发发货、抽奖或通知
-   */
+  // ============================================================
+  // 2. 核心通知逻辑：成团信号发射
+  // ============================================================
 
-  private async handleGroupSuccess(groupId: string, db: Tx) {
-    this.logger.log(`Group ${groupId} success!`);
+  /**
+   * [内部私有] 在事务内更新状态
+   */
+  private async handleGroupSuccessInTx(groupId: string, db: Tx) {
+    this.logger.log(`[Status] Group ${groupId} reached SUCCESS state.`);
     await db.treasureGroup.update({
       where: { groupId },
       data: {
@@ -198,48 +169,256 @@ export class GroupService {
       },
     });
 
-    // TODO: 触发后续逻辑，如发货、抽奖、通知等
+    // 关键优化：使用 setImmediate 确保信号在主数据库事务 COMMIT 之后发出
+    // 这样 Worker 去查订单时，状态肯定已经是最新且可见的
+    setImmediate(() => this.emitGroupSuccessSignal(groupId));
   }
 
-  // 组团列表
+  /**
+   * [信号发射器] 往 BullMQ 丢任务
+   */
+  private async emitGroupSuccessSignal(groupId: string) {
+    try {
+      await this.settlementQueue.add(
+        'activate_orders',
+        { groupId },
+        {
+          jobId: `settle_${groupId}`, // 幂等性，同一个团绝不重复激活
+          delay: 1000, // 给数据库留 1s 缓冲时间
+          removeOnComplete: true,
+        },
+      );
+      this.logger.log(`🚀 [BullMQ] Queued activation for group ${groupId}`);
+    } catch (err: any) {
+      this.logger.error(`[BullMQ ERROR] Failed to add job: ${err.message}`);
+    }
+  }
+
+  // ============================================================
+  // 3. 定时任务：机器人阶梯补位 (更真实的模拟用户)
+  // ============================================================
+
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  async handleRobotIntervention() {
+    return await this.lockService.runWithLock(
+      'group:robot:fill',
+      30000, // 30秒分布式锁
+      async () => {
+        const activeGroups = await this.prisma.treasureGroup.findMany({
+          where: {
+            groupStatus: GROUP_STATUS.ACTIVE,
+            treasure: { enableRobot: true },
+          },
+          include: { treasure: { select: { robotDelay: true } } },
+        });
+
+        const now = Date.now();
+        for (const group of activeGroups) {
+          const triggerTime =
+            group.createdAt.getTime() + group.treasure.robotDelay * 1000;
+          if (now < triggerTime) continue;
+          if (group.currentMembers >= group.maxMembers) continue;
+
+          //  阶梯式补位：一次 Cron 只进 1 个机器人
+          await this.fillSingleRobot(group);
+        }
+      },
+      false,
+    );
+  }
+
+  private async fillSingleRobot(group: any) {
+    const bot = await this.prisma.user.findFirst({
+      where: {
+        isRobot: true,
+        treasureGroupMembers: { none: { groupId: group.groupId } },
+      },
+    });
+    if (!bot) return;
+
+    try {
+      let shouldTriggerSuccess = false;
+      await this.prisma.$transaction(async (tx) => {
+        const currentGroup = await tx.treasureGroup.findUnique({
+          where: { groupId: group.groupId },
+        });
+        if (
+          !currentGroup ||
+          currentGroup.currentMembers >= currentGroup.maxMembers
+        )
+          return;
+
+        // 1. 插入机器人成员
+        await tx.treasureGroupMember.create({
+          data: {
+            groupId: group.groupId,
+            userId: bot.id,
+            isOwner: IS_OWNER.NO,
+            orderId: null,
+            memberType: 1,
+          },
+        });
+
+        // 2. 更新团人数 (乐观锁)
+        await tx.treasureGroup.updateMany({
+          where: { groupId: group.groupId, version: currentGroup.version },
+          data: {
+            currentMembers: { increment: 1 },
+            robotCount: { increment: 1 },
+            isSystemFilled: true,
+            version: { increment: 1 },
+          },
+        });
+
+        // 3. 检查是否补满
+        if (currentGroup.currentMembers + 1 >= currentGroup.maxMembers) {
+          await tx.treasureGroup.update({
+            where: { groupId: group.groupId },
+            data: {
+              groupStatus: GROUP_STATUS.SUCCESS,
+              successAt: new Date(),
+              endedAt: new Date(),
+            },
+          });
+          shouldTriggerSuccess = true;
+        }
+      });
+
+      // 4. 事务外发射信号
+      if (shouldTriggerSuccess) {
+        await this.emitGroupSuccessSignal(group.groupId);
+      }
+    } catch (e: any) {
+      this.logger.error(`[Robot Error] Group ${group.groupId}: ${e.message}`);
+    }
+  }
+
+  // ============================================================
+  // 4. 定时任务：处理过期团 (退款)
+  // ============================================================
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleExpiredGroups() {
+    return await this.lockService.runWithLock(
+      'group:expire',
+      60000, // 60秒锁，防止大规模处理时锁失效
+      async () => {
+        const expiredGroups = await this.prisma.treasureGroup.findMany({
+          where: {
+            groupStatus: GROUP_STATUS.ACTIVE,
+            expireAt: { lt: new Date() },
+          },
+          take: 50,
+          select: { groupId: true },
+        });
+
+        if (expiredGroups.length === 0) return;
+        this.logger.log(
+          `[Expired] Found ${expiredGroups.length} groups for refund.`,
+        );
+
+        await Promise.allSettled(
+          expiredGroups.map((g) => this.processGroupFailure(g.groupId)),
+        );
+      },
+      false,
+    );
+  }
+
+  private async processGroupFailure(groupId: string) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const group = await tx.treasureGroup.findUnique({ where: { groupId } });
+        if (!group || group.groupStatus !== GROUP_STATUS.ACTIVE) return;
+
+        await tx.treasureGroup.update({
+          where: { groupId },
+          data: { groupStatus: GROUP_STATUS.FAILED, endedAt: new Date() },
+        });
+
+        const orders = await tx.order.findMany({
+          where: {
+            groupId,
+            payStatus: PAY_STATUS.PAID,
+            refundStatus: REFUND_STATUS.NO_REFUND,
+          },
+        });
+
+        for (const order of orders) {
+          await this.refundSingleOrder(order, tx);
+        }
+      });
+    } catch (e: any) {
+      this.logger.error(`[Failure Error] Group ${groupId}: ${e.message}`);
+    }
+  }
+
+  private async refundSingleOrder(order: any, tx: Tx) {
+    const cashRefund = new Prisma.Decimal(order.finalAmount);
+    const coinRefund = new Prisma.Decimal(order.coinUsed || 0);
+
+    if (cashRefund.gt(0)) {
+      await this.wallet.creditCash(
+        {
+          userId: order.userId,
+          amount: cashRefund,
+          related: { id: order.orderId, type: 'REFUND_FAIL' },
+          desc: 'Refund',
+        },
+        tx,
+      );
+    }
+    if (coinRefund.gt(0)) {
+      await this.wallet.creditCoin(
+        {
+          userId: order.userId,
+          coins: coinRefund,
+          related: { id: order.orderId, type: 'REFUND_FAIL' },
+          desc: 'Refund',
+        },
+        tx,
+      );
+    }
+
+    await tx.order.update({
+      where: { orderId: order.orderId },
+      data: {
+        orderStatus: ORDER_STATUS.CANCELED,
+        refundStatus: REFUND_STATUS.REFUNDED,
+        refundAmount: cashRefund,
+        refundedAt: new Date(),
+      },
+    });
+  }
+
+  // ============================================================
+  // 5. 其他列表查询接口 (已保留)
+  // ============================================================
+
   async listGroupForTreasure(
     userId: string | null,
     dto: GroupListForTreasureDto,
   ) {
     const { treasureId, page, pageSize, status, includeExpired } = dto;
-
     const now = new Date();
-
     const whereConditions: Prisma.TreasureGroupWhereInput = {};
 
     if (treasureId) {
       whereConditions.treasureId = treasureId;
     }
-    // 状态过滤
-    if (status === GROUP_STATUS.ACTIVE || (!status && !includeExpired)) {
-      // 只看进行中的
-      whereConditions.groupStatus = GROUP_STATUS.ACTIVE;
 
-      // 只看未过期的
-      if (!includeExpired) {
-        whereConditions.expireAt = { gt: now };
-      }
+    if (status === GROUP_STATUS.ACTIVE || (!status && !includeExpired)) {
+      whereConditions.groupStatus = GROUP_STATUS.ACTIVE;
+      if (!includeExpired) whereConditions.expireAt = { gt: now };
     } else if (status) {
-      // 如果指定了状态 (比如查 FAILED)，就按指定的状态查
       whereConditions.groupStatus = status;
     }
 
     const [total, groups] = await this.prisma.$transaction([
-      this.prisma.treasureGroup.count({
-        where: whereConditions,
-      }),
+      this.prisma.treasureGroup.count({ where: whereConditions }),
       this.prisma.treasureGroup.findMany({
         where: whereConditions,
-        // 优先展示快过期的，增加紧迫感
-        orderBy:
-          !includeExpired && (!status || status === GROUP_STATUS.ACTIVE)
-            ? [{ expireAt: 'asc' }]
-            : [{ createdAt: 'desc' }],
+        orderBy: [{ expireAt: 'asc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
@@ -251,25 +430,12 @@ export class GroupService {
               unitAmount: true,
             },
           },
-          creator: {
-            select: {
-              id: true,
-              nickname: true,
-              avatar: true,
-            },
-          },
+          creator: { select: { id: true, nickname: true, avatar: true } },
           members: {
             orderBy: [{ isOwner: 'desc' }, { joinedAt: 'asc' }],
-            // 每个组只取前 8 个成员预览；顺序：团长在前，其余按加入时间
             take: 8,
             include: {
-              user: {
-                select: {
-                  id: true,
-                  nickname: true,
-                  avatar: true,
-                },
-              },
+              user: { select: { id: true, nickname: true, avatar: true } },
             },
           },
           _count: { select: { members: true } },
@@ -277,84 +443,21 @@ export class GroupService {
       }),
     ]);
 
-    const listWithStatus = groups.map((group) => {
-      let isJoined = false;
-      if (userId) {
-        isJoined = group.members.some((member) => member.user.id === userId);
-      }
-      return {
-        ...group,
-        isJoined,
-      };
-    });
-
     return {
       page,
       pageSize,
       total,
-      list: listWithStatus,
+      list: groups.map((g) => ({
+        ...g,
+        isJoined: userId ? g.members.some((m) => m.user.id === userId) : false,
+      })),
     };
   }
 
-  // 查找团对应的成员
-  async listGroupMembers(
-    groupId: string,
-    params: {
-      page: number;
-      pageSize: number;
-    },
-  ) {
-    const { page, pageSize } = params;
-
-    // check groupId exists
-    const group = await this.prisma.treasureGroup.findUnique({
-      where: { groupId },
-      select: { groupId: true },
-    });
-
-    // group not found, return empty list
-    if (!group) {
-      return {
-        page,
-        pageSize,
-        total: 0,
-        list: [],
-      };
-    }
-
-    // fetch members
-    const [count, members] = await this.prisma.$transaction([
-      this.prisma.treasureGroupMember.count({ where: { groupId } }),
-      this.prisma.treasureGroupMember.findMany({
-        where: { groupId },
-        orderBy: [{ isOwner: 'desc' }, { joinedAt: 'asc' }, { id: 'asc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: {
-          user: {
-            select: {
-              id: true,
-              nickname: true,
-              avatar: true,
-            },
-          },
-        },
-      }),
-    ]);
-    return {
-      page,
-      pageSize,
-      total: count,
-      list: members,
-    };
-  }
-
-  // 获取单个团的详情 (专门给 GroupRoomPage 使用)
   async getGroupDetail(groupId: string) {
     const group = await this.prisma.treasureGroup.findUnique({
       where: { groupId },
       include: {
-        // 1. 关联查出商品信息 (UI可能需要跳回商品页)
         treasure: {
           select: {
             treasureId: true,
@@ -362,328 +465,15 @@ export class GroupService {
             treasureCoverImg: true,
           },
         },
-        // 2. 关联查出所有成员 (UI用来画坑位)
         members: {
-          // 顺序：团长在前，其余按加入时间
           orderBy: [{ isOwner: 'desc' }, { joinedAt: 'asc' }],
           include: {
-            user: {
-              select: {
-                id: true,
-                nickname: true,
-                avatar: true,
-              },
-            },
+            user: { select: { id: true, nickname: true, avatar: true } },
           },
         },
       },
     });
-    if (!group) {
-      throw new NotFoundException('Group not found');
-    }
+    if (!group) throw new NotFoundException('Group not found');
     return group;
-  }
-
-  /**
-   *  定时任务：每分钟执行一次
-   * 扫描过期团，触发自动退款
-   * throwOnFail = false，抢不到锁就跳过，不报错
-   */
-  @Cron(CronExpression.EVERY_MINUTE)
-  async handleExpiredGroups() {
-    return await this.lockService.runWithLock(
-      'group:expire',
-      5000,
-      async () => {
-        // 1. 找出所有过期且未处理的团
-        const expiredGroups = await this.prisma.treasureGroup.findMany({
-          where: {
-            groupStatus: GROUP_STATUS.ACTIVE, // 仍然是进行中的
-            expireAt: { lt: new Date() }, // 时间：已经过期
-          },
-          take: 50, // 每次处理 500个，防止一次性数据量过大
-          select: { groupId: true },
-        });
-        if (expiredGroups.length === 0) {
-          return;
-        }
-        this.logger.log(
-          `Found ${expiredGroups.length} expired groups to process.`,
-        );
-
-        // 2. 逐个处理 (使用 Promise.allSettled 防止一个报错卡死整个循环)
-        await Promise.allSettled(
-          expiredGroups.map((g) => this.processGroupFailure(g.groupId)),
-        );
-      },
-      false,
-    );
-  }
-
-  /**
-   * 处理单个团的失败流程 (原子性操作)
-   */
-  private async processGroupFailure(groupId: string) {
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        // A. 二次确认状态 (防止在查出来的毫秒间，正好有人凑齐了)
-        const group = await tx.treasureGroup.findUnique({
-          where: { groupId },
-        });
-
-        if (!group || group.groupStatus !== GROUP_STATUS.ACTIVE) {
-          return;
-        }
-
-        this.logger.warn(
-          `Group ${groupId} failed to complete, processing refunds.`,
-        );
-
-        // B. 更新团状态为失败
-        await tx.treasureGroup.update({
-          where: { groupId },
-          data: {
-            groupStatus: GROUP_STATUS.FAILED, // 标记为失败
-            endedAt: new Date(),
-          },
-        });
-
-        // C. 处理退款逻辑
-        const orders = await tx.order.findMany({
-          where: {
-            groupId,
-            payStatus: PAY_STATUS.PAID,
-            refundStatus: REFUND_STATUS.NO_REFUND,
-          },
-        });
-
-        if (orders.length > 0) {
-          this.logger.log(
-            `[Cron] Refunding ${orders.length} orders for group ${groupId}`,
-          );
-        }
-
-        // D. 逐个退款 (在同一个事务里处理，或者分离)
-        // 建议：直接在这里调退款，确保状态一致性
-        for (const order of orders) {
-          // 调用退款服务
-          await this.refundSingleOrder(order, tx);
-        }
-      });
-    } catch (e: any) {
-      this.logger.error(
-        `Error processing failure for group ${groupId}: ${e.message}`,
-      );
-    }
-  }
-
-  /**
-   * 单笔订单退款逻辑
-   */
-
-  private async refundSingleOrder(order: any, tx: Tx) {
-    // 防止重复退款
-    if (order.refundStatus !== REFUND_STATUS.NO_REFUND) return;
-
-    const cashRefund = new Prisma.Decimal(order.finalAmount);
-    const coinRefund = new Prisma.Decimal(order.coinUsed || 0);
-
-    // 1. 退现金 (如果有)
-    if (cashRefund.gt(0)) {
-      await this.wallet.creditCash(
-        {
-          userId: order.userId,
-          amount: cashRefund,
-          related: { id: order.orderId, type: 'REFUND_GROUP_FAIL' },
-          desc: 'Refund for failed group purchase',
-        },
-        tx,
-      );
-    }
-
-    // 2. 退金币 (如果有)
-    if (coinRefund.gt(0)) {
-      await this.wallet.creditCoin(
-        {
-          userId: order.userId,
-          coins: coinRefund,
-          related: { id: order.orderId, type: 'REFUND_GROUP_FAIL' },
-          desc: 'Refund of coins for failed group purchase',
-        },
-        tx,
-      );
-    }
-
-    // 3. 更新订单退款状态
-    await tx.order.update({
-      where: { orderId: order.orderId },
-      data: {
-        orderStatus: ORDER_STATUS.CANCELED, // 取消订单
-        refundStatus: REFUND_STATUS.REFUNDED, // 标记为已退款
-        refundReason: 'Group purchase failed, automatic refund issued',
-        refundAmount: cashRefund,
-        refundedAt: new Date(),
-        refundAuditedBy: 'SYSTEM_CRON', // 系统自动
-      },
-    });
-  }
-
-  /**
-   *  核心任务：机器人自动补位
-   * 频率：每 30 秒执行一次
-   */
-  @Cron(CronExpression.EVERY_30_SECONDS)
-  async handleRobotIntervention() {
-    return await this.lockService.runWithLock(
-      'group:robot:fill',
-      30000,
-      async () => {
-        // 1. 捞出所有需要处理的团
-        // 条件：状态是进行中(1) + 商品开启了机器人(enableRobot=true)
-        const activeGroups = await this.prisma.treasureGroup.findMany({
-          where: {
-            groupStatus: GROUP_STATUS.ACTIVE,
-            treasure: {
-              enableRobot: true,
-            },
-          },
-          include: {
-            treasure: {
-              select: {
-                robotDelay: true,
-                virtualAvatars: true,
-              },
-            },
-          },
-        });
-
-        const now = Date.now();
-
-        for (const group of activeGroups) {
-          // 计算“介入时间点”
-          const createdAt = group.createdAt.getTime();
-          const triggerTime = createdAt + group.treasure.robotDelay * 1000;
-
-          // A. 时间没到？跳过
-          if (now < triggerTime) continue;
-
-          // B. 人数已满？跳过
-          if (group.currentMembers >= group.maxMembers) continue;
-
-          //  满足条件，执行注入！
-          await this.fillGroupWithRobots(group);
-        }
-      },
-      false,
-    );
-  }
-
-  // [私有] 把机器人塞进指定的团
-  private async fillGroupWithRobots(group: any) {
-    const missingCount = group.maxMembers - group.currentMembers;
-    if (missingCount <= 0) return;
-
-    // 1. 查找机器人逻辑 (这部分你写得没问题，保持原样)
-    const totalRobots = await this.prisma.user.count({
-      where: { isRobot: true },
-    });
-    if (totalRobots < missingCount) return;
-
-    const whereConditions: Prisma.UserWhereInput = {
-      isRobot: true,
-      treasureGroupMembers: {
-        none: { groupId: group.groupId },
-      },
-    };
-
-    const skip = Math.floor(Math.random() * (totalRobots - missingCount));
-    const robots = await this.prisma.user.findMany({
-      where: whereConditions,
-      skip: skip < 0 ? 0 : skip,
-      take: missingCount,
-    });
-
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        // Double Check
-        const currentGroup = await tx.treasureGroup.findUnique({
-          where: { groupId: group.groupId },
-        });
-
-        if (
-          !currentGroup ||
-          currentGroup.currentMembers >= currentGroup.maxMembers
-        ) {
-          return;
-        }
-
-        // 计算实际缺口 (防止并发时有人刚好加进来)
-        const realMissing =
-          currentGroup.maxMembers - currentGroup.currentMembers;
-        const botsToUse = robots.slice(0, realMissing);
-
-        if (botsToUse.length === 0) return;
-
-        this.logger.log(
-          `🤖 Filling group ${group.groupId} with ${botsToUse.length} robots.`,
-        );
-
-        // 2. 循环只做“插入成员”这一件事
-        for (const bot of botsToUse) {
-          let finalAvatar = bot.avatar;
-          if (
-            Array.isArray(group.treasure.virtualAvatars) &&
-            group.treasure.virtualAvatars.length > 0
-          ) {
-            const va = group.treasure.virtualAvatars as string[];
-            finalAvatar = va[Math.floor(Math.random() * va.length)];
-          }
-
-          try {
-            await tx.treasureGroupMember.create({
-              data: {
-                groupId: group.groupId,
-                userId: bot.id,
-                isOwner: IS_OWNER.NO,
-                orderId: null,
-                memberType: 1,
-                shareCoin: 0,
-                shareAmount: 0,
-                // avatar: finalAvatar // 如果你的 Member 表有这个字段请解开
-              },
-            });
-          } catch (error: any) {
-            if (error.code === 'P2002') continue;
-            throw error;
-          }
-        }
-
-        // 3.  移出循环：一次性更新团状态
-        // 只有所有机器人都插进去了，才更新团的人数
-        await tx.treasureGroup.updateMany({
-          where: {
-            groupId: group.groupId,
-            version: currentGroup.version, // 乐观锁确保这期间没人动过这个团
-            currentMembers: currentGroup.currentMembers, //双重保险：确保人数还是我读到的人数
-          },
-          data: {
-            currentMembers: { increment: botsToUse.length }, // 累加
-            robotCount: { increment: botsToUse.length },
-            isSystemFilled: true,
-            version: { increment: 1 },
-          },
-        });
-
-        // 4.  移出循环：判断是否满员
-        // 只有这里判断满员，才触发 success
-        const finalCount = currentGroup.currentMembers + botsToUse.length;
-        if (finalCount >= currentGroup.maxMembers) {
-          // 这里传 tx 进去，保证 success 逻辑也在同一个事务里
-          await this.handleGroupSuccess(group.groupId, tx);
-        }
-      });
-    } catch (e) {
-      this.logger.error(`Error filling group ${group.groupId}: ${e}`);
-    }
   }
 }

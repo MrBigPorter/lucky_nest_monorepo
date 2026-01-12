@@ -32,16 +32,6 @@ export class GroupController {
     };
   }
 
-  @Get(':groupId/members')
-  @ApiOkResponse({ type: GroupMembersResponseDto })
-  async get(
-    @Param('groupId') groupId: string,
-    @Query() query: GroupMembersDto,
-  ) {
-    const data = await this.groupService.listGroupMembers(groupId, query);
-    return plainToInstance(GroupMembersResponseDto, data);
-  }
-
   @Get(':groupId')
   @ApiOkResponse({ type: GroupDetailResponseDto })
   async getGroupDetail(@Param('groupId') groupId: string) {
