@@ -389,26 +389,34 @@ export class GroupService {
    * 扫描过期团，触发自动退款
    * throwOnFail = false，抢不到锁就跳过，不报错
    */
-  @DistributedLock('group:expired:handler', 3000, false)
   @Cron(CronExpression.EVERY_MINUTE)
   async handleExpiredGroups() {
-    // 1. 找出所有过期且未处理的团
-    const expiredGroups = await this.prisma.treasureGroup.findMany({
-      where: {
-        groupStatus: GROUP_STATUS.ACTIVE, // 仍然是进行中的
-        expireAt: { lt: new Date() }, // 时间：已经过期
-      },
-      take: 50, // 每次处理 500个，防止一次性数据量过大
-      select: { groupId: true },
-    });
-    if (expiredGroups.length === 0) {
-      return;
-    }
-    this.logger.log(`Found ${expiredGroups.length} expired groups to process.`);
+    return await this.lockService.runWithLock(
+      'group:expire',
+      5000,
+      async () => {
+        // 1. 找出所有过期且未处理的团
+        const expiredGroups = await this.prisma.treasureGroup.findMany({
+          where: {
+            groupStatus: GROUP_STATUS.ACTIVE, // 仍然是进行中的
+            expireAt: { lt: new Date() }, // 时间：已经过期
+          },
+          take: 50, // 每次处理 500个，防止一次性数据量过大
+          select: { groupId: true },
+        });
+        if (expiredGroups.length === 0) {
+          return;
+        }
+        this.logger.log(
+          `Found ${expiredGroups.length} expired groups to process.`,
+        );
 
-    // 2. 逐个处理 (使用 Promise.allSettled 防止一个报错卡死整个循环)
-    await Promise.allSettled(
-      expiredGroups.map((g) => this.processGroupFailure(g.groupId)),
+        // 2. 逐个处理 (使用 Promise.allSettled 防止一个报错卡死整个循环)
+        await Promise.allSettled(
+          expiredGroups.map((g) => this.processGroupFailure(g.groupId)),
+        );
+      },
+      false,
     );
   }
 
@@ -518,5 +526,164 @@ export class GroupService {
         refundAuditedBy: 'SYSTEM_CRON', // 系统自动
       },
     });
+  }
+
+  /**
+   *  核心任务：机器人自动补位
+   * 频率：每 30 秒执行一次
+   */
+  @Cron(CronExpression.EVERY_30_SECONDS)
+  async handleRobotIntervention() {
+    return await this.lockService.runWithLock(
+      'group:robot:fill',
+      30000,
+      async () => {
+        // 1. 捞出所有需要处理的团
+        // 条件：状态是进行中(1) + 商品开启了机器人(enableRobot=true)
+        const activeGroups = await this.prisma.treasureGroup.findMany({
+          where: {
+            groupStatus: GROUP_STATUS.ACTIVE,
+            treasure: {
+              enableRobot: true,
+            },
+          },
+          include: {
+            treasure: {
+              select: {
+                robotDelay: true,
+                virtualAvatars: true,
+              },
+            },
+          },
+        });
+
+        const now = Date.now();
+
+        for (const group of activeGroups) {
+          // 计算“介入时间点”
+          const createdAt = group.createdAt.getTime();
+          const triggerTime = createdAt + group.treasure.robotDelay * 1000;
+
+          // A. 时间没到？跳过
+          if (now < triggerTime) continue;
+
+          // B. 人数已满？跳过
+          if (group.currentMembers >= group.maxMembers) continue;
+
+          //  满足条件，执行注入！
+          await this.fillGroupWithRobots(group);
+        }
+      },
+      false,
+    );
+  }
+
+  // [私有] 把机器人塞进指定的团
+  private async fillGroupWithRobots(group: any) {
+    const missingCount = group.maxMembers - group.currentMembers;
+    if (missingCount <= 0) return;
+
+    // 1. 查找机器人逻辑 (这部分你写得没问题，保持原样)
+    const totalRobots = await this.prisma.user.count({
+      where: { isRobot: true },
+    });
+    if (totalRobots < missingCount) return;
+
+    const whereConditions: Prisma.UserWhereInput = {
+      isRobot: true,
+      treasureGroupMembers: {
+        none: { groupId: group.groupId },
+      },
+    };
+
+    const skip = Math.floor(Math.random() * (totalRobots - missingCount));
+    const robots = await this.prisma.user.findMany({
+      where: whereConditions,
+      skip: skip < 0 ? 0 : skip,
+      take: missingCount,
+    });
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // Double Check
+        const currentGroup = await tx.treasureGroup.findUnique({
+          where: { groupId: group.groupId },
+        });
+
+        if (
+          !currentGroup ||
+          currentGroup.currentMembers >= currentGroup.maxMembers
+        ) {
+          return;
+        }
+
+        // 计算实际缺口 (防止并发时有人刚好加进来)
+        const realMissing =
+          currentGroup.maxMembers - currentGroup.currentMembers;
+        const botsToUse = robots.slice(0, realMissing);
+
+        if (botsToUse.length === 0) return;
+
+        this.logger.log(
+          `🤖 Filling group ${group.groupId} with ${botsToUse.length} robots.`,
+        );
+
+        // 2. 循环只做“插入成员”这一件事
+        for (const bot of botsToUse) {
+          let finalAvatar = bot.avatar;
+          if (
+            Array.isArray(group.treasure.virtualAvatars) &&
+            group.treasure.virtualAvatars.length > 0
+          ) {
+            const va = group.treasure.virtualAvatars as string[];
+            finalAvatar = va[Math.floor(Math.random() * va.length)];
+          }
+
+          try {
+            await tx.treasureGroupMember.create({
+              data: {
+                groupId: group.groupId,
+                userId: bot.id,
+                isOwner: IS_OWNER.NO,
+                orderId: null,
+                memberType: 1,
+                shareCoin: 0,
+                shareAmount: 0,
+                // avatar: finalAvatar // 如果你的 Member 表有这个字段请解开
+              },
+            });
+          } catch (error: any) {
+            if (error.code === 'P2002') continue;
+            throw error;
+          }
+        }
+
+        // 3.  移出循环：一次性更新团状态
+        // 只有所有机器人都插进去了，才更新团的人数
+        await tx.treasureGroup.updateMany({
+          where: {
+            groupId: group.groupId,
+            version: currentGroup.version, // 乐观锁确保这期间没人动过这个团
+            currentMembers: currentGroup.currentMembers, //双重保险：确保人数还是我读到的人数
+          },
+          data: {
+            currentMembers: { increment: botsToUse.length }, // 累加
+            robotCount: { increment: botsToUse.length },
+            isSystemFilled: true,
+            version: { increment: 1 },
+          },
+        });
+
+        // 4.  移出循环：判断是否满员
+        // 只有这里判断满员，才触发 success
+        const finalCount = currentGroup.currentMembers + botsToUse.length;
+        if (finalCount >= currentGroup.maxMembers) {
+          // 这里传 tx 进去，保证 success 逻辑也在同一个事务里
+          await this.handleGroupSuccess(group.groupId, tx);
+        }
+      });
+    } catch (e) {
+      this.logger.error(`Error filling group ${group.groupId}: ${e}`);
+    }
   }
 }

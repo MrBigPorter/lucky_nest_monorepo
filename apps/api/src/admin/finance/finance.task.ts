@@ -31,7 +31,7 @@ export class FinanceTask {
     // 这里的 ttl 设短一点没关系，只要能互斥就行
     await this.lockService.runWithLock(
       'cron:stuck_recharges',
-      1000,
+      60000,
       async () => {
         try {
           // 30 分钟前的时间点
@@ -93,7 +93,7 @@ export class FinanceTask {
   async handleStuckWithdrawals() {
     await this.lockService.runWithLock(
       'cron:stuck_withdrawals',
-      1000,
+      300000,
       async () => {
         try {
           // 找出 10 分钟前更新，但状态依然是 PROCESSING 的订单
@@ -196,6 +196,7 @@ export class FinanceTask {
           }
         } catch (e) {}
       },
+      false,
     );
   }
 }

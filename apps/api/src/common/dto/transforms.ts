@@ -322,7 +322,7 @@ export function DateToTimestamp() {
 
 /** 字符串脱敏 (手机号/邮箱/卡号) */
 export function MaskString(
-  type: 'phone' | 'email' | 'idcard' | 'bankcard' = 'phone',
+  type: 'phone' | 'email' | 'idcard' | 'bankcard' | 'name' = 'phone',
 ) {
   return applyDecorators(
     Type(() => String),
@@ -330,27 +330,59 @@ export function MaskString(
       if (isEmpty(value)) return null;
       const str = String(value);
 
+      // 1. 手机号脱敏 (保留前3后4)
+      // 示例: 09123456789 -> 091****6789
       if (type === 'phone' && str.length >= 7) {
-        return str.replace(/(\d{3})\d{3,4}(\d{4})/, '$1****$2');
+        // 兼容不同长度的手机号，中间固定显示4个星号
+        return str.replace(/^(\d{3})\d+(\d{4})$/, '$1****$2');
       }
 
+      // 2. 邮箱脱敏
+      // 示例: admin@gmail.com -> ad***n@gmail.com
       if (type === 'email' && str.includes('@')) {
         const [name, domain] = str.split('@');
-        if (name.length <= 2) return `${name}***@${domain}`;
+        if (name.length <= 2) {
+          return `${name}***@${domain}`;
+        }
         return `${name.slice(0, 2)}***${name.slice(-1)}@${domain}`;
       }
 
+      // 3. 银行卡脱敏 (保留前4后4)
+      // 示例: 6222026000001234 -> 6222********1234
       if (type === 'bankcard' && str.length > 8) {
         const prefix = str.slice(0, 4);
         const suffix = str.slice(-4);
+        // 中间剩余部分全部替换为星号，或者固定长度
         const maskLength = str.length - 8;
         return `${prefix}${'*'.repeat(maskLength)}${suffix}`;
       }
 
+      // 4. 身份证脱敏 (保留前6后4)
+      // 示例: 110101199001011234 -> 110101********1234
       if (type === 'idcard') {
-        return str.replace(/^(\d{6})\d{8}(\w{4})$/, '$1********$2');
+        return str.replace(/^(\w{6})\w+(\w{4})$/, '$1********$2');
       }
 
+      // 5. 🔥 [新增] 姓名/昵称脱敏
+      if (type === 'name') {
+        // 情况A: 只有一个字 (如: "刘") -> "*"
+        if (str.length <= 1) {
+          return '*';
+        }
+
+        // 情况B: 两个字 (如: "张三") -> "张*"
+        if (str.length === 2) {
+          return `${str[0]}*`;
+        }
+
+        // 情况C: 三个字及以上 (如: "欧阳锋", "LuckyStar")
+        // 规则: 保留首尾，中间最多显示3个星号，防止名字太长全是星号
+        // 示例: "LuckyStar" -> "L***r"
+        const maskLen = Math.min(3, str.length - 2);
+        return `${str[0]}${'*'.repeat(maskLen)}${str[str.length - 1]}`;
+      }
+
+      // 默认不处理
       return str;
     }),
   );

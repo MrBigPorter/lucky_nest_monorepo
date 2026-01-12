@@ -25,6 +25,10 @@ model User {
   inviteCode            String?               @unique @map("invite_code") @db.VarChar(20)
   /// VIP等级
   vipLevel              Int                   @default(0) @map("vip_level") @db.SmallInt
+
+  /// 是否机器人: false-真人 true-机器人
+  isRobot Boolean @default(false) @map("is_robot")
+
   /// KYC状态: 0-未认证 1-审核中 2-审核失败 3-待补充 4-已认证
   kycStatus             Int                   @default(0) @map("kyc_status") @db.SmallInt
   deliveryAddressId     String?               @map("delivery_address_id")
@@ -399,7 +403,6 @@ model TreasureGroup {
   creator           User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   treasure          Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
 
-  tempField Int?
   @@index([treasureId], map: "idx_treasure")
   @@index([creatorId], map: "idx_creator")
   @@index([groupStatus], map: "idx_status")

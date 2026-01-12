@@ -67,12 +67,15 @@ export class RedisLockService implements OnModuleInit, OnModuleDestroy {
     callback: () => Promise<T>,
     throwOnFail = true,
   ): Promise<T | undefined> {
-    // 返回值可能为 undefined
+    // 🔍 调试日志 1: 检查客户端状态
     if (!this.client?.isOpen) {
+      this.logger.error(`❌ [RedisLock] Client not connected. Key: ${key}`);
       throw new Error('Redis Lock Client is not connected');
     }
 
     const lockValue = crypto.randomUUID();
+
+    this.logger.log(`🔒 [RedisLock] 尝试加锁: ${key} (TTL: ${ttl})`);
 
     // 1. 加锁
     const result = await this.client.set(key, lockValue, {
@@ -82,12 +85,15 @@ export class RedisLockService implements OnModuleInit, OnModuleDestroy {
 
     // 2. 抢锁失败的处理逻辑
     if (result !== 'OK') {
+      this.logger.warn(`⚠️ [RedisLock] 加锁失败 (被占用): ${key}`);
       if (throwOnFail) {
         throw new Error(`Lock busy: ${key}`); // API 场景：报错
       } else {
         return undefined; // Cron 场景：静默跳过
       }
     }
+
+    this.logger.log(`✅ [RedisLock] 加锁成功! 执行业务逻辑...`);
 
     try {
       // 3. 执行业务
@@ -101,6 +107,18 @@ export class RedisLockService implements OnModuleInit, OnModuleDestroy {
         });
       } catch (e) {
         this.logger.error(`Failed to release lock for key ${key}: ${e}`);
+        throw e;
+      } finally {
+        // 4. 解锁
+        try {
+          this.logger.log(`🔓 [RedisLock] 准备解锁: ${key}`);
+          await this.client.eval(UNLOCK_SCRIPT, {
+            keys: [key],
+            arguments: [lockValue],
+          });
+        } catch (e) {
+          this.logger.error(`Failed to release lock for key ${key}: ${e}`);
+        }
       }
     }
   }
