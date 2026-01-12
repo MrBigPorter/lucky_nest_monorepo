@@ -16,12 +16,28 @@ import { PaymentModule } from '@api/common/payment/payment.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisLockModule } from '@api/common/redis/redis-lock.module';
 import { PaymentChannelModule } from '@api/common/payment-channel/payment-channel.module';
+import { BullModule } from '@nestjs/bullmq';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
   imports: [
     // 定时任务模块
     ScheduleModule.forRoot(),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          url: config.get<string>('REDIS_URL'),
+        },
+        // 默认配置：防止 Redis 瞬间压力过大
+        defaultJobOptions: {
+          attempts: 3, // 默认重试3次
+          backoff: { type: 'exponential', delay: 1000 }, // 指数补偿重试
+          removeOnComplete: true, // 成功后清理
+          removeOnFail: false, // 失败保留用于排查
+        },
+      }),
+    }),
     // 1) 全局配置模块：环境变量校验
     ConfigModule.forRoot({
       isGlobal: true,

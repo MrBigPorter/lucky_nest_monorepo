@@ -5,7 +5,7 @@ import {
   Transform,
   Type,
 } from 'class-transformer';
-import { TreasureResponseClientDto } from '@api/admin/treasure/dto/treasure-response.dto';
+import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Exclude()
@@ -55,7 +55,7 @@ export class ActSectionResponseDto {
   })
   endAt!: number;
 
-  @ApiProperty({ type: [TreasureResponseClientDto] })
+  @ApiProperty({ type: [TreasureResponseDto] })
   @Expose()
-  items!: TreasureResponseClientDto[];
+  items!: TreasureResponseDto[];
 }
