@@ -56,7 +56,16 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param payload
    */
   broadcastToLobby(event: string, payload: any) {
-    // 广播消息到拼团大厅房间的所有客户端
+    // 1. 保留这行日志，证明数据到了这里
+    this.logger.log(
+      `📡 [Gateway] Broadcasting '${event}' to room '${SocketRoom.LOBBY}'. Data: ${JSON.stringify(payload)}`,
+    );
+
+    //  删除下面这行！就是它导致了报错崩溃
+    // const roomSize = this.server.sockets.adapter.rooms.get(SocketRoom.LOBBY)?.size || 0;
+    // this.logger.log(`👥 [Gateway] Room '${SocketRoom.LOBBY}' has ${roomSize} clients.`);
+
+    //  2. 直接发送！
     this.server.to(SocketRoom.LOBBY).emit(event, payload);
   }
 }
