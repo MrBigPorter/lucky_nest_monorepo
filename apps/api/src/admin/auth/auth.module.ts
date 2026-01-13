@@ -21,6 +21,6 @@ import { PasswordService } from '@api/common/service/password.service';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard, JwtStrategy, PasswordService],
-  exports: [],
+  exports: [AuthService, JwtModule], //导出给别人用
 })
 export class AuthModule {}

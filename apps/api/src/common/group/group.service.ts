@@ -20,7 +20,10 @@ import {
 import { RedisLockService } from '@api/common/redis/redis-lock.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { EventsGateway } from '@api/common/events/events.gateway';
+import {
+  EventsGateway,
+  PushEventType,
+} from '@api/common/events/events.gateway';
 import dayjs from 'dayjs';
 
 type Tx = Prisma.TransactionClient | PrismaService;
@@ -163,6 +166,47 @@ export class GroupService {
     }
   }
 
+  // [新增方法] 核心通知逻辑：通知团内所有成员结果
+  private async notifyMembersOfResult(groupId: string, isSuccess: boolean) {
+    try {
+      // 查询所有成员 + 团信息
+      const groupData = await this.prisma.treasureGroup.findUnique({
+        where: { groupId },
+        include: {
+          members: { select: { userId: true } },
+          treasure: { select: { treasureName: true } },
+        },
+      });
+      if (!groupData) return;
+
+      const eventType = isSuccess
+        ? PushEventType.GROUP_SUCCESS
+        : PushEventType.GROUP_FAILED;
+
+      // 遍历成员，发送通知
+      for (const member of groupData.members) {
+        if (!member.userId) continue;
+
+        // 这里假设 EventsGateway 有一个 sendToUser 方法
+        this.eventsGateway.notifyUser(member.userId, eventType, {
+          groupId: groupData.groupId,
+          title: isSuccess ? 'Group Success!' : 'Group Expired',
+          treasureName: groupData.treasure.treasureName,
+          message: isSuccess
+            ? 'Your group is full! Results calculating...'
+            : 'Group failed. Refund processed.',
+          timestamp: Date.now(),
+        });
+      }
+      this.logger.log(
+        `🔔 [Notify] Sent ${eventType} to ${groupData.members.length} members of group ${groupId}`,
+      );
+    } catch (e: any) {
+      this.logger.error(
+        `Failed to notify members for group ${groupId}: ${e.message}`,
+      );
+    }
+  }
   // ============================================================
   // 2. 核心通知逻辑：成团信号发射
   // ============================================================
@@ -188,6 +232,8 @@ export class GroupService {
       //  [Socket 触发点 4]：状态变为 SUCCESS
       // 通知前端这个团满了/结束了
       this.notifyGroupChange(groupId);
+      //  2. [新增] 通知参与者 (弹窗报喜)
+      this.notifyMembersOfResult(groupId, true);
     });
   }
 
@@ -315,6 +361,8 @@ export class GroupService {
       // 4. 事务外发射信号
       if (shouldTriggerSuccess) {
         await this.emitGroupSuccessSignal(group.groupId);
+        //  [新增] 如果机器人补满了，也要通知真人成员“成了”！
+        this.notifyMembersOfResult(group.groupId, true);
       }
 
       //  [Socket 触发点 3]：机器人加入后
@@ -383,6 +431,9 @@ export class GroupService {
       //  [Socket 触发点 5]：状态变为 FAILED
       // 事务结束后，通知前端移除该团
       this.notifyGroupChange(groupId);
+
+      //  2. [新增] 通知参与者 (退款到账提醒)
+      this.notifyMembersOfResult(groupId, false);
     } catch (e: any) {
       this.logger.error(`[Failure Error] Group ${groupId}: ${e.message}`);
     }
@@ -537,7 +588,7 @@ export class GroupService {
         this.logger.log(
           `📡 [Socket Emit] Sending 'group_update' to lobby. Status: ${group.groupStatus}`,
         );
-        this.eventsGateway.broadcastToLobby('group_update', {
+        this.eventsGateway.broadcastToLobby({
           groupId: group.groupId,
           currentMembers: group.currentMembers,
           isFull: group.currentMembers >= group.maxMembers,
