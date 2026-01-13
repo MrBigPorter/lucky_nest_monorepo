@@ -20,7 +20,7 @@ export class TreasureCategoryResponseDto {
 
 //  定义商品主体返回信息
 @Exclude()
-export class TreasureResponseDto {
+export class AdminTreasureResponseDto {
   // ==========================
   // 1. 基础信息
   // ==========================

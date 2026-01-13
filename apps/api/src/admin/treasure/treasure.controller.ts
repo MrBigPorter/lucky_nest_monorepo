@@ -17,11 +17,10 @@ import { OpAction, OpModule, Role } from '@lucky/shared';
 import { CreateTreasureDto } from '@api/admin/treasure/dto/create-treasure.dto';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
-import { TreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
 import { UpdateTreasureStateDto } from '@api/admin/treasure/dto/update-treasure-state.dto';
 import { RequirePermission } from '@api/common/decorators/require-permission.decorator';
 import { plainToInstance } from 'class-transformer';
-import { TreasureListResponseDto } from '@api/admin/treasure/dto/treasure-list-response.dto';
+import { AdminTreasureResponseDto } from '@api/admin/treasure/dto/treasure-response.dto';
 
 @ApiTags('admin Treasure Management')
 @ApiBearerAuth()
@@ -37,10 +36,10 @@ export class TreasureController {
    */
   @Post('create')
   @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.CREATE)
-  @ApiOkResponse({ type: TreasureResponseDto })
+  @ApiOkResponse({ type: AdminTreasureResponseDto })
   async create(@Body() dto: CreateTreasureDto) {
     const data = await this.treasureService.create(dto);
-    return plainToInstance(TreasureResponseDto, data);
+    return plainToInstance(AdminTreasureResponseDto, data);
   }
 
   /**
@@ -49,12 +48,12 @@ export class TreasureController {
    */
   @Get('list')
   @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.VIEW)
-  @ApiOkResponse({ type: TreasureListResponseDto })
+  @ApiOkResponse({ type: AdminTreasureResponseDto })
   async findAll(@Query() dto: QueryTreasureDto) {
     const result = await this.treasureService.findAll(dto);
 
     return {
-      list: plainToInstance(TreasureResponseDto, result.list),
+      list: plainToInstance(AdminTreasureResponseDto, result.list),
       page: result.page,
       pageSize: result.pageSize,
       total: result.total,
@@ -67,10 +66,10 @@ export class TreasureController {
    */
   @Get(':id')
   @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.VIEW)
-  @ApiOkResponse({ type: TreasureResponseDto })
+  @ApiOkResponse({ type: AdminTreasureResponseDto })
   async findOne(@Param('id') id: string) {
     const data = await this.treasureService.findOne(id);
-    return plainToInstance(TreasureResponseDto, data);
+    return plainToInstance(AdminTreasureResponseDto, data);
   }
 
   /**
@@ -81,10 +80,10 @@ export class TreasureController {
    */
   @Patch(':id')
   @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.UPDATE)
-  @ApiOkResponse({ type: TreasureResponseDto })
+  @ApiOkResponse({ type: AdminTreasureResponseDto })
   async update(@Param('id') id: string, @Body() dto: UpdateTreasureDto) {
     const data = await this.treasureService.update(id, dto);
-    return plainToInstance(TreasureResponseDto, data);
+    return plainToInstance(AdminTreasureResponseDto, data);
   }
 
   /**
@@ -95,13 +94,13 @@ export class TreasureController {
    */
   @Patch(':id/state')
   @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.UPDATE)
-  @ApiOkResponse({ type: TreasureResponseDto })
+  @ApiOkResponse({ type: AdminTreasureResponseDto })
   async updateState(
     @Param('id') id: string,
     @Body() dto: UpdateTreasureStateDto,
   ) {
     const data = await this.treasureService.updateState(id, dto.state);
-    return plainToInstance(TreasureResponseDto, data);
+    return plainToInstance(AdminTreasureResponseDto, data);
   }
 
   /**
@@ -111,10 +110,10 @@ export class TreasureController {
    */
   @Delete(':id')
   @RequirePermission(OpModule.TREASURE, OpAction.TREASURE.DELETE)
-  @ApiOkResponse({ type: TreasureResponseDto })
+  @ApiOkResponse({ type: AdminTreasureResponseDto })
   async remove(@Param('id') id: string) {
     const data = await this.treasureService.remove(id);
-    return plainToInstance(TreasureResponseDto, data);
+    return plainToInstance(AdminTreasureResponseDto, data);
   }
 
   /**
