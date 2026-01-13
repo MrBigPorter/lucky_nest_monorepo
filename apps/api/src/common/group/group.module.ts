@@ -4,12 +4,14 @@ import { GroupService } from '@api/common/group/group.service';
 import { WalletModule } from '@api/client/wallet/wallet.module';
 import { RedisLockModule } from '@api/common/redis/redis-lock.module';
 import { BullModule } from '@nestjs/bullmq';
+import { EventsModule } from '@api/common/events/events.module';
 
 @Module({
   imports: [
     PrismaModule,
     WalletModule,
     RedisLockModule,
+    EventsModule,
     BullModule.registerQueue({
       name: 'group_settlement',
     }),
