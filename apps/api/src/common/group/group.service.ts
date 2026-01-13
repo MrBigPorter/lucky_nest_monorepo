@@ -15,11 +15,13 @@ import {
   GROUP_STATUS,
   IS_OWNER,
   REFUND_STATUS,
+  TimeHelper,
 } from '@lucky/shared';
 import { RedisLockService } from '@api/common/redis/redis-lock.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { EventsGateway } from '@api/common/events/events.gateway';
+import dayjs from 'dayjs';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -231,7 +233,18 @@ export class GroupService {
         for (const group of activeGroups) {
           const triggerTime =
             group.createdAt.getTime() + group.treasure.robotDelay * 1000;
-          if (now < triggerTime) continue;
+
+          const fmt = 'HH:mm:ss'; // 只看时分秒就够了，不用看年月日
+          const nowStr = dayjs(now).format(fmt);
+          const triggerStr = dayjs(triggerTime).format(fmt);
+          const waitSeconds = Math.ceil((triggerTime - now) / 1000); // 算出还要等几秒
+
+          if (now < triggerTime) {
+            this.logger.debug(
+              `⏳ [等待中] 团ID: ${group.groupId.slice(-6)} | 当前: ${nowStr} | 预定: ${triggerStr} | ⚠️ 还要等: ${waitSeconds}秒`,
+            );
+            continue;
+          }
           if (group.currentMembers >= group.maxMembers) continue;
 
           //  阶梯式补位：一次 Cron 只进 1 个机器人
@@ -504,6 +517,9 @@ export class GroupService {
    * 必须重新查库，以获取数据库自动生成的 updatedAt 时间戳 (用于前端防乱序)
    */
   private async notifyGroupChange(groupId: string) {
+    this.logger.log(
+      `📢 [Socket Debug] Preparing to notify for group ${groupId}`,
+    );
     try {
       //  异步执行，不阻塞主流程
       // 这里的查询非常快，只查必要字段
@@ -518,6 +534,9 @@ export class GroupService {
         },
       });
       if (group) {
+        this.logger.log(
+          `📡 [Socket Emit] Sending 'group_update' to lobby. Status: ${group.groupStatus}`,
+        );
         this.eventsGateway.broadcastToLobby('group_update', {
           groupId: group.groupId,
           currentMembers: group.currentMembers,
