@@ -5,6 +5,7 @@ import { WalletModule } from '@api/client/wallet/wallet.module';
 import { RedisLockModule } from '@api/common/redis/redis-lock.module';
 import { BullModule } from '@nestjs/bullmq';
 import { EventsModule } from '@api/common/events/events.module';
+import { NotificationModule } from '@api/client/notification/notification.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { EventsModule } from '@api/common/events/events.module';
     WalletModule,
     RedisLockModule,
     EventsModule,
+    NotificationModule,
     BullModule.registerQueue({
       name: 'group_settlement',
     }),

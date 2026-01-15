@@ -51,6 +51,7 @@ model User {
   wallet                UserWallet?
   transactions          WalletTransaction[]
   withdrawOrders        WithdrawOrder[]
+  fcmDevices            Device[]
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -1038,4 +1039,30 @@ model FlashSaleProduct {
   treasure   Treasure         @relation(fields: [treasureId], references: [treasureId])
 
   @@map("flash_sale_products")
+}
+
+/// 推送设备表 (用于 FCM)
+model Device {
+  /// FCM Token 作为主键 (Token 是唯一的且最重要)
+  token      String   @id @map("fcm_token") @db.VarChar(255)
+
+  /// 平台类型: android / ios / web
+  platform   String   @map("platform") @db.VarChar(20)
+
+  /// 绑定用户ID (可为空! 允许游客存在)
+  userId     String?  @map("user_id") @db.VarChar(32)
+
+  /// 最后活跃时间 (用于清洗死粉，比如超过6个月不活跃就不发了)
+  lastActive DateTime @default(now()) @map("last_active_at")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  /// 关联用户 (当用户退出登录时，User 变成 null，但记录保留)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([platform])
+  @@index([lastActive])
+  @@map("devices") // 这里的表名叫做 devices，区别于 user_devices
 }
