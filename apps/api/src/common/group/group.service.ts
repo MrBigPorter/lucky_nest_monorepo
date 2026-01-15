@@ -25,6 +25,7 @@ import {
   PushEventType,
 } from '@api/common/events/events.gateway';
 import dayjs from 'dayjs';
+import { NotificationService } from '@api/client/notification/notification.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -36,6 +37,7 @@ export class GroupService {
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
     public readonly lockService: RedisLockService,
+    private readonly notificationService: NotificationService,
     @InjectQueue('group_settlement') private readonly settlementQueue: Queue,
     private readonly eventsGateway: EventsGateway,
   ) {}
@@ -197,6 +199,29 @@ export class GroupService {
             : 'Group failed. Refund processed.',
           timestamp: Date.now(),
         });
+
+        // 2.  [修改 2] FCM 推送通知 (用于唤醒后台/锁屏用户)
+        // 这里的 await 可能会轻微拖慢循环，如果群成员很多(比如几百人)，建议去掉 await 让它并行
+        // 但对于 5-10 人的小团，await 完全没问题，且更安全
+        this.notificationService
+          .sendPrivateMessage(
+            member.userId,
+            // Title: 成功用  庆祝，失败用 ⏳ 提示
+            isSuccess ? ' Group Full! Results are in...' : ' Group Expired',
+            // Body: 重点突出产品名，失败强调 "Don't worry" 和 "Refund"
+            isSuccess
+              ? `Hooray! Your group for "${groupData.treasure.treasureName}" is complete. Tap to see if you won!`
+              : `The group for "${groupData.treasure.treasureName}" didn't fill up. Don't worry, your refund has been processed instantly.`,
+            {
+              type: 'group_detail',
+              id: groupId,
+              isSuccess: String(isSuccess),
+            },
+          )
+          .catch((e) => {
+            // 建议加上 catch，防止因为一个人推送失败炸掉整个循环（如果不加 await 这行可以忽略）
+            this.logger.error(`FCM failed for ${member.userId}: ${e.message}`);
+          });
       }
       this.logger.log(
         `🔔 [Notify] Sent ${eventType} to ${groupData.members.length} members of group ${groupId}`,
