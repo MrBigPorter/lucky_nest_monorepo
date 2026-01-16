@@ -5,10 +5,12 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '@api/common/prisma/prisma.service';
 export enum SocketRoom {
   LOBBY = 'group_lobby', // 拼团大厅
 }
@@ -34,7 +36,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(EventsGateway.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly prismaService: PrismaService,
+  ) {}
 
   // 客户端发送 "joinRoom" 消息，加入指定房间
   // 2. 修改：连接时识别用户身份，加入私人房间
@@ -137,5 +142,126 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `📨 [Gateway] Sent push to room '${room}': ${JSON.stringify(message)}`,
     );
+  }
+
+  // =========================================================
+  //   新增业务：IM 聊天核心逻辑 (兼容扩展)
+  // =========================================================
+
+  /**
+   * 1. 加入聊天室
+   * 前端调用: socket.emit('join_chat', { conversationId: 'xxx' })
+   */
+  @SubscribeMessage('join_chat')
+  handleJoinChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId: string },
+  ) {
+    const { conversationId } = payload;
+    // 简单校验一下，防止加入空房间
+    if (!conversationId) return;
+
+    client.join(conversationId);
+    this.logger.log(
+      `💬 Client ${client.id} joined Chat Room: ${conversationId}`,
+    );
+    return { status: 'joined', conversationId };
+  }
+
+  /**
+   * 2. 离开聊天室
+   */
+  @SubscribeMessage('leave_chat')
+  handleLeaveChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId: string },
+  ) {
+    client.leave(payload.conversationId);
+  }
+
+  /**
+   * 3. 发送消息 (核心!)
+   * 前端调用: socket.emit('send_message', { ... })
+   */
+  @SubscribeMessage('send_message')
+  async handleSendMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    payload: {
+      conversationId: string;
+      content: string;
+      type: number;
+      tempId: string; // 前端生成的 UUID
+    },
+  ) {
+    // 从 handleConnection 挂载的属性里拿 userId，更安全
+    const userId = (client as any).userId;
+    if (!userId) {
+      this.logger.warn(`❌ Unauthorized message attempt from ${client.id}`);
+      return { error: 'Unauthorized' };
+    }
+
+    const { conversationId, content, type, tempId } = payload;
+
+    try {
+      //  事务：SeqID自增 + 存消息 + 更新会话快照
+      // (这里逻辑和之前规划的一样，为了保持 Gateway 干净，
+      const result = await this.prismaService.$transaction(async (tx) => {
+        // A. 自增 SeqID
+        const conv = await tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            lastMsgSeqId: { increment: 1 },
+          },
+          select: { lastMsgSeqId: true },
+        });
+        const nextSeqId = conv.lastMsgSeqId;
+
+        // B. 存消息
+        const msg = await tx.chatMessage.create({
+          data: {
+            conversationId,
+            senderId: userId,
+            content,
+            type,
+            seqId: nextSeqId,
+            clientTempId: tempId,
+          },
+          include: {
+            sender: true, // 把发送者头像昵称带出来，方便广播
+          },
+        });
+        // C. 更新会话快照
+        await tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            lastMsgContent: type === 0 ? content : '[Media]',
+            lastMsgType: type,
+            lastMsgTime: new Date(),
+          },
+        });
+        return msg;
+      });
+
+      //  广播给房间内其他人 (使用独立事件名 'chat_message')
+      // 注意：使用 broadcast.to() 或者 client.to() 可以排除自己
+      // 但为了保证多端同步(比如我在手机发了，网页端也要显示)，通常直接 server.to()
+      client.to(conversationId).emit('chat_message', result);
+
+      //  返回 ACK (给当前客户端)
+      // Socket.io 会自动把这个 return 值作为回调传给前端的 emit ack function
+      return {
+        status: 'ok',
+        data: {
+          id: result.id,
+          seqId: result.seqId,
+          tempId: tempId,
+          createdAt: result.createdAt,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(`Send Message Failed: ${error.message}`);
+      return { status: 'error', message: error.message };
+    }
   }
 }
