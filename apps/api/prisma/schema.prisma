@@ -52,6 +52,8 @@ model User {
   transactions          WalletTransaction[]
   withdrawOrders        WithdrawOrder[]
   fcmDevices            Device[]
+  chatMessages          ChatMessage[]
+  ChatMember             ChatMember[]
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -1065,4 +1067,80 @@ model Device {
   @@index([platform])
   @@index([lastActive])
   @@map("devices") // 这里的表名叫做 devices，区别于 user_devices
+}
+
+// ==========================================
+// JOYMINIS IM MODULE (通用聊天模块)
+// ==========================================
+
+// 1. 通用会话表
+model Conversation {
+  id           String   @id @default(cuid()) // IM 内部 ID
+
+  // 类型: "GROUP"(拼团), "DIRECT"(私信), "SUPPORT"(客服)
+  type         ConversationType
+
+  // 🌉 业务钩子: 存 TreasureGroup.groupId
+  businessId   String?  @unique
+
+  // 快照 (用于列表页快速渲染)
+  lastMsgContent String?
+  lastMsgType    Int?      @default(0)
+  lastMsgTime    DateTime?
+  lastMsgSeqId   Int       @default(0) // 🔥 全局 SeqID 发号器
+
+  // 关联
+  messages     ChatMessage[]
+  members      ChatMember[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum ConversationType {
+  GROUP
+  DIRECT
+  SUPPORT
+}
+
+// 2. 消息表
+model ChatMessage {
+  id             String   @id @default(cuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  senderId       String?  // Null = 系统消息
+  sender         User?    @relation(fields: [senderId], references: [id])
+
+  type           Int      @default(0) // 0:Text, 1:Image, 2:Audio, 3:Video, 99:System
+  content        String   // 文本或 URL
+  meta           Json?    // {w, h, duration, size}
+
+  //  核心机制
+  seqId          Int      // 序列号
+  clientTempId   String?  // 前端生成的 UUID (用于去重/ACK)
+
+  isRecalled     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, seqId]) // 关键索引：拉取历史记录
+}
+
+// 3. 成员表
+model ChatMember {
+  id             String       @id @default(cuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+
+  // 阅读进度 (未读数 = Conversation.lastMsgSeqId - ChatMember.lastReadSeqId)
+  lastReadSeqId  Int          @default(0)
+
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId]) // 每个人在每个群只能有一条记录
 }

@@ -1,5 +1,5 @@
 import { TimeHelper } from "../date/TimeHelper";
-
+import crypto from "node:crypto";
 /**
  * 业务前缀枚举
  * 统一管理所有单据的前缀，拒绝硬编码
@@ -44,7 +44,8 @@ export class OrderNoHelper {
 
     // 截取用户ID后4位 (不足补0)
     // 假设 userId 是 UUID 或 长数字
-    const userSuffix = userId.slice(-4).padStart(4, "0");
+    //  推荐改：用 hash 取 4 位数字，分布更均匀、不可预测，但仍可路由
+    const userSuffix = this._hashToDigits(userId, 4);
 
     return `${prefix}${timeStr}${randomStr}${userSuffix}`;
   }
@@ -52,6 +53,13 @@ export class OrderNoHelper {
   // ==========================================
   // Private Helpers
   // ==========================================
+
+  /** 把 userId 映射成固定长度数字串（用于分库路由） */
+  private static _hashToDigits(input: string, len: number): string {
+    const hash = crypto.createHash("sha256").update(input).digest();
+    const n = hash.readUInt32BE(0) % 10 ** len;
+    return n.toString().padStart(len, "0");
+  }
 
   /**
    * 生成指定长度的纯数字随机串
