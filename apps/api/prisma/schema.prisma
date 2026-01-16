@@ -1083,11 +1083,21 @@ model Conversation {
   // 🌉 业务钩子: 存 TreasureGroup.groupId
   businessId   String?  @unique
 
+  // 2. 普通群/私聊专用
+  name         String?          // 群名 (私聊可为空)
+  avatar       String?          // 群头像
+  ownerId      String?          // 群主ID (普通群用)
+
+  // [新增] 会话状态: NORMAL(正常), ARCHIVED(归档/解散), MUTED(全员禁言)
+  status       Int              @default(1)
+
   // 快照 (用于列表页快速渲染)
   lastMsgContent String?
   lastMsgType    Int?      @default(0)
   lastMsgTime    DateTime?
-  lastMsgSeqId   Int       @default(0) // 🔥 全局 SeqID 发号器
+  lastMsgSeqId   Int       @default(0) //  全局 SeqID 发号器
+  // [新增] 快照发送者: 列表页直接显示 "SenderName: Content"
+  lastMsgSenderId String?
 
   // 关联
   messages     ChatMessage[]
@@ -1098,9 +1108,10 @@ model Conversation {
 }
 
 enum ConversationType {
-  GROUP
-  DIRECT
-  SUPPORT
+  GROUP  // 手动创建的群 (兴趣群、闲聊群)
+  DIRECT // 私聊 (点对点)
+  SUPPORT // 客服聊天 (用户与客服之间)
+  BUSINESS // 自动业务群 (拼团、客服、订单) - 也就是之前的 GROUP
 }
 
 // 2. 消息表
@@ -1136,6 +1147,15 @@ model ChatMember {
 
   userId         String
   user           User         @relation(fields: [userId], references: [id])
+
+  // 角色权限
+  role           String       @default("MEMBER") // OWNER, ADMIN, MEMBER
+
+  // 个性化设置
+  nickname       String?      // 在群里的昵称
+  //  [建议] 增加置顶功能 (微信的置顶聊天)
+  isPinned       Boolean      @default(false)
+  isMuted        Boolean      @default(false)
 
   // 阅读进度 (未读数 = Conversation.lastMsgSeqId - ChatMember.lastReadSeqId)
   lastReadSeqId  Int          @default(0)

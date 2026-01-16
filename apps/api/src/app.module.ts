@@ -17,6 +17,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RedisLockModule } from '@api/common/redis/redis-lock.module';
 import { PaymentChannelModule } from '@api/common/payment-channel/payment-channel.module';
 import { BullModule } from '@nestjs/bullmq';
+import { ChatModule } from '@api/common/chat/chat.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -99,6 +100,7 @@ import { BullModule } from '@nestjs/bullmq';
     AdminModule,
     PaymentModule,
     PaymentChannelModule,
+    ChatModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],
