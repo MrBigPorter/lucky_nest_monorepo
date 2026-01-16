@@ -3,10 +3,23 @@ export const CONVERSATION_TYPE = {
   GROUP: "GROUP",
   DIRECT: "DIRECT",
   SUPPORT: "SUPPORT",
+  BUSINESS: "BUSINESS",
 } as const;
 
 export type ConversationType =
   (typeof CONVERSATION_TYPE)[keyof typeof CONVERSATION_TYPE];
+
+export enum ConversationStatus {
+  NORMAL = 1,
+  ARCHIVED = 2,
+  MUTED = 3,
+}
+
+export enum ChatMemberRole {
+  OWNER = "OWNER",
+  ADMIN = "ADMIN",
+  MEMBER = "MEMBER",
+}
 
 /** 消息类型（与 ChatMessage.type 对齐） */
 export const MESSAGE_TYPE = {
