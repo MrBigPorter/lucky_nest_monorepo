@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import {
   ChatMemberRole,
@@ -6,11 +10,76 @@ import {
   ConversationStatus,
 } from '@lucky/shared';
 import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
+import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
+import { GetMessagesDto } from '@api/common/chat/dto/get-messages.dto';
+import { EventsGateway } from '@api/common/events/events.gateway';
+import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 
 @Injectable()
 export class ChatService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway,
+  ) {}
 
+  // =================================================================
+  // 🔴 核心操作 (发送消息)
+  // =================================================================
+  async sendMessage(userId: string, dto: CreateMessageDto) {
+    const { conversationId, content, type } = dto;
+    // 1. 存入数据库 (Prisma)
+    // 使用事务处理 seqId 自增逻辑
+    const message = await this.prisma.$transaction(async (tx) => {
+      // A. 更新会话 SeqID
+      const conv = await tx.conversation.update({
+        where: { id: conversationId },
+        data: {
+          lastMsgSeqId: { increment: 1 },
+        },
+        select: { lastMsgSeqId: true },
+      });
+
+      // B. 创建消息
+      const msg = await tx.chatMessage.create({
+        data: {
+          conversationId,
+          senderId: userId,
+          content,
+          type,
+          seqId: conv.lastMsgSeqId,
+          clientTempId: null, // HTTP 发送通常不需要回传这个，或者你可以加在 DTO 里传进来
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              nickname: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+
+      // C. 更新会话最后消息快照
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: {
+          lastMsgContent: type === 0 ? content : '[Media]',
+          lastMsgType: type,
+          lastMsgTime: new Date(),
+        },
+      });
+
+      return msg;
+    });
+    // 2. 通过 Gateway 广播给房间内其他人
+    this.eventsGateway.server.to(conversationId).emit('chat_message', {
+      ...message,
+      isSelf: message.senderId === userId,
+      createdAt: message.createdAt.getTime(), // 转时间戳
+    });
+    return message;
+  }
   // =================================================================
   // 🟢 核心查询 (消息列表页)
   // =================================================================
@@ -185,72 +254,135 @@ export class ChatService {
   // =================================================================
   // 🔌 辅助方法: 获取会话详情 (进房前/进房后调用)
   // =================================================================
+  // 1. 获取详情
   async getConversationDetail(conversationId: string, userId: string) {
-    // 1. 权限校验
-    const isMember = await this.prisma.chatMember.findUnique({
+    // 鉴权：检查是否在群里
+    const memberCheck = await this.prisma.chatMember.findUnique({
       where: { conversationId_userId: { conversationId, userId } },
     });
-    if (!isMember) {
-      throw new Error('Access denied: You are not a member of this chat');
-    }
+    if (!memberCheck)
+      throw new ForbiddenException('you are not a member of this conversation');
 
-    // 2. 查会话 + 历史消息
+    // 查数据
     const conv = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
-        messages: {
-          take: 30, // 首屏加载 30 条
-          orderBy: { seqId: 'desc' }, // 倒序查最新的
+        members: {
           include: {
-            sender: { select: { id: true, nickname: true, avatar: true } },
+            user: { select: { id: true, nickname: true, avatar: true } },
           },
         },
       },
     });
 
-    if (!conv) {
-      throw new Error('Conversation not found');
-    }
+    if (!conv) throw new NotFoundException('conversation not found');
 
-    // 3. 处理显示名称 (私聊显示对方名字)
+    // 处理显示名称
     let displayName = conv.name;
-    // let displayAvatar = conv.avatar; // 假设 Schema 有 avatar
-
-    if (conv.type === CONVERSATION_TYPE.DIRECT) {
-      const partnerMember = await this.prisma.chatMember.findFirst({
-        where: { conversationId: conv.id, userId: { not: userId } },
-        include: { user: { select: { nickname: true, avatar: true } } },
-      });
-
-      if (partnerMember && partnerMember.user) {
-        displayName = partnerMember.user.nickname;
-        // displayAvatar = partnerMember.user.avatar;
+    if (conv.type === 'DIRECT') {
+      const partner = conv.members.find((m) => m.userId !== userId);
+      if (partner) {
+        displayName = partner.user.nickname;
       }
     }
 
-    // 4.  返回详情 DTO (包含 history)
-    // 这里不再返回 ConversationListResponseDto，而是返回带 history 的结构
+    // 映射到 DTO
     return {
       id: conv.id,
       name: displayName || 'Unknown',
       type: conv.type,
-      // 历史消息：需要转换一下格式，方便前端处理
-      history: conv.messages
-        .map((msg) => ({
-          id: msg.id,
-          content: msg.content,
-          type: msg.type,
-          createdAt: msg.createdAt.getTime(),
-          sender: msg.sender
-            ? {
-                id: msg.sender.id,
-                nickname: msg.sender.nickname,
-                avatar: msg.sender.avatar,
-              }
-            : null,
-          // 判断是不是自己发的，交给前端根据 myUserId 判断
-        }))
-        .reverse(), //  翻转回正序 (旧 -> 新)，方便前端 ListView 渲染
+      members: conv.members.map((m) => ({
+        userId: m.userId,
+        nickname: m.user.nickname,
+        avatar: m.user.avatar,
+        role: m.role,
+      })),
     };
+  }
+
+  // 2. 获取消息
+  async getMessages(userId: string, dto: GetMessagesDto) {
+    const { conversationId, cursor, pageSize = 20 } = dto;
+    const takeAmount = pageSize + 1; // 多取一条用来判断是否有下一页
+
+    // 查消息
+    const messages = await this.prisma.chatMessage.findMany({
+      where: { conversationId },
+      orderBy: { seqId: 'desc' }, // 最新的在前面
+      take: takeAmount,
+      include: {
+        sender: {
+          select: {
+            id: true,
+            nickname: true,
+            avatar: true,
+          },
+        },
+      },
+      //修正1：如果有 cursor，必须 skip: 1 跳过自身，否则第一条会重复
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+
+    // 判断是否有下一页
+    let nextCursor: string | null = null;
+    const hasNextPage = messages.length > pageSize;
+
+    console.log('messages.length', messages.length);
+
+    console.log('Fetched messages:', hasNextPage);
+
+    if (hasNextPage) {
+      // 如果查到了多余的一条，说明有下一页
+      // 1. 弹出多查的那一条（不要返给前端，那是下一页的数据）
+      messages.pop();
+      // 2. 将剩下的最后一条的 ID 设为游标
+      nextCursor = messages[messages.length - 1].id;
+    }
+    // 在 cursor 模式下，total 其实没那么重要，可以不查以节省性能
+    // 如果非要查 total，可以单独查，但对于无限滚动，通常不需要 total
+    const mappedList = messages.map((msg) => ({
+      id: msg.id,
+      content: msg.content,
+      type: msg.type,
+      createdAt: msg.createdAt.getTime(),
+      isSelf: msg.senderId === userId,
+      sender: {
+        id: msg.sender?.id,
+        nickname: msg.sender?.nickname,
+        avatar: msg.sender?.avatar,
+      },
+    }));
+    return {
+      list: mappedList,
+      nextCursor: nextCursor,
+    };
+  }
+
+  // =======================================================
+  // 🔍 搜索用户
+  // =======================================================
+  async searchUsers(myUserId: string, dto: SearchUserDto) {
+    const { keyword } = dto;
+
+    return this.prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: myUserId } }, // 排除自己
+          {
+            // 1. 昵称模糊搜索 (contains)
+            OR: [
+              { nickname: { contains: keyword, mode: 'insensitive' } },
+              { phone: { contains: keyword } },
+            ],
+          },
+        ],
+      },
+      take: 20, // 限制返回数量
+      select: {
+        id: true,
+        nickname: true,
+        avatar: true,
+      },
+    });
   }
 }

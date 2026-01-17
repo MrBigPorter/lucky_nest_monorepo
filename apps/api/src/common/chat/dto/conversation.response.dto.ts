@@ -67,6 +67,7 @@ export class ChatMessageResponseDto {
   content!: string;
 
   @ApiProperty()
+  @DateToTimestamp()
   createdAt!: number;
 
   @ApiProperty({ type: SenderInfoResponseDto, required: false })
