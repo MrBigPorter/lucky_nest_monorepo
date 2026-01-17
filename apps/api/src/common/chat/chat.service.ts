@@ -279,10 +279,12 @@ export class ChatService {
 
     // 处理显示名称
     let displayName = conv.name;
+    let displayAvatar = conv['avatar']; // 假设有头像字段
     if (conv.type === 'DIRECT') {
       const partner = conv.members.find((m) => m.userId !== userId);
       if (partner) {
         displayName = partner.user.nickname;
+        displayAvatar = partner.user.avatar;
       }
     }
 
@@ -290,7 +292,9 @@ export class ChatService {
     return {
       id: conv.id,
       name: displayName || 'Unknown',
+      avatar: displayAvatar,
       type: conv.type,
+      memberCount: conv.members.length,
       members: conv.members.map((m) => ({
         userId: m.userId,
         nickname: m.user.nickname,
