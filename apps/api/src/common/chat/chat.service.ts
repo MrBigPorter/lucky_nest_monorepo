@@ -14,6 +14,7 @@ import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
 import { GetMessagesDto } from '@api/common/chat/dto/get-messages.dto';
 import { EventsGateway } from '@api/common/events/events.gateway';
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
+import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
 
 @Injectable()
 export class ChatService {
@@ -77,8 +78,70 @@ export class ChatService {
       ...message,
       isSelf: message.senderId === userId,
       createdAt: message.createdAt.getTime(), // 转时间戳
+      tempId: dto.tempId, // 透传客户端临时 ID
     });
     return message;
+  }
+
+  // 核心操作: 消除红点 (标记已读)
+  // =================================================================
+
+  async markAsRead(userId: string, dto: MarkAsReadDto) {
+    const { conversationId, maxSeqId } = dto;
+
+    // 1. 查会话当前的最新 SeqId
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { lastMsgSeqId: true },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // 2. 确定要更新到的目标 SeqId
+    // 如果前端传了 maxSeqId，就用前端传的（但不能超过会话实际最大值）
+    // 如果没传，就直接拉满（全读）
+    let targetSeqId = conversation.lastMsgSeqId;
+
+    if (maxSeqId) {
+      // 保护逻辑：不能标记读到了未来的消息
+      targetSeqId = Math.min(maxSeqId, conversation.lastMsgSeqId);
+    }
+
+    // 3. 更新 Member 表
+    const updatedMember = await this.prisma.chatMember.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        lastReadSeqId: targetSeqId,
+      },
+      select: { lastReadSeqId: true },
+    });
+
+    // 4. 计算剩余未读数 (理论上是 0，除非 maxSeqId 传小了，或者就在这一毫秒又来了新消息)
+    const unreadCount = Math.max(
+      0,
+      conversation.lastMsgSeqId - updatedMember.lastReadSeqId,
+    );
+
+    // 5. (进阶) 如果做了多端同步，这里可以通过 Gateway 通知该用户的其他设备
+    this.eventsGateway.server
+      .to(`user_${userId}`)
+      .emit('conversation_updated', {
+        conversationId,
+        lastReadSeqId: updatedMember.lastReadSeqId,
+        unreadCount,
+      });
+
+    return {
+      lastReadSeqId: updatedMember.lastReadSeqId,
+      unreadCount: unreadCount,
+    };
   }
   // =================================================================
   // 🟢 核心查询 (消息列表页)
@@ -330,10 +393,6 @@ export class ChatService {
     // 判断是否有下一页
     let nextCursor: string | null = null;
     const hasNextPage = messages.length > pageSize;
-
-    console.log('messages.length', messages.length);
-
-    console.log('Fetched messages:', hasNextPage);
 
     if (hasNextPage) {
       // 如果查到了多余的一条，说明有下一页

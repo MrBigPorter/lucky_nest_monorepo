@@ -16,4 +16,8 @@ export class CreateMessageDto {
   @IsInt()
   @IsOptional()
   type: number = 0;
+
+  @IsString()
+  @IsOptional()
+  tempId?: string; // 新增这个，不用存数据库，只用来透传
 }
