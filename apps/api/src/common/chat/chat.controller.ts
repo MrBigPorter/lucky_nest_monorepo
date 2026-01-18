@@ -27,6 +27,8 @@ import {
   MessageResponseDto,
 } from '@api/common/chat/dto/message.response.dto';
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
+import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
+import { MarkAsReadResponseDto } from '@api/common/chat/dto/mark-as-read.response.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -79,7 +81,23 @@ export class ChatController {
       createdAt: msg.createdAt.getTime(),
       isSelf: true, // 既然是我调用的接口，那肯定是我发的
       sender: msg.sender,
+      tempId: dto.tempId,
     });
+  }
+
+  /**
+   * 标记消息为已读
+   * @param userId
+   * @param dto
+   */
+  @Post('message/mark-as-read')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ type: MarkAsReadResponseDto })
+  async markAsRead(
+    @CurrentUserId() userId: string,
+    @Body() dto: MarkAsReadDto,
+  ) {
+    return this.chatService.markAsRead(userId, dto);
   }
 
   /**
