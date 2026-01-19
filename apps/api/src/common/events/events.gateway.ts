@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@api/common/prisma/prisma.service';
+import { SocketEvents } from '@lucky/shared';
 export enum SocketRoom {
   LOBBY = 'group_lobby', // 拼团大厅
 }
@@ -152,7 +153,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 1. 加入聊天室
    * 前端调用: socket.emit('join_chat', { conversationId: 'xxx' })
    */
-  @SubscribeMessage('join_chat')
+  @SubscribeMessage(SocketEvents.JOIN_CHAT)
   handleJoinChat(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { conversationId: string },
@@ -171,7 +172,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * 2. 离开聊天室
    */
-  @SubscribeMessage('leave_chat')
+  @SubscribeMessage(SocketEvents.LEAVE_CHAT)
   handleLeaveChat(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { conversationId: string },
@@ -183,7 +184,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 3. 发送消息 (核心!)
    * 前端调用: socket.emit('send_message', { ... })
    */
-  @SubscribeMessage('send_message')
+  @SubscribeMessage(SocketEvents.SEND_MESSAGE)
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody()
@@ -246,7 +247,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       //  广播给房间内其他人 (使用独立事件名 'chat_message')
       // 注意：使用 broadcast.to() 或者 client.to() 可以排除自己
       // 但为了保证多端同步(比如我在手机发了，网页端也要显示)，通常直接 server.to()
-      client.to(conversationId).emit('chat_message', result);
+      client.to(conversationId).emit(SocketEvents.CHAT_MESSAGE, result);
 
       //  返回 ACK (给当前客户端)
       // Socket.io 会自动把这个 return 值作为回调传给前端的 emit ack function

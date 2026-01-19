@@ -101,3 +101,14 @@ export type MessageMeta = {
   duration?: number;
   size?: number;
 };
+
+export enum SocketEvents {
+  // 💬 Chat
+  CHAT_MESSAGE = "chat_message",
+  CONVERSATION_READ = "conversation_read",
+
+  // 👥 Group
+  JOIN_CHAT = "join_chat",
+  LEAVE_CHAT = "leave_chat",
+  SEND_MESSAGE = "send_message",
+}

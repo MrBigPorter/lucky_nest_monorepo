@@ -69,20 +69,12 @@ export class ChatController {
   async sendMessage(
     @CurrentUserId() userId: string,
     @Body() dto: CreateMessageDto,
-  ): Promise<MessageResponseDto> {
+  ) {
     // 调用 Service 处理业务
     const msg = await this.chatService.sendMessage(userId, dto);
 
     // 格式化返回结果
-    return plainToInstance(MessageResponseDto, {
-      id: msg.id,
-      content: msg.content,
-      type: msg.type,
-      createdAt: msg.createdAt.getTime(),
-      isSelf: true, // 既然是我调用的接口，那肯定是我发的
-      sender: msg.sender,
-      tempId: dto.tempId,
-    });
+    return plainToInstance(MessageResponseDto, msg);
   }
 
   /**

@@ -16,6 +16,9 @@ export class MessageResponseDto {
   @ApiProperty({ description: '消息ID' })
   id!: string;
 
+  @ApiProperty({ description: '消息序列号 (用于标记已读)' })
+  seqId!: number;
+
   @ApiProperty({ description: '消息内容' })
   content!: string;
 
