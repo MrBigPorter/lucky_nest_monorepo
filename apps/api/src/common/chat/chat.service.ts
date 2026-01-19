@@ -8,6 +8,7 @@ import {
   ChatMemberRole,
   CONVERSATION_TYPE,
   ConversationStatus,
+  SocketEvents,
 } from '@lucky/shared';
 import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
@@ -74,12 +75,14 @@ export class ChatService {
       return msg;
     });
     // 2. 通过 Gateway 广播给房间内其他人
-    this.eventsGateway.server.to(conversationId).emit('chat_message', {
-      ...message,
-      isSelf: message.senderId === userId,
-      createdAt: message.createdAt.getTime(), // 转时间戳
-      tempId: dto.tempId, // 透传客户端临时 ID
-    });
+    this.eventsGateway.server
+      .to(conversationId)
+      .emit(SocketEvents.CHAT_MESSAGE, {
+        ...message,
+        isSelf: message.senderId === userId,
+        createdAt: message.createdAt.getTime(), // 转时间戳
+        tempId: dto.tempId, // 透传客户端临时 ID
+      });
     return message;
   }
 
@@ -129,10 +132,13 @@ export class ChatService {
       conversation.lastMsgSeqId - updatedMember.lastReadSeqId,
     );
 
-    // 5. (进阶) 如果做了多端同步，这里可以通过 Gateway 通知该用户的其他设备
+    //  架构师操作：Event Sourcing (事件广播)
+    // 告诉房间里的其他人："我(userId) 已经读到了 targetSeqId 这一行"
+    // ==========================================================
     this.eventsGateway.server
-      .to(`user_${userId}`)
-      .emit('conversation_updated', {
+      .to(conversationId)
+      .emit(SocketEvents.CONVERSATION_READ, {
+        readerId: userId,
         conversationId,
         lastReadSeqId: updatedMember.lastReadSeqId,
         unreadCount,
@@ -405,6 +411,7 @@ export class ChatService {
     // 如果非要查 total，可以单独查，但对于无限滚动，通常不需要 total
     const mappedList = messages.map((msg) => ({
       id: msg.id,
+      seqId: msg.seqId,
       content: msg.content,
       type: msg.type,
       createdAt: msg.createdAt.getTime(),
