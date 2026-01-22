@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -34,6 +35,8 @@ import { UploadService } from '@api/common/upload/upload.service';
 import { UploadTokenResponseDto } from '@api/common/chat/dto/upload-token-response.dto';
 import { RecallMessageDto } from '@api/common/chat/dto/recall-message.dto';
 import { RecallMessageResponseDto } from '@api/common/chat/dto/recall-message-response.dto';
+import { DeleteMessageResponseDto } from '@api/common/chat/dto/delete-message.response.dto';
+import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -96,6 +99,22 @@ export class ChatController {
   async recall(@Body() dto: RecallMessageDto, @CurrentUserId() userId: string) {
     const result = await this.chatService.recallMessage(userId, dto.messageId);
     return plainToInstance(RecallMessageResponseDto, result);
+  }
+
+  /**
+   * 删除消息
+   * @param userId
+   * @param dto
+   */
+  @Delete('message/delete')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ type: DeleteMessageResponseDto })
+  async recallMessage(
+    @CurrentUserId() userId: string,
+    @Body() dto: DeleteMessageDto,
+  ) {
+    const result = await this.chatService.deleteMessage(userId, dto);
+    return plainToInstance(DeleteMessageResponseDto, result);
   }
 
   /**

@@ -18,6 +18,7 @@ import { GetMessagesDto } from '@api/common/chat/dto/get-messages.dto';
 import { EventsGateway } from '@api/common/events/events.gateway';
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
+import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
 
 @Injectable()
 export class ChatService {
@@ -85,18 +86,28 @@ export class ChatService {
 
       return msg;
     });
+
+    // 2. 构造统一的返回对象 (DTO)
+    const messageDto = {
+      ...message,
+      createdAt: message.createdAt.getTime(), // 转时间戳
+      isRecalled: false,
+      tempId: dto.tempId,
+    };
+
     // 2. 通过 Gateway 广播给房间内其他人
     this.eventsGateway.server
       .to(conversationId)
       .emit(SocketEvents.CHAT_MESSAGE, {
-        ...message,
-        isSelf: message.senderId === userId,
-        createdAt: message.createdAt.getTime(), // 转时间戳
-        tempId: dto.tempId, // 透传客户端临时 ID
+        ...messageDto,
+        isSelf: undefined,
       });
 
     // fcm send notification
-    return message;
+    return {
+      ...messageDto,
+      isSelf: true, //  明确告诉前端，这是我自己发的
+    };
   }
 
   // 核心操作: 消除红点 (标记已读)
@@ -166,21 +177,66 @@ export class ChatService {
         });
       }
 
-      return msg;
+      return {
+        messageId: msg.id,
+        tip: 'Message has been recalled',
+      };
     });
 
     // 5. 广播撤回事件
     this.eventsGateway.server
-      .to(updatedMessage.conversationId)
+      .to(message.conversationId)
       .emit(SocketEvents.MESSAGE_RECALLED, {
-        messageId: messageId,
         conversationId: message.conversationId,
+        isSelf: message.senderId === userId,
+        messageId: messageId,
         operatorId: userId,
         seqId: message.seqId,
         tip: 'An image or text has been recalled', // 供前端 fallback 显示
       });
 
     return updatedMessage;
+  }
+
+  // =================================================================
+  //  核心操作 (删除消息)
+  // =================================================================
+  async deleteMessage(userId: string, dto: DeleteMessageDto) {
+    const { messageId, conversationId } = dto;
+
+    // 1.check message exists
+    const message = await this.prisma.chatMessage.findUnique({
+      where: { id: messageId },
+      select: { senderId: true, conversationId: true },
+    });
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // 2.  严谨性校验：校验用户是否是该会话的成员
+    // 只有会话成员才有权隐藏该会话的消息
+    const member = await this.prisma.chatMember.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId: message.conversationId,
+          userId,
+        },
+      },
+    });
+    if (!member) {
+      throw new ForbiddenException('You are not a member of this conversation');
+    }
+
+    // 2. 幂等插入隐藏记录
+    // 使用 upsert 即使前端并发重复请求，数据库也不会报唯一索引冲突
+    await this.prisma.chatMessageHide.upsert({
+      where: {
+        userId_messageId: { userId, messageId },
+      },
+      update: {}, // 已存在则不做任何操作
+      create: { userId, messageId },
+    });
+    return { messageId };
   }
 
   async markAsRead(userId: string, dto: MarkAsReadDto) {
@@ -506,7 +562,12 @@ export class ChatService {
 
     // 查消息
     const messages = await this.prisma.chatMessage.findMany({
-      where: { conversationId },
+      where: {
+        conversationId,
+        hiddenByUsers: {
+          none: { userId }, // 排除被当前用户隐藏的消息
+        },
+      },
       orderBy: { seqId: 'desc' }, // 最新的在前面
       take: takeAmount,
       include: {
@@ -542,6 +603,7 @@ export class ChatService {
       type: msg.type,
       createdAt: msg.createdAt.getTime(),
       isSelf: msg.senderId === userId,
+      isRecalled: msg.type === MESSAGE_TYPE.RECALLED,
       sender: {
         id: msg.sender?.id,
         nickname: msg.sender?.nickname,
