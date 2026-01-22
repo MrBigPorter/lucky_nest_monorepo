@@ -32,6 +32,8 @@ import { MarkAsReadResponseDto } from '@api/common/chat/dto/mark-as-read.respons
 import { GetUploadTokenDto } from '@api/common/chat/dto/get-upload-token.dto';
 import { UploadService } from '@api/common/upload/upload.service';
 import { UploadTokenResponseDto } from '@api/common/chat/dto/upload-token-response.dto';
+import { RecallMessageDto } from '@api/common/chat/dto/recall-message.dto';
+import { RecallMessageResponseDto } from '@api/common/chat/dto/recall-message-response.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -82,6 +84,18 @@ export class ChatController {
 
     // 格式化返回结果
     return plainToInstance(MessageResponseDto, msg);
+  }
+
+  /**
+   * 撤回消息
+   * @param dto
+   * @param userId
+   */
+  @Post('message/recall')
+  @HttpCode(HttpStatus.OK)
+  async recall(@Body() dto: RecallMessageDto, @CurrentUserId() userId: string) {
+    const result = await this.chatService.recallMessage(userId, dto.messageId);
+    return plainToInstance(RecallMessageResponseDto, result);
   }
 
   /**
