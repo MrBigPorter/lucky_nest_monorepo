@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ChatService } from '@api/common/chat/chat.service';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
-import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { CreateDirectChatDto } from '@api/common/chat/dto/create-direct-chat.dto';
 import { CreateGroupChatDto } from '@api/common/chat/dto/create-group-chat.dto';
@@ -29,12 +29,19 @@ import {
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
 import { MarkAsReadResponseDto } from '@api/common/chat/dto/mark-as-read.response.dto';
+import { GetUploadTokenDto } from '@api/common/chat/dto/get-upload-token.dto';
+import { UploadService } from '@api/common/upload/upload.service';
+import { UploadTokenResponseDto } from '@api/common/chat/dto/upload-token-response.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    // 注入 UploadService 用于生成上传凭证
+    private readonly uploadService: UploadService,
+  ) {}
 
   /**
    * 获取会话列表
@@ -166,5 +173,28 @@ export class ChatController {
   ) {
     const data = await this.chatService.searchUsers(userId, dto);
     return plainToInstance(UserSimpleResponseDto, data);
+  }
+
+  /**
+   * 获取上传文件的 Token 和 URL
+   * @param userId
+   * @param body
+   */
+  @Post('upload-token')
+  @ApiOkResponse({
+    type: UploadTokenResponseDto,
+  })
+  async getUploadToken(
+    @CurrentUserId() userId: string, // 从 Token 解析出用户 ID
+    @Body() body: GetUploadTokenDto,
+  ) {
+    // 调用你写好的 Service
+    // module 传 'chat'，这样文件会存到 uploads/chat/user_id/xxx.jpg
+    return this.uploadService.generatePresignedUrl(
+      userId,
+      body.fileName,
+      body.fileType,
+      'chat',
+    );
   }
 }

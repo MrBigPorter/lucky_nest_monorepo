@@ -159,13 +159,22 @@ export class UploadService {
         expiresIn: 600,
       });
 
+      // 2. 处理返回给前端用于发消息的 Key/URL
+      let publicUrl = null;
+
+      if (!isPrivate) {
+        //  重点：如果是公开模块(chat)，直接拼接永久 CDN 链接
+        // 这样前端存进数据库的就是一个永久链接，任何时候都能看
+        publicUrl = `${this.publicDomain}/${key}`;
+      }
+
       this.logger.log(`Generated upload URL for ${module} in bucket ${bucket}`);
 
       return {
         url, // 临时上传链接 (给前端 PUT 用)
         key, // 存数据库的 Key
         // 如果是公开桶，直接返回 CDN 链接；私有桶则不返回，强迫前端以后通过签名访问
-        cdnUrl: isPrivate ? null : `${this.publicDomain}/${key}`,
+        cdnUrl: publicUrl,
         isPrivate,
       };
     } catch (error) {

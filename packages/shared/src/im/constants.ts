@@ -27,6 +27,7 @@ export const MESSAGE_TYPE = {
   IMAGE: 1,
   AUDIO: 2,
   VIDEO: 3,
+  RECALLED: 4,
   SYSTEM: 99,
 } as const;
 
@@ -106,6 +107,7 @@ export enum SocketEvents {
   // 💬 Chat
   CHAT_MESSAGE = "chat_message",
   CONVERSATION_READ = "conversation_read",
+  MESSAGE_RECALLED = "message_recalled",
 
   // 👥 Group
   JOIN_CHAT = "join_chat",
