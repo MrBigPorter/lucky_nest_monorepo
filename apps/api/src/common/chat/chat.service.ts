@@ -8,7 +8,9 @@ import {
   ChatMemberRole,
   CONVERSATION_TYPE,
   ConversationStatus,
+  MESSAGE_TYPE,
   SocketEvents,
+  TimeHelper,
 } from '@lucky/shared';
 import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
@@ -25,7 +27,7 @@ export class ChatService {
   ) {}
 
   // =================================================================
-  // 🔴 核心操作 (发送消息)
+  //  核心操作 (发送消息)
   // =================================================================
   async sendMessage(userId: string, dto: CreateMessageDto) {
     const { conversationId, content, type } = dto;
@@ -49,7 +51,7 @@ export class ChatService {
           content,
           type,
           seqId: conv.lastMsgSeqId,
-          clientTempId: null, // HTTP 发送通常不需要回传这个，或者你可以加在 DTO 里传进来
+          clientTempId: dto.tempId || null, // HTTP 发送通常不需要回传这个，或者你可以加在 DTO 里传进来
         },
         include: {
           sender: {
@@ -62,11 +64,20 @@ export class ChatService {
         },
       });
 
+      // C. 更新会话快照
+      // 优化：处理预览文本 (LastMsgContent)
+      let previewText = '[Unsupported]';
+      if (type === MESSAGE_TYPE.TEXT)
+        previewText = content; // 假设 MessageType.TEXT = 0 或 'text'
+      else if (type === MESSAGE_TYPE.IMAGE) previewText = '[Image]';
+      else if (type === MESSAGE_TYPE.AUDIO) previewText = '[Voice]';
+      else if (type === MESSAGE_TYPE.VIDEO) previewText = '[Video]';
+
       // C. 更新会话最后消息快照
       await tx.conversation.update({
         where: { id: conversationId },
         data: {
-          lastMsgContent: type === 0 ? content : '[Media]',
+          lastMsgContent: previewText,
           lastMsgType: type,
           lastMsgTime: new Date(),
         },
@@ -83,11 +94,94 @@ export class ChatService {
         createdAt: message.createdAt.getTime(), // 转时间戳
         tempId: dto.tempId, // 透传客户端临时 ID
       });
+
+    // fcm send notification
     return message;
   }
 
   // 核心操作: 消除红点 (标记已读)
   // =================================================================
+
+  // =================================================================
+  //  核心操作 (撤回消息)
+  // =================================================================
+  async recallMessage(userId: string, messageId: string) {
+    // 1. 查消息，确认存在且是自己发的
+    const message = await this.prisma.chatMessage.findUnique({
+      where: { id: messageId },
+    });
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only recall your own messages');
+    }
+
+    // 3. 时间校验：严格 2 分钟限制 (120,000 毫秒)
+    const isWithinTwoMinus = TimeHelper.isWithinRange(
+      message.createdAt,
+      new Date(),
+      120000,
+    );
+    if (!isWithinTwoMinus) {
+      throw new ForbiddenException('Recall time window has expired');
+    }
+
+    // 4. 执行撤回事务
+    const updatedMessage = await this.prisma.$transaction(async (tx) => {
+      // A. 逻辑修改消息内容和类型
+      const msg = await tx.chatMessage.update({
+        where: { id: messageId },
+        data: {
+          content: '[Message Recalled]',
+          type: MESSAGE_TYPE.RECALLED, // 假设有个 RECALLED 类型
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              nickname: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+
+      // B. 更新会话快照 (如果撤回的是最后一条消息，则需要更新会话的 lastMsgContent 等字段)
+      const conv = await tx.conversation.findUnique({
+        where: { id: msg.conversationId },
+        select: {
+          lastMsgSeqId: true,
+        },
+      });
+
+      if (conv && conv.lastMsgSeqId === msg.seqId) {
+        // 撤回的是最后一条消息，更新会话快照
+        await tx.conversation.update({
+          where: { id: msg.conversationId },
+          data: {
+            lastMsgContent: '[Message Recalled]',
+            lastMsgType: MESSAGE_TYPE.RECALLED,
+          },
+        });
+      }
+
+      return msg;
+    });
+
+    // 5. 广播撤回事件
+    this.eventsGateway.server
+      .to(updatedMessage.conversationId)
+      .emit(SocketEvents.MESSAGE_RECALLED, {
+        messageId: messageId,
+        conversationId: message.conversationId,
+        operatorId: userId,
+        seqId: message.seqId,
+        tip: 'An image or text has been recalled', // 供前端 fallback 显示
+      });
+
+    return updatedMessage;
+  }
 
   async markAsRead(userId: string, dto: MarkAsReadDto) {
     const { conversationId, maxSeqId } = dto;
@@ -150,7 +244,7 @@ export class ChatService {
     };
   }
   // =================================================================
-  // 🟢 核心查询 (消息列表页)
+  //  核心查询 (消息列表页)
   // =================================================================
   async getConversationList(userId: string, page = 1, pageSize = 20) {
     const conversations = await this.prisma.conversation.findMany({
@@ -178,28 +272,48 @@ export class ChatService {
       take: pageSize,
     });
 
-    //  后处理：为前端补充 Direct Chat 的头像和名字
-    // 这一步虽然在 Service 做有点重，但能极大简化前端逻辑
+    // 2.  解决 N+1 问题：收集所有 Direct Chat 的 ID
+    const directConvIds = conversations
+      .filter((conv) => conv.type === CONVERSATION_TYPE.DIRECT)
+      .map((conv) => conv.id);
 
-    return await Promise.all(
-      conversations.map(async (conv) => {
+    // 3. ️ 批量查询对方信息 (只查 Direct 类型且不是自己的成员)
+    let partnersMap = new Map<
+      string,
+      { nickname: string | null; avatar: string | null }
+    >();
+
+    if (directConvIds.length > 0) {
+      const partners = await this.prisma.chatMember.findMany({
+        where: {
+          conversationId: { in: directConvIds },
+          userId: { not: userId }, // 排除自己
+        },
+        include: {
+          user: { select: { nickname: true, avatar: true } },
+        },
+      });
+
+      // 转为 Map: conversationId -> UserInfo
+      partners.forEach((p) => {
+        if (p.user) partnersMap.set(p.conversationId, p.user);
+      });
+
+      // 4. 内存组装数据
+      return conversations.map((conv) => {
         let displayName = conv.name;
-        let displayAvatar = conv['avatar']; // 假设 Schema 有 avatar 字段
+        let displayAvatar = conv['avatar']; // Schema 中若无 avatar 字段，需确认
 
-        // 如果是私聊，且没有群名，则去查对方的信息
+        // 如果是私聊，从 Map 中取对方信息
         if (conv.type === CONVERSATION_TYPE.DIRECT) {
-          // 找对方 (成员里 userId 不等于我的那个)
-          const partnerMember = await this.prisma.chatMember.findFirst({
-            where: { conversationId: conv.id, userId: { not: userId } },
-            include: { user: { select: { nickname: true, avatar: true } } },
-          });
-
-          if (partnerMember && partnerMember.user) {
-            displayName = partnerMember.user.nickname;
-            displayAvatar = partnerMember.user.avatar;
+          const partner = partnersMap.get(conv.id);
+          if (partner) {
+            displayName = partner.nickname;
+            displayAvatar = partner.avatar;
           }
         }
-        const mySettings = conv.members[0];
+
+        const mySettings = conv.members[0]; // 前面 include where userId 保证了只有 1 个
 
         return new ConversationListResponseDto({
           id: conv.id,
@@ -207,22 +321,20 @@ export class ChatService {
           name: displayName || 'Unknown',
           avatar: displayAvatar,
           lastMsgContent: conv.lastMsgContent,
-          // 转时间戳，前端处理更方便
           lastMsgTime: conv.lastMsgTime ? conv.lastMsgTime.getTime() : 0,
           isPinned: mySettings?.isPinned ?? false,
           isMuted: mySettings?.isMuted ?? false,
-          // 简单计算未读
           unreadCount: Math.max(
             0,
             conv.lastMsgSeqId - (mySettings?.lastReadSeqId ?? 0),
           ),
         });
-      }),
-    );
+      });
+    }
   }
 
   // =================================================================
-  // 🔵 场景 A: 业务群 (拼团)
+  //  场景 A: 业务群 (拼团)
   // =================================================================
   async ensureBusinessConversation(businessId: string) {
     const existing = await this.prisma.conversation.findFirst({
@@ -266,7 +378,7 @@ export class ChatService {
   }
 
   // =================================================================
-  // 🟡 场景 B: 私聊 (Direct)
+  //  场景 B: 私聊 (Direct)
   // =================================================================
   async ensureDirectConversation(myId: string, targetId: string) {
     const existing = await this.prisma.conversation.findFirst({
@@ -297,7 +409,7 @@ export class ChatService {
   }
 
   // =================================================================
-  // 🟣 场景 C: 手动建群 (Group)
+  //  场景 C: 手动建群 (Group)
   // =================================================================
   async createGroupChat(creatorId: string, name: string, memberIds: string[]) {
     const uniqueMembers = Array.from(new Set([creatorId, ...memberIds]));
@@ -321,7 +433,7 @@ export class ChatService {
   }
 
   // =================================================================
-  // 🔌 辅助方法: 获取会话详情 (进房前/进房后调用)
+  //  辅助方法: 获取会话详情 (进房前/进房后调用)
   // =================================================================
   // 1. 获取详情
   async getConversationDetail(conversationId: string, userId: string) {
@@ -378,6 +490,20 @@ export class ChatService {
     const { conversationId, cursor, pageSize = 20 } = dto;
     const takeAmount = pageSize + 1; // 多取一条用来判断是否有下一页
 
+    let partnerReadSeqId = 0;
+
+    const partnerMember = await this.prisma.chatMember.findFirst({
+      where: {
+        conversationId: conversationId,
+        userId: { not: userId }, // 对方
+      },
+      select: { lastReadSeqId: true },
+    });
+
+    if (partnerMember) {
+      partnerReadSeqId = partnerMember.lastReadSeqId;
+    }
+
     // 查消息
     const messages = await this.prisma.chatMessage.findMany({
       where: { conversationId },
@@ -425,11 +551,12 @@ export class ChatService {
     return {
       list: mappedList,
       nextCursor: nextCursor,
+      partnerLastReadSeqId: partnerReadSeqId, // 可选：如果需要，可以查对方的已读 SeqId
     };
   }
 
   // =======================================================
-  // 🔍 搜索用户
+  //  搜索用户
   // =======================================================
   async searchUsers(myUserId: string, dto: SearchUserDto) {
     const { keyword } = dto;
