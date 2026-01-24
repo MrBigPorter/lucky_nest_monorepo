@@ -31,15 +31,59 @@ export class ChatService {
   //  核心操作 (发送消息)
   // =================================================================
   async sendMessage(userId: string, dto: CreateMessageDto) {
-    const { conversationId, content, type } = dto;
+    const { id, conversationId, content, type, duration, width, height } = dto;
+
+    // 2. 幂等性检查 (Idempotency Check)
+    // 如果该 ID 已存在，直接返回，不做任何处理。
+    // 这解决了前端因网络超时重试导致的“重复消息”问题。
+    const existingMessage = await this.prisma.chatMessage.findUnique({
+      where: { id },
+    });
+    if (existingMessage) {
+      // 可以在这里做一个简单的校验，确保 senderId 一致，防止恶意覆盖
+      if (existingMessage.senderId !== userId) {
+        throw new ForbiddenException('Message ID conflict');
+      }
+      return {
+        ...existingMessage,
+        createdAt: existingMessage.createdAt.getTime(),
+        isSelf: true, // 明确告诉前端这是自己发的
+      };
+    }
+
+    // 3. 组装 Meta (丰富元数据)
+    // 使用具体的接口类型代替 any，代码更健壮
+    const meta: Record<string, any> = {};
+
+    // 如果是语音 (type 2) 且传了 duration，存入 meta
+    if (dto.type === MESSAGE_TYPE.AUDIO && dto.duration) {
+      meta.duration = dto.duration;
+    }
+
+    //  建议：把宽高存入 meta，解决图片气泡闪烁问题
+    if (
+      (type === MESSAGE_TYPE.IMAGE || type === MESSAGE_TYPE.VIDEO) &&
+      width &&
+      height
+    ) {
+      meta.w = width;
+      meta.h = height;
+    }
+
     // 1. 存入数据库 (Prisma)
     // 使用事务处理 seqId 自增逻辑
     const message = await this.prisma.$transaction(async (tx) => {
-      // A. 更新会话 SeqID
+      // A. 锁定并更新会话 SeqID
+      // 注意：在高并发群聊中，这里可能会成为热点。
+      // 如果未来量大，可以考虑使用 Redis 自增 seqId，异步写入 DB。
+
       const conv = await tx.conversation.update({
         where: { id: conversationId },
         data: {
           lastMsgSeqId: { increment: 1 },
+          lastMsgContent: this._getPreviewText(type, content), // 抽离方法
+          lastMsgType: type,
+          lastMsgTime: new Date(),
         },
         select: { lastMsgSeqId: true },
       });
@@ -47,12 +91,14 @@ export class ChatService {
       // B. 创建消息
       const msg = await tx.chatMessage.create({
         data: {
+          id, // 使用前端传的 ID
           conversationId,
           senderId: userId,
           content,
           type,
+          //  核心：把 duration 存进 meta 字段
+          meta: Object.keys(meta).length > 0 ? meta : undefined,
           seqId: conv.lastMsgSeqId,
-          clientTempId: dto.tempId || null, // HTTP 发送通常不需要回传这个，或者你可以加在 DTO 里传进来
         },
         include: {
           sender: {
@@ -65,20 +111,22 @@ export class ChatService {
         },
       });
 
-      // C. 更新会话快照
-      // 优化：处理预览文本 (LastMsgContent)
-      let previewText = '[Unsupported]';
-      if (type === MESSAGE_TYPE.TEXT)
-        previewText = content; // 假设 MessageType.TEXT = 0 或 'text'
-      else if (type === MESSAGE_TYPE.IMAGE) previewText = '[Image]';
-      else if (type === MESSAGE_TYPE.AUDIO) previewText = '[Voice]';
-      else if (type === MESSAGE_TYPE.VIDEO) previewText = '[Video]';
+      //  核心修复：在发送时，自动更新【发送者】的 lastReadSeqId
+      await tx.chatMember.updateMany({
+        where: {
+          conversationId,
+          userId,
+        },
+        data: {
+          lastReadSeqId: conv.lastMsgSeqId, // 标记为已读到最新
+        },
+      });
 
       // C. 更新会话最后消息快照
       await tx.conversation.update({
         where: { id: conversationId },
         data: {
-          lastMsgContent: previewText,
+          lastMsgContent: this._getPreviewText(type, content),
           lastMsgType: type,
           lastMsgTime: new Date(),
         },
@@ -92,7 +140,6 @@ export class ChatService {
       ...message,
       createdAt: message.createdAt.getTime(), // 转时间戳
       isRecalled: false,
-      tempId: dto.tempId,
     };
 
     // 2. 通过 Gateway 广播给房间内其他人
@@ -102,6 +149,27 @@ export class ChatService {
         ...messageDto,
         isSelf: undefined,
       });
+
+    // 2. 【新增逻辑】推给所有成员的“个人专属房间”
+    const members = await this.prisma.chatMember.findMany({
+      where: {
+        conversationId,
+        userId: { not: userId }, // 排除发送者自己
+      },
+      select: { userId: true },
+    });
+
+    members.forEach((member) => {
+      //  关键修正：必须加上 "user_" 前缀，以此匹配 Gateway 里的 handleConnection 逻辑
+      const privateRoom = `user_${member.userId}`;
+
+      this.eventsGateway.server
+        .to(privateRoom)
+        .emit(SocketEvents.CHAT_MESSAGE, {
+          ...messageDto,
+          isSelf: false,
+        });
+    });
 
     // fcm send notification
     return {
@@ -146,6 +214,7 @@ export class ChatService {
         data: {
           content: '[Message Recalled]',
           type: MESSAGE_TYPE.RECALLED, // 假设有个 RECALLED 类型
+          meta: {}, // 清空 meta
         },
         include: {
           sender: {
@@ -354,39 +423,38 @@ export class ChatService {
       partners.forEach((p) => {
         if (p.user) partnersMap.set(p.conversationId, p.user);
       });
-
-      // 4. 内存组装数据
-      return conversations.map((conv) => {
-        let displayName = conv.name;
-        let displayAvatar = conv['avatar']; // Schema 中若无 avatar 字段，需确认
-
-        // 如果是私聊，从 Map 中取对方信息
-        if (conv.type === CONVERSATION_TYPE.DIRECT) {
-          const partner = partnersMap.get(conv.id);
-          if (partner) {
-            displayName = partner.nickname;
-            displayAvatar = partner.avatar;
-          }
-        }
-
-        const mySettings = conv.members[0]; // 前面 include where userId 保证了只有 1 个
-
-        return new ConversationListResponseDto({
-          id: conv.id,
-          type: conv.type,
-          name: displayName || 'Unknown',
-          avatar: displayAvatar,
-          lastMsgContent: conv.lastMsgContent,
-          lastMsgTime: conv.lastMsgTime ? conv.lastMsgTime.getTime() : 0,
-          isPinned: mySettings?.isPinned ?? false,
-          isMuted: mySettings?.isMuted ?? false,
-          unreadCount: Math.max(
-            0,
-            conv.lastMsgSeqId - (mySettings?.lastReadSeqId ?? 0),
-          ),
-        });
-      });
     }
+    // 4. 内存组装数据
+    return conversations.map((conv) => {
+      let displayName = conv.name;
+      let displayAvatar = conv['avatar']; // Schema 中若无 avatar 字段，需确认
+
+      // 如果是私聊，从 Map 中取对方信息
+      if (conv.type === CONVERSATION_TYPE.DIRECT) {
+        const partner = partnersMap.get(conv.id);
+        if (partner) {
+          displayName = partner.nickname;
+          displayAvatar = partner.avatar;
+        }
+      }
+
+      const mySettings = conv.members[0]; // 前面 include where userId 保证了只有 1 个
+
+      return new ConversationListResponseDto({
+        id: conv.id,
+        type: conv.type,
+        name: displayName || 'Unknown',
+        avatar: displayAvatar,
+        lastMsgContent: conv.lastMsgContent,
+        lastMsgTime: conv.lastMsgTime ? conv.lastMsgTime.getTime() : 0,
+        isPinned: mySettings?.isPinned ?? false,
+        isMuted: mySettings?.isMuted ?? false,
+        unreadCount: Math.max(
+          0,
+          conv.lastMsgSeqId - (mySettings?.lastReadSeqId ?? 0),
+        ),
+      });
+    });
   }
 
   // =================================================================
@@ -604,6 +672,8 @@ export class ChatService {
       createdAt: msg.createdAt.getTime(),
       isSelf: msg.senderId === userId,
       isRecalled: msg.type === MESSAGE_TYPE.RECALLED,
+      // 前端会从 meta['duration'] 里读取时长
+      meta: msg.meta,
       sender: {
         id: msg.sender?.id,
         nickname: msg.sender?.nickname,
@@ -643,5 +713,21 @@ export class ChatService {
         avatar: true,
       },
     });
+  }
+
+  // 私有辅助方法：生成预览文本
+  private _getPreviewText(type: number, content: string): string {
+    switch (type) {
+      case MESSAGE_TYPE.TEXT:
+        return content;
+      case MESSAGE_TYPE.IMAGE:
+        return '[Image]';
+      case MESSAGE_TYPE.AUDIO:
+        return '[Voice]';
+      case MESSAGE_TYPE.VIDEO:
+        return '[Video]';
+      default:
+        return '[Unsupported]';
+    }
   }
 }
