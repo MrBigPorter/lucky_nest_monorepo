@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
 import path from 'node:path';
+import mime from 'mime';
 
 @Injectable()
 export class UploadService {
@@ -142,7 +143,12 @@ export class UploadService {
   ) {
     const { bucket, isPrivate } = this.getBucketConfig(module);
 
-    const fileExt = path.extname(fileName);
+    // [优化] 后缀名兜底
+    let fileExt = extname(fileName);
+    if (!fileExt && fileType) {
+      const ext = mime.extension(fileType);
+      if (ext) fileExt = `.${ext}`;
+    }
     const uniqueFileName = `${uuidv4()}${fileExt}`;
     // Key 格式: uploads/kyc/user_123/xxx.jpg
     const key = `uploads/${module}/${userId}/${uniqueFileName}`;
@@ -272,12 +278,11 @@ export class UploadService {
     const { bucket, isPrivate } = this.getBucketConfig(module);
 
     // 根据 mimeType 简单推断后缀，或者直接生成 jpg
-    let ext = '.jpg';
-    if (mimeType === 'image/png') ext = '.png';
-    else if (mimeType === 'application/pdf') ext = '.pdf';
+    // [修改点] 使用库自动获取后缀，如果没有找到则默认 .bin
+    const extension = mime.extension(mimeType) || 'bin';
+    const uniqueFileName = `${prefix}_${uuidv4()}.${extension}`;
 
     // 生成语义化的文件名：uploads/kyc/user_123/id_front_xxxx.jpg
-    const uniqueFileName = `${prefix}_${uuidv4()}${ext}`;
     const key = `uploads/${module}/${userId}/${uniqueFileName}`;
 
     // 强制开启加密 (encrypt = true)
