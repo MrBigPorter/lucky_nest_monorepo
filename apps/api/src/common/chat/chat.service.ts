@@ -19,6 +19,8 @@ import { EventsGateway } from '@api/common/events/events.gateway';
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
 import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
+import { CreateGroupChatDto } from '@api/common/chat/dto/create-group-chat.dto';
+import { CreateGroupDto } from '@api/common/chat/dto/group-chat.dto';
 
 @Injectable()
 export class ChatService {
@@ -371,7 +373,7 @@ export class ChatService {
   // =================================================================
   //  核心查询 (消息列表页)
   // =================================================================
-  async getConversationList(userId: string, page = 1, pageSize = 20) {
+  async getConversationList(userId: string, page = 1, pageSize = 200) {
     const conversations = await this.prisma.conversation.findMany({
       where: {
         members: { some: { userId } },
@@ -535,7 +537,10 @@ export class ChatService {
   // =================================================================
   //  场景 C: 手动建群 (Group)
   // =================================================================
-  async createGroupChat(creatorId: string, name: string, memberIds: string[]) {
+  async createGroupChat(creatorId: string, dto: CreateGroupDto) {
+    const { name, memberIds } = dto;
+
+    // 去重并确保群主在成员列表中
     const uniqueMembers = Array.from(new Set([creatorId, ...memberIds]));
 
     return this.prisma.conversation.create({
@@ -543,6 +548,8 @@ export class ChatService {
         type: CONVERSATION_TYPE.GROUP,
         name,
         status: ConversationStatus.NORMAL,
+        lastMsgContent: 'Group created',
+        lastMsgTime: new Date(),
         ownerId: creatorId, // 记录群主
         members: {
           //  优化：使用 create 数组
@@ -551,6 +558,13 @@ export class ChatService {
             role:
               uid === creatorId ? ChatMemberRole.OWNER : ChatMemberRole.MEMBER,
           })),
+        },
+      },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, nickname: true, avatar: true } },
+          },
         },
       },
     });

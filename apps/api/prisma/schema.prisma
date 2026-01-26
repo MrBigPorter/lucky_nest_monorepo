@@ -54,6 +54,8 @@ model User {
   fcmDevices            Device[]
   chatMessages          ChatMessage[]
   ChatMember             ChatMember[]
+  friends               Friend[] @relation("UserFriends")
+  friendOf              Friend[] @relation("FriendUsers")
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -1179,4 +1181,23 @@ model ChatMember {
   joinedAt       DateTime     @default(now())
 
   @@unique([conversationId, userId]) // 每个人在每个群只能有一条记录
+}
+
+// 补齐好友关系表
+model Friend {
+  id        String   @id @default(cuid()) @map("id") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId    String   @map("user_id") @db.VarChar(32)
+  user      User     @relation("UserFriends", fields: [userId], references: [id])
+
+  friendId  String   @map("friend_id") @db.VarChar(32)
+  friend    User     @relation("FriendUsers", fields: [friendId], references: [id])
+
+  remark    String?  @db.VarChar(100) // 备注名
+  status    Int      @default(1)      // 1:已添加, 2:黑名单
+
+  @@unique([userId, friendId]) // 关键：防止重复加好友
+  @@index([userId])
+  @@map("friends")
 }

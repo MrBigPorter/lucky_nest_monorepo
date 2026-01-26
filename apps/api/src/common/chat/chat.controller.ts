@@ -37,6 +37,10 @@ import { RecallMessageDto } from '@api/common/chat/dto/recall-message.dto';
 import { RecallMessageResponseDto } from '@api/common/chat/dto/recall-message-response.dto';
 import { DeleteMessageResponseDto } from '@api/common/chat/dto/delete-message.response.dto';
 import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
+import {
+  CreateGroupDto,
+  GroupCreatedResponseDto,
+} from '@api/common/chat/dto/group-chat.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -167,18 +171,15 @@ export class ChatController {
    * @param userId 当前用户 ID
    * @param dto
    */
-  @Post('group')
+  @Post('create-group')
   @HttpCode(HttpStatus.OK)
+  @ApiResponse({ type: GroupCreatedResponseDto })
   async createGroup(
     @CurrentUserId() userId: string,
-    @Body() dto: CreateGroupChatDto,
+    @Body() dto: CreateGroupDto,
   ) {
-    const conv = await this.chatService.createGroupChat(
-      userId,
-      dto.name,
-      dto.members,
-    );
-    return { conversationId: conv.id };
+    const conv = await this.chatService.createGroupChat(userId, dto);
+    return plainToInstance(GroupCreatedResponseDto, conv);
   }
 
   /**
