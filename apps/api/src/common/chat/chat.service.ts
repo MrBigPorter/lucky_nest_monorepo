@@ -534,6 +534,91 @@ export class ChatService {
     });
   }
 
+  /**
+   * 功能：邀请成员加入群聊
+   * 逻辑：过滤已在群里的人 -> 批量插入 Member 表
+   */
+  async inviteToGroup(
+    operatorId: string,
+    dto: { groupId: string; memberIds: string[] },
+  ) {
+    const { groupId, memberIds } = dto;
+    // 1. 鉴权：操作人必须在群里
+    const operator = await this.prisma.chatMember.findUnique({
+      where: {
+        conversationId_userId: { conversationId: groupId, userId: operatorId },
+      },
+    });
+    if (!operator) {
+      throw new ForbiddenException('You are not a member of this group');
+    }
+
+    // 2. 查重：找出已经在群里的人
+    const existingMembers = await this.prisma.chatMember.findMany({
+      where: {
+        conversationId: groupId,
+        userId: { in: memberIds },
+      },
+      select: {
+        userId: true,
+      },
+    });
+    const existingSet = new Set(existingMembers.map((m) => m.userId));
+    // 3. 筛选出真正的新人
+    const newMembers = memberIds.filter((id) => !existingSet.has(id));
+    if (newMembers.length === 0) {
+      return { count: 0 };
+    }
+
+    // 4. 批量插入成员
+    await this.prisma.chatMember.createMany({
+      data: newMembers.map((uid) => ({
+        conversationId: groupId,
+        userId: uid,
+        role: ChatMemberRole.MEMBER,
+        lastReadSeqId: 0, // 新人从头读，或者设为当前 seqId (看业务需求)
+      })),
+    });
+
+    // 5. TODO: 这里应该通过 WebSocket 通知群里其他人 "User X invited User Y"
+    return { count: newMembers.length };
+  }
+
+  /**
+   * 功能：退出群聊
+   * 逻辑：删除成员关系 -> 如果群空了，自毁会话
+   */
+
+  async leaveGroup(userId: string, groupId: string) {
+    // 1. 检查是否存在
+    const member = await this.prisma.chatMember.findUnique({
+      where: {
+        conversationId_userId: { conversationId: groupId, userId },
+      },
+    });
+    if (!member) {
+      throw new NotFoundException('You are not a member of this group');
+    }
+
+    // 2. 删除成员关系
+    await this.prisma.chatMember.delete({
+      where: {
+        conversationId_userId: { conversationId: groupId, userId },
+      },
+    });
+    // 3. 检查群是否空了
+    const remainingMembers = await this.prisma.chatMember.count({
+      where: { conversationId: groupId },
+    });
+    if (remainingMembers === 0) {
+      // 群空了，删除会话
+      await this.prisma.conversation.delete({
+        where: { id: groupId },
+      });
+    }
+    return { success: true };
+  }
+
   // =================================================================
   //  场景 C: 手动建群 (Group)
   // =================================================================

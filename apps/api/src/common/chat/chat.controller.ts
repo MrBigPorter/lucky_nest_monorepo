@@ -41,6 +41,10 @@ import {
   CreateGroupDto,
   GroupCreatedResponseDto,
 } from '@api/common/chat/dto/group-chat.dto';
+import { InviteToGroupDto } from '@api/common/chat/dto/invite-to-group.dto';
+import { LeaveGroupDto } from '@api/common/chat/dto/leave-group.dto';
+import { InviteToGroupResponseDto } from '@api/common/chat/dto/invite-to-group.response.dto';
+import { LeaveGroupResponseDto } from '@api/common/chat/dto/leave-group.response.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -230,5 +234,35 @@ export class ChatController {
       body.fileType,
       'chat',
     );
+  }
+
+  /**
+   *  邀请用户加入群聊
+   * @param userId 当前用户 ID
+   * @param dto
+   */
+  @Post('group/invite')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ type: InviteToGroupResponseDto })
+  async inviteToGroup(
+    @CurrentUserId() userId: string,
+    @Body() dto: InviteToGroupDto,
+  ) {
+    return this.chatService.inviteToGroup(userId, dto);
+  }
+
+  /**
+   *  退出群聊
+   * @param userId 当前用户 ID
+   * @param dto
+   */
+  @Post('group/leave')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ type: LeaveGroupResponseDto })
+  async leaveGroup(
+    @CurrentUserId() userId: string,
+    @Body() dto: LeaveGroupDto,
+  ) {
+    return this.chatService.leaveGroup(userId, dto.groupId);
   }
 }
