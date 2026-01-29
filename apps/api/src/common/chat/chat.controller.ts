@@ -52,12 +52,12 @@ import { LeaveGroupResponseDto } from '@api/common/chat/dto/leave-group.response
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
-    // 注入 UploadService 用于生成上传凭证
+    // Inject UploadService for generating upload credentials
     private readonly uploadService: UploadService,
   ) {}
 
   /**
-   * 获取会话列表
+   * Get conversation list
    * @param page
    * @param userId
    */
@@ -70,7 +70,7 @@ export class ChatController {
   }
 
   /**
-   *获取历史消息 (History)
+   * Get chat history (messages)
    * @param query
    * @param userId
    */
@@ -83,6 +83,11 @@ export class ChatController {
     return this.chatService.getMessages(userId, query);
   }
 
+  /**
+   * Send a message
+   * @param userId
+   * @param dto
+   */
   @Post('message')
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ type: MessageResponseDto })
@@ -90,15 +95,15 @@ export class ChatController {
     @CurrentUserId() userId: string,
     @Body() dto: CreateMessageDto,
   ) {
-    // 调用 Service 处理业务
+    // Call Service to handle business logic
     const msg = await this.chatService.sendMessage(userId, dto);
 
-    // 格式化返回结果
+    // Format returned result
     return plainToInstance(MessageResponseDto, msg);
   }
 
   /**
-   * 撤回消息
+   * Recall a message
    * @param dto
    * @param userId
    */
@@ -110,7 +115,7 @@ export class ChatController {
   }
 
   /**
-   * 删除消息
+   * Delete a message
    * @param userId
    * @param dto
    */
@@ -126,7 +131,7 @@ export class ChatController {
   }
 
   /**
-   * 标记消息为已读
+   * Mark messages as read
    * @param userId
    * @param dto
    */
@@ -141,7 +146,7 @@ export class ChatController {
   }
 
   /**
-   * 确保存在与某个业务实体的会话（如商家客服），不存在则创建
+   * Ensure a conversation with a business entity exists (e.g., merchant customer service), create if not
    * @param query
    */
   @Get('business')
@@ -153,9 +158,9 @@ export class ChatController {
   }
 
   /**
-   * 确保存在与某个用户的私聊会话，不存在则创建
+   * Ensure a direct chat (private message) with a specific user exists, create if not
    * @param dto
-   * @param userId 当前用户 ID
+   * @param userId Current User ID
    */
   @Post('direct')
   @HttpCode(HttpStatus.OK)
@@ -171,8 +176,8 @@ export class ChatController {
   }
 
   /**
-   * 创建群聊会话
-   * @param userId 当前用户 ID
+   * Create a group chat conversation
+   * @param userId Current User ID
    * @param dto
    */
   @Post('create-group')
@@ -187,7 +192,7 @@ export class ChatController {
   }
 
   /**
-   * 获取会话详情
+   * Get conversation details
    * @param id
    * @param userId
    */
@@ -199,7 +204,7 @@ export class ChatController {
   }
 
   /**
-   * 搜索用户
+   * Search for users
    * @param dto
    * @param userId
    */
@@ -214,7 +219,7 @@ export class ChatController {
   }
 
   /**
-   * 获取上传文件的 Token 和 URL
+   * Get upload token and URL for files
    * @param userId
    * @param body
    */
@@ -223,11 +228,11 @@ export class ChatController {
     type: UploadTokenResponseDto,
   })
   async getUploadToken(
-    @CurrentUserId() userId: string, // 从 Token 解析出用户 ID
+    @CurrentUserId() userId: string, // User ID parsed from Token
     @Body() body: GetUploadTokenDto,
   ) {
-    // 调用你写好的 Service
-    // module 传 'chat'，这样文件会存到 uploads/chat/user_id/xxx.jpg
+    // Call the designated UploadService
+    // module set to 'chat', storing files at uploads/chat/user_id/xxx.jpg
     return this.uploadService.generatePresignedUrl(
       userId,
       body.fileName,
@@ -237,8 +242,8 @@ export class ChatController {
   }
 
   /**
-   *  邀请用户加入群聊
-   * @param userId 当前用户 ID
+   * Invite users to join group chat
+   * @param userId Current User ID
    * @param dto
    */
   @Post('group/invite')
@@ -252,8 +257,8 @@ export class ChatController {
   }
 
   /**
-   *  退出群聊
-   * @param userId 当前用户 ID
+   * Leave group chat
+   * @param userId Current User ID
    * @param dto
    */
   @Post('group/leave')

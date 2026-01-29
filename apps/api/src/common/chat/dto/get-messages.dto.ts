@@ -13,9 +13,10 @@ export class GetMessagesDto {
     description: '游标：上一页最后一条消息的ID (第一页不传)',
     required: false,
   })
-  @IsString()
+  @ToInt()
+  @IsInt()
   @IsOptional()
-  cursor?: string;
+  cursor?: number;
 
   @ApiProperty({ description: '每页条数', default: 20, required: false })
   @IsOptional()
