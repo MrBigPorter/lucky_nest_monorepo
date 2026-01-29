@@ -1,56 +1,44 @@
-import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsNotEmpty,
-  IsString,
   IsInt,
-  IsOptional,
+  IsNotEmpty,
   IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateMessageDto {
-  @ApiProperty({ description: 'Message ID' })
   @IsString()
   @IsNotEmpty()
-  id!: string; //  核心新增：必填，不再依赖后端生成
+  id!: string;
 
-  @ApiProperty({ description: 'Conversation ID' })
   @IsString()
   @IsNotEmpty()
   conversationId!: string;
 
-  @ApiProperty({ description: 'Message content (Text or URL)' })
   @IsString()
   @IsNotEmpty()
   content!: string;
 
-  @ApiProperty({
-    description: 'Message type (0: Text, 1: Image, 2: Audio)',
-    default: 0,
-  })
   @IsInt()
   @IsOptional()
   type: number = 0;
 
-  @ApiProperty({
-    description: 'Audio duration in seconds (Required if type is 2)',
-    required: false,
-  })
+  @ApiProperty({ description: 'Extensible metadata object', required: false })
+  @IsOptional()
+  @IsObject()
+  meta?: Record<string, any>;
+
+  // 保留旧字段用于兼容，但标记为可选
   @IsInt()
   @IsOptional()
-  duration?: number; // Added: Optional parameter for audio duration
+  duration?: number;
 
-  @ApiProperty({
-    description: 'Image width in pixels (Required if type is 1)',
-    required: false,
-  })
   @IsNumber()
   @IsOptional()
   width?: number;
 
-  @ApiProperty({
-    description: 'Image height in pixels (Required if type is 1)',
-    required: false,
-  })
   @IsNumber()
   @IsOptional()
   height?: number;

@@ -19,7 +19,6 @@ import { EventsGateway } from '@api/common/events/events.gateway';
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
 import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
-import { CreateGroupChatDto } from '@api/common/chat/dto/create-group-chat.dto';
 import { CreateGroupDto } from '@api/common/chat/dto/group-chat.dto';
 
 @Injectable()
@@ -30,215 +29,123 @@ export class ChatService {
   ) {}
 
   // =================================================================
-  //  核心操作 (发送消息)
+  //  CORE OPERATION: sendMessage (Unified Meta-First Engine)
   // =================================================================
   async sendMessage(userId: string, dto: CreateMessageDto) {
-    const { id, conversationId, content, type, duration, width, height } = dto;
+    const { id, conversationId, content, type } = dto;
 
-    // 2. 幂等性检查 (Idempotency Check)
-    // 如果该 ID 已存在，直接返回，不做任何处理。
-    // 这解决了前端因网络超时重试导致的“重复消息”问题。
+    // 1. Idempotency Check: Prevent duplicate messages from network retries.
     const existingMessage = await this.prisma.chatMessage.findUnique({
       where: { id },
     });
     if (existingMessage) {
-      // 可以在这里做一个简单的校验，确保 senderId 一致，防止恶意覆盖
-      if (existingMessage.senderId !== userId) {
+      if (existingMessage.senderId !== userId)
         throw new ForbiddenException('Message ID conflict');
-      }
       return {
         ...existingMessage,
         createdAt: existingMessage.createdAt.getTime(),
-        isSelf: true, // 明确告诉前端这是自己发的
+        isSelf: true,
       };
     }
 
-    // 3. 组装 Meta (丰富元数据)
-    // 使用具体的接口类型代替 any，代码更健壮
-    const meta: Record<string, any> = {};
-
-    // 如果是语音 (type 2) 且传了 duration，存入 meta
-    if (dto.type === MESSAGE_TYPE.AUDIO && dto.duration) {
-      meta.duration = dto.duration;
-    }
-
-    //  建议：把宽高存入 meta，解决图片气泡闪烁问题
+    // 2. Meta Assembly: Merge nested meta object with legacy flattened fields.
+    const finalMeta: Record<string, any> = dto.meta || {};
+    if (type === MESSAGE_TYPE.AUDIO && dto.duration)
+      finalMeta.duration = dto.duration;
     if (
       (type === MESSAGE_TYPE.IMAGE || type === MESSAGE_TYPE.VIDEO) &&
-      width &&
-      height
+      dto.width &&
+      dto.height
     ) {
-      meta.w = width;
-      meta.h = height;
+      finalMeta.w = dto.width;
+      finalMeta.h = dto.height;
     }
 
-    // 1. 存入数据库 (Prisma)
-    // 使用事务处理 seqId 自增逻辑
+    // 3. Database Transaction: Atomic update for Sequence ID and Snapshot.
     const message = await this.prisma.$transaction(async (tx) => {
-      // A. 锁定并更新会话 SeqID
-      // 注意：在高并发群聊中，这里可能会成为热点。
-      // 如果未来量大，可以考虑使用 Redis 自增 seqId，异步写入 DB。
-
+      // Update Conversation SeqID and last message preview
       const conv = await tx.conversation.update({
         where: { id: conversationId },
         data: {
           lastMsgSeqId: { increment: 1 },
-          lastMsgContent: this._getPreviewText(type, content), // 抽离方法
+          lastMsgContent: this._getPreviewText(type, content),
           lastMsgType: type,
           lastMsgTime: new Date(),
         },
         select: { lastMsgSeqId: true },
       });
 
-      // B. 创建消息
+      // Create main message record
       const msg = await tx.chatMessage.create({
         data: {
-          id, // 使用前端传的 ID
+          id,
           conversationId,
           senderId: userId,
           content,
           type,
-          //  核心：把 duration 存进 meta 字段
-          meta: Object.keys(meta).length > 0 ? meta : undefined,
+          meta: Object.keys(finalMeta).length > 0 ? finalMeta : undefined,
           seqId: conv.lastMsgSeqId,
         },
         include: {
-          sender: {
-            select: {
-              id: true,
-              nickname: true,
-              avatar: true,
-            },
-          },
+          sender: { select: { id: true, nickname: true, avatar: true } },
         },
       });
 
-      //  核心修复：在发送时，自动更新【发送者】的 lastReadSeqId
+      // Update sender's read progress instantly
       await tx.chatMember.updateMany({
-        where: {
-          conversationId,
-          userId,
-        },
-        data: {
-          lastReadSeqId: conv.lastMsgSeqId, // 标记为已读到最新
-        },
-      });
-
-      // C. 更新会话最后消息快照
-      await tx.conversation.update({
-        where: { id: conversationId },
-        data: {
-          lastMsgContent: this._getPreviewText(type, content),
-          lastMsgType: type,
-          lastMsgTime: new Date(),
-        },
+        where: { conversationId, userId },
+        data: { lastReadSeqId: conv.lastMsgSeqId },
       });
 
       return msg;
     });
 
-    // 2. 构造统一的返回对象 (DTO)
     const messageDto = {
       ...message,
-      createdAt: message.createdAt.getTime(), // 转时间戳
+      createdAt: message.createdAt.getTime(),
       isRecalled: false,
     };
 
-    // 2. 通过 Gateway 广播给房间内其他人
+    // 4. Broadcasting: Emit to the room (others) and individual personal rooms (sync).
     this.eventsGateway.server
       .to(conversationId)
-      .emit(SocketEvents.CHAT_MESSAGE, {
-        ...messageDto,
-        isSelf: undefined,
-      });
+      .emit(SocketEvents.CHAT_MESSAGE, { ...messageDto, isSelf: false });
+    this._notifyOtherMembers(userId, conversationId, messageDto);
 
-    // 2. 【新增逻辑】推给所有成员的“个人专属房间”
-    const members = await this.prisma.chatMember.findMany({
-      where: {
-        conversationId,
-        userId: { not: userId }, // 排除发送者自己
-      },
-      select: { userId: true },
-    });
-
-    members.forEach((member) => {
-      //  关键修正：必须加上 "user_" 前缀，以此匹配 Gateway 里的 handleConnection 逻辑
-      const privateRoom = `user_${member.userId}`;
-
-      this.eventsGateway.server
-        .to(privateRoom)
-        .emit(SocketEvents.CHAT_MESSAGE, {
-          ...messageDto,
-          isSelf: false,
-        });
-    });
-
-    // fcm send notification
-    return {
-      ...messageDto,
-      isSelf: true, //  明确告诉前端，这是我自己发的
-    };
+    return { ...messageDto, isSelf: true };
   }
 
-  // 核心操作: 消除红点 (标记已读)
   // =================================================================
-
-  // =================================================================
-  //  核心操作 (撤回消息)
+  //  CORE OPERATION: recallMessage (2-Minute Rule)
   // =================================================================
   async recallMessage(userId: string, messageId: string) {
-    // 1. 查消息，确认存在且是自己发的
     const message = await this.prisma.chatMessage.findUnique({
       where: { id: messageId },
     });
-    if (!message) {
-      throw new NotFoundException('Message not found');
-    }
-    if (message.senderId !== userId) {
-      throw new ForbiddenException('You can only recall your own messages');
+    if (!message) throw new NotFoundException('Message not found');
+    if (message.senderId !== userId)
+      throw new ForbiddenException('Cannot recall others messages');
+
+    // Strict 120-second recall window
+    if (!TimeHelper.isWithinRange(message.createdAt, new Date(), 120000)) {
+      throw new ForbiddenException('Recall window expired');
     }
 
-    // 3. 时间校验：严格 2 分钟限制 (120,000 毫秒)
-    const isWithinTwoMinus = TimeHelper.isWithinRange(
-      message.createdAt,
-      new Date(),
-      120000,
-    );
-    if (!isWithinTwoMinus) {
-      throw new ForbiddenException('Recall time window has expired');
-    }
-
-    // 4. 执行撤回事务
-    const updatedMessage = await this.prisma.$transaction(async (tx) => {
-      // A. 逻辑修改消息内容和类型
+    const result = await this.prisma.$transaction(async (tx) => {
       const msg = await tx.chatMessage.update({
         where: { id: messageId },
         data: {
           content: '[Message Recalled]',
-          type: MESSAGE_TYPE.RECALLED, // 假设有个 RECALLED 类型
-          meta: {}, // 清空 meta
-        },
-        include: {
-          sender: {
-            select: {
-              id: true,
-              nickname: true,
-              avatar: true,
-            },
-          },
+          type: MESSAGE_TYPE.RECALLED,
+          meta: {},
         },
       });
 
-      // B. 更新会话快照 (如果撤回的是最后一条消息，则需要更新会话的 lastMsgContent 等字段)
       const conv = await tx.conversation.findUnique({
         where: { id: msg.conversationId },
-        select: {
-          lastMsgSeqId: true,
-        },
+        select: { lastMsgSeqId: true },
       });
-
-      if (conv && conv.lastMsgSeqId === msg.seqId) {
-        // 撤回的是最后一条消息，更新会话快照
+      if (conv?.lastMsgSeqId === msg.seqId) {
         await tx.conversation.update({
           where: { id: msg.conversationId },
           data: {
@@ -247,131 +154,70 @@ export class ChatService {
           },
         });
       }
-
-      return {
-        messageId: msg.id,
-        tip: 'Message has been recalled',
-      };
+      return { messageId: msg.id, tip: 'Message recalled' };
     });
 
-    // 5. 广播撤回事件
     this.eventsGateway.server
       .to(message.conversationId)
       .emit(SocketEvents.MESSAGE_RECALLED, {
         conversationId: message.conversationId,
-        isSelf: message.senderId === userId,
-        messageId: messageId,
-        operatorId: userId,
-        seqId: message.seqId,
-        tip: 'An image or text has been recalled', // 供前端 fallback 显示
+        messageId,
+        tip: 'A message was recalled',
       });
-
-    return updatedMessage;
+    return result;
   }
 
   // =================================================================
-  //  核心操作 (删除消息)
+  //  CORE OPERATION: deleteMessage (Soft Delete)
   // =================================================================
   async deleteMessage(userId: string, dto: DeleteMessageDto) {
-    const { messageId, conversationId } = dto;
-
-    // 1.check message exists
+    const { messageId } = dto;
     const message = await this.prisma.chatMessage.findUnique({
       where: { id: messageId },
-      select: { senderId: true, conversationId: true },
     });
-    if (!message) {
-      throw new NotFoundException('Message not found');
-    }
+    if (!message) throw new NotFoundException('Message not found');
 
-    // 2.  严谨性校验：校验用户是否是该会话的成员
-    // 只有会话成员才有权隐藏该会话的消息
-    const member = await this.prisma.chatMember.findUnique({
-      where: {
-        conversationId_userId: {
-          conversationId: message.conversationId,
-          userId,
-        },
-      },
-    });
-    if (!member) {
-      throw new ForbiddenException('You are not a member of this conversation');
-    }
-
-    // 2. 幂等插入隐藏记录
-    // 使用 upsert 即使前端并发重复请求，数据库也不会报唯一索引冲突
+    // Idempotent concealment record creation
     await this.prisma.chatMessageHide.upsert({
-      where: {
-        userId_messageId: { userId, messageId },
-      },
-      update: {}, // 已存在则不做任何操作
+      where: { userId_messageId: { userId, messageId } },
+      update: {},
       create: { userId, messageId },
     });
     return { messageId };
   }
 
+  // =================================================================
+  //  CORE OPERATION: markAsRead (Read Sync)
+  // =================================================================
   async markAsRead(userId: string, dto: MarkAsReadDto) {
     const { conversationId, maxSeqId } = dto;
-
-    // 1. 查会话当前的最新 SeqId
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       select: { lastMsgSeqId: true },
     });
+    if (!conversation) throw new NotFoundException('Conversation not found');
 
-    if (!conversation) {
-      throw new NotFoundException('Conversation not found');
-    }
-
-    // 2. 确定要更新到的目标 SeqId
-    // 如果前端传了 maxSeqId，就用前端传的（但不能超过会话实际最大值）
-    // 如果没传，就直接拉满（全读）
-    let targetSeqId = conversation.lastMsgSeqId;
-
-    if (maxSeqId) {
-      // 保护逻辑：不能标记读到了未来的消息
-      targetSeqId = Math.min(maxSeqId, conversation.lastMsgSeqId);
-    }
-
-    // 3. 更新 Member 表
+    const targetSeqId = maxSeqId
+      ? Math.min(maxSeqId, conversation.lastMsgSeqId)
+      : conversation.lastMsgSeqId;
     const updatedMember = await this.prisma.chatMember.update({
-      where: {
-        conversationId_userId: {
-          conversationId,
-          userId,
-        },
-      },
-      data: {
-        lastReadSeqId: targetSeqId,
-      },
+      where: { conversationId_userId: { conversationId, userId } },
+      data: { lastReadSeqId: targetSeqId },
       select: { lastReadSeqId: true },
     });
 
-    // 4. 计算剩余未读数 (理论上是 0，除非 maxSeqId 传小了，或者就在这一毫秒又来了新消息)
-    const unreadCount = Math.max(
-      0,
-      conversation.lastMsgSeqId - updatedMember.lastReadSeqId,
-    );
-
-    //  架构师操作：Event Sourcing (事件广播)
-    // 告诉房间里的其他人："我(userId) 已经读到了 targetSeqId 这一行"
-    // ==========================================================
     this.eventsGateway.server
       .to(conversationId)
       .emit(SocketEvents.CONVERSATION_READ, {
         readerId: userId,
         conversationId,
         lastReadSeqId: updatedMember.lastReadSeqId,
-        unreadCount,
       });
-
-    return {
-      lastReadSeqId: updatedMember.lastReadSeqId,
-      unreadCount: unreadCount,
-    };
+    return { lastReadSeqId: updatedMember.lastReadSeqId };
   }
+
   // =================================================================
-  //  核心查询 (消息列表页)
+  //  QUERIES: Lists & Details (N+1 Optimized)
   // =================================================================
   async getConversationList(userId: string, page = 1, pageSize = 200) {
     const conversations = await this.prisma.conversation.findMany({
@@ -379,76 +225,35 @@ export class ChatService {
         members: { some: { userId } },
         status: ConversationStatus.NORMAL,
       },
-      include: {
-        // 1. 查出"我"的设置 (置顶、未读数)
-        members: {
-          where: { userId },
-          select: {
-            isPinned: true,
-            isMuted: true,
-            lastReadSeqId: true,
-            // unreadCount 不需要存库，前端根据 conv.lastMsgSeqId - member.lastReadSeqId 计算
-          },
-        },
-        // 2. 关键优化：如果是私聊，必须查出对方的信息
-        // 我们这里取前 2 个成员，如果是 DIRECT，排除自己就是对方
-        // (Prisma 暂时很难在 include 里做复杂的条件过滤，所以建议把成员 User 信息简单带出来)
-      },
-      orderBy: { lastMsgTime: 'desc' }, // 暂时按时间，理想是按 members 的 isPinned 排序
+      include: { members: { where: { userId } } },
+      orderBy: { lastMsgTime: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
-    // 2.  解决 N+1 问题：收集所有 Direct Chat 的 ID
-    const directConvIds = conversations
-      .filter((conv) => conv.type === CONVERSATION_TYPE.DIRECT)
-      .map((conv) => conv.id);
-
-    // 3. ️ 批量查询对方信息 (只查 Direct 类型且不是自己的成员)
-    let partnersMap = new Map<
-      string,
-      { nickname: string | null; avatar: string | null }
-    >();
-
-    if (directConvIds.length > 0) {
+    // Batch resolve Direct Chat partners to avoid N+1 queries
+    const directIds = conversations
+      .filter((c) => c.type === CONVERSATION_TYPE.DIRECT)
+      .map((c) => c.id);
+    const partnersMap = new Map();
+    if (directIds.length > 0) {
       const partners = await this.prisma.chatMember.findMany({
-        where: {
-          conversationId: { in: directConvIds },
-          userId: { not: userId }, // 排除自己
-        },
-        include: {
-          user: { select: { nickname: true, avatar: true } },
-        },
+        where: { conversationId: { in: directIds }, userId: { not: userId } },
+        include: { user: { select: { nickname: true, avatar: true } } },
       });
-
-      // 转为 Map: conversationId -> UserInfo
-      partners.forEach((p) => {
-        if (p.user) partnersMap.set(p.conversationId, p.user);
-      });
+      partners.forEach((p) => partnersMap.set(p.conversationId, p.user));
     }
-    // 4. 内存组装数据
+
     return conversations.map((conv) => {
-      let displayName = conv.name;
-      let displayAvatar = conv['avatar']; // Schema 中若无 avatar 字段，需确认
-
-      // 如果是私聊，从 Map 中取对方信息
-      if (conv.type === CONVERSATION_TYPE.DIRECT) {
-        const partner = partnersMap.get(conv.id);
-        if (partner) {
-          displayName = partner.nickname;
-          displayAvatar = partner.avatar;
-        }
-      }
-
-      const mySettings = conv.members[0]; // 前面 include where userId 保证了只有 1 个
-
+      const partner = partnersMap.get(conv.id);
+      const mySettings = conv.members[0];
       return new ConversationListResponseDto({
         id: conv.id,
         type: conv.type,
-        name: displayName || 'Unknown',
-        avatar: displayAvatar,
+        name: partner?.nickname || conv.name || 'Unknown',
+        avatar: partner?.avatar || conv['avatar'],
         lastMsgContent: conv.lastMsgContent,
-        lastMsgTime: conv.lastMsgTime ? conv.lastMsgTime.getTime() : 0,
+        lastMsgTime: conv.lastMsgTime?.getTime() || 0,
         isPinned: mySettings?.isPinned ?? false,
         isMuted: mySettings?.isMuted ?? false,
         unreadCount: Math.max(
@@ -459,40 +264,129 @@ export class ChatService {
     });
   }
 
+  async getConversationDetail(conversationId: string, userId: string) {
+    const conv = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, nickname: true, avatar: true } },
+          },
+          orderBy: { role: 'asc' },
+        },
+      },
+    });
+    if (!conv) throw new NotFoundException('Conversation not found');
+
+    let displayName = conv.name;
+    let displayAvatar = conv['avatar'];
+    if (conv.type === CONVERSATION_TYPE.DIRECT) {
+      const partner = conv.members.find((m) => m.userId !== userId);
+      if (partner) {
+        displayName = partner.user.nickname;
+        displayAvatar = partner.user.avatar;
+      }
+    }
+
+    return {
+      id: conv.id,
+      name: displayName,
+      avatar: displayAvatar,
+      type: conv.type,
+      ownerId: conv.ownerId,
+      memberCount: conv.members.length,
+      members: conv.members.map((m) => ({
+        userId: m.userId,
+        nickname: m.user.nickname,
+        avatar: m.user.avatar,
+        role: m.role,
+      })),
+    };
+  }
+
   // =================================================================
-  //  场景 A: 业务群 (拼团)
+  //  CORE OPERATION: getMessages (SeqId Optimization)
   // =================================================================
-  async ensureBusinessConversation(businessId: string) {
-    const existing = await this.prisma.conversation.findFirst({
-      // 推荐用 findUnique 如果 businessId 是 unique
-      where: { businessId },
+  async getMessages(userId: string, dto: GetMessagesDto) {
+    // 1. DTO 已经自动转换了类型，这里 cursor 就是 number (seqId)
+    const { conversationId, cursor, pageSize = 20 } = dto;
+
+    const partner = await this.prisma.chatMember.findFirst({
+      where: { conversationId, userId: { not: userId } },
+      select: { lastReadSeqId: true },
     });
 
-    if (existing) return existing;
+    // 2. 构造查询条件
+    const whereCondition: any = {
+      conversationId,
+      hiddenByUsers: { none: { userId } },
+    };
 
+    //  核心：基于 SeqId 的范围查询
+    // 如果传了 cursor (seqId)，就查比它小的 (历史消息)
+    if (cursor) {
+      whereCondition.seqId = { lt: cursor };
+    }
+
+    const messages = await this.prisma.chatMessage.findMany({
+      where: whereCondition,
+      orderBy: { seqId: 'desc' }, // 倒序
+      take: pageSize, // 不需要 +1，也不需要 skip
+      include: {
+        sender: { select: { id: true, nickname: true, avatar: true } },
+      },
+    });
+
+    // 3. 计算下一页游标 (Next SeqId)
+    let nextCursor: number | null = null;
+    if (messages.length > 0) {
+      // 取最后一条消息的 seqId 作为下一次请求的 cursor
+      nextCursor = messages[messages.length - 1].seqId;
+    }
+
+    return {
+      list: messages.map((m) => ({
+        id: m.id,
+        seqId: m.seqId,
+        content: m.content,
+        type: m.type,
+        createdAt: m.createdAt.getTime(),
+        isSelf: m.senderId === userId,
+        meta: m.meta,
+        sender: m.sender,
+      })),
+      // 这里返回 number 类型的游标
+      nextCursor,
+      partnerLastReadSeqId: partner?.lastReadSeqId ?? 0,
+    };
+  }
+
+  // =================================================================
+  //  GROUP & MEMBERSHIP (Business, Direct, Group)
+  // =================================================================
+
+  async ensureBusinessConversation(businessId: string) {
+    const existing = await this.prisma.conversation.findFirst({
+      where: { businessId },
+    });
+    if (existing) return existing;
     return this.prisma.conversation.create({
       data: {
-        //  建议用 BUSINESS 类型区分
-        type: CONVERSATION_TYPE.BUSINESS, // 需确保 Enum 里有这个
+        type: CONVERSATION_TYPE.BUSINESS,
         businessId,
-        name: `Business Group ${businessId}`, // 占位名
+        name: `Business ${businessId}`,
         status: ConversationStatus.NORMAL,
-        lastMsgContent: 'Welcome to the group!',
+        lastMsgContent: 'Welcome!',
         lastMsgTime: new Date(),
       },
     });
   }
 
-  // 添加成员到业务群
   async addMemberToBusinessGroup(businessId: string, userId: string) {
     const conversation = await this.ensureBusinessConversation(businessId);
-
     return this.prisma.chatMember.upsert({
       where: {
-        conversationId_userId: {
-          conversationId: conversation.id,
-          userId,
-        },
+        conversationId_userId: { conversationId: conversation.id, userId },
       },
       update: { role: ChatMemberRole.MEMBER },
       create: {
@@ -503,9 +397,6 @@ export class ChatService {
     });
   }
 
-  // =================================================================
-  //  场景 B: 私聊 (Direct)
-  // =================================================================
   async ensureDirectConversation(myId: string, targetId: string) {
     const existing = await this.prisma.conversation.findFirst({
       where: {
@@ -516,15 +407,12 @@ export class ChatService {
         ],
       },
     });
-
     if (existing) return existing;
-
     return this.prisma.conversation.create({
       data: {
         type: CONVERSATION_TYPE.DIRECT,
         status: ConversationStatus.NORMAL,
         members: {
-          //  优化：使用 create 数组，兼容性更好
           create: [
             { userId: myId, role: ChatMemberRole.OWNER },
             { userId: targetId, role: ChatMemberRole.OWNER },
@@ -534,110 +422,60 @@ export class ChatService {
     });
   }
 
-  /**
-   * 功能：邀请成员加入群聊
-   * 逻辑：过滤已在群里的人 -> 批量插入 Member 表
-   */
   async inviteToGroup(
     operatorId: string,
     dto: { groupId: string; memberIds: string[] },
   ) {
     const { groupId, memberIds } = dto;
-    // 1. 鉴权：操作人必须在群里
     const operator = await this.prisma.chatMember.findUnique({
       where: {
         conversationId_userId: { conversationId: groupId, userId: operatorId },
       },
     });
-    if (!operator) {
-      throw new ForbiddenException('You are not a member of this group');
-    }
+    if (!operator) throw new ForbiddenException('Not a member');
 
-    // 2. 查重：找出已经在群里的人
-    const existingMembers = await this.prisma.chatMember.findMany({
-      where: {
-        conversationId: groupId,
-        userId: { in: memberIds },
-      },
-      select: {
-        userId: true,
-      },
+    const existing = await this.prisma.chatMember.findMany({
+      where: { conversationId: groupId, userId: { in: memberIds } },
+      select: { userId: true },
     });
-    const existingSet = new Set(existingMembers.map((m) => m.userId));
-    // 3. 筛选出真正的新人
+    const existingSet = new Set(existing.map((m) => m.userId));
     const newMembers = memberIds.filter((id) => !existingSet.has(id));
-    if (newMembers.length === 0) {
-      return { count: 0 };
+    if (newMembers.length > 0) {
+      await this.prisma.chatMember.createMany({
+        data: newMembers.map((uid) => ({
+          conversationId: groupId,
+          userId: uid,
+          role: ChatMemberRole.MEMBER,
+          lastReadSeqId: 0,
+        })),
+      });
     }
-
-    // 4. 批量插入成员
-    await this.prisma.chatMember.createMany({
-      data: newMembers.map((uid) => ({
-        conversationId: groupId,
-        userId: uid,
-        role: ChatMemberRole.MEMBER,
-        lastReadSeqId: 0, // 新人从头读，或者设为当前 seqId (看业务需求)
-      })),
-    });
-
-    // 5. TODO: 这里应该通过 WebSocket 通知群里其他人 "User X invited User Y"
     return { count: newMembers.length };
   }
 
-  /**
-   * 功能：退出群聊
-   * 逻辑：删除成员关系 -> 如果群空了，自毁会话
-   */
-
   async leaveGroup(userId: string, groupId: string) {
-    // 1. 检查是否存在
-    const member = await this.prisma.chatMember.findUnique({
-      where: {
-        conversationId_userId: { conversationId: groupId, userId },
-      },
-    });
-    if (!member) {
-      throw new NotFoundException('You are not a member of this group');
-    }
-
-    // 2. 删除成员关系
     await this.prisma.chatMember.delete({
-      where: {
-        conversationId_userId: { conversationId: groupId, userId },
-      },
+      where: { conversationId_userId: { conversationId: groupId, userId } },
     });
-    // 3. 检查群是否空了
-    const remainingMembers = await this.prisma.chatMember.count({
+    const remaining = await this.prisma.chatMember.count({
       where: { conversationId: groupId },
     });
-    if (remainingMembers === 0) {
-      // 群空了，删除会话
-      await this.prisma.conversation.delete({
-        where: { id: groupId },
-      });
-    }
+    if (remaining === 0)
+      await this.prisma.conversation.delete({ where: { id: groupId } });
     return { success: true };
   }
 
-  // =================================================================
-  //  场景 C: 手动建群 (Group)
-  // =================================================================
   async createGroupChat(creatorId: string, dto: CreateGroupDto) {
-    const { name, memberIds } = dto;
-
-    // 去重并确保群主在成员列表中
-    const uniqueMembers = Array.from(new Set([creatorId, ...memberIds]));
-
+    const uniqueMembers = Array.from(new Set([creatorId, ...dto.memberIds]));
     return this.prisma.conversation.create({
       data: {
         type: CONVERSATION_TYPE.GROUP,
-        name,
+        name: dto.name,
         status: ConversationStatus.NORMAL,
         lastMsgContent: 'Group created',
         lastMsgTime: new Date(),
-        ownerId: creatorId, // 记录群主
+        ownerId: creatorId,
         members: {
-          //  优化：使用 create 数组
           create: uniqueMembers.map((uid) => ({
             userId: uid,
             role:
@@ -655,166 +493,25 @@ export class ChatService {
     });
   }
 
-  // =================================================================
-  //  辅助方法: 获取会话详情 (进房前/进房后调用)
-  // =================================================================
-  // 1. 获取详情
-  async getConversationDetail(conversationId: string, userId: string) {
-    // 鉴权：检查是否在群里
-    const memberCheck = await this.prisma.chatMember.findUnique({
-      where: { conversationId_userId: { conversationId, userId } },
-    });
-    if (!memberCheck)
-      throw new ForbiddenException('you are not a member of this conversation');
-
-    // 查数据
-    const conv = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, nickname: true, avatar: true } },
-          },
-        },
-      },
-    });
-
-    if (!conv) throw new NotFoundException('conversation not found');
-
-    // 处理显示名称
-    let displayName = conv.name;
-    let displayAvatar = conv['avatar']; // 假设有头像字段
-    if (conv.type === 'DIRECT') {
-      const partner = conv.members.find((m) => m.userId !== userId);
-      if (partner) {
-        displayName = partner.user.nickname;
-        displayAvatar = partner.user.avatar;
-      }
-    }
-
-    // 映射到 DTO
-    return {
-      id: conv.id,
-      name: displayName || 'Unknown',
-      avatar: displayAvatar,
-      type: conv.type,
-      memberCount: conv.members.length,
-      members: conv.members.map((m) => ({
-        userId: m.userId,
-        nickname: m.user.nickname,
-        avatar: m.user.avatar,
-        role: m.role,
-      })),
-    };
-  }
-
-  // 2. 获取消息
-  async getMessages(userId: string, dto: GetMessagesDto) {
-    const { conversationId, cursor, pageSize = 20 } = dto;
-    const takeAmount = pageSize + 1; // 多取一条用来判断是否有下一页
-
-    let partnerReadSeqId = 0;
-
-    const partnerMember = await this.prisma.chatMember.findFirst({
-      where: {
-        conversationId: conversationId,
-        userId: { not: userId }, // 对方
-      },
-      select: { lastReadSeqId: true },
-    });
-
-    if (partnerMember) {
-      partnerReadSeqId = partnerMember.lastReadSeqId;
-    }
-
-    // 查消息
-    const messages = await this.prisma.chatMessage.findMany({
-      where: {
-        conversationId,
-        hiddenByUsers: {
-          none: { userId }, // 排除被当前用户隐藏的消息
-        },
-      },
-      orderBy: { seqId: 'desc' }, // 最新的在前面
-      take: takeAmount,
-      include: {
-        sender: {
-          select: {
-            id: true,
-            nickname: true,
-            avatar: true,
-          },
-        },
-      },
-      //修正1：如果有 cursor，必须 skip: 1 跳过自身，否则第一条会重复
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    });
-
-    // 判断是否有下一页
-    let nextCursor: string | null = null;
-    const hasNextPage = messages.length > pageSize;
-
-    if (hasNextPage) {
-      // 如果查到了多余的一条，说明有下一页
-      // 1. 弹出多查的那一条（不要返给前端，那是下一页的数据）
-      messages.pop();
-      // 2. 将剩下的最后一条的 ID 设为游标
-      nextCursor = messages[messages.length - 1].id;
-    }
-    // 在 cursor 模式下，total 其实没那么重要，可以不查以节省性能
-    // 如果非要查 total，可以单独查，但对于无限滚动，通常不需要 total
-    const mappedList = messages.map((msg) => ({
-      id: msg.id,
-      seqId: msg.seqId,
-      content: msg.content,
-      type: msg.type,
-      createdAt: msg.createdAt.getTime(),
-      isSelf: msg.senderId === userId,
-      isRecalled: msg.type === MESSAGE_TYPE.RECALLED,
-      // 前端会从 meta['duration'] 里读取时长
-      meta: msg.meta,
-      sender: {
-        id: msg.sender?.id,
-        nickname: msg.sender?.nickname,
-        avatar: msg.sender?.avatar,
-      },
-    }));
-    return {
-      list: mappedList,
-      nextCursor: nextCursor,
-      partnerLastReadSeqId: partnerReadSeqId, // 可选：如果需要，可以查对方的已读 SeqId
-    };
-  }
-
-  // =======================================================
-  //  搜索用户
-  // =======================================================
   async searchUsers(myUserId: string, dto: SearchUserDto) {
-    const { keyword } = dto;
-
     return this.prisma.user.findMany({
       where: {
         AND: [
-          { id: { not: myUserId } }, // 排除自己
+          { id: { not: myUserId } },
           {
-            // 1. 昵称模糊搜索 (contains)
             OR: [
-              { nickname: { contains: keyword, mode: 'insensitive' } },
-              { phone: { contains: keyword } },
+              { nickname: { contains: dto.keyword, mode: 'insensitive' } },
+              { phone: { contains: dto.keyword } },
             ],
           },
         ],
       },
-      take: 20, // 限制返回数量
-      select: {
-        id: true,
-        nickname: true,
-        avatar: true,
-      },
+      take: 20,
+      select: { id: true, nickname: true, avatar: true },
     });
   }
 
-  // 私有辅助方法：生成预览文本
+  // --- Internal Support ---
   private _getPreviewText(type: number, content: string): string {
     switch (type) {
       case MESSAGE_TYPE.TEXT:
@@ -828,5 +525,24 @@ export class ChatService {
       default:
         return '[Unsupported]';
     }
+  }
+
+  private _notifyOtherMembers(
+    senderId: string,
+    conversationId: string,
+    data: any,
+  ) {
+    this.prisma.chatMember
+      .findMany({
+        where: { conversationId, userId: { not: senderId } },
+        select: { userId: true },
+      })
+      .then((members) =>
+        members.forEach((m) =>
+          this.eventsGateway.server
+            .to(`user_${m.userId}`)
+            .emit(SocketEvents.CHAT_MESSAGE, data),
+        ),
+      );
   }
 }
