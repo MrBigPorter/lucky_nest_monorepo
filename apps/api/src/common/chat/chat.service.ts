@@ -32,7 +32,7 @@ export class ChatService {
   //  CORE OPERATION: sendMessage (Unified Meta-First Engine)
   // =================================================================
   async sendMessage(userId: string, dto: CreateMessageDto) {
-    const { id, conversationId, content, type } = dto;
+    const { id, conversationId, content, type, meta } = dto;
 
     // 1. Idempotency Check: Prevent duplicate messages from network retries.
     const existingMessage = await this.prisma.chatMessage.findUnique({
@@ -50,15 +50,15 @@ export class ChatService {
 
     // 2. Meta Assembly: Merge nested meta object with legacy flattened fields.
     const finalMeta: Record<string, any> = dto.meta || {};
-    if (type === MESSAGE_TYPE.AUDIO && dto.duration)
-      finalMeta.duration = dto.duration;
+    if (type === MESSAGE_TYPE.AUDIO && meta?.duration)
+      finalMeta.duration = meta.duration;
     if (
       (type === MESSAGE_TYPE.IMAGE || type === MESSAGE_TYPE.VIDEO) &&
-      dto.width &&
-      dto.height
+      meta?.w &&
+      meta?.h
     ) {
-      finalMeta.w = dto.width;
-      finalMeta.h = dto.height;
+      finalMeta.w = meta.w;
+      finalMeta.h = meta.h;
     }
 
     // 3. Database Transaction: Atomic update for Sequence ID and Snapshot.
