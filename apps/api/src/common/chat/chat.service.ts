@@ -61,6 +61,22 @@ export class ChatService {
       finalMeta.h = meta.h;
     }
 
+    //  新增：File 处理 (确保关键字段被保留)
+    if (type === MESSAGE_TYPE.FILE) {
+      if (meta?.fileName) finalMeta.fileName = meta.fileName;
+      if (meta?.fileSize) finalMeta.fileSize = meta.fileSize;
+      if (meta?.fileExt) finalMeta.fileExt = meta.fileExt;
+    }
+
+    //  新增：Location 处理
+    if (type === MESSAGE_TYPE.LOCATION) {
+      if (meta?.latitude) finalMeta.latitude = meta.latitude;
+      if (meta?.longitude) finalMeta.longitude = meta.longitude;
+      if (meta?.address) finalMeta.address = meta.address;
+      if (meta?.title) finalMeta.title = meta.title;
+      if (meta?.thumb) finalMeta.thumb = meta.thumb;
+    }
+
     // 3. Database Transaction: Atomic update for Sequence ID and Snapshot.
     const message = await this.prisma.$transaction(async (tx) => {
       // Update Conversation SeqID and last message preview
@@ -154,17 +170,49 @@ export class ChatService {
           },
         });
       }
-      return { messageId: msg.id, tip: 'Message recalled' };
+      return { messageId: msg.id, tip: 'Message recalled', seqId: msg.seqId };
     });
+
+    // 对应 Flutter 的 SocketRecallEvent 模型
+    const recallPayload = {
+      conversationId: message.conversationId,
+      messageId: messageId,
+      tip: 'A message was recalled',
+      operatorId: userId,
+      seqId: result.seqId,
+    };
 
     this.eventsGateway.server
       .to(message.conversationId)
       .emit(SocketEvents.MESSAGE_RECALLED, {
-        conversationId: message.conversationId,
-        messageId,
-        tip: 'A message was recalled',
+        ...recallPayload,
+        // 前端区分自己和他人撤回
+        isSelf: false,
       });
+
+    // 2.：精准推送给该会话的所有成员 (包含离线/退房用户同步)
+    // 这样即便手机端因为 autoDispose 暂时断开了会话房间，只要 Socket 连着，就能收到个人频道的更新
+    this._notifyRecallToMembers(message.conversationId, recallPayload);
     return result;
+  }
+
+  // --- 辅助方法：通知所有成员撤回指令 ---
+  private _notifyRecallToMembers(conversationId: string, data: any) {
+    this.prisma.chatMember
+      .findMany({
+        where: { conversationId },
+        select: { userId: true },
+      })
+      .then((members) => {
+        members.forEach((m) => {
+          this.eventsGateway.server
+            .to(`user_${m.userId}`)
+            .emit(SocketEvents.MESSAGE_RECALLED, {
+              ...data,
+              isSelf: data.operatorId === m.userId,
+            });
+        });
+      });
   }
 
   // =================================================================
@@ -206,13 +254,29 @@ export class ChatService {
       select: { lastReadSeqId: true },
     });
 
+    //  对应 Flutter 的 SocketReadEvent 模型
+    const readPayload = {
+      conversationId,
+      readerId: userId,
+      lastReadSeqId: targetSeqId,
+    };
+
+    // 广播给房间内其他人
     this.eventsGateway.server
       .to(conversationId)
       .emit(SocketEvents.CONVERSATION_READ, {
-        readerId: userId,
-        conversationId,
-        lastReadSeqId: updatedMember.lastReadSeqId,
+        ...readPayload,
+        isSelf: false,
       });
+
+    // 推送给个人频道
+    this.eventsGateway.server
+      .to(`user_${userId}`)
+      .emit(SocketEvents.CONVERSATION_READ, {
+        ...readPayload,
+        isSelf: true,
+      });
+
     return { lastReadSeqId: updatedMember.lastReadSeqId };
   }
 
@@ -522,6 +586,13 @@ export class ChatService {
         return '[Voice]';
       case MESSAGE_TYPE.VIDEO:
         return '[Video]';
+      //  新增：文件消息预览
+      case MESSAGE_TYPE.FILE:
+        return '[File]';
+
+      //  新增：位置消息预览
+      case MESSAGE_TYPE.LOCATION:
+        return '[Location]';
       default:
         return '[Unsupported]';
     }

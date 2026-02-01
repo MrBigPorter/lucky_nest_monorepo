@@ -37,4 +37,45 @@ export class MessageMetaDto {
   @IsOptional()
   @IsString()
   localAssetId?: string;
+
+  // =========================================================
+  //  新增：文件消息 (File) 专用字段
+  // =========================================================
+  @ApiProperty({ description: '文件名 (e.g. report.pdf)', required: false })
+  @IsOptional()
+  @IsString()
+  fileName?: string;
+
+  @ApiProperty({ description: '文件大小 (字节)', required: false })
+  @IsOptional()
+  @IsInt() // 大小应该是整数
+  fileSize?: number;
+
+  @ApiProperty({ description: '文件后缀 (e.g. pdf)', required: false })
+  @IsOptional()
+  @IsString()
+  fileExt?: string;
+
+  // =========================================================
+  // 新增：位置消息 (Location) 专用字段
+  // =========================================================
+  @ApiProperty({ description: '纬度', required: false })
+  @IsOptional()
+  @IsNumber() // 浮点数
+  latitude?: number;
+
+  @ApiProperty({ description: '经度', required: false })
+  @IsOptional()
+  @IsNumber() // 浮点数
+  longitude?: number;
+
+  @ApiProperty({ description: '具体地址字符串', required: false })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiProperty({ description: '位置名称/POI (e.g. 腾讯大厦)', required: false })
+  @IsOptional()
+  @IsString()
+  title?: string;
 }

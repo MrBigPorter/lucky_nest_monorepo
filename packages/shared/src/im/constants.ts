@@ -28,6 +28,11 @@ export const MESSAGE_TYPE = {
   AUDIO: 2,
   VIDEO: 3,
   RECALLED: 4,
+  //  新增：文件类型
+  FILE: 5,
+  //  新增：位置类型
+  LOCATION: 6,
+
   SYSTEM: 99,
 } as const;
 
@@ -97,19 +102,34 @@ export const IM_CONSTRAINTS = {
 
 /** meta Json 推荐字段（方便前端类型收敛） */
 export type MessageMeta = {
-  w?: number;
-  h?: number;
-  duration?: number;
-  size?: number;
+  // === 通用/图片/视频 ===
+  w?: number; // 宽
+  h?: number; // 高
+  duration?: number; // 时长 (语音/视频)
+  blurHash?: string; //  补全：模糊占位符
+  thumb?: string; //  补全：缩略图/封面
+
+  // ===  新增：文件消息字段 ===
+  fileName?: string; // 文件名
+  fileSize?: number; // 文件大小 (字节)
+  fileExt?: string; // 文件后缀 (e.g. pdf)
+
+  // ===  新增：位置消息字段 ===
+  latitude?: number; // 纬度
+  longitude?: number; // 经度
+  address?: string; // 详细地址
+
+  // === 前端辅助 ===
+  localAssetId?: string; // 本地资产引用 (用于乐观 UI)
 };
 
 export enum SocketEvents {
-  // 💬 Chat
+  //  Chat
   CHAT_MESSAGE = "chat_message",
   CONVERSATION_READ = "conversation_read",
   MESSAGE_RECALLED = "message_recalled",
 
-  // 👥 Group
+  //  Group
   JOIN_CHAT = "join_chat",
   LEAVE_CHAT = "leave_chat",
   SEND_MESSAGE = "send_message",
