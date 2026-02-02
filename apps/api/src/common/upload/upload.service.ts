@@ -13,8 +13,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
-import path from 'node:path';
-import mime from 'mime';
+import * as mime from 'mime';
 
 @Injectable()
 export class UploadService {
@@ -279,7 +278,17 @@ export class UploadService {
 
     // 根据 mimeType 简单推断后缀，或者直接生成 jpg
     // [修改点] 使用库自动获取后缀，如果没有找到则默认 .bin
-    const extension = mime.extension(mimeType) || 'bin';
+    //  修复点：增加容错判断
+    let extension = 'bin';
+    try {
+      // 尝试多种获取方式
+      extension =
+        (mime.extension
+          ? mime.extension(mimeType)
+          : (mime as any).getType(mimeType)) || 'jpg';
+    } catch (e) {
+      extension = 'jpg'; // 兜底为 jpg
+    }
     const uniqueFileName = `${prefix}_${uuidv4()}.${extension}`;
 
     // 生成语义化的文件名：uploads/kyc/user_123/id_front_xxxx.jpg

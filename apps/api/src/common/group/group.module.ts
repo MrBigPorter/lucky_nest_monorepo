@@ -6,17 +6,19 @@ import { RedisLockModule } from '@api/common/redis/redis-lock.module';
 import { BullModule } from '@nestjs/bullmq';
 import { EventsModule } from '@api/common/events/events.module';
 import { NotificationModule } from '@api/client/notification/notification.module';
+import { AvatarModule } from '@api/common/avatar/avatar.module';
 
 @Module({
   imports: [
+    BullModule.registerQueue({
+      name: 'group_settlement',
+    }),
     PrismaModule,
     WalletModule,
     RedisLockModule,
     EventsModule,
     NotificationModule,
-    BullModule.registerQueue({
-      name: 'group_settlement',
-    }),
+    AvatarModule,
   ],
   controllers: [],
   providers: [GroupService],

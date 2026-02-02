@@ -20,12 +20,16 @@ import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
 import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
 import { CreateGroupDto } from '@api/common/chat/dto/group-chat.dto';
+import { AVATAR_QUEUE_NAME } from '@api/common/avatar/avatar.processor';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
 
 @Injectable()
 export class ChatService {
   constructor(
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
+    @InjectQueue(AVATAR_QUEUE_NAME) private readonly avatarQueue: Queue,
   ) {}
 
   // =================================================================
@@ -328,6 +332,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * Get conversation detail with member info
+   * @param conversationId
+   * @param userId
+   */
   async getConversationDetail(conversationId: string, userId: string) {
     const conv = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -446,6 +455,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * Add member to business group conversation
+   * @param businessId
+   * @param userId
+   */
   async addMemberToBusinessGroup(businessId: string, userId: string) {
     const conversation = await this.ensureBusinessConversation(businessId);
     return this.prisma.chatMember.upsert({
@@ -461,6 +475,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * Ensure a direct conversation between two users exists, create if not
+   * @param myId
+   * @param targetId
+   */
   async ensureDirectConversation(myId: string, targetId: string) {
     const existing = await this.prisma.conversation.findFirst({
       where: {
@@ -486,6 +505,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * Invite members to group chat
+   * @param operatorId
+   * @param dto
+   */
   async inviteToGroup(
     operatorId: string,
     dto: { groupId: string; memberIds: string[] },
@@ -513,10 +537,17 @@ export class ChatService {
           lastReadSeqId: 0,
         })),
       });
+      //  埋点：成员数量变动，重新合成九宫格
+      this._triggerAvatarUpdate(groupId);
     }
     return { count: newMembers.length };
   }
 
+  /**
+   * Leave group chat
+   * @param userId
+   * @param groupId
+   */
   async leaveGroup(userId: string, groupId: string) {
     await this.prisma.chatMember.delete({
       where: { conversationId_userId: { conversationId: groupId, userId } },
@@ -524,14 +555,19 @@ export class ChatService {
     const remaining = await this.prisma.chatMember.count({
       where: { conversationId: groupId },
     });
-    if (remaining === 0)
+    if (remaining === 0) {
       await this.prisma.conversation.delete({ where: { id: groupId } });
+    } else {
+      //  埋点：成员数量变动，重新合成九宫格
+      this._triggerAvatarUpdate(groupId);
+    }
+
     return { success: true };
   }
 
   async createGroupChat(creatorId: string, dto: CreateGroupDto) {
     const uniqueMembers = Array.from(new Set([creatorId, ...dto.memberIds]));
-    return this.prisma.conversation.create({
+    const conversation = await this.prisma.conversation.create({
       data: {
         type: CONVERSATION_TYPE.GROUP,
         name: dto.name,
@@ -555,8 +591,18 @@ export class ChatService {
         },
       },
     });
+    // Trigger avatar generation asynchronously
+    //  ：新群创建，立即合成初始九宫格头像
+    this._triggerAvatarUpdate(conversation.id);
+
+    return conversation;
   }
 
+  /**
+   * Search users by keyword (nickname, phone, id)
+   * @param myUserId
+   * @param dto
+   */
   async searchUsers(myUserId: string, dto: SearchUserDto) {
     return this.prisma.user.findMany({
       where: {
@@ -566,6 +612,7 @@ export class ChatService {
             OR: [
               { nickname: { contains: dto.keyword, mode: 'insensitive' } },
               { phone: { contains: dto.keyword } },
+              { id: { equals: dto.keyword } },
             ],
           },
         ],
@@ -598,6 +645,13 @@ export class ChatService {
     }
   }
 
+  /**
+   * [内部方法] 通知会话内其他成员（除发送者外）
+   * @param senderId
+   * @param conversationId
+   * @param data
+   * @private
+   */
   private _notifyOtherMembers(
     senderId: string,
     conversationId: string,
@@ -615,5 +669,25 @@ export class ChatService {
             .emit(SocketEvents.CHAT_MESSAGE, data),
         ),
       );
+  }
+
+  /**
+   * [内部方法] 触发 IM 群组九宫格头像异步合成
+   */
+  private _triggerAvatarUpdate(conversationId: string) {
+    this.avatarQueue
+      .add(
+        'update_chat_group', // 注意这里调用的是 chat 对应的 Job Name
+        { conversationId },
+        {
+          delay: 500, // 给数据库留出事务提交时间
+          removeOnComplete: true,
+          jobId: `chat_avatar_${conversationId}`, // 幂等性，防止频繁加人导致队列堆积
+        },
+      )
+      .catch((err) => {
+        // 仅记录错误，不阻塞业务主流程
+        console.error(`[Chat Avatar Queue ERROR] ${err.message}`);
+      });
   }
 }
