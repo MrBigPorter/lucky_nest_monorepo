@@ -128,9 +128,33 @@ export enum SocketEvents {
   CHAT_MESSAGE = "chat_message",
   CONVERSATION_READ = "conversation_read",
   MESSAGE_RECALLED = "message_recalled",
+  CONVERSATION_UPDATED = "conversation_updated",
 
   //  Group
   JOIN_CHAT = "join_chat",
   LEAVE_CHAT = "leave_chat",
   SEND_MESSAGE = "send_message",
+
+  // Contact
+  CONTACT_APPLY = "contact_apply",
+  CONTACT_ACCEPT = "contact_accept",
 }
+
+// 状态: 0=待处理, 1=已同意, 2=已拒绝
+export const FRIEND_REQUEST_STATUS = {
+  PENDING: 0,
+  ACCEPTED: 1,
+  REJECTED: 2,
+} as const;
+
+// 状态: 1=已成为好友, 2=已拉黑
+export const FRIEND_SHIP_STATUS = {
+  FRIENDS: 1,
+  BLOCKED: 2,
+} as const;
+
+export type FriendRequestStatus =
+  (typeof FRIEND_REQUEST_STATUS)[keyof typeof FRIEND_REQUEST_STATUS];
+
+export type FriendShipStatus =
+  (typeof FRIEND_SHIP_STATUS)[keyof typeof FRIEND_SHIP_STATUS];

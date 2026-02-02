@@ -26,6 +26,7 @@ import {
 } from '@api/common/events/events.gateway';
 import dayjs from 'dayjs';
 import { NotificationService } from '@api/client/notification/notification.service';
+import { AVATAR_QUEUE_NAME } from '@api/common/avatar/avatar.processor';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -38,6 +39,7 @@ export class GroupService {
     private readonly wallet: WalletService,
     public readonly lockService: RedisLockService,
     private readonly notificationService: NotificationService,
+    @InjectQueue(AVATAR_QUEUE_NAME) private readonly avatarQueue: Queue,
     @InjectQueue('group_settlement') private readonly settlementQueue: Queue,
     private readonly eventsGateway: EventsGateway,
   ) {}
@@ -118,6 +120,9 @@ export class GroupService {
         await this.handleGroupSuccessInTx(groupId, db);
       }
 
+      // 触发头像更新任务
+      this.triggerAvatarUpdate(groupId);
+
       //  [Socket 触发点 1]：真人加入成功
       // 不要在 await 里面等，让它飘着就行 (Fire and Forget)
       this.notifyGroupChange(groupId);
@@ -159,6 +164,8 @@ export class GroupService {
           memberType: 0,
         },
       });
+
+      this.triggerAvatarUpdate(newGroup.groupId);
 
       return {
         finalGroupId: newGroup.groupId,
@@ -282,6 +289,30 @@ export class GroupService {
     }
   }
 
+  /**
+   * [内部方法] 触发群组九宫格头像异步合成
+   */
+  private triggerAvatarUpdate(groupId: string) {
+    this.avatarQueue
+      .add(
+        'update_treasure_group',
+        { groupId },
+        {
+          // 关键：延迟 500ms 执行，防止数据库主从延迟或事务未提交导致 Worker 查不到新成员
+          delay: 500,
+          // 自动清理完成的任务，节省 Redis 内存
+          removeOnComplete: true,
+          // 幂等性：同一个群在极短时间内只排队一个合成任务
+          jobId: `avatar_${groupId}`,
+        },
+      )
+      .catch((err) => {
+        this.logger.error(
+          `[Avatar Queue ERROR] Failed to add job: ${err.message}`,
+        );
+      });
+  }
+
   // ============================================================
   // 3. 定时任务：机器人阶梯补位 (更真实的模拟用户)
   // ============================================================
@@ -382,6 +413,8 @@ export class GroupService {
           shouldTriggerSuccess = true;
         }
       });
+
+      this.triggerAvatarUpdate(group.groupId);
 
       // 4. 事务外发射信号
       if (shouldTriggerSuccess) {

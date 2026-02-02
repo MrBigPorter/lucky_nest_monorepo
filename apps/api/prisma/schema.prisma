@@ -56,6 +56,8 @@ model User {
   ChatMember             ChatMember[]
   friends               Friend[] @relation("UserFriends")
   friendOf              Friend[] @relation("FriendUsers")
+  sentRequests     FriendRequest[] @relation("RequestSent")
+  receivedRequests FriendRequest[] @relation("RequestReceived")
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -373,6 +375,7 @@ model TreasureGroup {
   updatedAt         DateTime              @updatedAt @map("updated_at")
   /// 产品ID
   treasureId        String                @map("treasure_id") @db.VarChar(32)
+  groupAvatar       String?               @map("group_avatar") @db.VarChar(255)
   /// 创建人用户ID（团长）
   creatorId         String                @map("creator_id") @db.VarChar(32)
   /// 组团名称
@@ -1200,4 +1203,26 @@ model Friend {
   @@unique([userId, friendId]) // 关键：防止重复加好友
   @@index([userId])
   @@map("friends")
+}
+
+// 新增：只用来存“申请记录” (临时表)
+model FriendRequest {
+  id        String   @id @default(cuid()) @map("request_id") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  fromUserId String   @map("from_user_id") @db.VarChar(32) // 申请人
+  toUserId   String   @map("to_user_id") @db.VarChar(32)   // 被申请人
+
+  reason     String?  @db.VarChar(200) // 验证消息 "我是老王"
+
+  // 状态: 0=待处理, 1=已同意, 2=已拒绝
+  status     Int      @default(0) @db.SmallInt
+
+  fromUser   User     @relation("RequestSent", fields: [fromUserId], references: [id])
+  toUser     User     @relation("RequestReceived", fields: [toUserId], references: [id])
+
+  @@unique([fromUserId, toUserId]) // 防止重复申请
+  @@index([toUserId, status])      // 方便查“谁加了我”
+  @@map("friend_requests")
 }
