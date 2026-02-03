@@ -6,7 +6,11 @@ import {
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { EventsGateway } from '@api/common/events/events.gateway';
 import { AddFriendDto } from '@api/common/contact/dto/contact.dto';
-import { FRIEND_REQUEST_STATUS, FRIEND_SHIP_STATUS } from '@lucky/shared';
+import {
+  FRIEND_REQUEST_STATUS,
+  FRIEND_SHIP_STATUS,
+  RELATIONSHIP_STATUS,
+} from '@lucky/shared';
 import { SocketEvents } from '@lucky/shared';
 import { HandleContactDto } from '@api/common/contact/dto/handle-contact.dto';
 
@@ -212,10 +216,15 @@ export class ContactService {
    * @param dto
    */
   async searchUsers(myUserId: string, dto: { keyword: string }) {
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         AND: [
-          { id: { not: myUserId } }, // 排除自己
+          {
+            id: { not: myUserId },
+          },
+          {
+            isRobot: false,
+          },
           {
             OR: [
               { nickname: { contains: dto.keyword, mode: 'insensitive' } },
@@ -227,6 +236,58 @@ export class ContactService {
       },
       take: 20,
       select: { id: true, nickname: true, avatar: true, phone: true },
+    });
+    if (users.length === 0) {
+      return [];
+    }
+
+    // 提取搜索结果的 ID 列表
+    const targetUserIds = users.map((u) => u.id);
+    // 2. 批量查询：这些人里，哪些已经是我的好友？
+    const friends = await this.prisma.friend.findMany({
+      where: {
+        userId: myUserId,
+        friendId: { in: targetUserIds },
+        status: FRIEND_SHIP_STATUS.FRIENDS,
+      },
+      select: { friendId: true },
+    });
+    // 构建一个 Set 以便快速查找
+    const friendIdSet = new Set(friends.map((f) => f.friendId));
+    // 3. 批量查询：这些人里，哪些我已经发过申请（且还在 Pending 中）？
+    // (只查不是好友的人，优化性能)
+    const nonFriendIds = targetUserIds.filter((id) => !friendIdSet.has(id));
+
+    let sentRequestSet = new Set<string>();
+    if (nonFriendIds.length > 0) {
+      const sentRequests = await this.prisma.friendRequest.findMany({
+        where: {
+          fromUserId: myUserId,
+          toUserId: { in: nonFriendIds },
+          status: FRIEND_REQUEST_STATUS.PENDING, // 只关心待处理的
+        },
+        select: { toUserId: true },
+      });
+      sentRequestSet = new Set(sentRequests.map((r) => r.toUserId));
+    }
+
+    // 4. 组装最终结果
+    return users.map((user) => {
+      let status = RELATIONSHIP_STATUS.STRANGER;
+
+      if (friendIdSet.has(user.id)) {
+        status = RELATIONSHIP_STATUS.FRIEND;
+      } else if (sentRequestSet.has(user.id)) {
+        status = RELATIONSHIP_STATUS.SENT;
+      }
+
+      //  显式返回对象，确保字段存在
+      return {
+        id: user.id,
+        nickname: user.nickname,
+        avatar: user.avatar,
+        status: status,
+      };
     });
   }
 }
