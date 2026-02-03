@@ -158,3 +158,10 @@ export type FriendRequestStatus =
 
 export type FriendShipStatus =
   (typeof FRIEND_SHIP_STATUS)[keyof typeof FRIEND_SHIP_STATUS];
+
+// 用户关系状态：0=陌生人, 1=好友, 2=已发送好友请求
+export const RELATIONSHIP_STATUS = {
+  STRANGER: 0,
+  FRIEND: 1,
+  SENT: 2,
+};

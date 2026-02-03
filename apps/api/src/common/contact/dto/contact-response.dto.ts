@@ -73,8 +73,16 @@ export class SearchUserResponseDto {
   @ApiProperty({ description: 'User Nickname', example: 'Alice' })
   nickname!: string;
 
-  @ApiProperty({ description: 'User Avatar', required: false, example: 'https://...' })
+  @ApiProperty({
+    description: 'User Avatar',
+    required: false,
+    example: 'https://...',
+  })
   avatar?: string;
 
-
+  @ApiProperty({
+    description: 'Relationship status: 0=Stranger, 1=Friend, 2=RequestSent',
+    example: 0,
+  })
+  status!: number;
 }
