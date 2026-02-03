@@ -2,10 +2,9 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { AvatarService } from './avatar.service';
-
 import { EventsGateway } from '@api/common/events/events.gateway';
 import { Logger } from '@nestjs/common';
-import { SocketEvents } from '@lucky/shared';
+import { SocketEvents } from '@lucky/shared'; // 确保常量定义包含 CONVERSATION_UPDATED
 
 // 定义队列名称常量
 export const AVATAR_QUEUE_NAME = 'avatar_composition';
@@ -19,12 +18,9 @@ export class AvatarProcessor extends WorkerHost {
     private readonly avatarService: AvatarService,
     private readonly eventsGateway: EventsGateway,
   ) {
-    super(); // 必须调用 super
+    super();
   }
 
-  /**
-   * 核心处理逻辑：根据 Job Name 进行分发
-   */
   async process(job: Job<any, any, string>): Promise<any> {
     this.logger.debug(`[Job Received] Name: ${job.name}`);
     switch (job.name) {
@@ -37,9 +33,6 @@ export class AvatarProcessor extends WorkerHost {
     }
   }
 
-  // ==========================================
-  // 1. 处理夺宝团头像
-  // ==========================================
   private async handleTreasureGroup(job: Job<{ groupId: string }>) {
     const { groupId } = job.data;
 
@@ -66,20 +59,14 @@ export class AvatarProcessor extends WorkerHost {
         where: { groupId },
         data: { groupAvatar: newAvatarUrl },
       });
+
+      // 注意：如果夺宝团也需要 Socket 通知，这里也应调用 dispatch
     }
   }
 
-  // ==========================================
-  // 2. 处理群聊头像
-  // ==========================================
-  // ==========================================
-  // 2. 处理群聊头像
-  // ==========================================
   private async handleChatGroup(job: Job<{ conversationId: string }>) {
     const { conversationId } = job.data;
 
-    // 1. 获取前 9 个成员（用于合成）
-    // 2. [关键修改] 获取所有成员 ID（用于发送 Socket 通知）
     const allMembers = await this.prisma.chatMember.findMany({
       where: { conversationId },
       select: {
@@ -90,7 +77,6 @@ export class AvatarProcessor extends WorkerHost {
 
     if (allMembers.length === 0) return;
 
-    // 之前的合成逻辑保持不变
     const urls = allMembers
       .slice(0, 9)
       .map((m) => m.user.avatar || this.getFallbackAvatar(m.user.nickname));
@@ -106,32 +92,36 @@ export class AvatarProcessor extends WorkerHost {
         data: { avatar: newAvatarUrl },
       });
 
-      if (!this.eventsGateway.server) {
-        this.logger.error('❌ Socket server is not initialized!');
-        return;
-      }
-
-      // 方案升级：多路精准推送
       this.logger.log(
         `📡 [Socket Broadcast] Group: ${conversationId}, Members: ${allMembers.length}`,
       );
 
-      // A. 推送给正在房间里聊天的人
-      this.eventsGateway.server
-        .to(conversationId)
-        .emit(SocketEvents.CONVERSATION_UPDATED, {
+      /**
+       *  修改点 1: 修改房间内广播逻辑
+       * 不再直接使用 emit，通过 dispatch 统一分发，适配前端 SocketDispatcherMixin
+       */
+      this.eventsGateway.dispatch(
+        conversationId,
+        SocketEvents.CONVERSATION_UPDATED,
+        {
           id: conversationId,
           avatar: newAvatarUrl,
-        });
+        },
+      );
 
-      // B. 推送给所有群成员的“个人频道”（确保列表页刷新）
+      /**
+       *  修改点 2: 修改群成员个人频道广播逻辑
+       * 遍历成员并使用 dispatch，确保即便用户不在当前聊天页面，也能在列表页刷新头像
+       */
       for (const member of allMembers) {
-        this.eventsGateway.server
-          .to(`user_${member.userId}`)
-          .emit(SocketEvents.CONVERSATION_UPDATED, {
+        this.eventsGateway.dispatch(
+          `user_${member.userId}`,
+          SocketEvents.CONVERSATION_UPDATED,
+          {
             id: conversationId,
             avatar: newAvatarUrl,
-          });
+          },
+        );
       }
     }
   }
@@ -140,13 +130,11 @@ export class AvatarProcessor extends WorkerHost {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random`;
   }
 
-  // 监控：任务完成
   @OnWorkerEvent('completed')
   onCompleted(job: Job) {
     this.logger.log(`Job ${job.id} of type ${job.name} completed.`);
   }
 
-  // 监控：任务失败
   @OnWorkerEvent('failed')
   onFailed(job: Job, error: Error) {
     this.logger.error(`Job ${job.id} failed: ${error.message}`);

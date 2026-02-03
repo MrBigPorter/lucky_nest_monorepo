@@ -12,22 +12,22 @@ import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { SocketEvents } from '@lucky/shared';
+
 export enum SocketRoom {
   LOBBY = 'group_lobby', // 拼团大厅
 }
 
-// 1. 新增：定义所有推送类型，防止手抖写错
+// 定义推送子类型
 export enum PushEventType {
-  GROUP_UPDATE = 'group_update', // 大厅：进度更新
-  GROUP_SUCCESS = 'group_success', // 私信：拼团成功
-  GROUP_FAILED = 'group_failed', // 私信：拼团失败(退款)
-  WALLET_CHANGE = 'wallet_change', // 私信：余额变动
+  GROUP_UPDATE = 'group_update',
+  GROUP_SUCCESS = 'group_success',
+  GROUP_FAILED = 'group_failed',
+  WALLET_CHANGE = 'wallet_change',
 }
 
 @WebSocketGateway({
   namespace: 'events',
-  cors: { origin: '*' }, // 允许跨域
-  // 心跳配置：后端也需要配置，配合前端检测假死
+  cors: { origin: '*' },
   pingInterval: 10000,
   pingTimeout: 5000,
 })
@@ -42,43 +42,29 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly prismaService: PrismaService,
   ) {}
 
-  // 客户端发送 "joinRoom" 消息，加入指定房间
-  // 2. 修改：连接时识别用户身份，加入私人房间
   async handleConnection(client: Socket) {
     try {
-      // 从连接参数中获取 token 或 userId
-      // Flutter 端: IO.io(..., OptionBuilder().setQuery({'token': 'xxx'}).build())
       const token =
         (client.handshake.query.token as string) ||
         (client.handshake.auth?.token as string);
 
-      // 简单解析 token 获取 userId (生产环境建议调用 AuthService 验证)
       let userId: string | null = null;
       if (token) {
         try {
-          //  2. 使用 JwtService 验证并解析
-          // 这会自动使用 AuthModule 里配置的 Secret 校验签名
           const payload = this.jwtService.verify(token);
-          userId = payload.sub; // 假设 JWT 里用 sub 存用户 ID
-
-          this.logger.debug(`🔐 User verified via JWT: ${userId}`);
+          userId = payload.sub;
+          this.logger.debug(` User verified via JWT: ${userId}`);
         } catch (jwtError: any) {
-          this.logger.warn(`❌ JWT Verification Error: ${jwtError.message}`);
+          this.logger.warn(` JWT Verification Error: ${jwtError.message}`);
         }
 
-        this.logger.log(
-          `🔌 Client connected: ${client.id} (User: ${userId || 'Guest'})`,
-        );
-
-        // 如果验证通过，加入私人房间
         if (userId) {
           const privateRoom = `user_${userId}`;
           await client.join(privateRoom);
-          this.logger.log(
-            `Client ${client.id} joined private room: ${privateRoom}`,
-          );
-          // 可选：把 userId 挂在 Socket 实例上，以后在这个连接发消息不需要再查了
           (client as any).userId = userId;
+          this.logger.log(
+            `🔌 Client connected: ${client.id} (User: ${userId})`,
+          );
         }
       }
     } catch (error: any) {
@@ -86,92 +72,67 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // 客户端断开连接
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  // 客户端请求加入拼团大厅房间
-  @SubscribeMessage('join_lobby')
-  handleJoinLobby(@ConnectedSocket() client: Socket) {
-    client.join(SocketRoom.LOBBY);
-    this.logger.log(`Client ${client.id} joined room: ${SocketRoom.LOBBY}`);
-  }
-
-  // 客户端请求离开拼团大厅房间
-  @SubscribeMessage('leave_lobby')
-  handleLeaveLobby(@ConnectedSocket() client: Socket) {
-    client.leave(SocketRoom.LOBBY);
-    this.logger.log(`Client ${client.id} left room: ${SocketRoom.LOBBY}`);
-  }
+  // ---------------------------------------------------------
+  // 核心：统一分发方法 (Unified Dispatcher)
+  // ---------------------------------------------------------
 
   /**
-   * 场景 A: 广播给大厅 (更新进度)
-   * 替换原来的 broadcastToLobby
+   *  修改点 1: 增加统一分发出口
+   * 所有业务指令的最终出口，前端只监听 SocketEvents.DISPATCH ('dispatch')
+   */
+  dispatch(room: string, type: string, data: any) {
+    this.server.to(room).emit(SocketEvents.DISPATCH, {
+      type, // 对应前端的业务识别码，如 'chat_message'
+      data, // 实际数据载荷
+    });
+    this.logger.debug(` [Dispatch] To: ${room}, Type: ${type}`);
+  }
+
+  // ---------------------------------------------------------
+  // 业务通知逻辑 (重构为调用 dispatch)
+  // ---------------------------------------------------------
+
+  /**
+   *  修改点 2: 修改大厅广播逻辑
    */
   broadcastToLobby(payload: any) {
-    // 内部调用 sendPush，类型固定为 GROUP_UPDATE
-    this.sendPush(SocketRoom.LOBBY, PushEventType.GROUP_UPDATE, payload);
+    // 统一走 dispatch 出口，类型设为 GROUP_UPDATE
+    this.dispatch(SocketRoom.LOBBY, SocketEvents.GROUP_UPDATE, payload);
   }
 
   /**
-   * 场景 B: 私信通知用户 (成功/失败/退款)
-   * 给 GroupService 调用的
+   *  修改点 3: 修改个人私信通知逻辑
    */
-  notifyUser(userId: string, type: PushEventType, payload: any) {
+  notifyUser(userId: string, type: string, payload: any) {
     const privateRoom = `user_${userId}`;
-    this.sendPush(privateRoom, type, payload);
+    this.dispatch(privateRoom, type, payload);
   }
 
-  // =========================================================
-  //  核心修改：统一发送方法 (Send Push)
-  // =========================================================
-
   /**
-   * 通用推送方法：所有消息都走这个出口
-   * 前端只需要监听 'server_push'
+   *  修改点 4: 兼容旧 sendPush 方法，内部重定向至 dispatch
    */
-  private sendPush(room: string, type: PushEventType, payload: any) {
-    const message = {
-      type, // 告诉前端是什么事
-      payload: payload, // 具体数据
-      timestamp: Date.now(), // 方便前端做防抖或排序
-    };
-
-    // 统一事件
-    this.server.to(room).emit('server_push', message);
-    this.logger.log(
-      `📨 [Gateway] Sent push to room '${room}': ${JSON.stringify(message)}`,
-    );
+  private sendPush(room: string, type: string, payload: any) {
+    this.dispatch(room, type, payload);
   }
 
-  // =========================================================
-  //   新增业务：IM 聊天核心逻辑 (兼容扩展)
-  // =========================================================
+  // ---------------------------------------------------------
+  // IM 聊天监听逻辑
+  // ---------------------------------------------------------
 
-  /**
-   * 1. 加入聊天室
-   * 前端调用: socket.emit('join_chat', { conversationId: 'xxx' })
-   */
   @SubscribeMessage(SocketEvents.JOIN_CHAT)
   handleJoinChat(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { conversationId: string },
   ) {
-    const { conversationId } = payload;
-    // 简单校验一下，防止加入空房间
-    if (!conversationId) return;
-
-    client.join(conversationId);
-    this.logger.log(
-      `💬 Client ${client.id} joined Chat Room: ${conversationId}`,
-    );
-    return { status: 'joined', conversationId };
+    if (!payload.conversationId) return;
+    client.join(payload.conversationId);
+    return { status: 'joined', conversationId: payload.conversationId };
   }
 
-  /**
-   * 2. 离开聊天室
-   */
   @SubscribeMessage(SocketEvents.LEAVE_CHAT)
   handleLeaveChat(
     @ConnectedSocket() client: Socket,
@@ -180,10 +141,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.leave(payload.conversationId);
   }
 
-  /**
-   * 3. 发送消息 (核心!)
-   * 前端调用: socket.emit('send_message', { ... })
-   */
   @SubscribeMessage(SocketEvents.SEND_MESSAGE)
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
@@ -192,47 +149,34 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       conversationId: string;
       content: string;
       type: number;
-      tempId: string; // 前端生成的 UUID
+      tempId: string;
     },
   ) {
-    // 从 handleConnection 挂载的属性里拿 userId，更安全
     const userId = (client as any).userId;
-    if (!userId) {
-      this.logger.warn(`❌ Unauthorized message attempt from ${client.id}`);
-      return { error: 'Unauthorized' };
-    }
+    if (!userId) return { error: 'Unauthorized' };
 
     const { conversationId, content, type, tempId } = payload;
 
     try {
-      //  事务：SeqID自增 + 存消息 + 更新会话快照
-      // (这里逻辑和之前规划的一样，为了保持 Gateway 干净，
       const result = await this.prismaService.$transaction(async (tx) => {
-        // A. 自增 SeqID
         const conv = await tx.conversation.update({
           where: { id: conversationId },
-          data: {
-            lastMsgSeqId: { increment: 1 },
-          },
+          data: { lastMsgSeqId: { increment: 1 } },
           select: { lastMsgSeqId: true },
         });
-        const nextSeqId = conv.lastMsgSeqId;
 
-        // B. 存消息
         const msg = await tx.chatMessage.create({
           data: {
             conversationId,
             senderId: userId,
             content,
             type,
-            seqId: nextSeqId,
+            seqId: conv.lastMsgSeqId,
             clientTempId: tempId,
           },
-          include: {
-            sender: true, // 把发送者头像昵称带出来，方便广播
-          },
+          include: { sender: true },
         });
-        // C. 更新会话快照
+
         await tx.conversation.update({
           where: { id: conversationId },
           data: {
@@ -244,13 +188,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return msg;
       });
 
-      //  广播给房间内其他人 (使用独立事件名 'chat_message')
-      // 注意：使用 broadcast.to() 或者 client.to() 可以排除自己
-      // 但为了保证多端同步(比如我在手机发了，网页端也要显示)，通常直接 server.to()
-      client.to(conversationId).emit(SocketEvents.CHAT_MESSAGE, result);
+      /**
+       *  修改点 5: 修改发送消息后的广播逻辑
+       * 不再直接 emit(chat_message)，而是通过 dispatch 分发
+       */
+      this.dispatch(conversationId, SocketEvents.CHAT_MESSAGE, {
+        ...result,
+        isSelf: false, // 告知房间内其他人此消息非本人发送
+      });
 
-      //  返回 ACK (给当前客户端)
-      // Socket.io 会自动把这个 return 值作为回调传给前端的 emit ack function
       return {
         status: 'ok',
         data: {
@@ -264,5 +210,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.error(`Send Message Failed: ${error.message}`);
       return { status: 'error', message: error.message };
     }
+  }
+
+  @SubscribeMessage('join_lobby')
+  handleJoinLobby(@ConnectedSocket() client: Socket) {
+    client.join(SocketRoom.LOBBY);
+  }
+
+  @SubscribeMessage('leave_lobby')
+  handleLeaveLobby(@ConnectedSocket() client: Socket) {
+    client.leave(SocketRoom.LOBBY);
   }
 }
