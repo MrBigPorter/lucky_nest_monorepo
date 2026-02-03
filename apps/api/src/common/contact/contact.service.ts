@@ -10,8 +10,8 @@ import {
   FRIEND_REQUEST_STATUS,
   FRIEND_SHIP_STATUS,
   RELATIONSHIP_STATUS,
+  SocketEvents, // 确保引入了最新的常量定义
 } from '@lucky/shared';
-import { SocketEvents } from '@lucky/shared';
 import { HandleContactDto } from '@api/common/contact/dto/handle-contact.dto';
 
 @Injectable()
@@ -31,7 +31,6 @@ export class ContactService {
       throw new BadRequestException('You cannot add yourself as a friend.');
     }
 
-    // 1. Check target user exists
     const targetUser = await this.prisma.user.findUnique({
       where: { id: friendId },
     });
@@ -42,7 +41,6 @@ export class ContactService {
       );
     }
 
-    // 2. Check existing friendship
     const existingFriend = await this.prisma.friend.findUnique({
       where: { userId_friendId: { userId, friendId } },
     });
@@ -53,7 +51,6 @@ export class ContactService {
       throw new BadRequestException('You are already friends with this user.');
     }
 
-    // 3. Upsert Request
     await this.prisma.friendRequest.upsert({
       where: {
         fromUserId_toUserId: { fromUserId: userId, toUserId: friendId },
@@ -71,25 +68,30 @@ export class ContactService {
       },
     });
 
-    // 4. Socket Notification
-    this.eventsGateway.server
-      .to(`user_${friendId}`)
-      .emit(SocketEvents.CONTACT_APPLY, {
+    /**
+     * 修改点 1: 修改好友申请的 Socket 通知逻辑
+     * 不再直接使用 .emit('contact_apply')，而是通过统一的 dispatch 管道
+     */
+    this.eventsGateway.dispatch(
+      `user_${friendId}`,
+      SocketEvents.CONTACT_APPLY,
+      {
         applicantId: userId,
         reason,
-      });
+      },
+    );
 
     return { success: true };
   }
 
   /**
-   * Get friend requests (Fixed Mapping)
+   * Get friend requests
    */
   async getFriendRequests(userId: string) {
     const requests = await this.prisma.friendRequest.findMany({
       where: {
         toUserId: userId,
-        status: FRIEND_REQUEST_STATUS.PENDING, // Only pending requests
+        status: FRIEND_REQUEST_STATUS.PENDING,
       },
       include: {
         fromUser: {
@@ -103,23 +105,21 @@ export class ContactService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // 关键修复：手动映射 Prisma 数据结构 -> DTO 结构
     return requests.map((r) => ({
       id: r.fromUser.id,
       nickname: r.fromUser.nickname,
       avatar: r.fromUser.avatar,
-      requestTime: r.createdAt.getTime(), // Date -> timestamp
+      requestTime: r.createdAt.getTime(),
       reason: r.reason,
     }));
   }
 
   /**
-   * Handle request (Fixed Logic)
+   * Handle request
    */
   async handleFriendRequest(userId: string, dto: HandleContactDto) {
     const { targetId, accept } = dto;
 
-    // 1. Find the request
     const request = await this.prisma.friendRequest.findUnique({
       where: {
         fromUserId_toUserId: { fromUserId: targetId, toUserId: userId },
@@ -132,26 +132,20 @@ export class ContactService {
       );
     }
 
-    //  关键修复 2：处理拒绝逻辑 (accept 是 boolean)
     if (!accept) {
       await this.prisma.friendRequest.update({
         where: { id: request.id },
         data: { status: FRIEND_REQUEST_STATUS.REJECTED },
       });
-      return { success: true, action: 'rejected' }; // 必须 Return，否则会跑下面的同意逻辑
+      return { success: true, action: 'rejected' };
     }
 
-    // 关键修复 3：处理同意逻辑 (事务 + 双向好友)
     await this.prisma.$transaction(async (tx) => {
-      // A. Update Request Status
       await tx.friendRequest.update({
         where: { id: request.id },
         data: { status: FRIEND_REQUEST_STATUS.ACCEPTED },
       });
 
-      // B. Create Bi-directional Friendship (双向写入)
-
-      // 1. Me -> Him
       await tx.friend.upsert({
         where: { userId_friendId: { userId, friendId: targetId } },
         create: {
@@ -163,7 +157,6 @@ export class ContactService {
         update: { status: FRIEND_SHIP_STATUS.FRIENDS },
       });
 
-      // 2. Him -> Me (User 表反向关联)
       await tx.friend.upsert({
         where: { userId_friendId: { userId: targetId, friendId: userId } },
         create: {
@@ -176,12 +169,17 @@ export class ContactService {
       });
     });
 
-    // 4. Socket Notification
-    this.eventsGateway.server
-      .to(`user_${targetId}`)
-      .emit(SocketEvents.CONTACT_ACCEPT, {
+    /**
+     *  修改点 2: 修改同意好友申请的 Socket 通知逻辑
+     * 统一走 dispatch，确保前端 SocketService 能在对应的 type 中处理逻辑
+     */
+    this.eventsGateway.dispatch(
+      `user_${targetId}`,
+      SocketEvents.CONTACT_ACCEPT,
+      {
         friendId: userId,
-      });
+      },
+    );
 
     return { success: true, action: 'accepted' };
   }
@@ -210,26 +208,21 @@ export class ContactService {
       phone: f.friend.phone,
     }));
   }
+
   /**
    * Search users
-   * @param myUserId
-   * @param dto
    */
   async searchUsers(myUserId: string, dto: { keyword: string }) {
     const users = await this.prisma.user.findMany({
       where: {
         AND: [
-          {
-            id: { not: myUserId },
-          },
-          {
-            isRobot: false,
-          },
+          { id: { not: myUserId } },
+          { isRobot: false },
           {
             OR: [
               { nickname: { contains: dto.keyword, mode: 'insensitive' } },
               { phone: { contains: dto.keyword } },
-              { id: { equals: dto.keyword } }, // 支持直接搜 ID
+              { id: { equals: dto.keyword } },
             ],
           },
         ],
@@ -237,13 +230,10 @@ export class ContactService {
       take: 20,
       select: { id: true, nickname: true, avatar: true, phone: true },
     });
-    if (users.length === 0) {
-      return [];
-    }
 
-    // 提取搜索结果的 ID 列表
+    if (users.length === 0) return [];
+
     const targetUserIds = users.map((u) => u.id);
-    // 2. 批量查询：这些人里，哪些已经是我的好友？
     const friends = await this.prisma.friend.findMany({
       where: {
         userId: myUserId,
@@ -252,10 +242,8 @@ export class ContactService {
       },
       select: { friendId: true },
     });
-    // 构建一个 Set 以便快速查找
+
     const friendIdSet = new Set(friends.map((f) => f.friendId));
-    // 3. 批量查询：这些人里，哪些我已经发过申请（且还在 Pending 中）？
-    // (只查不是好友的人，优化性能)
     const nonFriendIds = targetUserIds.filter((id) => !friendIdSet.has(id));
 
     let sentRequestSet = new Set<string>();
@@ -264,14 +252,13 @@ export class ContactService {
         where: {
           fromUserId: myUserId,
           toUserId: { in: nonFriendIds },
-          status: FRIEND_REQUEST_STATUS.PENDING, // 只关心待处理的
+          status: FRIEND_REQUEST_STATUS.PENDING,
         },
         select: { toUserId: true },
       });
       sentRequestSet = new Set(sentRequests.map((r) => r.toUserId));
     }
 
-    // 4. 组装最终结果
     return users.map((user) => {
       let status = RELATIONSHIP_STATUS.STRANGER;
 
@@ -281,7 +268,6 @@ export class ContactService {
         status = RELATIONSHIP_STATUS.SENT;
       }
 
-      //  显式返回对象，确保字段存在
       return {
         id: user.id,
         nickname: user.nickname,

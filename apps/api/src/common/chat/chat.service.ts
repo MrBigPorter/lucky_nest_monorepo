@@ -1,6 +1,9 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
@@ -12,7 +15,6 @@ import {
   SocketEvents,
   TimeHelper,
 } from '@lucky/shared';
-import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
 import { GetMessagesDto } from '@api/common/chat/dto/get-messages.dto';
 import { EventsGateway } from '@api/common/events/events.gateway';
@@ -23,9 +25,12 @@ import { CreateGroupDto } from '@api/common/chat/dto/group-chat.dto';
 import { AVATAR_QUEUE_NAME } from '@api/common/avatar/avatar.processor';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
+import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     private prisma: PrismaService,
     private eventsGateway: EventsGateway,
@@ -38,7 +43,6 @@ export class ChatService {
   async sendMessage(userId: string, dto: CreateMessageDto) {
     const { id, conversationId, content, type, meta } = dto;
 
-    // 1. Idempotency Check: Prevent duplicate messages from network retries.
     const existingMessage = await this.prisma.chatMessage.findUnique({
       where: { id },
     });
@@ -52,7 +56,6 @@ export class ChatService {
       };
     }
 
-    // 2. Meta Assembly: Merge nested meta object with legacy flattened fields.
     const finalMeta: Record<string, any> = dto.meta || {};
     if (type === MESSAGE_TYPE.AUDIO && meta?.duration)
       finalMeta.duration = meta.duration;
@@ -65,14 +68,12 @@ export class ChatService {
       finalMeta.h = meta.h;
     }
 
-    //  新增：File 处理 (确保关键字段被保留)
     if (type === MESSAGE_TYPE.FILE) {
       if (meta?.fileName) finalMeta.fileName = meta.fileName;
       if (meta?.fileSize) finalMeta.fileSize = meta.fileSize;
       if (meta?.fileExt) finalMeta.fileExt = meta.fileExt;
     }
 
-    //  新增：Location 处理
     if (type === MESSAGE_TYPE.LOCATION) {
       if (meta?.latitude) finalMeta.latitude = meta.latitude;
       if (meta?.longitude) finalMeta.longitude = meta.longitude;
@@ -81,9 +82,7 @@ export class ChatService {
       if (meta?.thumb) finalMeta.thumb = meta.thumb;
     }
 
-    // 3. Database Transaction: Atomic update for Sequence ID and Snapshot.
     const message = await this.prisma.$transaction(async (tx) => {
-      // Update Conversation SeqID and last message preview
       const conv = await tx.conversation.update({
         where: { id: conversationId },
         data: {
@@ -95,7 +94,6 @@ export class ChatService {
         select: { lastMsgSeqId: true },
       });
 
-      // Create main message record
       const msg = await tx.chatMessage.create({
         data: {
           id,
@@ -111,7 +109,6 @@ export class ChatService {
         },
       });
 
-      // Update sender's read progress instantly
       await tx.chatMember.updateMany({
         where: { conversationId, userId },
         data: { lastReadSeqId: conv.lastMsgSeqId },
@@ -126,10 +123,15 @@ export class ChatService {
       isRecalled: false,
     };
 
-    // 4. Broadcasting: Emit to the room (others) and individual personal rooms (sync).
-    this.eventsGateway.server
-      .to(conversationId)
-      .emit(SocketEvents.CHAT_MESSAGE, { ...messageDto, isSelf: false });
+    /**
+     *  修改点 1: 修改消息广播逻辑
+     * 不再直接 emit(SocketEvents.CHAT_MESSAGE)，而是通过 dispatch 分发
+     */
+    this.eventsGateway.dispatch(conversationId, SocketEvents.CHAT_MESSAGE, {
+      ...messageDto,
+      isSelf: false,
+    });
+
     this._notifyOtherMembers(userId, conversationId, messageDto);
 
     return { ...messageDto, isSelf: true };
@@ -146,7 +148,6 @@ export class ChatService {
     if (message.senderId !== userId)
       throw new ForbiddenException('Cannot recall others messages');
 
-    // Strict 120-second recall window
     if (!TimeHelper.isWithinRange(message.createdAt, new Date(), 120000)) {
       throw new ForbiddenException('Recall window expired');
     }
@@ -177,7 +178,6 @@ export class ChatService {
       return { messageId: msg.id, tip: 'Message recalled', seqId: msg.seqId };
     });
 
-    // 对应 Flutter 的 SocketRecallEvent 模型
     const recallPayload = {
       conversationId: message.conversationId,
       messageId: messageId,
@@ -186,16 +186,19 @@ export class ChatService {
       seqId: result.seqId,
     };
 
-    this.eventsGateway.server
-      .to(message.conversationId)
-      .emit(SocketEvents.MESSAGE_RECALLED, {
+    /**
+     *  修改点 2: 修改撤回广播逻辑
+     * 统一使用 dispatch
+     */
+    this.eventsGateway.dispatch(
+      message.conversationId,
+      SocketEvents.MESSAGE_RECALLED,
+      {
         ...recallPayload,
-        // 前端区分自己和他人撤回
         isSelf: false,
-      });
+      },
+    );
 
-    // 2.：精准推送给该会话的所有成员 (包含离线/退房用户同步)
-    // 这样即便手机端因为 autoDispose 暂时断开了会话房间，只要 Socket 连着，就能收到个人频道的更新
     this._notifyRecallToMembers(message.conversationId, recallPayload);
     return result;
   }
@@ -209,12 +212,17 @@ export class ChatService {
       })
       .then((members) => {
         members.forEach((m) => {
-          this.eventsGateway.server
-            .to(`user_${m.userId}`)
-            .emit(SocketEvents.MESSAGE_RECALLED, {
+          /**
+           *  修改点 3: 内部通知成员撤回也改为 dispatch
+           */
+          this.eventsGateway.dispatch(
+            `user_${m.userId}`,
+            SocketEvents.MESSAGE_RECALLED,
+            {
               ...data,
               isSelf: data.operatorId === m.userId,
-            });
+            },
+          );
         });
       });
   }
@@ -229,7 +237,6 @@ export class ChatService {
     });
     if (!message) throw new NotFoundException('Message not found');
 
-    // Idempotent concealment record creation
     await this.prisma.chatMessageHide.upsert({
       where: { userId_messageId: { userId, messageId } },
       update: {},
@@ -243,45 +250,59 @@ export class ChatService {
   // =================================================================
   async markAsRead(userId: string, dto: MarkAsReadDto) {
     const { conversationId, maxSeqId } = dto;
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
-      select: { lastMsgSeqId: true },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
 
-    const targetSeqId = maxSeqId
-      ? Math.min(maxSeqId, conversation.lastMsgSeqId)
-      : conversation.lastMsgSeqId;
-    const updatedMember = await this.prisma.chatMember.update({
-      where: { conversationId_userId: { conversationId, userId } },
-      data: { lastReadSeqId: targetSeqId },
-      select: { lastReadSeqId: true },
-    });
+    //  优化 1: 显式参数校验，防止 Prisma 引擎崩溃
+    if (!conversationId) {
+      throw new BadRequestException('Invalid conversationId');
+    }
 
-    //  对应 Flutter 的 SocketReadEvent 模型
-    const readPayload = {
-      conversationId,
-      readerId: userId,
-      lastReadSeqId: targetSeqId,
-    };
-
-    // 广播给房间内其他人
-    this.eventsGateway.server
-      .to(conversationId)
-      .emit(SocketEvents.CONVERSATION_READ, {
-        ...readPayload,
-        isSelf: false,
+    try {
+      // 1. 获取会话当前的最后消息序列号
+      const conversation = await this.prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { lastMsgSeqId: true },
       });
 
-    // 推送给个人频道
-    this.eventsGateway.server
-      .to(`user_${userId}`)
-      .emit(SocketEvents.CONVERSATION_READ, {
-        ...readPayload,
-        isSelf: true,
+      if (!conversation) {
+        throw new NotFoundException('Conversation not found');
+      }
+
+      // 2. 确定更新的已读位置：不能超过会话当前最大的 SeqId
+      const targetSeqId = maxSeqId
+        ? Math.min(maxSeqId, conversation.lastMsgSeqId)
+        : conversation.lastMsgSeqId;
+
+      // 3. 更新成员已读状态
+      const updatedMember = await this.prisma.chatMember.update({
+        where: {
+          conversationId_userId: { conversationId, userId },
+        },
+        data: { lastReadSeqId: targetSeqId },
+        select: { lastReadSeqId: true },
       });
 
-    return { lastReadSeqId: updatedMember.lastReadSeqId };
+      // 4. 构建统一的已读载荷
+      const readPayload = {
+        conversationId,
+        readerId: userId,
+        lastReadSeqId: targetSeqId,
+      };
+
+      //  优化 2: 修正广播逻辑
+      // 仅向会话房间广播，让前端自行判断 isSelf
+      // 这样可以减少 Socket 发送压力，并保持逻辑的一致性
+      this.eventsGateway.dispatch(
+        conversationId,
+        SocketEvents.CONVERSATION_READ,
+        readPayload,
+      );
+
+      return { lastReadSeqId: updatedMember.lastReadSeqId };
+    } catch (error: any) {
+      //  优化 3: 捕获 Prisma 可能抛出的底层错误
+      this.logger.error(`[MarkAsRead Error] ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Failed to mark messages as read');
+    }
   }
 
   // =================================================================
@@ -299,7 +320,6 @@ export class ChatService {
       take: pageSize,
     });
 
-    // Batch resolve Direct Chat partners to avoid N+1 queries
     const directIds = conversations
       .filter((c) => c.type === CONVERSATION_TYPE.DIRECT)
       .map((c) => c.id);
@@ -332,11 +352,6 @@ export class ChatService {
     });
   }
 
-  /**
-   * Get conversation detail with member info
-   * @param conversationId
-   * @param userId
-   */
   async getConversationDetail(conversationId: string, userId: string) {
     const conv = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -381,7 +396,6 @@ export class ChatService {
   //  CORE OPERATION: getMessages (SeqId Optimization)
   // =================================================================
   async getMessages(userId: string, dto: GetMessagesDto) {
-    // 1. DTO 已经自动转换了类型，这里 cursor 就是 number (seqId)
     const { conversationId, cursor, pageSize = 20 } = dto;
 
     const partner = await this.prisma.chatMember.findFirst({
@@ -389,31 +403,26 @@ export class ChatService {
       select: { lastReadSeqId: true },
     });
 
-    // 2. 构造查询条件
     const whereCondition: any = {
       conversationId,
       hiddenByUsers: { none: { userId } },
     };
 
-    //  核心：基于 SeqId 的范围查询
-    // 如果传了 cursor (seqId)，就查比它小的 (历史消息)
     if (cursor) {
       whereCondition.seqId = { lt: cursor };
     }
 
     const messages = await this.prisma.chatMessage.findMany({
       where: whereCondition,
-      orderBy: { seqId: 'desc' }, // 倒序
-      take: pageSize, // 不需要 +1，也不需要 skip
+      orderBy: { seqId: 'desc' },
+      take: pageSize,
       include: {
         sender: { select: { id: true, nickname: true, avatar: true } },
       },
     });
 
-    // 3. 计算下一页游标 (Next SeqId)
     let nextCursor: number | null = null;
     if (messages.length > 0) {
-      // 取最后一条消息的 seqId 作为下一次请求的 cursor
       nextCursor = messages[messages.length - 1].seqId;
     }
 
@@ -428,7 +437,6 @@ export class ChatService {
         meta: m.meta,
         sender: m.sender,
       })),
-      // 这里返回 number 类型的游标
       nextCursor,
       partnerLastReadSeqId: partner?.lastReadSeqId ?? 0,
     };
@@ -455,11 +463,6 @@ export class ChatService {
     });
   }
 
-  /**
-   * Add member to business group conversation
-   * @param businessId
-   * @param userId
-   */
   async addMemberToBusinessGroup(businessId: string, userId: string) {
     const conversation = await this.ensureBusinessConversation(businessId);
     return this.prisma.chatMember.upsert({
@@ -475,11 +478,6 @@ export class ChatService {
     });
   }
 
-  /**
-   * Ensure a direct conversation between two users exists, create if not
-   * @param myId
-   * @param targetId
-   */
   async ensureDirectConversation(myId: string, targetId: string) {
     const existing = await this.prisma.conversation.findFirst({
       where: {
@@ -505,11 +503,6 @@ export class ChatService {
     });
   }
 
-  /**
-   * Invite members to group chat
-   * @param operatorId
-   * @param dto
-   */
   async inviteToGroup(
     operatorId: string,
     dto: { groupId: string; memberIds: string[] },
@@ -537,17 +530,11 @@ export class ChatService {
           lastReadSeqId: 0,
         })),
       });
-      //  埋点：成员数量变动，重新合成九宫格
       this._triggerAvatarUpdate(groupId);
     }
     return { count: newMembers.length };
   }
 
-  /**
-   * Leave group chat
-   * @param userId
-   * @param groupId
-   */
   async leaveGroup(userId: string, groupId: string) {
     await this.prisma.chatMember.delete({
       where: { conversationId_userId: { conversationId: groupId, userId } },
@@ -558,7 +545,6 @@ export class ChatService {
     if (remaining === 0) {
       await this.prisma.conversation.delete({ where: { id: groupId } });
     } else {
-      //  埋点：成员数量变动，重新合成九宫格
       this._triggerAvatarUpdate(groupId);
     }
 
@@ -591,18 +577,11 @@ export class ChatService {
         },
       },
     });
-    // Trigger avatar generation asynchronously
-    //  ：新群创建，立即合成初始九宫格头像
     this._triggerAvatarUpdate(conversation.id);
 
     return conversation;
   }
 
-  /**
-   * Search users by keyword (nickname, phone, id)
-   * @param myUserId
-   * @param dto
-   */
   async searchUsers(myUserId: string, dto: SearchUserDto) {
     return this.prisma.user.findMany({
       where: {
@@ -622,7 +601,6 @@ export class ChatService {
     });
   }
 
-  // --- Internal Support ---
   private _getPreviewText(type: number, content: string): string {
     switch (type) {
       case MESSAGE_TYPE.TEXT:
@@ -633,11 +611,8 @@ export class ChatService {
         return '[Voice]';
       case MESSAGE_TYPE.VIDEO:
         return '[Video]';
-      //  新增：文件消息预览
       case MESSAGE_TYPE.FILE:
         return '[File]';
-
-      //  新增：位置消息预览
       case MESSAGE_TYPE.LOCATION:
         return '[Location]';
       default:
@@ -646,11 +621,7 @@ export class ChatService {
   }
 
   /**
-   * [内部方法] 通知会话内其他成员（除发送者外）
-   * @param senderId
-   * @param conversationId
-   * @param data
-   * @private
+   *  修改点 5: 内部通知其他成员逻辑改为 dispatch
    */
   private _notifyOtherMembers(
     senderId: string,
@@ -664,29 +635,27 @@ export class ChatService {
       })
       .then((members) =>
         members.forEach((m) =>
-          this.eventsGateway.server
-            .to(`user_${m.userId}`)
-            .emit(SocketEvents.CHAT_MESSAGE, data),
+          this.eventsGateway.dispatch(
+            `user_${m.userId}`,
+            SocketEvents.CHAT_MESSAGE,
+            data,
+          ),
         ),
       );
   }
 
-  /**
-   * [内部方法] 触发 IM 群组九宫格头像异步合成
-   */
   private _triggerAvatarUpdate(conversationId: string) {
     this.avatarQueue
       .add(
-        'update_chat_group', // 注意这里调用的是 chat 对应的 Job Name
+        'update_chat_group',
         { conversationId },
         {
-          delay: 500, // 给数据库留出事务提交时间
+          delay: 500,
           removeOnComplete: true,
-          jobId: `chat_avatar_${conversationId}`, // 幂等性，防止频繁加人导致队列堆积
+          jobId: `chat_avatar_${conversationId}`,
         },
       )
       .catch((err) => {
-        // 仅记录错误，不阻塞业务主流程
         console.error(`[Chat Avatar Queue ERROR] ${err.message}`);
       });
   }

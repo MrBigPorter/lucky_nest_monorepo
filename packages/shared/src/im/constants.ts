@@ -123,22 +123,54 @@ export type MessageMeta = {
   localAssetId?: string; // 本地资产引用 (用于乐观 UI)
 };
 
-export enum SocketEvents {
-  //  Chat
-  CHAT_MESSAGE = "chat_message",
-  CONVERSATION_READ = "conversation_read",
-  MESSAGE_RECALLED = "message_recalled",
-  CONVERSATION_UPDATED = "conversation_updated",
+/**
+ * Socket 事件定义
+ * 配合前端 Unified Dispatch 架构
+ */
+export const SocketEvents = {
+  // ==========================================
+  //  核心：统一分发事件名 (Backend emit -> Client on)
+  // ==========================================
+  DISPATCH: "dispatch",
 
-  //  Group
-  JOIN_CHAT = "join_chat",
-  LEAVE_CHAT = "leave_chat",
-  SEND_MESSAGE = "send_message",
+  // ==========================================
+  //  业务类型 (Payload Type Values)
+  // 这些值对应前端 payload['type']
+  // ==========================================
 
-  // Contact
-  CONTACT_APPLY = "contact_apply",
-  CONTACT_ACCEPT = "contact_accept",
-}
+  // --- 聊天业务 ---
+  CHAT_MESSAGE: "chat_message",
+  CONVERSATION_READ: "conversation_read",
+  MESSAGE_RECALLED: "message_recalled",
+  CONVERSATION_UPDATED: "conversation_updated", // 头像/群名变更
+  TYPING: "typing",
+
+  // --- 拼团/钱包/群组业务 ---
+  GROUP_SUCCESS: "group_success",
+  GROUP_FAILED: "group_failed",
+  GROUP_UPDATE: "group_update", // 通用群组变动（如人员进出）
+  WALLET_CHANGE: "wallet_change", // 余额变动通知
+
+  // --- 好友/联系人业务 ---
+  CONTACT_APPLY: "contact_apply",
+  CONTACT_ACCEPT: "contact_accept",
+
+  // --- 系统通知 ---
+  ERROR: "error",
+  FORCE_LOGOUT: "force_logout", // 强制下线
+
+  // ==========================================
+  //  客户端上行事件 (Client emit -> Backend on)
+  // 这些是后端 Gateway @SubscribeMessage 监听的事件
+  // ==========================================
+  JOIN_CHAT: "join_chat",
+  LEAVE_CHAT: "leave_chat",
+  JOIN_LOBBY: "join_lobby",
+  LEAVE_LOBBY: "leave_lobby",
+  SEND_MESSAGE: "send_message",
+} as const;
+
+export type SocketEventType = (typeof SocketEvents)[keyof typeof SocketEvents];
 
 // 状态: 0=待处理, 1=已同意, 2=已拒绝
 export const FRIEND_REQUEST_STATUS = {
