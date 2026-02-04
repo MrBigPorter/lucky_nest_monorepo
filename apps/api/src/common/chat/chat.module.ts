@@ -9,6 +9,9 @@ import { AVATAR_QUEUE_NAME } from '@api/common/avatar/avatar.processor';
 import { BullModule } from '@nestjs/bullmq';
 import { ContactController } from '@api/common/contact/contact.controller';
 import { ContactService } from '@api/common/contact/contact.service';
+import { NotificationModule } from '@api/client/notification/notification.module';
+import { SocketListener } from '@api/common/events/listeners/socket.listener';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -17,9 +20,11 @@ import { ContactService } from '@api/common/contact/contact.service';
     EventsModule,
     UploadModule,
     AvatarModule,
+    NotificationModule,
+    EventEmitterModule.forRoot({ global: true }),
   ],
   controllers: [ChatController, ContactController],
-  providers: [ChatService, ContactService],
+  providers: [ChatService, ContactService, SocketListener],
   exports: [ChatService, ContactService],
 })
 export class ChatModule {}

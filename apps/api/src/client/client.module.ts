@@ -15,8 +15,8 @@ import { AddressModule } from '@api/client/address/address.module';
 import { ClientRegionModule } from '@api/client/region/client-region.module';
 import { PaymentChannelClientModule } from '@api/client/payment-channel/payment-channel.module';
 import { GroupClientModule } from '@api/client/group/groups.module';
-import { NotificationModule } from '@api/client/notification/notification.module';
 import { UsersModule } from '@api/client/users/users.module';
+import { NotificationModule } from '@api/client/notification/notification.module';
 
 @Module({
   imports: [
@@ -35,8 +35,8 @@ import { UsersModule } from '@api/client/users/users.module';
     ClientRegionModule,
     PaymentChannelClientModule,
     GroupClientModule,
-    NotificationModule,
     UsersModule,
+    NotificationModule,
   ],
   providers: [],
   controllers: [HealthController],

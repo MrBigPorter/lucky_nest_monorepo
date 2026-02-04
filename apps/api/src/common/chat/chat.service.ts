@@ -26,14 +26,22 @@ import { AVATAR_QUEUE_NAME } from '@api/common/avatar/avatar.processor';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
+import { NotificationService } from '@api/client/notification/notification.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  CHAT_EVENTS,
+  MessageCreatedEvent,
+} from '@api/common/chat/events/chat.events';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private eventsGateway: EventsGateway,
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly eventsGateway: EventsGateway,
+    private readonly notificationService: NotificationService,
     @InjectQueue(AVATAR_QUEUE_NAME) private readonly avatarQueue: Queue,
   ) {}
 
@@ -123,16 +131,30 @@ export class ChatService {
       isRecalled: false,
     };
 
-    /**
-     *  修改点 1: 修改消息广播逻辑
-     * 不再直接 emit(SocketEvents.CHAT_MESSAGE)，而是通过 dispatch 分发
-     */
-    this.eventsGateway.dispatch(conversationId, SocketEvents.CHAT_MESSAGE, {
-      ...messageDto,
-      isSelf: false,
+    // 2. 查出需要通知的成员 ID (必须在 Service 层做，因为只有这里懂业务)
+    // 优化：利用 Prisma 关联查询直接拿，或者复用之前的查询结果
+    const members = await this.prisma.chatMember.findMany({
+      where: { conversationId },
+      select: { userId: true },
     });
+    const memberIds = members.map((m) => m.userId);
 
-    this._notifyOtherMembers(userId, conversationId, messageDto);
+    this.eventEmitter.emit(
+      CHAT_EVENTS.MESSAGE_CREATED,
+      new MessageCreatedEvent(
+        message.id,
+        message.conversationId,
+        message.content,
+        message.type,
+        message.sender?.id || '',
+        message.sender?.nickname || '',
+        message.sender?.avatar || '',
+        message.createdAt.getTime(),
+        memberIds,
+        message.seqId,
+        message.meta,
+      ),
+    );
 
     return { ...messageDto, isSelf: true };
   }
