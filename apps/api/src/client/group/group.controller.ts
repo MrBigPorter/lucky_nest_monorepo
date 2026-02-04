@@ -50,7 +50,6 @@ export class GroupClientController {
   @ApiOkResponse({ type: GroupDetailResponseDto })
   async getGroupDetail(@Param('groupId') groupId: string) {
     const data = await this.groupService.getGroupDetail(groupId);
-    console.log('group detail data', data);
     return plainToInstance(GroupDetailResponseDto, data);
   }
 }

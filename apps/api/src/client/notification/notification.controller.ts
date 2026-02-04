@@ -9,7 +9,7 @@ import {
 } from '@api/client/notification/dto/send-test.dto';
 
 @UseGuards(OptionalJwtAuthGuard)
-@Controller('client/notifications')
+@Controller('/client/notifications')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
