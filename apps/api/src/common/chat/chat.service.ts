@@ -12,7 +12,6 @@ import {
   CONVERSATION_TYPE,
   ConversationStatus,
   MESSAGE_TYPE,
-  SocketEvents,
   TimeHelper,
 } from '@lucky/shared';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
@@ -30,7 +29,9 @@ import { NotificationService } from '@api/client/notification/notification.servi
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   CHAT_EVENTS,
+  ConversationReadEvent,
   MessageCreatedEvent,
+  MessageRecalledEvent,
 } from '@api/common/chat/events/chat.events';
 
 @Injectable()
@@ -40,7 +41,6 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly eventsGateway: EventsGateway,
     private readonly notificationService: NotificationService,
     @InjectQueue(AVATAR_QUEUE_NAME) private readonly avatarQueue: Queue,
   ) {}
@@ -175,6 +175,7 @@ export class ChatService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // 1. 数据库逻辑 (保持不变)
       const msg = await tx.chatMessage.update({
         where: { id: messageId },
         data: {
@@ -200,53 +201,26 @@ export class ChatService {
       return { messageId: msg.id, tip: 'Message recalled', seqId: msg.seqId };
     });
 
-    const recallPayload = {
-      conversationId: message.conversationId,
-      messageId: messageId,
-      tip: 'A message was recalled',
-      operatorId: userId,
-      seqId: result.seqId,
-    };
+    // 2. 查出需要通知的成员 (为了 Socket 列表更新)
+    const members = await this.prisma.chatMember.findMany({
+      where: { conversationId: message.conversationId },
+      select: { userId: true },
+    });
+    const memberIds = members.map((m) => m.userId);
 
-    /**
-     *  修改点 2: 修改撤回广播逻辑
-     * 统一使用 dispatch
-     */
-    this.eventsGateway.dispatch(
-      message.conversationId,
-      SocketEvents.MESSAGE_RECALLED,
-      {
-        ...recallPayload,
-        isSelf: false,
-      },
+    //  [Refactor] 触发事件，而不是直接调 Socket
+    this.eventEmitter.emit(
+      CHAT_EVENTS.MESSAGE_RECALLED,
+      new MessageRecalledEvent(
+        message.conversationId,
+        messageId,
+        userId,
+        result.seqId,
+        memberIds,
+      ),
     );
 
-    this._notifyRecallToMembers(message.conversationId, recallPayload);
     return result;
-  }
-
-  // --- 辅助方法：通知所有成员撤回指令 ---
-  private _notifyRecallToMembers(conversationId: string, data: any) {
-    this.prisma.chatMember
-      .findMany({
-        where: { conversationId },
-        select: { userId: true },
-      })
-      .then((members) => {
-        members.forEach((m) => {
-          /**
-           *  修改点 3: 内部通知成员撤回也改为 dispatch
-           */
-          this.eventsGateway.dispatch(
-            `user_${m.userId}`,
-            SocketEvents.MESSAGE_RECALLED,
-            {
-              ...data,
-              isSelf: data.operatorId === m.userId,
-            },
-          );
-        });
-      });
   }
 
   // =================================================================
@@ -272,14 +246,12 @@ export class ChatService {
   // =================================================================
   async markAsRead(userId: string, dto: MarkAsReadDto) {
     const { conversationId, maxSeqId } = dto;
-
-    //  优化 1: 显式参数校验，防止 Prisma 引擎崩溃
     if (!conversationId) {
       throw new BadRequestException('Invalid conversationId');
     }
 
     try {
-      // 1. 获取会话当前的最后消息序列号
+      // 1. 数据库逻辑
       const conversation = await this.prisma.conversation.findUnique({
         where: { id: conversationId },
         select: { lastMsgSeqId: true },
@@ -289,12 +261,10 @@ export class ChatService {
         throw new NotFoundException('Conversation not found');
       }
 
-      // 2. 确定更新的已读位置：不能超过会话当前最大的 SeqId
       const targetSeqId = maxSeqId
         ? Math.min(maxSeqId, conversation.lastMsgSeqId)
         : conversation.lastMsgSeqId;
 
-      // 3. 更新成员已读状态
       const updatedMember = await this.prisma.chatMember.update({
         where: {
           conversationId_userId: { conversationId, userId },
@@ -303,25 +273,14 @@ export class ChatService {
         select: { lastReadSeqId: true },
       });
 
-      // 4. 构建统一的已读载荷
-      const readPayload = {
-        conversationId,
-        readerId: userId,
-        lastReadSeqId: targetSeqId,
-      };
-
-      //  优化 2: 修正广播逻辑
-      // 仅向会话房间广播，让前端自行判断 isSelf
-      // 这样可以减少 Socket 发送压力，并保持逻辑的一致性
-      this.eventsGateway.dispatch(
-        conversationId,
-        SocketEvents.CONVERSATION_READ,
-        readPayload,
+      //  [Refactor] 触发事件，而不是直接调 Socket
+      this.eventEmitter.emit(
+        CHAT_EVENTS.CONVERSATION_READ,
+        new ConversationReadEvent(conversationId, userId, targetSeqId),
       );
 
       return { lastReadSeqId: updatedMember.lastReadSeqId };
     } catch (error: any) {
-      //  优化 3: 捕获 Prisma 可能抛出的底层错误
       this.logger.error(`[MarkAsRead Error] ${error.message}`, error.stack);
       throw new InternalServerErrorException('Failed to mark messages as read');
     }
@@ -640,30 +599,6 @@ export class ChatService {
       default:
         return '[Unsupported]';
     }
-  }
-
-  /**
-   *  修改点 5: 内部通知其他成员逻辑改为 dispatch
-   */
-  private _notifyOtherMembers(
-    senderId: string,
-    conversationId: string,
-    data: any,
-  ) {
-    this.prisma.chatMember
-      .findMany({
-        where: { conversationId, userId: { not: senderId } },
-        select: { userId: true },
-      })
-      .then((members) =>
-        members.forEach((m) =>
-          this.eventsGateway.dispatch(
-            `user_${m.userId}`,
-            SocketEvents.CHAT_MESSAGE,
-            data,
-          ),
-        ),
-      );
   }
 
   private _triggerAvatarUpdate(conversationId: string) {

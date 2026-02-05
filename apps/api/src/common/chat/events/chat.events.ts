@@ -4,6 +4,10 @@ export const CHAT_EVENTS = {
    * 用于解耦：Socket 推送、FCM 离线推送、短信通知、审计日志等
    */
   MESSAGE_CREATED: 'chat.message.created',
+  /** 消息撤回 [NEW] */
+  MESSAGE_RECALLED: 'chat.message.recalled',
+  /** 会话已读 [NEW] */
+  CONVERSATION_READ: 'chat.conversation.read',
 };
 
 export class MessageCreatedEvent {
@@ -22,5 +26,23 @@ export class MessageCreatedEvent {
     //  [新增] 必须补齐这些字段，否则前端会报错
     public readonly seqId: number,
     public readonly meta: any,
+  ) {}
+}
+
+export class MessageRecalledEvent {
+  constructor(
+    public readonly conversationId: string,
+    public readonly messageId: string,
+    public readonly operatorId: string, // 谁执行的撤回
+    public readonly seqId: number,
+    public readonly memberIds: string[], // 需要通知的成员列表
+  ) {}
+}
+
+export class ConversationReadEvent {
+  constructor(
+    public readonly conversationId: string,
+    public readonly readerId: string,
+    public readonly lastReadSeqId: number,
   ) {}
 }
