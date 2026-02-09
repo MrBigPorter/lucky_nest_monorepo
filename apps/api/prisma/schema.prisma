@@ -1096,6 +1096,13 @@ model Conversation {
   // [新增] 会话状态: NORMAL(正常), ARCHIVED(归档/解散), MUTED(全员禁言)
   status       Int              @default(1)
 
+  /// 全员禁言开关: false-关 true-开
+  isMuteAll        Boolean   @default(false) @map("is_mute_all")
+  /// 加群审批开关: false-关 true-开
+  joinNeedApproval Boolean   @default(false) @map("join_need_approval")
+  /// 群公告内容 (支持简单的 String 或 JSON 结构)
+  announcement     String?   @map("announcement") @db.VarChar(2000)
+
   // 快照 (用于列表页快速渲染)
   lastMsgContent String?
   lastMsgType    Int?      @default(0)
@@ -1171,6 +1178,10 @@ model ChatMember {
 
   // 角色权限
   role           String       @default("MEMBER") // OWNER, ADMIN, MEMBER
+  /// 禁言截止时间 (WebRTC/Chat 逻辑判断: now() < mutedUntil ? 禁言 : 正常)
+  mutedUntil     DateTime?    @map("muted_until")
+  /// 邀请人ID (溯源用，是谁把你拉进群的)
+  inviterId      String?      @map("inviter_id")
 
   // 个性化设置
   nickname       String?      // 在群里的昵称
@@ -1184,6 +1195,7 @@ model ChatMember {
   joinedAt       DateTime     @default(now())
 
   @@unique([conversationId, userId]) // 每个人在每个群只能有一条记录
+  @@index([conversationId, role]) //  新增索引：快速查找群里的管理员
 }
 
 // 补齐好友关系表

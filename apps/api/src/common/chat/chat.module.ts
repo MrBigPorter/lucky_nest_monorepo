@@ -12,6 +12,9 @@ import { ContactService } from '@api/common/contact/contact.service';
 import { NotificationModule } from '@api/client/notification/notification.module';
 import { SocketListener } from '@api/common/events/listeners/socket.listener';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ChatGroupService } from '@api/common/chat/chat-group.service';
+import { ChatGroupController } from '@api/common/chat/chat-group.controller';
+import { ChatListener } from '@api/common/events/listeners/chat.listener';
 
 @Module({
   imports: [
@@ -23,8 +26,14 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     NotificationModule,
     EventEmitterModule.forRoot({ global: true }),
   ],
-  controllers: [ChatController, ContactController],
-  providers: [ChatService, ContactService, SocketListener],
-  exports: [ChatService, ContactService],
+  controllers: [ChatController, ContactController, ChatGroupController],
+  providers: [
+    ChatService,
+    ChatGroupService,
+    ContactService,
+    SocketListener,
+    ChatListener,
+  ],
+  exports: [ChatService, ChatGroupService, ContactService],
 })
 export class ChatModule {}

@@ -143,6 +143,14 @@ export const SocketEvents = {
   CONVERSATION_READ: "conversation_read",
   MESSAGE_RECALLED: "message_recalled",
   CONVERSATION_UPDATED: "conversation_updated", // 头像/群名变更
+  MEMBER_KICKED: "member_kicked", // 成员被踢出群聊
+  MEMBER_MUTED: "member_muted", // 成员被禁言/解禁
+  OWNER_TRANSFERRED: "owner_transferred", // 群主转让
+  MEMBER_ROLE_UPDATED: "member_role_updated", // 成员角色变更（如管理员权限变动）
+  MEMBER_JOINED: "member_joined", // 成员加入群聊
+  MEMBER_LEFT: "member_left", // 成员离开群聊
+  GROUP_DISBANDED: "group_disbanded", // 群聊解散
+  GROUP_INFO_UPDATED: "group_info_updated", // 群信息更新（如公告、全员禁言等）
   TYPING: "typing",
 
   // --- 拼团/钱包/群组业务 ---

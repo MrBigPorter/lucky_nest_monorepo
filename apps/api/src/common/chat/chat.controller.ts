@@ -16,7 +16,6 @@ import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { CreateDirectChatDto } from '@api/common/chat/dto/create-direct-chat.dto';
-import { CreateGroupChatDto } from '@api/common/chat/dto/create-group-chat.dto';
 import { JoinBusinessChatDto } from '@api/common/chat/dto/join-business-chat.dto';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
 import { plainToInstance } from 'class-transformer';
