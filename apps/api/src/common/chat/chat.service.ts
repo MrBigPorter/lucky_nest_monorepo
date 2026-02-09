@@ -357,12 +357,27 @@ export class ChatService {
       }
     }
 
+    //获取当前用户在这个会话里的状态
+    const myMember = conv.members.find((m) => m.userId === userId);
+    // 如果当前用户不是成员（极端情况），给予默认值
+    const myLastReadSeqId = myMember?.lastReadSeqId ?? 0;
+    // 计算未读数：(总消息数 - 我已读的)
+    // 确保不小于 0
+    const unreadCount = Math.max(0, conv.lastMsgSeqId - myLastReadSeqId);
+
     return {
       id: conv.id,
       name: displayName,
       avatar: displayAvatar,
       type: conv.type,
       ownerId: conv.ownerId,
+
+      lastMsgSeqId: conv.lastMsgSeqId, // 会话最新的一条 Seq
+      myLastReadSeqId: myLastReadSeqId, // 我读到了哪一条
+      unreadCount: unreadCount, // 算出来的未读数 (前端自愈的依据)
+      isPinned: myMember?.isPinned ?? false,
+      isMuted: myMember?.isMuted ?? false,
+
       memberCount: conv.members.length,
       members: conv.members.map((m) => ({
         userId: m.userId,

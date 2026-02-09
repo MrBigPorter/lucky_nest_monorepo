@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ConversationType } from '@prisma/client';
 import { DateToTimestamp } from '@api/common/dto/transforms';
+import { ChatMemberRole } from '@lucky/shared';
 
 // 1. 简单的 ID 返回 (用于创建接口)
 export class ConversationIdResponseDto {
@@ -8,7 +9,7 @@ export class ConversationIdResponseDto {
   conversationId!: string;
 }
 
-// 2. 完整的会话列表项
+// 2. 完整的会话列表项 (用于列表页)
 export class ConversationListResponseDto {
   @ApiProperty({ description: '会话ID' })
   id!: string;
@@ -34,16 +35,33 @@ export class ConversationListResponseDto {
   @ApiProperty({ description: '是否免打扰' })
   isMuted!: boolean;
 
-  @ApiProperty({ description: '未读数 (仅供参考，准确值建议前端计算)' })
+  @ApiProperty({ description: '未读数 (P0 核心字段)' })
   unreadCount!: number;
 
-  // 构造函数：负责把 Prisma 的复杂数据 "洗" 成 DTO
+  @ApiProperty({ description: '最后一条消息 SeqId (用于同步断点)' })
+  lastMsgSeqId!: number;
+
   constructor(partial: Partial<ConversationListResponseDto>) {
     Object.assign(this, partial);
   }
 }
 
-// 3. 消息发送者信息 (用于详情页)
+// 3. 成员简要信息 DTO (用于详情页成员列表)
+export class ConversationMemberDto {
+  @ApiProperty()
+  userId!: string;
+
+  @ApiProperty()
+  nickname!: string;
+
+  @ApiProperty()
+  avatar!: string;
+
+  @ApiProperty({ enum: ChatMemberRole })
+  role!: ChatMemberRole;
+}
+
+// 4. 消息发送者信息
 export class SenderInfoResponseDto {
   @ApiProperty()
   id!: string;
@@ -55,7 +73,7 @@ export class SenderInfoResponseDto {
   avatar!: string;
 }
 
-// 4. 消息详情 (用于详情页历史记录)
+// 5. 消息详情
 export class ChatMessageResponseDto {
   @ApiProperty()
   id!: string;
@@ -74,7 +92,6 @@ export class ChatMessageResponseDto {
   sender?: SenderInfoResponseDto;
 }
 
-// 5. 会话详情 (包含历史记录)
 export class ConversationDetailResponseDto {
   @ApiProperty()
   id!: string;
@@ -82,6 +99,35 @@ export class ConversationDetailResponseDto {
   @ApiProperty()
   name!: string;
 
-  @ApiProperty({ type: [ChatMessageResponseDto] })
-  history!: ChatMessageResponseDto[];
+  @ApiProperty({ required: false })
+  avatar?: string;
+
+  @ApiProperty({ enum: ConversationType })
+  type!: ConversationType;
+
+  @ApiProperty()
+  ownerId!: string;
+
+  @ApiProperty()
+  memberCount!: number;
+
+  // --- P0 自愈核心字段 START ---
+  @ApiProperty({ description: '会话最新的 SeqId' })
+  lastMsgSeqId!: number;
+
+  @ApiProperty({ description: '我已读到的 SeqId' })
+  myLastReadSeqId!: number;
+
+  @ApiProperty({ description: '未读数 (用于前端状态自愈判断)' })
+  unreadCount!: number;
+  // --- P0 自愈核心字段 END ---
+
+  @ApiProperty()
+  isPinned!: boolean;
+
+  @ApiProperty()
+  isMuted!: boolean;
+
+  @ApiProperty({ type: [ConversationMemberDto] })
+  members!: ConversationMemberDto[];
 }
