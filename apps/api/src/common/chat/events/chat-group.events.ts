@@ -2,111 +2,103 @@
 //  事件常量定义 (Event Constants)
 // ==========================================
 export const CHAT_GROUP_EVENTS = {
-  // --- 1. 惩罚与管理 ---
-  MEMBER_KICKED: 'chat.group.member_kicked', // 踢人
-  MEMBER_MUTED: 'chat.group.member_muted', // 禁言
-
-  // --- 2. 权限与角色 ---
-  OWNER_TRANSFERRED: 'chat.group.owner_transferred', // 转让群主
-  MEMBER_ROLE_UPDATED: 'chat.group.member_role_updated', // 升/降管理员
-
-  // --- 3. 群信息变更 ---
-  INFO_UPDATED: 'chat.group.info_updated', // 改名/公告/全员禁言
-
-  // --- 4. 成员变动 (列表刷新用) ---
-  MEMBER_JOINED: 'chat.group.member_joined', // 新人入群
-  MEMBER_LEFT: 'chat.group.member_left', // 主动退群
-
-  // --- 5. 群生命周期 ---
-  GROUP_DISBANDED: 'chat.group.disbanded', // 群解散
+  MEMBER_KICKED: 'chat.group.member_kicked',
+  MEMBER_MUTED: 'chat.group.member_muted',
+  OWNER_TRANSFERRED: 'chat.group.owner_transferred',
+  MEMBER_ROLE_UPDATED: 'chat.group.member_role_updated',
+  INFO_UPDATED: 'chat.group.info_updated',
+  MEMBER_JOINED: 'chat.group.member_joined',
+  MEMBER_LEFT: 'chat.group.member_left',
+  GROUP_DISBANDED: 'chat.group.disbanded',
 };
 
 // ==========================================
-//  Payload 类定义 (Payload Definitions)
+//  Payload 类定义 (已统一 targetId 和 syncType)
 // ==========================================
 
-// 1. 踢人事件 [补回]
 export class GroupMemberKickedEvent {
   constructor(
     public readonly conversationId: string,
-    public readonly operatorId: string, // 谁踢的
-    public readonly kickedUserId: string, // 谁被踢了
+    public readonly operatorId: string,
+    public readonly targetId: string, // 统一字段名
     public readonly timestamp: number,
+    public readonly syncType: string = 'REMOVE', // 默认指令：删除本地会话
   ) {}
 }
 
-// 2. 禁言事件 [补回]
 export class GroupMemberMutedEvent {
   constructor(
     public readonly conversationId: string,
     public readonly operatorId: string,
-    public readonly targetUserId: string,
-    public readonly mutedUntil: number | null, // null = 解除
+    public readonly targetId: string, // 统一字段名
+    public readonly mutedUntil: number | null,
+    public readonly syncType: string = 'PATCH', // 默认指令：局部修补 UI
   ) {}
 }
 
-// 3. 转让群主事件 [补回]
 export class GroupOwnerTransferredEvent {
   constructor(
     public readonly conversationId: string,
-    public readonly operatorId: string, // 旧群主
-    public readonly newOwnerId: string, // 新群主
+    public readonly operatorId: string,
+    public readonly targetId: string, // 统一字段名 (新群主)
+    public readonly syncType: string = 'PATCH',
   ) {}
 }
 
-// 4. 群信息变更事件 [补回]
 export class GroupInfoUpdatedEvent {
   constructor(
     public readonly conversationId: string,
     public readonly operatorId: string,
     public readonly updates: {
       name?: string;
+      avatar?: string;
       announcement?: string;
       isMuteAll?: boolean;
-      joinNeedApproval?: boolean;
     },
+    public readonly syncType: string = 'PATCH', // 默认指令：局部修补名/头像
   ) {}
 }
 
-// 5. 角色变更事件 (升职/降职)
 export class GroupMemberRoleUpdatedEvent {
   constructor(
     public readonly conversationId: string,
     public readonly operatorId: string,
-    public readonly targetUserId: string,
+    public readonly targetId: string, // 统一字段名
     public readonly newRole: 'ADMIN' | 'MEMBER',
+    public readonly syncType: string = 'PATCH',
   ) {}
 }
 
-// 6. 群解散事件
 export class GroupDisbandedEvent {
   constructor(
     public readonly conversationId: string,
     public readonly operatorId: string,
     public readonly timestamp: number,
+    public readonly syncType: string = 'REMOVE', // 默认指令：所有人移除会话
   ) {}
 }
 
-// 7. 成员主动退群事件
 export class GroupMemberLeftEvent {
   constructor(
     public readonly conversationId: string,
-    public readonly userId: string,
+    public readonly targetId: string, // 统一字段名 (退群者)
     public readonly timestamp: number,
+    public readonly syncType: string = 'PATCH',
   ) {}
 }
 
-// 8. 新成员加入事件
 export class GroupMemberJoinedEvent {
   constructor(
     public readonly conversationId: string,
-    public readonly member: {
+    public readonly operatorId: string,
+    public readonly syncType: string, // 必填：决定是 PATCH 还是 FULL_SYNC
+    public readonly member?: {
+      // PATCH 模式带完整对象
       userId: string;
       nickname: string;
       avatar?: string;
       role: string;
-      joinedAt: number;
     },
-    public readonly inviterId?: string,
+    public readonly targetIds?: string[], // 批量入群时只发 ID 列表
   ) {}
 }

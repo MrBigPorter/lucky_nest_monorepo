@@ -38,24 +38,26 @@ export class SocketListener {
       isSelf: false,
     };
 
-    // A. 广播给房间内的人 (Hot Read/Chat Screen)
+    //  A. 房间广播 (O(1))
     this.eventsGateway.dispatch(
       event.conversationId,
       SocketEvents.CHAT_MESSAGE,
       socketPayload,
     );
 
-    // B. 广播给列表预览 (Conversation List)
-    // 只有发给特定的人，才能在列表页更新“最后一条消息”
-    event.memberIds.forEach((userId) => {
-      if (userId !== event.senderId) {
-        this.eventsGateway.dispatch(
-          `user_${userId}`,
-          SocketEvents.CHAT_MESSAGE,
-          socketPayload,
-        );
-      }
-    });
+    //  B. 列表预览：只针对小群或在线个人进行分发
+    // 设定阈值（如100人），超过此人数的群不再执行 forEach 个人分发，靠“前台自愈”同步
+    if (event.memberIds.length < 100) {
+      event.memberIds.forEach((userId) => {
+        if (userId !== event.senderId) {
+          this.eventsGateway.dispatch(
+            `user_${userId}`,
+            SocketEvents.CHAT_MESSAGE,
+            socketPayload,
+          );
+        }
+      });
+    }
   }
 
   // ===========================================================================
