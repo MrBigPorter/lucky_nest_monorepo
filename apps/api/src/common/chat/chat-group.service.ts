@@ -115,7 +115,7 @@ export class ChatGroupService {
         operatorId,
         targetId,
         Date.now(),
-      ),
+      ), // targetId 对应构造函数
     );
 
     return { success: true, kickedUserId: targetId };
@@ -153,9 +153,9 @@ export class ChatGroupService {
       new GroupMemberMutedEvent(
         dto.conversationId,
         operatorId,
-        dto.targetUserId, // targetId
+        dto.targetUserId,
         mutedUntilTimestamp,
-      ),
+      ), // 统一 targetId
     );
 
     return { success: true, mutedUntil: mutedUntilTimestamp };

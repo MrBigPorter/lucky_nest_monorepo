@@ -545,7 +545,7 @@ export class ChatService {
         conversationId: groupId,
         operatorId,
         targetIds: newMembers,
-        syncType: SocketSyncTypes.FULL_SYNC,
+        syncType: SocketSyncTypes.FULL_SYNC, // 告诉前端大群变动，去拉接口
       });
 
       this._triggerAvatarUpdate(groupId);
