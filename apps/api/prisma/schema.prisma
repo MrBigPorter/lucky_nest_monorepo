@@ -1102,6 +1102,7 @@ model Conversation {
   joinNeedApproval Boolean   @default(false) @map("join_need_approval")
   /// 群公告内容 (支持简单的 String 或 JSON 结构)
   announcement     String?   @map("announcement") @db.VarChar(2000)
+  announcementAt DateTime?
 
   // 快照 (用于列表页快速渲染)
   lastMsgContent String?

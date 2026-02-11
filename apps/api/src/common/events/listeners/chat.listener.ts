@@ -8,50 +8,79 @@ import {
   GroupMemberJoinedEvent,
   GroupMemberKickedEvent,
   GroupMemberLeftEvent,
-  GroupMemberMutedEvent,
   GroupMemberRoleUpdatedEvent,
   GroupOwnerTransferredEvent,
 } from '@api/common/chat/events/chat-group.events';
 import { SocketEvents } from '@lucky/shared';
+import { PrismaService } from '@api/common/prisma/prisma.service';
 
 @Injectable()
 export class ChatListener {
   private readonly logger = new Logger(ChatListener.name);
 
-  constructor(private readonly eventsGateway: EventsGateway) {}
+  constructor(
+    private readonly eventsGateway: EventsGateway,
+    private readonly prismaService: PrismaService,
+  ) {}
 
   // ===========================================================================
   // 1. 踢人 (Member Kicked)
   // ===========================================================================
   @OnEvent(CHAT_GROUP_EVENTS.MEMBER_KICKED)
   handleMemberKicked(payload: GroupMemberKickedEvent) {
+    const { conversationId, kickedUserId, operatorId, timestamp } = payload;
+    this.eventsGateway.dispatch(conversationId, SocketEvents.MEMBER_KICKED, {
+      conversationId: conversationId,
+      operatorId: operatorId, // 谁踢的
+      targetId: kickedUserId, //  统一叫 targetId
+      timestamp: timestamp,
+    });
     this.eventsGateway.dispatch(
-      payload.conversationId, // 目标房间
+      `user_${kickedUserId}`,
       SocketEvents.MEMBER_KICKED,
       {
-        conversationId: payload.conversationId,
-        kickedUserId: payload.kickedUserId,
-        operatorId: payload.operatorId,
-        timestamp: payload.timestamp,
+        conversationId,
+        targetId: kickedUserId,
       },
+      conversationId, // 排除房间内发送
     );
   }
 
   // ===========================================================================
   // 2. 禁言 (Member Muted)
   // ===========================================================================
-  @OnEvent(CHAT_GROUP_EVENTS.MEMBER_MUTED)
-  handleMemberMuted(payload: GroupMemberMutedEvent) {
+
+  @OnEvent(CHAT_GROUP_EVENTS.INFO_UPDATED)
+  async handleInfoUpdated(payload: GroupInfoUpdatedEvent) {
+    const { conversationId, operatorId, updates } = payload;
+
+    // 1. 发给“正在看群的人” (房间广播)
     this.eventsGateway.dispatch(
-      payload.conversationId,
-      SocketEvents.MEMBER_MUTED,
-      {
-        conversationId: payload.conversationId,
-        targetUserId: payload.targetUserId,
-        mutedUntil: payload.mutedUntil,
-        operatorId: payload.operatorId,
-      },
+      conversationId,
+      SocketEvents.GROUP_INFO_UPDATED,
+      { conversationId, operatorId, updates },
     );
+
+    // 2. 查出群成员
+    const members = await this.prismaService.chatMember.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+
+    // 3. 发给“列表页的人”，并使用 .except() 排除掉已经在房间里的人
+    //  这是解决“重负实行”和“列表不刷新”的关键
+    for (const member of members) {
+      this.eventsGateway.dispatch(
+        `user_${member.userId}`,
+        SocketEvents.GROUP_INFO_UPDATED,
+        {
+          conversationId,
+          operatorId,
+          updates,
+        },
+        conversationId,
+      );
+    }
   }
 
   // ===========================================================================
@@ -64,9 +93,9 @@ export class ChatListener {
       SocketEvents.MEMBER_ROLE_UPDATED,
       {
         conversationId: payload.conversationId,
-        targetUserId: payload.targetUserId,
-        newRole: payload.newRole,
         operatorId: payload.operatorId,
+        targetId: payload.targetUserId, //  统一叫 targetId
+        newRole: payload.newRole,
       },
     );
   }
@@ -81,24 +110,8 @@ export class ChatListener {
       SocketEvents.OWNER_TRANSFERRED,
       {
         conversationId: payload.conversationId,
-        newOwnerId: payload.newOwnerId,
         operatorId: payload.operatorId,
-      },
-    );
-  }
-
-  // ===========================================================================
-  // 5. 群信息更新 (Info Updated)
-  // ===========================================================================
-  @OnEvent(CHAT_GROUP_EVENTS.INFO_UPDATED)
-  handleInfoUpdated(payload: GroupInfoUpdatedEvent) {
-    this.eventsGateway.dispatch(
-      payload.conversationId,
-      SocketEvents.GROUP_INFO_UPDATED,
-      {
-        conversationId: payload.conversationId,
-        updates: payload.updates,
-        operatorId: payload.operatorId,
+        targetId: payload.newOwnerId, //  统一叫 targetId (新群主)
       },
     );
   }
@@ -107,19 +120,25 @@ export class ChatListener {
   // 6. 群解散 (Group Disbanded)
   // ===========================================================================
   @OnEvent(CHAT_GROUP_EVENTS.GROUP_DISBANDED)
-  handleGroupDisbanded(payload: GroupDisbandedEvent) {
-    this.eventsGateway.dispatch(
-      payload.conversationId,
-      SocketEvents.GROUP_DISBANDED,
-      {
-        conversationId: payload.conversationId,
-        operatorId: payload.operatorId,
-        timestamp: payload.timestamp,
-      },
-    );
+  async handleGroupDisbanded(payload: GroupDisbandedEvent) {
+    const { conversationId } = payload;
+    const members = await this.prismaService.chatMember.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
 
-    //  注意：EventsGateway 封装后可能没有直接暴露 disconnectSockets 方法
-    // 如果需要强制断开，可能需要扩展 EventsGateway 或者接受这一步由前端处理
+    // 2.  给每个人发通知
+    for (const m of members) {
+      this.eventsGateway.dispatch(
+        `user_${m.userId}`,
+        SocketEvents.GROUP_DISBANDED,
+        {
+          conversationId,
+        },
+        conversationId,
+      );
+    }
+    // 强制断开连接
     this.eventsGateway.server
       .in(payload.conversationId)
       .disconnectSockets(true);
@@ -135,7 +154,8 @@ export class ChatListener {
       SocketEvents.MEMBER_LEFT,
       {
         conversationId: payload.conversationId,
-        userId: payload.userId,
+        operatorId: payload.userId, // 主动退群，操作人是自己
+        targetId: payload.userId, //  目标也是自己
         timestamp: payload.timestamp,
       },
     );
@@ -146,13 +166,25 @@ export class ChatListener {
   // ===========================================================================
   @OnEvent(CHAT_GROUP_EVENTS.MEMBER_JOINED)
   handleMemberJoined(payload: GroupMemberJoinedEvent) {
+    const { conversationId, member } = payload;
     this.eventsGateway.dispatch(
       payload.conversationId,
       SocketEvents.MEMBER_JOINED,
       {
         conversationId: payload.conversationId,
-        member: payload.member,
-        inviterId: payload.inviterId,
+        operatorId: payload.inviterId, // 邀请人
+        targetId: payload.member.userId, // 新加入的人
+        member: payload.member, // 依然需要完整的 member 对象用于 UI 展示
+      },
+    );
+
+    // 因为他之前不在群里，没加入 Socket 房间，必须点对点告诉他：你入伙了
+    this.eventsGateway.dispatch(
+      `user_${member.userId}`,
+      SocketEvents.MEMBER_JOINED,
+      {
+        conversationId,
+        member,
       },
     );
   }

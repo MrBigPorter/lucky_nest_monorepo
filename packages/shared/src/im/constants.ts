@@ -178,6 +178,17 @@ export const SocketEvents = {
   SEND_MESSAGE: "send_message",
 } as const;
 
+/**
+FULL_SYNC: 列表全部重新拉取
+INFO_SYNC: 只拉取群基本信息
+MEMBER_SYNC: 只拉取成员列表
+*/
+export const SocketSyncTypes = {
+  FULL_SYNC: "full_sync",
+  INFO_SYNC: "info_sync",
+  MEMBER_SYNC: "member_sync",
+} as const;
+
 export type SocketEventType = (typeof SocketEvents)[keyof typeof SocketEvents];
 
 // 状态: 0=待处理, 1=已同意, 2=已拒绝

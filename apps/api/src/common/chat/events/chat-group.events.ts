@@ -103,7 +103,7 @@ export class GroupMemberJoinedEvent {
     public readonly member: {
       userId: string;
       nickname: string;
-      avatar: string;
+      avatar?: string;
       role: string;
       joinedAt: number;
     },

@@ -12,7 +12,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
+import { JwtAuthGuard } from '@api/common/jwt/jwt.guard'; // 确保路径正确
 import { ChatGroupService } from '@api/common/chat/chat-group.service';
 import {
   KickMemberDto,
@@ -20,11 +20,15 @@ import {
   MuteMemberDto,
   MuteMemberResDto,
   TransferOwnerDto,
+  TransferOwnerResDto,
   UpdateGroupInfoDto,
   UpdateGroupResDto,
-  SetAdminDto, // [New]
+  SetAdminDto,
+  SetAdminResDto,
+  LeaveGroupResDto,
+  DisbandGroupResDto,
 } from '@api/common/chat/dto/group/group-manage.dto';
-import { CurrentUserId } from '@api/common/decorators/user.decorator';
+import { CurrentUserId } from '@api/common/decorators/user.decorator'; // 确保路径正确
 
 @ApiTags('Chat Group Management (v6.0)')
 @ApiBearerAuth()
@@ -65,34 +69,41 @@ export class ChatGroupController {
 
   @Post('transfer-owner')
   @ApiOperation({ summary: 'Transfer group ownership (Owner only)' })
+  @ApiResponse({ status: 200, type: TransferOwnerResDto })
   async transferOwner(
     @CurrentUserId() userId: string,
     @Body() dto: TransferOwnerDto,
-  ) {
+  ): Promise<TransferOwnerResDto> {
     return this.groupService.transferOwner(userId, dto);
   }
 
   @Post('admin')
   @ApiOperation({ summary: 'Promote/Demote an admin (Owner only)' })
-  async setAdmin(@CurrentUserId() userId: string, @Body() dto: SetAdminDto) {
+  @ApiResponse({ status: 200, type: SetAdminResDto })
+  async setAdmin(
+    @CurrentUserId() userId: string,
+    @Body() dto: SetAdminDto,
+  ): Promise<SetAdminResDto> {
     return this.groupService.setAdmin(userId, dto);
   }
 
   @Delete('leave/:conversationId')
   @ApiOperation({ summary: 'Leave a group (Member/Admin only)' })
+  @ApiResponse({ status: 200, type: LeaveGroupResDto })
   async leaveGroup(
     @CurrentUserId() userId: string,
     @Param('conversationId') conversationId: string,
-  ) {
+  ): Promise<LeaveGroupResDto> {
     return this.groupService.leaveGroup(userId, conversationId);
   }
 
   @Delete('disband/:conversationId')
   @ApiOperation({ summary: 'Disband a group (Owner only)' })
+  @ApiResponse({ status: 200, type: DisbandGroupResDto })
   async disbandGroup(
     @CurrentUserId() userId: string,
     @Param('conversationId') conversationId: string,
-  ) {
+  ): Promise<DisbandGroupResDto> {
     return this.groupService.disbandGroup(userId, conversationId);
   }
 }
