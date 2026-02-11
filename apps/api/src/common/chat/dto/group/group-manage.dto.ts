@@ -7,6 +7,11 @@ import {
   IsBoolean,
   Min,
 } from 'class-validator';
+import { ChatMemberRole } from '@lucky/shared';
+
+// ==========================================
+//  REQUEST DTOs (Requests from Client)
+// ==========================================
 
 // 1. Kick Member Request
 export class KickMemberDto {
@@ -64,6 +69,10 @@ export class UpdateGroupInfoDto {
   @IsOptional()
   name?: string;
 
+  @IsString()
+  @IsOptional()
+  avatar?: string;
+
   @ApiProperty({ description: 'New group announcement', required: false })
   @IsString()
   @IsOptional()
@@ -102,6 +111,10 @@ export class SetAdminDto {
   isAdmin!: boolean;
 }
 
+// ==========================================
+//  RESPONSE DTOs (Results from Server)
+// ==========================================
+
 // 1. Mute Member Response
 export class MuteMemberResDto {
   @ApiProperty({
@@ -122,7 +135,7 @@ export class KickMemberResDto {
   success!: boolean;
 }
 
-// 3. Update Group Info Response (Snapshot)
+// 3. Update Group Info Response
 export class UpdateGroupResDto {
   @ApiProperty({ description: 'Conversation ID' })
   id!: string;
@@ -135,4 +148,34 @@ export class UpdateGroupResDto {
 
   @ApiProperty({ description: 'Current "Mute All" status' })
   isMuteAll!: boolean;
+}
+
+// 4. Set Admin Response [NEW]
+export class SetAdminResDto {
+  @ApiProperty({ description: 'Indicates if the operation was successful' })
+  success!: boolean;
+
+  @ApiProperty({
+    description: 'The new role of the target user',
+    enum: ChatMemberRole,
+  })
+  role!: ChatMemberRole;
+}
+
+// 5. Transfer Owner Response [NEW]
+export class TransferOwnerResDto {
+  @ApiProperty({ description: 'Indicates if the operation was successful' })
+  success!: boolean;
+}
+
+// 6. Leave Group Response [NEW]
+export class LeaveGroupResDto {
+  @ApiProperty({ description: 'Indicates if the operation was successful' })
+  success!: boolean;
+}
+
+// 7. Disband Group Response [NEW]
+export class DisbandGroupResDto {
+  @ApiProperty({ description: 'Indicates if the operation was successful' })
+  success!: boolean;
 }

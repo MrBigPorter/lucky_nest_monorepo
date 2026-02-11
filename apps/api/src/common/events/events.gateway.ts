@@ -84,11 +84,22 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    *  修改点 1: 增加统一分发出口
    * 所有业务指令的最终出口，前端只监听 SocketEvents.DISPATCH ('dispatch')
    */
-  dispatch(room: string, type: string, data: any) {
-    this.server.to(room).emit(SocketEvents.DISPATCH, {
-      type, // 对应前端的业务识别码，如 'chat_message'
-      data, // 实际数据载荷
-    });
+  dispatch(room: string, type: string, data: any, excludeRoom?: string) {
+    if (excludeRoom) {
+      this.server
+        .to(room)
+        .except(excludeRoom) // 排除特定房间（如已在房间内的人）
+        .emit(SocketEvents.DISPATCH, {
+          type, // 对应前端的业务识别码，如 'chat_message'
+          data, // 实际数据载荷z
+        });
+    } else {
+      this.server.to(room).emit(SocketEvents.DISPATCH, {
+        type, // 对应前端的业务识别码，如 'chat_message'
+        data, // 实际数据载荷
+      });
+    }
+
     this.logger.debug(` [Dispatch] To: ${room}, Type: ${type}`);
   }
 

@@ -88,6 +88,7 @@ export class SocketListener {
           ...recallPayload,
           isSelf: event.operatorId === userId, // 标记是不是自己撤回的
         },
+        event.conversationId,
       );
     });
   }

@@ -1,44 +1,43 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ConversationType } from '@prisma/client';
-import { DateToTimestamp } from '@api/common/dto/transforms';
 import { ChatMemberRole } from '@lucky/shared';
 
-// 1. 简单的 ID 返回 (用于创建接口)
+// 1. Simple ID Response (for creation)
 export class ConversationIdResponseDto {
-  @ApiProperty({ description: '会话ID' })
+  @ApiProperty({ description: 'Conversation ID' })
   conversationId!: string;
 }
 
-// 2. 完整的会话列表项 (用于列表页)
+// 2. Conversation List Item (for the list/inbox page)
 export class ConversationListResponseDto {
-  @ApiProperty({ description: '会话ID' })
+  @ApiProperty({ description: 'Conversation ID' })
   id!: string;
 
-  @ApiProperty({ enum: ConversationType, description: '会话类型' })
+  @ApiProperty({ enum: ConversationType, description: 'Type of conversation' })
   type!: ConversationType;
 
-  @ApiProperty({ description: '显示名称 (群名或对方昵称)' })
+  @ApiProperty({ description: 'Display name (Group name or partner nickname)' })
   name!: string;
 
-  @ApiProperty({ description: '显示头像', required: false })
+  @ApiProperty({ description: 'Display avatar URL', required: false })
   avatar?: string | null;
 
-  @ApiProperty({ description: '最后一条消息内容', required: false })
+  @ApiProperty({ description: 'Content of the last message', required: false })
   lastMsgContent?: string | null;
 
-  @ApiProperty({ description: '最后一条消息时间 (毫秒时间戳)' })
+  @ApiProperty({ description: 'Timestamp of the last message (milliseconds)' })
   lastMsgTime!: number;
 
-  @ApiProperty({ description: '是否置顶' })
+  @ApiProperty({ description: 'Pinned status' })
   isPinned!: boolean;
 
-  @ApiProperty({ description: '是否免打扰' })
+  @ApiProperty({ description: 'Mute/DND status' })
   isMuted!: boolean;
 
-  @ApiProperty({ description: '未读数 (P0 核心字段)' })
+  @ApiProperty({ description: 'Unread message count' })
   unreadCount!: number;
 
-  @ApiProperty({ description: '最后一条消息 SeqId (用于同步断点)' })
+  @ApiProperty({ description: 'Sequence ID of the last message' })
   lastMsgSeqId!: number;
 
   constructor(partial: Partial<ConversationListResponseDto>) {
@@ -46,7 +45,7 @@ export class ConversationListResponseDto {
   }
 }
 
-// 3. 成员简要信息 DTO (用于详情页成员列表)
+// 3. Member Information (Updated for v6.0)
 export class ConversationMemberDto {
   @ApiProperty()
   userId!: string;
@@ -59,39 +58,16 @@ export class ConversationMemberDto {
 
   @ApiProperty({ enum: ChatMemberRole })
   role!: ChatMemberRole;
+
+  //  [NEW] Individual mute status
+  @ApiProperty({
+    description: 'Timestamp when the mute expires (ms). null if not muted',
+    required: false,
+  })
+  mutedUntil?: number | null;
 }
 
-// 4. 消息发送者信息
-export class SenderInfoResponseDto {
-  @ApiProperty()
-  id!: string;
-
-  @ApiProperty()
-  nickname!: string;
-
-  @ApiProperty()
-  avatar!: string;
-}
-
-// 5. 消息详情
-export class ChatMessageResponseDto {
-  @ApiProperty()
-  id!: string;
-
-  @ApiProperty()
-  type!: number;
-
-  @ApiProperty()
-  content!: string;
-
-  @ApiProperty()
-  @DateToTimestamp()
-  createdAt!: number;
-
-  @ApiProperty({ type: SenderInfoResponseDto, required: false })
-  sender?: SenderInfoResponseDto;
-}
-
+// 4. Conversation Detail (Updated for v6.0)
 export class ConversationDetailResponseDto {
   @ApiProperty()
   id!: string;
@@ -111,21 +87,31 @@ export class ConversationDetailResponseDto {
   @ApiProperty()
   memberCount!: number;
 
-  // --- P0 自愈核心字段 START ---
-  @ApiProperty({ description: '会话最新的 SeqId' })
+  //  [NEW] Group Settings
+  @ApiProperty({ description: 'Group announcement', required: false })
+  announcement?: string;
+
+  @ApiProperty({ description: 'Global mute status for the group' })
+  isMuteAll!: boolean;
+
+  @ApiProperty({ description: 'Whether joining requires admin approval' })
+  joinNeedApproval!: boolean;
+
+  // --- Synchronization & Self-healing START ---
+  @ApiProperty({ description: 'Latest SeqId of the conversation' })
   lastMsgSeqId!: number;
 
-  @ApiProperty({ description: '我已读到的 SeqId' })
+  @ApiProperty({ description: 'Last read SeqId by the current user' })
   myLastReadSeqId!: number;
 
-  @ApiProperty({ description: '未读数 (用于前端状态自愈判断)' })
+  @ApiProperty({ description: 'Calculated unread count' })
   unreadCount!: number;
-  // --- P0 自愈核心字段 END ---
+  // --- Synchronization & Self-healing END ---
 
   @ApiProperty()
   isPinned!: boolean;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Personal mute/DND status for this user' })
   isMuted!: boolean;
 
   @ApiProperty({ type: [ConversationMemberDto] })

@@ -12,6 +12,7 @@ import {
   CONVERSATION_TYPE,
   ConversationStatus,
   MESSAGE_TYPE,
+  SocketSyncTypes,
   TimeHelper,
 } from '@lucky/shared';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
@@ -33,6 +34,10 @@ import {
   MessageCreatedEvent,
   MessageRecalledEvent,
 } from '@api/common/chat/events/chat.events';
+import {
+  CHAT_GROUP_EVENTS,
+  GroupMemberJoinedEvent,
+} from '@api/common/chat/events/chat-group.events';
 
 @Injectable()
 export class ChatService {
@@ -372,6 +377,10 @@ export class ChatService {
       type: conv.type,
       ownerId: conv.ownerId,
 
+      announcement: conv.announcement,
+      isMuteAll: conv.isMuteAll,
+      joinNeedApproval: conv.joinNeedApproval,
+
       lastMsgSeqId: conv.lastMsgSeqId, // 会话最新的一条 Seq
       myLastReadSeqId: myLastReadSeqId, // 我读到了哪一条
       unreadCount: unreadCount, // 算出来的未读数 (前端自愈的依据)
@@ -384,6 +393,7 @@ export class ChatService {
         nickname: m.user.nickname,
         avatar: m.user.avatar,
         role: m.role,
+        mutedUntil: m.mutedUntil ? new Date(m.mutedUntil).getTime() : null,
       })),
     };
   }
@@ -518,14 +528,26 @@ export class ChatService {
     const existingSet = new Set(existing.map((m) => m.userId));
     const newMembers = memberIds.filter((id) => !existingSet.has(id));
     if (newMembers.length > 0) {
-      await this.prisma.chatMember.createMany({
-        data: newMembers.map((uid) => ({
-          conversationId: groupId,
-          userId: uid,
-          role: ChatMemberRole.MEMBER,
-          lastReadSeqId: 0,
-        })),
+      // 1. 数据库操作
+      const createdMembers = await this.prisma.$transaction(async (tx) => {
+        await tx.chatMember.createMany({
+          data: newMembers.map((uid) => ({
+            conversationId: groupId,
+            userId: uid,
+            role: ChatMemberRole.MEMBER,
+          })),
+        });
       });
+
+      //  优化：不再循环发 Member 对象，只发一个“同步列表”指令
+      // 发送到 EventEmitter，让 Listener 去分发
+      this.eventEmitter.emit(CHAT_GROUP_EVENTS.MEMBER_JOINED, {
+        conversationId: groupId,
+        operatorId,
+        targetIds: newMembers,
+        syncType: SocketSyncTypes.FULL_SYNC,
+      });
+
       this._triggerAvatarUpdate(groupId);
     }
     return { count: newMembers.length };
