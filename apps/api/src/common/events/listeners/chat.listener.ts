@@ -8,9 +8,12 @@ import * as G from '@api/common/chat/events/chat-group.events';
 export class ChatListener {
   constructor(private readonly eventsGateway: EventsGateway) {}
 
+  // ========================================================
+  // 1. 群信息变更 (Info Updated)
+  // ========================================================
   @OnEvent(G.CHAT_GROUP_EVENTS.INFO_UPDATED)
   handleInfoUpdated(payload: G.GroupInfoUpdatedEvent) {
-    // 只发房间广播 (PATCH)，前端收到后直接改内存中的名字
+    // 房间广播：所有成员收到后，更新本地数据库的群名/头像
     this.eventsGateway.dispatch(
       payload.conversationId,
       SocketEvents.GROUP_INFO_UPDATED,
@@ -18,44 +21,132 @@ export class ChatListener {
     );
   }
 
+  // ========================================================
+  // 2. 成员退群 (Member Left)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.MEMBER_LEFT)
+  handleMemberLeft(payload: G.GroupMemberLeftEvent) {
+    // A. 房间广播：告诉剩下的人，某人走了
+    this.eventsGateway.dispatch(
+      payload.conversationId,
+      SocketEvents.MEMBER_LEFT,
+      payload,
+    );
+
+    // B. 定向通知：强制告诉退群者本人 (因为他可能已经不在 Socket 房间列表里了)
+    // 前端逻辑：收到是自己 -> deleteConversation
+    this.eventsGateway.dispatch(
+      `user_${payload.targetId}`,
+      SocketEvents.MEMBER_LEFT,
+      {
+        ...payload,
+        isSelf: true, // 标记位
+      },
+    );
+  }
+
+  // ========================================================
+  // 3. 成员被踢 (Member Kicked)
+  // ========================================================
   @OnEvent(G.CHAT_GROUP_EVENTS.MEMBER_KICKED)
   handleMemberKicked(payload: G.GroupMemberKickedEvent) {
-    // 1. 房间广播：告诉在场的人谁走了 (PATCH)
+    // A. 房间广播：告诉剩下的人，某人被踢了
     this.eventsGateway.dispatch(
       payload.conversationId,
       SocketEvents.MEMBER_KICKED,
       payload,
     );
-    // 2. 定向通知：告诉被踢的人删掉会话 (REMOVE)
+
+    // B. 定向通知：强制告诉被踢者本人
     this.eventsGateway.dispatch(
       `user_${payload.targetId}`,
       SocketEvents.MEMBER_KICKED,
-      payload,
+      {
+        ...payload,
+        isSelf: true,
+      },
       payload.conversationId,
     );
   }
 
+  // ========================================================
+  // 4.  [重点修改] 成员进群 (Member Joined)
+  // ========================================================
   @OnEvent(G.CHAT_GROUP_EVENTS.MEMBER_JOINED)
   handleMemberJoined(payload: G.GroupMemberJoinedEvent) {
-    // 1. 房间广播 (PATCH)
+    // A. 房间广播 (给老成员看)
+    // -------------------------------------------------
+    // 老成员收到后：
+    // 1. 如果 syncType == PATCH，直接把 payload.members 加进列表
+    // 2. 如果 syncType == MEMBER_SYNC，去拉 API
     this.eventsGateway.dispatch(
       payload.conversationId,
       SocketEvents.MEMBER_JOINED,
       payload,
     );
-    // 2. 定向通知：如果是新人，发 FULL_SYNC 让他拉一次列表
-    if (payload.member) {
-      this.eventsGateway.dispatch(
-        `user_${payload.member.userId}`,
-        SocketEvents.MEMBER_JOINED,
-        payload,
-      );
+
+    // B. 定向通知 (给新成员看)
+    // -------------------------------------------------
+    // 新人此时还不在 Socket 的 conversationId 房间里，必须发给 user_ID 频道
+    // 且事件名由 MEMBER_JOINED 改为 CONVERSATION_ADDED
+    if (payload.targetIds && payload.targetIds.length > 0) {
+      payload.targetIds.forEach((newUserId) => {
+        this.eventsGateway.dispatch(
+          `user_${newUserId}`,
+          SocketEvents.CONVERSATION_ADDED, //  告诉新人：你多了一个会话
+          {
+            conversationId: payload.conversationId,
+            operatorId: payload.operatorId,
+            timestamp: Date.now(),
+            // 可以带上简单的群信息，防止前端这就去拉接口
+            // (或者前端收到 ADDED 事件后统一去拉详情)
+          },
+        );
+      });
     }
   }
 
+  // ========================================================
+  // 5. 成员禁言 (Member Muted)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.MEMBER_MUTED)
+  handleMemberMuted(payload: G.GroupMemberMutedEvent) {
+    this.eventsGateway.dispatch(
+      payload.conversationId,
+      SocketEvents.MEMBER_MUTED,
+      payload,
+    );
+  }
+
+  // ========================================================
+  // 6. 成员角色变更 (Role Updated)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.MEMBER_ROLE_UPDATED)
+  handleMemberRoleUpdated(payload: G.GroupMemberRoleUpdatedEvent) {
+    this.eventsGateway.dispatch(
+      payload.conversationId,
+      SocketEvents.MEMBER_ROLE_UPDATED,
+      payload,
+    );
+  }
+
+  // ========================================================
+  // 7. 群主转让 (Owner Transferred)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.OWNER_TRANSFERRED)
+  handleOwnerTransferred(payload: G.GroupOwnerTransferredEvent) {
+    this.eventsGateway.dispatch(
+      payload.conversationId,
+      SocketEvents.OWNER_TRANSFERRED,
+      payload,
+    );
+  }
+
+  // ========================================================
+  // 8. 群解散 (Group Disbanded)
+  // ========================================================
   @OnEvent(G.CHAT_GROUP_EVENTS.GROUP_DISBANDED)
   handleGroupDisbanded(payload: G.GroupDisbandedEvent) {
-    // 房间广播：所有人 REMOVE
     this.eventsGateway.dispatch(
       payload.conversationId,
       SocketEvents.GROUP_DISBANDED,

@@ -8,6 +8,7 @@ import {
   Min,
 } from 'class-validator';
 import { ChatMemberRole } from '@lucky/shared';
+import { ToBool } from '@api/common/dto/transforms';
 
 // ==========================================
 //  REQUEST DTOs (Requests from Client)
@@ -82,11 +83,13 @@ export class UpdateGroupInfoDto {
     description: 'Enable/Disable mute all for the group',
     required: false,
   })
+  @ToBool()
   @IsBoolean()
   @IsOptional()
   isMuteAll?: boolean;
 
   @ApiProperty({ description: 'Require approval to join', required: false })
+  @ToBool()
   @IsBoolean()
   @IsOptional()
   joinNeedApproval?: boolean;
@@ -107,6 +110,7 @@ export class SetAdminDto {
   @ApiProperty({
     description: 'true = Promote to Admin, false = Demote to Member',
   })
+  @ToBool()
   @IsBoolean()
   isAdmin!: boolean;
 }
