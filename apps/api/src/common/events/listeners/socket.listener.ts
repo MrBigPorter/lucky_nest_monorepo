@@ -12,7 +12,8 @@ import { EventsGateway } from '@api/common/events/events.gateway';
 @Injectable()
 export class SocketListener {
   private readonly logger = new Logger(SocketListener.name);
-
+  //  定义熔断阈值：500人以上的大群，不再给列表页发推送
+  private readonly LARGE_GROUP_THRESHOLD = 500;
   constructor(private readonly eventsGateway: EventsGateway) {}
 
   // ===========================================================================
@@ -38,7 +39,7 @@ export class SocketListener {
       isSelf: false,
     };
 
-    //  A. 房间广播 (O(1))
+    //  A. 房间广播 (O(1))，保证聊天窗口内实时更新
     this.eventsGateway.dispatch(
       event.conversationId,
       SocketEvents.CHAT_MESSAGE,
@@ -46,8 +47,12 @@ export class SocketListener {
     );
 
     //  B. 列表预览：只针对小群或在线个人进行分发
-    // 设定阈值（如100人），超过此人数的群不再执行 forEach 个人分发，靠“前台自愈”同步
-    if (event.memberIds.length < 100) {
+    // 设定阈值（如500人），超过此人数的群不再执行 forEach 个人分发，靠“前台自愈”同步
+    if (
+      event.memberIds &&
+      event.memberIds.length > 0 &&
+      event.memberIds.length <= this.LARGE_GROUP_THRESHOLD
+    ) {
       event.memberIds.forEach((userId) => {
         if (userId !== event.senderId) {
           this.eventsGateway.dispatch(
@@ -80,19 +85,26 @@ export class SocketListener {
       { ...recallPayload, isSelf: false },
     );
 
-    // B. 广播给成员列表 (更新最后一条消息预览)
-    event.memberIds.forEach((userId) => {
-      // 这里的 dispatch 对应前端列表页的更新
-      this.eventsGateway.dispatch(
-        `user_${userId}`,
-        SocketEvents.MESSAGE_RECALLED,
-        {
-          ...recallPayload,
-          isSelf: event.operatorId === userId, // 标记是不是自己撤回的
-        },
-        event.conversationId,
-      );
-    });
+    //  B. 广播给成员列表 -  必须加熔断！
+    // 之前漏掉了这里。如果是万人群撤回，这里不加限制会炸。
+    // 逻辑：大群撤回时，列表页的消息预览不需要立马变（等到刷新时再变）
+    if (
+      event.memberIds &&
+      event.memberIds.length > 0 &&
+      event.memberIds.length <= this.LARGE_GROUP_THRESHOLD
+    ) {
+      event.memberIds.forEach((userId) => {
+        this.eventsGateway.dispatch(
+          `user_${userId}`,
+          SocketEvents.MESSAGE_RECALLED,
+          {
+            ...recallPayload,
+            isSelf: event.operatorId === userId,
+          },
+          event.conversationId,
+        );
+      });
+    }
   }
 
   // ===========================================================================

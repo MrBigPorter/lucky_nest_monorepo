@@ -24,6 +24,10 @@ import {
   GroupMemberLeftEvent,
 } from '@api/common/chat/events/chat-group.events';
 import { ChatMemberRole } from '@lucky/shared';
+import {
+  CHAT_EVENTS,
+  MessageCreatedEvent,
+} from '@api/common/chat/events/chat.events';
 
 @Injectable()
 export class ChatGroupService {
@@ -346,12 +350,30 @@ export class ChatGroupService {
       data: dataToUpdate,
     });
 
+    // 3. 关键修正：生成系统消息 (让列表页感知)
+    // 只要改名，就发一条 type 99 的系统消息
+    if (dto.name) {
+      await this._createSystemMessage(
+        this.prisma,
+        dto.conversationId,
+        `Group name updated to "${dto.name}"`,
+        {
+          action: 'UPDATE_INFO',
+          updates: { name: dto.name },
+        },
+      );
+    }
+
     // 系统消息 (仅针对公告变更，全员禁言可以不发系统消息，或者单独发)
     if (dto.announcement) {
       await this._createSystemMessage(
         this.prisma,
         dto.conversationId,
         `Announcement updated: ${dto.announcement}`,
+        {
+          action: 'UPDATE_INFO',
+          updates: { name: dto.name },
+        },
       );
     }
 
@@ -436,11 +458,20 @@ export class ChatGroupService {
   //  Helper: Create System Message
   // =================================================================
   private async _createSystemMessage(
-    tx: any,
+    tx: any, // Prisma Transaction Client
     conversationId: string,
     content: string,
+    meta: Record<string, any> = {}, // 新增 meta 参数
   ) {
-    // 1. 更新会话的最新消息指针
+    // 1. 定义熔断阈值 (比如 500 人)
+    const LARGE_GROUP_LIMIT = 500;
+
+    // 2. 先只查一下人数 (Count 是极快的 O(1))
+    const memberCount = await tx.chatMember.count({
+      where: { conversationId },
+    });
+
+    // 3. 更新会话最新消息指针
     const conv = await tx.conversation.update({
       where: { id: conversationId },
       data: {
@@ -452,15 +483,51 @@ export class ChatGroupService {
       select: { lastMsgSeqId: true },
     });
 
-    // 2. 插入消息记录
-    return await tx.chatMessage.create({
+    // 4. 创建消息记录 (DB 必须有，保证历史记录完整)
+    const message = await tx.chatMessage.create({
       data: {
         conversationId,
-        senderId: null, // 系统消息 sender 为空
+        senderId: null,
         type: 99,
         content,
         seqId: conv.lastMsgSeqId,
+        meta: meta, //  存入数据库 JSON 字段
       },
     });
+
+    // 5. 关键修正：大群直接传空数组！
+    let memberIds: string[] = [];
+
+    if (memberCount <= LARGE_GROUP_LIMIT) {
+      // 只有小群，才去查所有人的 ID，进行列表页推送
+      const members = await tx.chatMember.findMany({
+        where: { conversationId },
+        select: { userId: true },
+      });
+      memberIds = members.map((m: { userId: any }) => m.userId);
+    } else {
+      // 大群：不查 ID，不发个人推送。
+      // 效果：列表页不会跳动，保护服务器。
+    }
+
+    // 6. 触发事件
+    this.eventEmitter.emit(
+      CHAT_EVENTS.MESSAGE_CREATED,
+      new MessageCreatedEvent(
+        message.id,
+        conversationId,
+        content,
+        99,
+        '',
+        'System',
+        '',
+        message.createdAt.getTime(),
+        memberIds, // 如果是大群，这里是空的，SocketListener 就不会跑循环
+        message.seqId,
+        meta,
+      ),
+    );
+
+    return message;
   }
 }
