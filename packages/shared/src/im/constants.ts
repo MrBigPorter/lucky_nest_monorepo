@@ -143,6 +143,7 @@ export const SocketEvents = {
   CONVERSATION_READ: "conversation_read",
   MESSAGE_RECALLED: "message_recalled",
   CONVERSATION_UPDATED: "conversation_updated", // 头像/群名变更
+  CONVERSATION_ADDED: "conversation_added", // 会话新增（如被拉入新群）
   MEMBER_KICKED: "member_kicked", // 成员被踢出群聊
   MEMBER_MUTED: "member_muted", // 成员被禁言/解禁
   OWNER_TRANSFERRED: "owner_transferred", // 群主转让
@@ -183,13 +184,21 @@ FULL_SYNC: 列表全部重新拉取
 INFO_SYNC: 只拉取群基本信息
 MEMBER_SYNC: 只拉取成员列表
 */
+// @lucky/shared/constants.ts
+
 export const SocketSyncTypes = {
-  FULL_SYNC: "full_sync",
-  INFO_SYNC: "info_sync",
-  MEMBER_SYNC: "member_sync",
+  // --- 拉取类 ---
+  FULL_SYNC: "full_sync", // 全量拉取 (详情+成员)
+  MEMBER_SYNC: "member_sync", // 仅拉取成员列表
+  INFO_SYNC: "info_sync", // 仅拉取群基本信息
+
+  // --- 推送类 ---
+  PATCH: "patch", // 增量更新 (直接用 Payload 数据)
+  REMOVE: "remove", // 移除 (删除会话/成员)
 } as const;
 
-export type SocketEventType = (typeof SocketEvents)[keyof typeof SocketEvents];
+export type SocketSyncTypes =
+  (typeof SocketSyncTypes)[keyof typeof SocketSyncTypes];
 
 // 状态: 0=待处理, 1=已同意, 2=已拒绝
 export const FRIEND_REQUEST_STATUS = {

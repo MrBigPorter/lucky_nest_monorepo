@@ -1,6 +1,8 @@
 // ==========================================
 //  事件常量定义 (Event Constants)
 // ==========================================
+import { SocketSyncTypes } from '@lucky/shared';
+
 export const CHAT_GROUP_EVENTS = {
   MEMBER_KICKED: 'chat.group.member_kicked',
   MEMBER_MUTED: 'chat.group.member_muted',
@@ -22,7 +24,7 @@ export class GroupMemberKickedEvent {
     public readonly operatorId: string,
     public readonly targetId: string, // 统一字段名
     public readonly timestamp: number,
-    public readonly syncType: string = 'REMOVE', // 默认指令：删除本地会话
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.REMOVE,
   ) {}
 }
 
@@ -32,7 +34,7 @@ export class GroupMemberMutedEvent {
     public readonly operatorId: string,
     public readonly targetId: string, // 统一字段名
     public readonly mutedUntil: number | null,
-    public readonly syncType: string = 'PATCH', // 默认指令：局部修补 UI
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
   ) {}
 }
 
@@ -41,7 +43,7 @@ export class GroupOwnerTransferredEvent {
     public readonly conversationId: string,
     public readonly operatorId: string,
     public readonly targetId: string, // 统一字段名 (新群主)
-    public readonly syncType: string = 'PATCH',
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
   ) {}
 }
 
@@ -55,7 +57,7 @@ export class GroupInfoUpdatedEvent {
       announcement?: string;
       isMuteAll?: boolean;
     },
-    public readonly syncType: string = 'PATCH', // 默认指令：局部修补名/头像
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
   ) {}
 }
 
@@ -65,7 +67,7 @@ export class GroupMemberRoleUpdatedEvent {
     public readonly operatorId: string,
     public readonly targetId: string, // 统一字段名
     public readonly newRole: 'ADMIN' | 'MEMBER',
-    public readonly syncType: string = 'PATCH',
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
   ) {}
 }
 
@@ -74,7 +76,7 @@ export class GroupDisbandedEvent {
     public readonly conversationId: string,
     public readonly operatorId: string,
     public readonly timestamp: number,
-    public readonly syncType: string = 'REMOVE', // 默认指令：所有人移除会话
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.REMOVE,
   ) {}
 }
 
@@ -83,7 +85,7 @@ export class GroupMemberLeftEvent {
     public readonly conversationId: string,
     public readonly targetId: string, // 统一字段名 (退群者)
     public readonly timestamp: number,
-    public readonly syncType: string = 'PATCH',
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
   ) {}
 }
 
@@ -91,14 +93,20 @@ export class GroupMemberJoinedEvent {
   constructor(
     public readonly conversationId: string,
     public readonly operatorId: string,
-    public readonly syncType: string, // 必填：决定是 PATCH 还是 FULL_SYNC
-    public readonly member?: {
-      // PATCH 模式带完整对象
+
+    // 1. 必填：决定前端行为
+    public readonly syncType: SocketSyncTypes, // 默认指令：局部修补成员列表
+
+    // 2. 变更点：改为数组，支持一次拉多人时把头像昵称都带过去
+    public readonly members: Array<{
       userId: string;
       nickname: string;
       avatar?: string;
       role: string;
-    },
-    public readonly targetIds?: string[], // 批量入群时只发 ID 列表
+    }> = [],
+
+    // 3. 必填：无论 members 是否为空，这里都必须包含所有新人的 ID
+    // Listener 用它来遍历发送 "CONVERSATION_ADDED"
+    public readonly targetIds: string[] = [],
   ) {}
 }
