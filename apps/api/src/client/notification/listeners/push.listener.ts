@@ -16,32 +16,45 @@ export class PushListener {
   //  异步执行：不阻塞主线程发消息
   @OnEvent(CHAT_EVENTS.MESSAGE_CREATED, { async: true })
   async handleFcmPush(event: MessageCreatedEvent) {
+    // 1. 熔断检查：如果 memberIds 为空 (说明是大群，或者单聊)，直接跳过
+    // 这是配合 ChatGroupService 大群熔断机制的关键
+    if (!event.memberIds || event.memberIds.length === 0) {
+      // 可以在这里打个 debug 日志，确认大群熔断生效
+      this.logger.debug(
+        `[FCM] Skip push for empty member list (Large Group or Private): ${event.conversationId}`,
+      );
+      return;
+    }
+
     this.logger.debug(`[FCM] Processing push for message: ${event.messageId}`);
+
     try {
       // 1. 获取预览文本
       const previewText = this._getPreviewText(event.type, event.content);
 
-      // 2. 循环推送给其他成员
-      for (const targetId of event.memberIds) {
-        if (targetId === event.senderId) continue; // 不推给自己
+      // 3.  性能优化：将“串行等待”改为“并发执行”
+      // 使用 Promise.allSettled 防止某一个人发送失败导致整个流程报错中断
+      const pushPromises = event.memberIds.map(async (targetId) => {
+        if (targetId === event.senderId) return; // 不推给自己
 
-        // TODO: 这里可以加缓存判断用户是否在线，若在线则不推 (高级优化)
+        // TODO: 这里可以加 Redis 在线状态判断 (Online ? Skip : Push)
 
-        await this.notificationService.sendPrivateMessage(
+        return this.notificationService.sendPrivateMessage(
           targetId,
-          event.senderName, // 1. 这是系统通知栏显示的标题
-          previewText, // 2. 这是系统通知栏显示的内容
+          event.senderName,
+          previewText,
           {
             type: 'chat',
             id: event.conversationId,
-
             title: event.senderName,
             body: previewText,
-
             click_action: 'FLUTTER_NOTIFICATION_CLICK',
           },
         );
-      }
+      });
+
+      // 并发等待所有请求完成 (几百人也就是几百毫秒的事)
+      await Promise.allSettled(pushPromises);
     } catch (e) {
       this.logger.error(`[FCM Push Error] ${e}`);
     }
@@ -62,6 +75,8 @@ export class PushListener {
         return '[File]';
       case MESSAGE_TYPE.LOCATION:
         return '[Location]';
+      case 99: //  适配系统消息
+        return `[System] ${content}`;
       default:
         return '[Message]';
     }
