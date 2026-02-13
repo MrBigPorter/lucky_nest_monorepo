@@ -17,12 +17,12 @@ import {
 } from '@lucky/shared';
 import { SearchUserDto } from '@api/common/chat/dto/search-user.dto';
 import { GetMessagesDto } from '@api/common/chat/dto/get-messages.dto';
-import { EventsGateway } from '@api/common/events/events.gateway';
 import { CreateMessageDto } from '@api/common/chat/dto/create-message.dto';
 import { MarkAsReadDto } from '@api/common/chat/dto/mark-as-read.dto';
 import { DeleteMessageDto } from '@api/common/chat/dto/delete-message.dto';
 import { CreateGroupDto } from '@api/common/chat/dto/group-chat.dto';
 import { AVATAR_QUEUE_NAME } from '@api/common/avatar/avatar.processor';
+import { v4 as uuidv4 } from 'uuid';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
@@ -38,6 +38,7 @@ import {
   CHAT_GROUP_EVENTS,
   GroupMemberJoinedEvent,
 } from '@api/common/chat/events/chat-group.events';
+import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
 
 @Injectable()
 export class ChatService {
@@ -162,6 +163,43 @@ export class ChatService {
     );
 
     return { ...messageDto, isSelf: true };
+  }
+
+  // =================================================================
+  //  CORE OPERATION: forwardMessage
+  // =================================================================
+  async forwardMessage(userId: string, dto: ForwardMessageDto) {
+    // find original message
+    const originalMsg = await this.prisma.chatMessage.findUnique({
+      where: { id: dto.originalMsgId },
+    });
+
+    if (!originalMsg) throw new NotFoundException('Original message not found');
+
+    const results = [];
+
+    // 3. 循环发送给目标会话
+    // 注意：这里复用 sendMessage 是为了保证 Socket 推送、未读数更新、最后一条消息更新等逻辑的一致性
+    for (const targetConvId of dto.targetConversationIds) {
+      try {
+        // createMessageDto 里 content/type/meta 都是可选的，所以我们构造一个新的 DTO，确保必填项满足 sendMessage 的要求
+        const newMessage = await this.sendMessage(userId, {
+          id: uuidv4(),
+          type: originalMsg.type,
+          conversationId: targetConvId,
+          content: originalMsg.content, // 图片/视频/文件直接复用 URL
+          // 关键：必须透传 meta (宽、高、时长、文件名等)
+          // 注意：sendMessage 内部会重新清洗 meta，所以这里直接传过去即可
+          meta: originalMsg.meta as Record<string, any>,
+        });
+        results.push({ conversationId: targetConvId, message: newMessage });
+      } catch (error: any) {
+        this.logger.error(
+          `Failed to forward message to conversation ${targetConvId}: ${error.message}`,
+        );
+      }
+    }
+    return results;
   }
 
   // =================================================================
