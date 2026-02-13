@@ -44,6 +44,7 @@ import { InviteToGroupDto } from '@api/common/chat/dto/invite-to-group.dto';
 import { LeaveGroupDto } from '@api/common/chat/dto/leave-group.dto';
 import { InviteToGroupResponseDto } from '@api/common/chat/dto/invite-to-group.response.dto';
 import { LeaveGroupResponseDto } from '@api/common/chat/dto/leave-group.response.dto';
+import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -127,6 +128,20 @@ export class ChatController {
   ) {
     const result = await this.chatService.deleteMessage(userId, dto);
     return plainToInstance(DeleteMessageResponseDto, result);
+  }
+
+  /**
+   * Forward a message to multiple conversations
+   * @param userId
+   * @param dto
+   */
+  @Post('message/forward')
+  @ApiResponse({ status: 201, description: 'Message forwarded successfully' })
+  async forwardMessage(
+    @CurrentUserId() userId: string,
+    @Body() dto: ForwardMessageDto,
+  ) {
+    return this.chatService.forwardMessage(userId, dto);
   }
 
   /**
