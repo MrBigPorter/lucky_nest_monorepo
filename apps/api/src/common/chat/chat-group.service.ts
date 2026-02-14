@@ -22,8 +22,16 @@ import {
   GroupMemberRoleUpdatedEvent,
   GroupDisbandedEvent,
   GroupMemberLeftEvent,
+  GroupApplyResultEvent,
+  GroupRequestHandledEvent,
+  GroupApplyNewEvent,
 } from '@api/common/chat/events/chat-group.events';
-import { ChatMemberRole } from '@lucky/shared';
+import {
+  ChatMemberRole,
+  CONVERSATION_TYPE,
+  ConversationStatus,
+  GroupJoinRequestStatus,
+} from '@lucky/shared';
 import {
   CHAT_EVENTS,
   MessageCreatedEvent,
@@ -455,35 +463,298 @@ export class ChatGroupService {
   }
 
   // =================================================================
-  //  Helper: Create System Message
+  //  Action 8: Apply to Join Group (申请加群)
   // =================================================================
+  async applyToGroup(userId: string, groupId: string, reason?: string) {
+    // 1. 检查群是否存在且未解散
+    const group = await this.prisma.conversation.findUnique({
+      where: { id: groupId, status: 1 },
+      select: { joinNeedApproval: true, name: true, type: true },
+    });
+
+    if (!group) throw new NotFoundException('Group not found or disbanded');
+    if (group.type !== 'GROUP') throw new BadRequestException('Not a group');
+
+    // 2. 检查用户是否已经是成员
+    const isMember = await this.prisma.chatMember.count({
+      where: { conversationId: groupId, userId },
+    });
+    if (isMember > 0) {
+      throw new BadRequestException('Already a member');
+    }
+
+    // 3. 逻辑分支：若群未开启审批，则直接加入
+    if (!group.joinNeedApproval) {
+      await this.prisma.chatMember.create({
+        data: { conversationId: groupId, userId, role: ChatMemberRole.MEMBER },
+      });
+      return {
+        status: 'ACCEPTED',
+        message: 'Joined directly',
+      };
+    }
+
+    // 4. 防重校验：是否已有 Pending 申请
+    const existingApplication = await this.prisma.groupJoinRequest.findFirst({
+      where: {
+        groupId,
+        applicantId: userId,
+        status: GroupJoinRequestStatus.PENDING,
+      },
+    });
+    if (existingApplication)
+      throw new BadRequestException('Application already pending');
+
+    // 5. 创建申请记录
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { nickname: true, avatar: true },
+    });
+    const request = await this.prisma.groupJoinRequest.create({
+      data: {
+        groupId,
+        applicantId: userId,
+        reason: reason || '',
+        status: GroupJoinRequestStatus.PENDING,
+      },
+    });
+
+    // 6.  异步通知管理员
+    this._notifyAdminsOfNewRequest(
+      groupId,
+      userId,
+      user?.nickname || 'Unknown',
+      user?.avatar || null,
+      reason || '',
+    );
+
+    return {
+      status: 'PENDING',
+      requestId: request.id,
+      message: 'Application submitted, pending approval',
+    };
+  }
+
+  // =================================================================
+  //  Action 9: Get Join Requests (管理员查看申请列表)
+  // =================================================================
+  async getJoinRequests(operatorId: string, groupId: string) {
+    await this._checkPermission(operatorId, groupId, [
+      ChatMemberRole.OWNER,
+      ChatMemberRole.ADMIN,
+    ]);
+
+    return this.prisma.groupJoinRequest.findMany({
+      where: { groupId },
+      include: {
+        applicant: { select: { id: true, nickname: true, avatar: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // =================================================================
+  //  Action 10: Handle Join Request (审批处理)
+  // =================================================================
+  async handleJoinRequest(
+    operatorId: string,
+    requestId: string,
+    action: 'accept' | 'reject',
+  ) {
+    const operator = await this.prisma.user.findUnique({
+      where: { id: operatorId },
+      select: { nickname: true },
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. 获取申请记录
+      const request = await tx.groupJoinRequest.findUnique({
+        where: { id: requestId },
+        include: { conversation: { select: { name: true, id: true } } },
+      });
+
+      if (!request) throw new NotFoundException('Request not found');
+      if (request.status !== GroupJoinRequestStatus.PENDING)
+        throw new BadRequestException('Request already processed');
+
+      // 2. 权限检查
+      await this._checkPermission(operatorId, request.groupId, [
+        ChatMemberRole.OWNER,
+        ChatMemberRole.ADMIN,
+      ]);
+
+      // 3. 更新状态
+      const newStatus =
+        action === 'accept'
+          ? GroupJoinRequestStatus.ACCEPTED
+          : GroupJoinRequestStatus.REJECTED;
+      await tx.groupJoinRequest.update({
+        where: { id: requestId },
+        data: { status: newStatus, handlerId: operatorId },
+      });
+
+      // 4. 如果通过，执行加人与系统消息
+      if (action === 'accept') {
+        await tx.chatMember.create({
+          data: {
+            conversationId: request.groupId,
+            userId: request.applicantId,
+            role: ChatMemberRole.MEMBER,
+          },
+        });
+
+        const applicant = await tx.user.findUnique({
+          where: { id: request.applicantId },
+          select: { nickname: true },
+        });
+        await this._createSystemMessage(
+          tx,
+          request.groupId,
+          `${applicant?.nickname} joined the group`,
+        );
+      }
+
+      this.eventEmitter.emit(
+        CHAT_GROUP_EVENTS.APPLY_RESULT,
+        new GroupApplyResultEvent(
+          request.groupId, // 1. conversationId
+          request.applicantId, // 2. applicantId
+          request.conversation.name ?? 'Group', // 3. groupName
+          action === 'accept', // 4. approved
+          Date.now(), // 5. timestamp
+        ),
+      );
+
+      // B. 通知其他管理员同步 UI
+      const admins = await tx.chatMember.findMany({
+        where: {
+          conversationId: request.groupId,
+          role: { in: [ChatMemberRole.OWNER, ChatMemberRole.ADMIN] },
+        },
+        select: { userId: true },
+      });
+      this.eventEmitter.emit(
+        CHAT_GROUP_EVENTS.REQUEST_HANDLED,
+        new GroupRequestHandledEvent(
+          requestId,
+          request.groupId,
+          newStatus,
+          operatorId,
+          operator?.nickname || 'Admin',
+          Date.now(),
+          admins.map((a) => a.userId),
+        ),
+      );
+
+      return { success: true, status: newStatus };
+    });
+  }
+
+  /**
+   * Action 11: Search Groups (搜索群聊)
+   * @param userId
+   * @param keyword
+   */
+  async searchGroups(userId: string, keyword: string) {
+    // 1. 查找符合条件的群组 (ID 精确匹配 或 Name 模糊匹配)
+    const groups = await this.prisma.conversation.findMany({
+      where: {
+        type: CONVERSATION_TYPE.GROUP,
+        status: ConversationStatus.NORMAL,
+        OR: [
+          { id: keyword }, // ID 精确匹配
+          { name: { contains: keyword, mode: 'insensitive' } }, // Name 模糊匹配
+        ],
+      },
+      take: 20, // 限制返回数量，防止过载
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        joinNeedApproval: true,
+        //  核心修改：请求 Prisma 实时统计 members 关联表的数量
+        _count: {
+          select: { members: true },
+        },
+      },
+    });
+    // 2. 检查当前用户是否在这些群里
+    const groupIds = groups.map((g) => g.id);
+    const memberships = await this.prisma.chatMember.findMany({
+      where: {
+        conversationId: { in: groupIds },
+        userId,
+      },
+      select: { conversationId: true },
+    });
+    const joinedSet = new Set(memberships.map((m) => m.conversationId));
+
+    // 3. 组装返回数据
+    return groups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      avatar: g.avatar,
+      memberCount: g._count.members, // 直接使用 Prisma 统计结果
+      joinNeedApproval: g.joinNeedApproval,
+      isMember: joinedSet.has(g.id),
+    }));
+  }
+
+  // =================================================================
+  //  Private Helpers
+  // =================================================================
+
+  private async _notifyAdminsOfNewRequest(
+    groupId: string,
+    applicantId: string,
+    nickname: string,
+    avatar: string | null,
+    reason: string,
+  ) {
+    const admins = await this.prisma.chatMember.findMany({
+      where: {
+        conversationId: groupId,
+        role: { in: [ChatMemberRole.OWNER, ChatMemberRole.ADMIN] },
+      },
+      select: { userId: true },
+    });
+
+    this.eventEmitter.emit(
+      CHAT_GROUP_EVENTS.APPLY_NEW,
+      new GroupApplyNewEvent(
+        groupId,
+        applicantId,
+        nickname,
+        avatar,
+        reason,
+        Date.now(),
+        admins.map((a) => a.userId),
+      ),
+    );
+  }
+
   private async _createSystemMessage(
-    tx: any, // Prisma Transaction Client
+    tx: any,
     conversationId: string,
     content: string,
-    meta: Record<string, any> = {}, // 新增 meta 参数
+    meta: Record<string, any> = {},
   ) {
-    // 1. 定义熔断阈值 (比如 500 人)
     const LARGE_GROUP_LIMIT = 500;
-
-    // 2. 先只查一下人数 (Count 是极快的 O(1))
     const memberCount = await tx.chatMember.count({
       where: { conversationId },
     });
 
-    // 3. 更新会话最新消息指针
     const conv = await tx.conversation.update({
       where: { id: conversationId },
       data: {
         lastMsgSeqId: { increment: 1 },
         lastMsgContent: content,
-        lastMsgType: 99, // 99 = SYSTEM
+        lastMsgType: 99,
         lastMsgTime: new Date(),
       },
       select: { lastMsgSeqId: true },
     });
 
-    // 4. 创建消息记录 (DB 必须有，保证历史记录完整)
     const message = await tx.chatMessage.create({
       data: {
         conversationId,
@@ -491,26 +762,19 @@ export class ChatGroupService {
         type: 99,
         content,
         seqId: conv.lastMsgSeqId,
-        meta: meta, //  存入数据库 JSON 字段
+        meta,
       },
     });
 
-    // 5. 关键修正：大群直接传空数组！
     let memberIds: string[] = [];
-
     if (memberCount <= LARGE_GROUP_LIMIT) {
-      // 只有小群，才去查所有人的 ID，进行列表页推送
       const members = await tx.chatMember.findMany({
         where: { conversationId },
         select: { userId: true },
       });
       memberIds = members.map((m: { userId: any }) => m.userId);
-    } else {
-      // 大群：不查 ID，不发个人推送。
-      // 效果：列表页不会跳动，保护服务器。
     }
 
-    // 6. 触发事件
     this.eventEmitter.emit(
       CHAT_EVENTS.MESSAGE_CREATED,
       new MessageCreatedEvent(
@@ -522,7 +786,7 @@ export class ChatGroupService {
         'System',
         '',
         message.createdAt.getTime(),
-        memberIds, // 如果是大群，这里是空的，SocketListener 就不会跑循环
+        memberIds,
         message.seqId,
         meta,
       ),

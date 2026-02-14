@@ -58,6 +58,8 @@ model User {
   friendOf              Friend[] @relation("FriendUsers")
   sentRequests     FriendRequest[] @relation("RequestSent")
   receivedRequests FriendRequest[] @relation("RequestReceived")
+  sentJoinRequests     GroupJoinRequest[] @relation("UserApplications")
+  handledJoinRequests  GroupJoinRequest[] @relation("UserHandledRequests")
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -1085,7 +1087,7 @@ model Conversation {
   // 类型: "GROUP"(拼团), "DIRECT"(私信), "SUPPORT"(客服)
   type         ConversationType
 
-  // 🌉 业务钩子: 存 TreasureGroup.groupId
+  //  业务钩子: 存 TreasureGroup.groupId
   businessId   String?  @unique
 
   // 2. 普通群/私聊专用
@@ -1115,6 +1117,7 @@ model Conversation {
   // 关联
   messages     ChatMessage[]
   members      ChatMember[]
+  joinRequests GroupJoinRequest[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -1125,6 +1128,34 @@ enum ConversationType {
   DIRECT // 私聊 (点对点)
   SUPPORT // 客服聊天 (用户与客服之间)
   BUSINESS // 自动业务群 (拼团、客服、订单) - 也就是之前的 GROUP
+}
+
+// 2. 新增：入群申请表
+model GroupJoinRequest {
+  id        String   @id @default(cuid()) @map("id") @db.VarChar(32)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关系方
+  groupId     String   @map("group_id") @db.VarChar(32)
+  conversation Conversation @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  applicantId String   @map("applicant_id") @db.VarChar(32)
+  applicant   User     @relation("UserApplications", fields: [applicantId], references: [id])
+
+  handlerId   String?  @map("handler_id") @db.VarChar(32) // 处理人 (群主/管理员)
+  handler     User?    @relation("UserHandledRequests", fields: [handlerId], references: [id])
+
+  // 核心数据
+  reason      String?  @db.VarChar(200) // 申请理由
+  status      Int      @default(0)      // 0: Pending, 1: Accepted, 2: Rejected
+
+  // 索引优化
+  @@index([groupId, status]) // 管理员查“待办”列表时极快
+  @@unique([groupId, applicantId, status]) // 【关键】防止重复提交 Pending 状态的申请 (PostgreSQL 支持部分索引更好，但在 Prisma 里这样写有点难，我们在业务层做 Check)
+  // 替代方案：不加 Unique，在 Service 层做逻辑判断
+
+  @@map("group_join_requests")
 }
 
 // 2. 消息表

@@ -1,7 +1,7 @@
 // ==========================================
 //  事件常量定义 (Event Constants)
 // ==========================================
-import { SocketSyncTypes } from '@lucky/shared';
+import { GroupJoinRequestStatus, SocketSyncTypes } from '@lucky/shared';
 
 export const CHAT_GROUP_EVENTS = {
   MEMBER_KICKED: 'chat.group.member_kicked',
@@ -12,7 +12,57 @@ export const CHAT_GROUP_EVENTS = {
   MEMBER_JOINED: 'chat.group.member_joined',
   MEMBER_LEFT: 'chat.group.member_left',
   GROUP_DISBANDED: 'chat.group.disbanded',
+
+  APPLY_NEW: 'chat.group.apply_new', // 有新申请 (发给管理员)
+  APPLY_RESULT: 'chat.group.apply_result', // 申请结果 (发给申请人)
+  REQUEST_HANDLED: 'chat.group.request_handled', // 申请已被处理 (发给管理员同步 UI)
 };
+
+/**
+ * 1. 申请入群事件 (由用户发起)
+ */
+export class GroupApplyNewEvent {
+  constructor(
+    public readonly conversationId: string, // 统一使用 conversationId
+    public readonly applicantId: string,
+    public readonly nickname: string,
+    public readonly avatar: string | null,
+    public readonly reason: string,
+    public readonly timestamp: number,
+    public readonly adminIds: string[], // 路由目标：管理员们
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
+  ) {}
+}
+
+/**
+ * 2. 审批结果事件 (由管理员发出)
+ */
+export class GroupApplyResultEvent {
+  constructor(
+    public readonly conversationId: string, // 统一使用 conversationId
+    public readonly applicantId: string,
+    public readonly groupName: string,
+    public readonly approved: boolean,
+    public readonly timestamp: number,
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
+  ) {}
+}
+
+/**
+ * 3. 审批同步事件 (发给其他管理员)
+ */
+export class GroupRequestHandledEvent {
+  constructor(
+    public readonly requestId: string,
+    public readonly conversationId: string, // 统一使用 conversationId
+    public readonly status: GroupJoinRequestStatus,
+    public readonly handlerId: string,
+    public readonly handlerName: string,
+    public readonly timestamp: number,
+    public readonly adminIds: string[], // 路由目标：其他管理员
+    public readonly syncType: SocketSyncTypes = SocketSyncTypes.PATCH,
+  ) {}
+}
 
 // ==========================================
 //  Payload 类定义 (已统一 targetId 和 syncType)

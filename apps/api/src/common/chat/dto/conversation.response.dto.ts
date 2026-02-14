@@ -97,6 +97,14 @@ export class ConversationDetailResponseDto {
   @ApiProperty({ description: 'Whether joining requires admin approval' })
   joinNeedApproval!: boolean;
 
+  @ApiProperty({
+    description: 'Current user application status for this group',
+    enum: ['NONE', 'PENDING'],
+    example: 'NONE',
+    required: false, // 对成员来说可能是 undefined 或 NONE
+  })
+  applicationStatus?: 'NONE' | 'PENDING';
+
   // --- Synchronization & Self-healing START ---
   @ApiProperty({ description: 'Latest SeqId of the conversation' })
   lastMsgSeqId!: number;

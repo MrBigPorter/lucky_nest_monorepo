@@ -153,4 +153,56 @@ export class ChatListener {
       payload,
     );
   }
+
+  // ========================================================
+  // 9. 有新入群申请 (Group Apply New)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.APPLY_NEW)
+  handleGroupApplyNew(payload: G.GroupApplyNewEvent) {
+    // 逻辑：向每一个管理员的私有房间发送信号
+    payload.adminIds.forEach((adminId) => {
+      this.eventsGateway.dispatchToUser(
+        adminId,
+        SocketEvents.GROUP_APPLY_NEW,
+        payload,
+      );
+    });
+  }
+  // ========================================================
+  // 10. 申请处理结果 (Group Apply Result)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.APPLY_RESULT)
+  handleGroupApplyResult(payload: G.GroupApplyResultEvent) {
+    this.eventsGateway.dispatchToUser(
+      payload.applicantId,
+      SocketEvents.GROUP_APPLY_RESULT,
+      payload,
+    );
+
+    if (payload.approved) {
+      this.eventsGateway.dispatchToUser(
+        payload.applicantId,
+        SocketEvents.CONVERSATION_ADDED,
+        {
+          conversationId: payload.conversationId,
+          syncType: 'full_sync',
+        },
+      );
+    }
+  }
+
+  // ========================================================
+  // 11. 申请已被处理同步 (Request Handled Sync)
+  // ========================================================
+  @OnEvent(G.CHAT_GROUP_EVENTS.REQUEST_HANDLED)
+  handleRequestHandled(payload: G.GroupRequestHandledEvent) {
+    // 通知其他管理员，同步 UI 状态（按钮置灰）
+    payload.adminIds.forEach((adminId) => {
+      this.eventsGateway.dispatchToUser(
+        adminId,
+        SocketEvents.GROUP_REQUEST_HANDLED,
+        payload,
+      );
+    });
+  }
 }
