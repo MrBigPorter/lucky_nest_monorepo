@@ -124,6 +124,16 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
+   * 精准分发：发给特定用户 (通过私有房间)
+   * 这就是你问的 dispatchToUser 的来源
+   */
+  dispatchToUser(userId: string, type: string, data: any) {
+    const privateRoom = `user_${userId}`;
+    // 直接复用 dispatch 逻辑，发送到该用户的私有房间
+    this.dispatch(privateRoom, type, data);
+  }
+
+  /**
    *  修改点 4: 兼容旧 sendPush 方法，内部重定向至 dispatch
    */
   private sendPush(room: string, type: string, payload: any) {

@@ -376,6 +376,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * 获取会话详情：包括成员列表、未读数、个人设置等
+   * @param conversationId
+   * @param userId
+   */
   async getConversationDetail(conversationId: string, userId: string) {
     const conv = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -402,11 +407,35 @@ export class ChatService {
 
     //获取当前用户在这个会话里的状态
     const myMember = conv.members.find((m) => m.userId === userId);
+
+    // =========================================================
+    //  [新增逻辑] 检查申请状态 (仅针对陌生人 + 群聊)
+    // =========================================================
+    let applicationStatus: 'NONE' | 'PENDING' = 'NONE';
+
+    // 如果我不是成员，且这是个群组
+    if (!myMember && conv.type === CONVERSATION_TYPE.GROUP) {
+      // 查一下是否有待审批的记录
+      // 假设你的表名叫 groupJoinRequest，状态 0 是 PENDING
+      const pendingRequest = await this.prisma.groupJoinRequest.findFirst({
+        where: {
+          groupId: conversationId,
+          applicantId: userId,
+          status: 0, // 0 = PENDING
+        },
+      });
+
+      if (pendingRequest) {
+        applicationStatus = 'PENDING';
+      }
+    }
+
     // 如果当前用户不是成员（极端情况），给予默认值
     const myLastReadSeqId = myMember?.lastReadSeqId ?? 0;
     // 计算未读数：(总消息数 - 我已读的)
     // 确保不小于 0
     const unreadCount = Math.max(0, conv.lastMsgSeqId - myLastReadSeqId);
+    const isStranger = !myMember;
 
     return {
       id: conv.id,
@@ -425,14 +454,19 @@ export class ChatService {
       isPinned: myMember?.isPinned ?? false,
       isMuted: myMember?.isMuted ?? false,
 
+      applicationStatus: applicationStatus,
+
       memberCount: conv.members.length,
-      members: conv.members.map((m) => ({
-        userId: m.userId,
-        nickname: m.user.nickname,
-        avatar: m.user.avatar,
-        role: m.role,
-        mutedUntil: m.mutedUntil ? new Date(m.mutedUntil).getTime() : null,
-      })),
+      // 如果是陌生人，返回空列表；如果是成员，才返回完整列表
+      members: isStranger
+        ? []
+        : conv.members.map((m) => ({
+            userId: m.userId,
+            nickname: m.user.nickname,
+            avatar: m.user.avatar,
+            role: m.role,
+            mutedUntil: m.mutedUntil ? new Date(m.mutedUntil).getTime() : null,
+          })),
     };
   }
 
@@ -507,6 +541,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * 将用户加入到业务群聊中（如果群聊不存在则创建），并设置为普通成员
+   * @param businessId
+   * @param userId
+   */
   async addMemberToBusinessGroup(businessId: string, userId: string) {
     const conversation = await this.ensureBusinessConversation(businessId);
     return this.prisma.chatMember.upsert({
@@ -522,6 +561,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * 确保两个用户之间有一个直接会话，如果没有则创建一个新的直接会话
+   * @param myId
+   * @param targetId
+   */
   async ensureDirectConversation(myId: string, targetId: string) {
     const existing = await this.prisma.conversation.findFirst({
       where: {
@@ -547,6 +591,11 @@ export class ChatService {
     });
   }
 
+  /**
+   * 将用户邀请加入群聊，如果用户已经是成员则忽略，返回新加入的成员数量
+   * @param operatorId
+   * @param dto
+   */
   async inviteToGroup(
     operatorId: string,
     dto: { groupId: string; memberIds: string[] },
@@ -591,6 +640,11 @@ export class ChatService {
     return { count: newMembers.length };
   }
 
+  /**
+   * 用户主动退群，如果是最后一个成员则解散群聊
+   * @param userId
+   * @param groupId
+   */
   async leaveGroup(userId: string, groupId: string) {
     await this.prisma.chatMember.delete({
       where: { conversationId_userId: { conversationId: groupId, userId } },
@@ -607,6 +661,11 @@ export class ChatService {
     return { success: true };
   }
 
+  /**
+   * 创建群聊，并把创建者和成员都加入到群聊中
+   * @param creatorId
+   * @param dto
+   */
   async createGroupChat(creatorId: string, dto: CreateGroupDto) {
     const uniqueMembers = Array.from(new Set([creatorId, ...dto.memberIds]));
     const conversation = await this.prisma.conversation.create({
@@ -638,6 +697,11 @@ export class ChatService {
     return conversation;
   }
 
+  /**
+   * 搜索用户（用于添加好友、拉人进群等场景），支持昵称模糊、手机号和 ID 精确搜索
+   * @param myUserId
+   * @param dto
+   */
   async searchUsers(myUserId: string, dto: SearchUserDto) {
     return this.prisma.user.findMany({
       where: {
@@ -657,6 +721,12 @@ export class ChatService {
     });
   }
 
+  /**
+   * 根据消息类型生成预览文本（用于会话列表的最后一条消息显示），比如图片显示为 "[Image]"，语音显示为 "[Voice]"，位置显示为 "[Location]" 等
+   * @param type
+   * @param content
+   * @private
+   */
   private _getPreviewText(type: number, content: string): string {
     switch (type) {
       case MESSAGE_TYPE.TEXT:
@@ -676,6 +746,11 @@ export class ChatService {
     }
   }
 
+  /**
+   * 触发群头像更新的异步任务，利用 BullMQ 的去重和延迟功能，避免频繁更新导致的性能问题
+   * @param conversationId
+   * @private
+   */
   private _triggerAvatarUpdate(conversationId: string) {
     this.avatarQueue
       .add(

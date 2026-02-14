@@ -5,6 +5,9 @@ import {
   UseGuards,
   Delete,
   Param,
+  Get,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -27,6 +30,11 @@ import {
   SetAdminResDto,
   LeaveGroupResDto,
   DisbandGroupResDto,
+  HandleGroupJoinDto,
+  GroupJoinRequestItemDto,
+  ApplyToGroupDto,
+  ApplyToGroupResDto,
+  GroupSearchResultDto,
 } from '@api/common/chat/dto/group/group-manage.dto';
 import { CurrentUserId } from '@api/common/decorators/user.decorator'; // 确保路径正确
 
@@ -105,5 +113,69 @@ export class ChatGroupController {
     @Param('conversationId') conversationId: string,
   ): Promise<DisbandGroupResDto> {
     return this.groupService.disbandGroup(userId, conversationId);
+  }
+
+  // =================================================================
+  // [NEW] 1. 申请加入群组 (User Action)
+  // =================================================================
+  @Post('apply')
+  @ApiOperation({ summary: 'Apply to join a group (Stranger only)' })
+  @ApiResponse({ status: 200, type: ApplyToGroupResDto })
+  async applyToGroup(
+    @CurrentUserId() userId: string,
+    @Body() dto: ApplyToGroupDto,
+  ) {
+    return this.groupService.applyToGroup(
+      userId,
+      dto.conversationId,
+      dto.reason,
+    );
+  }
+
+  // =================================================================
+  // [NEW] 2. 获取待处理列表 (Admin Action)
+  // =================================================================
+  @Get('requests/:conversationId')
+  @ApiOperation({ summary: 'Get pending join requests (Admin/Owner only)' })
+  @ApiResponse({ status: 200, type: [GroupJoinRequestItemDto] })
+  async getJoinRequests(
+    @CurrentUserId() userId: string,
+    @Param('conversationId') conversationId: string,
+  ) {
+    return this.groupService.getJoinRequests(userId, conversationId);
+  }
+
+  // =================================================================
+  // [NEW] 3. 审批申请 (Admin Action)
+  // =================================================================
+  @Post('request/handle')
+  @ApiOperation({
+    summary: 'Accept or reject a join request (Admin/Owner only)',
+  })
+  @ApiResponse({ status: 200 })
+  async handleRequest(
+    @CurrentUserId() userId: string,
+    @Body() dto: HandleGroupJoinDto,
+  ) {
+    return this.groupService.handleJoinRequest(
+      userId,
+      dto.requestId,
+      dto.action,
+    );
+  }
+
+  /**
+   * Search for groups by keyword (for joining new groups)
+   * @param userId
+   * @param keyword
+   */
+  @Get('/search')
+  @ApiResponse({ status: 200, type: [GroupSearchResultDto] }) // Swagger 文档
+  async searchGroups(
+    @CurrentUserId() userId: string,
+    @Query('keyword') keyword: string,
+  ) {
+    if (!keyword) throw new BadRequestException('Keyword is required');
+    return this.groupService.searchGroups(userId, keyword);
   }
 }

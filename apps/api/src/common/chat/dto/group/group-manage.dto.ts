@@ -6,9 +6,12 @@ import {
   IsOptional,
   IsBoolean,
   Min,
+  MaxLength,
+  IsEnum,
+  Length,
 } from 'class-validator';
-import { ChatMemberRole } from '@lucky/shared';
-import { ToBool } from '@api/common/dto/transforms';
+import { ChatMemberRole, GroupJoinRequestStatus } from '@lucky/shared';
+import { ToBool, ToNumber } from '@api/common/dto/transforms';
 
 // ==========================================
 //  REQUEST DTOs (Requests from Client)
@@ -182,4 +185,103 @@ export class LeaveGroupResDto {
 export class DisbandGroupResDto {
   @ApiProperty({ description: 'Indicates if the operation was successful' })
   success!: boolean;
+}
+
+// 1. 申请入群 Request
+export class ApplyToGroupDto {
+  @ApiProperty({ description: 'Target Group ID' })
+  @IsString()
+  @IsNotEmpty()
+  conversationId!: string;
+
+  @ApiProperty({ description: 'Application reason', required: false })
+  @IsString()
+  @IsOptional()
+  @MaxLength(200)
+  reason?: string;
+}
+
+export class ApplyToGroupResDto {
+  @ApiProperty({ description: 'Current status', enum: ['PENDING', 'ACCEPTED'] })
+  status!: 'PENDING' | 'ACCEPTED';
+
+  @ApiProperty({ description: 'Request ID (if pending)', required: false })
+  requestId?: string;
+
+  @ApiProperty({ description: 'Hint message', required: false })
+  message?: string; // 补齐这个字段
+}
+
+// 3. 处理申请 Request
+export class HandleGroupJoinDto {
+  @ApiProperty({ description: 'Request ID from group_join_requests table' })
+  @IsString()
+  @IsNotEmpty()
+  requestId!: string;
+
+  @ApiProperty({ description: 'Action to take', enum: ['accept', 'reject'] })
+  @IsEnum(['accept', 'reject'])
+  @IsNotEmpty()
+  action!: 'accept' | 'reject';
+}
+
+// 4. 申请列表项 DTO (用于 Response 数组)
+export class GroupJoinRequestItemDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  reason!: string;
+
+  @ApiProperty({ enum: GroupJoinRequestStatus })
+  @ToNumber()
+  status!: number;
+
+  @ApiProperty()
+  createdAt!: Date;
+
+  @ApiProperty({ description: 'Applicant basic info' })
+  applicant!: {
+    id: string;
+    nickname: string;
+    avatar: string;
+  };
+}
+
+export class SearchGroupDto {
+  @ApiProperty({
+    description: 'Search keyword (Group ID or Name)',
+    example: 'G10086',
+    required: true,
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(1, 50)
+  keyword!: string;
+}
+
+export class GroupSearchResultDto {
+  @ApiProperty({ example: 'uuid-group-id' })
+  id!: string;
+
+  @ApiProperty({ example: 'Flutter Developers' })
+  name!: string;
+
+  @ApiProperty({ example: 'https://avatar.url...', required: false })
+  avatar!: string | null;
+
+  @ApiProperty({ example: 42, description: 'Current member count' })
+  memberCount!: number;
+
+  @ApiProperty({
+    example: true,
+    description: 'Whether approval is required to join',
+  })
+  joinNeedApproval!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether the current user is already a member',
+  })
+  isMember!: boolean;
 }

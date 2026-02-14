@@ -152,6 +152,12 @@ export const SocketEvents = {
   MEMBER_LEFT: "member_left", // 成员离开群聊
   GROUP_DISBANDED: "group_disbanded", // 群聊解散
   GROUP_INFO_UPDATED: "group_info_updated", // 群信息更新（如公告、全员禁言等）
+  // 1. 管理员收到：有新的入群申请
+  GROUP_APPLY_NEW: "group_apply_new",
+  // 2. 申请人收到：申请处理结果
+  GROUP_APPLY_RESULT: "group_apply_result",
+  // 3. 管理员同步：申请已被其他管理员处理
+  GROUP_REQUEST_HANDLED: "group_request_handled",
   TYPING: "typing",
 
   // --- 拼团/钱包/群组业务 ---
@@ -225,3 +231,12 @@ export const RELATIONSHIP_STATUS = {
   FRIEND: 1,
   SENT: 2,
 };
+
+/**
+ * 入群申请单状态
+ */
+export enum GroupJoinRequestStatus {
+  PENDING = 0, // 待处理
+  ACCEPTED = 1, // 已通过 (已自动加群)
+  REJECTED = 2, // 已拒绝
+}
