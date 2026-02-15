@@ -36,7 +36,8 @@ import {
   ApplyToGroupResDto,
   GroupSearchResultDto,
 } from '@api/common/chat/dto/group/group-manage.dto';
-import { CurrentUserId } from '@api/common/decorators/user.decorator'; // 确保路径正确
+import { CurrentUserId } from '@api/common/decorators/user.decorator';
+import { plainToInstance } from 'class-transformer'; // 确保路径正确
 
 @ApiTags('Chat Group Management (v6.0)')
 @ApiBearerAuth()
@@ -142,7 +143,8 @@ export class ChatGroupController {
     @CurrentUserId() userId: string,
     @Param('conversationId') conversationId: string,
   ) {
-    return this.groupService.getJoinRequests(userId, conversationId);
+    const res = await this.groupService.getJoinRequests(userId, conversationId);
+    return plainToInstance(GroupJoinRequestItemDto, res);
   }
 
   // =================================================================

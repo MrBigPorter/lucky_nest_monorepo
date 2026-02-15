@@ -11,6 +11,7 @@ import {
   ChatMemberRole,
   CONVERSATION_TYPE,
   ConversationStatus,
+  GroupJoinRequestStatus,
   MESSAGE_TYPE,
   SocketSyncTypes,
   TimeHelper,
@@ -430,6 +431,22 @@ export class ChatService {
       }
     }
 
+    //检查待审批数量 (仅针对管理员/群主)
+    let pendingRequestCount = 0;
+
+    // 如果我是管理员或群主，查一下有多少待审批的记录
+    if (conv.type === CONVERSATION_TYPE.GROUP && myMember) {
+      const isManager = myMember.role === 'OWNER' || myMember.role === 'ADMIN';
+      if (isManager) {
+        pendingRequestCount = await this.prisma.groupJoinRequest.count({
+          where: {
+            groupId: conversationId,
+            status: GroupJoinRequestStatus.PENDING, // 0 = PENDING
+          },
+        });
+      }
+    }
+
     // 如果当前用户不是成员（极端情况），给予默认值
     const myLastReadSeqId = myMember?.lastReadSeqId ?? 0;
     // 计算未读数：(总消息数 - 我已读的)
@@ -455,6 +472,7 @@ export class ChatService {
       isMuted: myMember?.isMuted ?? false,
 
       applicationStatus: applicationStatus,
+      pendingRequestCount: pendingRequestCount,
 
       memberCount: conv.members.length,
       // 如果是陌生人，返回空列表；如果是成员，才返回完整列表

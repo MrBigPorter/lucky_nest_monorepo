@@ -11,7 +11,8 @@ import {
   Length,
 } from 'class-validator';
 import { ChatMemberRole, GroupJoinRequestStatus } from '@lucky/shared';
-import { ToBool, ToNumber } from '@api/common/dto/transforms';
+import { DateToTimestamp, ToBool, ToNumber } from '@api/common/dto/transforms';
+import { Exclude, Expose } from 'class-transformer';
 
 // ==========================================
 //  REQUEST DTOs (Requests from Client)
@@ -226,21 +227,28 @@ export class HandleGroupJoinDto {
 }
 
 // 4. 申请列表项 DTO (用于 Response 数组)
+@Exclude()
 export class GroupJoinRequestItemDto {
   @ApiProperty()
+  @Expose()
   id!: string;
 
   @ApiProperty()
+  @Expose()
   reason!: string;
 
   @ApiProperty({ enum: GroupJoinRequestStatus })
   @ToNumber()
+  @Expose()
   status!: number;
 
   @ApiProperty()
-  createdAt!: Date;
+  @Expose()
+  @DateToTimestamp()
+  createdAt!: number;
 
   @ApiProperty({ description: 'Applicant basic info' })
+  @Expose()
   applicant!: {
     id: string;
     nickname: string;

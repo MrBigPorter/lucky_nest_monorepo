@@ -567,7 +567,7 @@ export class ChatGroupService {
     });
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. 获取申请记录
+      // 1. 获取申请记录并加锁 (防止并发操作)
       const request = await tx.groupJoinRequest.findUnique({
         where: { id: requestId },
         include: { conversation: { select: { name: true, id: true } } },
@@ -583,20 +583,51 @@ export class ChatGroupService {
         ChatMemberRole.ADMIN,
       ]);
 
-      // 3. 更新状态
       const newStatus =
         action === 'accept'
           ? GroupJoinRequestStatus.ACCEPTED
           : GroupJoinRequestStatus.REJECTED;
+
+      //  3. [关键步骤] 解决唯一约束冲突：先删除旧的已通过/已拒绝记录
+      // 如果不先删掉旧的 status=1 的记录，下面的 update 会触发 Unique 约束报错
+      if (action === 'accept') {
+        await tx.groupJoinRequest.deleteMany({
+          where: {
+            groupId: request.groupId,
+            applicantId: request.applicantId,
+            status: {
+              in: [
+                GroupJoinRequestStatus.REJECTED,
+                GroupJoinRequestStatus.ACCEPTED,
+              ],
+            },
+            // 不要把处理的这条 requestId 删了
+            id: { not: requestId },
+          },
+        });
+      }
+
+      //  4. 更新当前记录状态 (必须执行，否则该申请永远是 PENDING)
       await tx.groupJoinRequest.update({
         where: { id: requestId },
-        data: { status: newStatus, handlerId: operatorId },
+        data: {
+          status: newStatus,
+          handlerId: operatorId,
+        },
       });
 
-      // 4. 如果通过，执行加人与系统消息
+      // 5. 如果通过，执行加人逻辑
       if (action === 'accept') {
-        await tx.chatMember.create({
-          data: {
+        // 使用 upsert 防止重复加入 ChatMember 导致的 500 错误
+        await tx.chatMember.upsert({
+          where: {
+            conversationId_userId: {
+              conversationId: request.groupId,
+              userId: request.applicantId,
+            },
+          },
+          update: { role: ChatMemberRole.MEMBER }, // 如果曾经是成员，重置角色
+          create: {
             conversationId: request.groupId,
             userId: request.applicantId,
             role: ChatMemberRole.MEMBER,
@@ -607,25 +638,25 @@ export class ChatGroupService {
           where: { id: request.applicantId },
           select: { nickname: true },
         });
+
         await this._createSystemMessage(
           tx,
           request.groupId,
-          `${applicant?.nickname} joined the group`,
+          `${applicant?.nickname || 'New member'} joined the group`,
         );
       }
 
       this.eventEmitter.emit(
         CHAT_GROUP_EVENTS.APPLY_RESULT,
         new GroupApplyResultEvent(
-          request.groupId, // 1. conversationId
-          request.applicantId, // 2. applicantId
-          request.conversation.name ?? 'Group', // 3. groupName
-          action === 'accept', // 4. approved
-          Date.now(), // 5. timestamp
+          request.groupId,
+          request.applicantId,
+          request.conversation.name ?? 'Group',
+          action === 'accept',
+          Date.now(),
         ),
       );
 
-      // B. 通知其他管理员同步 UI
       const admins = await tx.chatMember.findMany({
         where: {
           conversationId: request.groupId,
@@ -633,6 +664,7 @@ export class ChatGroupService {
         },
         select: { userId: true },
       });
+
       this.eventEmitter.emit(
         CHAT_GROUP_EVENTS.REQUEST_HANDLED,
         new GroupRequestHandledEvent(
