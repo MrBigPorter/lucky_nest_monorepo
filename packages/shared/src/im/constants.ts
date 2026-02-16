@@ -240,3 +240,17 @@ export enum GroupJoinRequestStatus {
   ACCEPTED = 1, // 已通过 (已自动加群)
   REJECTED = 2, // 已拒绝
 }
+
+export enum CallMediaType {
+  AUDIO = "audio",
+  VIDEO = "video",
+}
+
+export enum CallEndReason {
+  HANGUP = "hangup", // 正常挂断
+  CANCEL = "cancel", // 主叫取消
+  DECLINE = "decline", // 被叫拒绝
+  BUSY = "busy", // 忙线
+  TIMEOUT = "timeout", // 无人接听超时
+  ERROR = "error", // 连接错误
+}

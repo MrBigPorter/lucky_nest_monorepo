@@ -19,6 +19,8 @@ import { PaymentChannelModule } from '@api/common/payment-channel/payment-channe
 import { BullModule } from '@nestjs/bullmq';
 import { ChatModule } from '@api/common/chat/chat.module';
 import { MediaModule } from '@api/common/media/media.module';
+import { CallModule } from '@api/common/events/call/call.module';
+import { EventsModule } from '@api/common/events/events.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -103,6 +105,8 @@ import { MediaModule } from '@api/common/media/media.module';
     PaymentChannelModule,
     ChatModule,
     MediaModule,
+    CallModule,
+    EventsModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],
