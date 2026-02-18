@@ -45,6 +45,7 @@ import { LeaveGroupDto } from '@api/common/chat/dto/leave-group.dto';
 import { InviteToGroupResponseDto } from '@api/common/chat/dto/invite-to-group.response.dto';
 import { LeaveGroupResponseDto } from '@api/common/chat/dto/leave-group.response.dto';
 import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
+import { IceServerDto } from '@api/common/chat/dto/get-ice-servers.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -283,5 +284,15 @@ export class ChatController {
     @Body() dto: LeaveGroupDto,
   ) {
     return this.chatService.leaveGroup(userId, dto.groupId);
+  }
+
+  /**
+   * Get ICE servers for WebRTC (for voice/video calls)
+   * @param userId Current User ID
+   */
+  @Get('ice-servers')
+  @ApiResponse({ status: 200, type: [IceServerDto] })
+  async getIceServers(@CurrentUserId() userId: string) {
+    return this.chatService.getIceServers(userId);
   }
 }
