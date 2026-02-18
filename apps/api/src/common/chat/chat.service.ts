@@ -29,6 +29,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { ConversationListResponseDto } from '@api/common/chat/dto/conversation.response.dto';
 import { NotificationService } from '@api/client/notification/notification.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import * as crypto from 'crypto';
 import {
   CHAT_EVENTS,
   ConversationReadEvent,
@@ -40,6 +41,7 @@ import {
   GroupMemberJoinedEvent,
 } from '@api/common/chat/events/chat-group.events';
 import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ChatService {
@@ -49,6 +51,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
     private readonly notificationService: NotificationService,
+    private readonly configService: ConfigService,
     @InjectQueue(AVATAR_QUEUE_NAME) private readonly avatarQueue: Queue,
   ) {}
 
@@ -737,6 +740,46 @@ export class ChatService {
       take: 20,
       select: { id: true, nickname: true, avatar: true },
     });
+  }
+
+  // =================================================================
+  //  WEBRTC: Get Dynamic ICE Servers (Secure)
+  // =================================================================
+  async getIceServers(userId: string) {
+    // 1. 从 .env 获取配置
+    const secret = this.configService.get<string>('TURN_SECRET');
+    const turnUrl = this.configService.get<string>('TURN_URL');
+
+    if (!secret || !turnUrl) {
+      this.logger.warn('TURN server is not configured properly.');
+      throw new InternalServerErrorException('WebRTC config error');
+    }
+
+    // 2. 设定过期时间 (例如 24 小时后过期)
+    // 注意：Coturn 要求单位是“秒”，不是毫秒
+    const ttl = 24 * 3600;
+    const timestamp = Math.floor(Date.now() / 1000) + ttl;
+
+    // 3. 拼接用户名: "过期时间戳:用户ID"
+    const turnUsername = `${timestamp}:${userId}`;
+
+    // 4. 使用 HMAC-SHA1 算法生成密码 (这是 Coturn 的标准算法)
+    const hmac = crypto.createHmac('sha1', secret);
+    hmac.setEncoding('base64');
+    hmac.write(turnUsername);
+    hmac.end();
+    const turnPassword = hmac.read().toString();
+    // 5. 返回给前端的格式
+    return [
+      // 免费的 Google STUN 服务 (用于打洞)
+      { urls: 'stun:stun.l.google.com:19302' },
+      // 你的私有 TURN 服务 (用于中转)
+      {
+        urls: turnUrl,
+        username: turnUsername,
+        credential: turnPassword,
+      },
+    ];
   }
 
   /**
