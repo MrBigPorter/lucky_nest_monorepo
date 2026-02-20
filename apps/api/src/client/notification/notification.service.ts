@@ -9,7 +9,6 @@ export class NotificationService implements OnModuleInit {
 
   // 定义全员广播的 Topic 名称
   private readonly GLOBAL_TOPIC = 'all_users';
-
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
@@ -200,6 +199,58 @@ export class NotificationService implements OnModuleInit {
     } catch (error: any) {
       this.logger.error(`❌ 全员广播发送失败: ${error.message}`);
       throw error;
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 核心功能 4: [新增] 音视频通话专属锁屏唤醒 (纯 Data 推送)
+  // ---------------------------------------------------------
+  async sendCallWakeUpPush(targetUserId: string, callData: any) {
+    // 1. 查找用户的所有设备 Token
+    const devices = await this.prisma.device.findMany({
+      where: { userId: targetUserId },
+      select: { token: true },
+    });
+
+    if (!devices.length) return;
+    const tokens = devices.map((d) => d.token);
+
+    // 2. 构造纯 Data 且最高优先级的 Payload
+    const message: admin.messaging.MulticastMessage = {
+      tokens,
+      //  命脉 1：绝对不能写 notification 字段！只能写 data！
+      data: {
+        type: 'call_invite', // 告诉 Flutter 这是一个电话
+        sessionId: callData.sessionId || '',
+        senderId: callData.senderId || '',
+        mediaType: callData.mediaType || '',
+        timestamp: String(Date.now()), // Data 只能传字符串
+      },
+      //  命脉 2：安卓必须强制 High 优先级，穿透 Doze 锁屏休眠
+      android: {
+        priority: 'high',
+      },
+      //  命脉 3：iOS 必须是 High 优先级 + 静默推送唤醒
+      apns: {
+        headers: {
+          'apns-priority': '10', // 10 代表立即投递
+          'apns-push-type': 'background', // 声明为后台唤醒推送
+        },
+        payload: {
+          aps: {
+            contentAvailable: true, // 允许后台唤醒 Flutter
+          },
+        },
+      },
+    };
+
+    try {
+      const response = await admin.messaging().sendEachForMulticast(message);
+      this.logger.log(
+        ` [Call WakeUp] Sent to ${targetUserId}: ${response.successCount} success`,
+      );
+    } catch (error: any) {
+      this.logger.error(`[Call WakeUp Error] ${error.message}`);
     }
   }
 
