@@ -13,6 +13,7 @@ import {
   CallIceCandidateDto,
   CallInviteDto,
 } from '@api/common/events/call/dto/call-signaling.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @WebSocketGateway({
   namespace: 'events',
@@ -23,6 +24,7 @@ export class CallGateway {
   server!: Server;
 
   private readonly logger = new Logger(CallGateway.name);
+  constructor(private readonly eventEmitter: EventEmitter2) {}
 
   /**
    * 辅助方法：安全获取当前 Socket 的用户 ID
@@ -49,7 +51,7 @@ export class CallGateway {
     }
 
     this.logger.log(
-      `📞 [Call Invite] ${senderId} -> ${payload.targetId} (Session: ${payload.sessionId})`,
+      ` [Call Invite] ${senderId} -> ${payload.targetId} (Session: ${payload.sessionId})`,
     );
 
     // 目标用户的私有房间名 (与 EventsGateway 保持一致)
@@ -59,6 +61,12 @@ export class CallGateway {
     this.server.to(targetRoom).emit('call_invite', {
       ...payload, // 包含 sessionId, sdp, mediaType
       senderId, // 补充发送者 ID
+    });
+    this.eventEmitter.emit('call.wake_up', {
+      targetId: payload.targetId,
+      sessionId: payload.sessionId,
+      senderId: senderId,
+      mediaType: payload.mediaType,
     });
   }
 
@@ -125,13 +133,20 @@ export class CallGateway {
     if (!senderId) return;
 
     this.logger.log(
-      `🛑 [Call End] ${senderId} -> ${payload.targetId} (Reason: ${payload.reason})`,
+      ` [Call End] ${senderId} -> ${payload.targetId} (Reason: ${payload.reason})`,
     );
 
     const targetRoom = `user_${payload.targetId}`;
     this.server.to(targetRoom).emit('call_end', {
       ...payload, // 包含 reason, sessionId
       senderId,
+    });
+
+    this.eventEmitter.emit('call.wake_up', {
+      targetId: payload.targetId,
+      sessionId: payload.sessionId,
+      senderId: senderId,
+      type: 'call_end',
     });
   }
 }

@@ -60,6 +60,24 @@ export class PushListener {
     }
   }
 
+  @OnEvent('call.wake_up', { async: true })
+  async handleCallWakeUp(event: {
+    targetId: string;
+    sessionId: string;
+    senderId: string;
+    mediaType: string;
+  }) {
+    this.logger.debug(
+      `[FCM] Processing call wake up for target: ${event.targetId}`,
+    );
+    try {
+      // 调用 NotificationService 专属的唤醒方法
+      await this.notificationService.sendCallWakeUpPush(event.targetId, event);
+    } catch (e) {
+      this.logger.error(`[FCM Call WakeUp Error] ${e}`);
+    }
+  }
+
   // 简单的预览文本生成器 (可以提取为 Shared Util)
   private _getPreviewText(type: number, content: string): string {
     switch (type) {
