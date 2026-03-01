@@ -288,6 +288,32 @@ export class ChatService {
     return { messageId };
   }
 
+  /**
+   * clear chat history for a user in a conversation (soft delete using cursor truncation)
+   */
+  async clearHistory(userId: string, conversationId: string) {
+    // get lastMsgSeqId for the conversation
+    const conv = await this.prisma.conversation.findUnique({
+      where: {
+        id: conversationId,
+      },
+      select: {
+        lastMsgSeqId: true,
+      },
+    });
+
+    if (!conv) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // update clearedSeqId for the user in chatMember
+    await this.prisma.chatMember.update({
+      where: { conversationId_userId: { conversationId, userId } },
+      data: { clearedSeqId: conv.lastMsgSeqId },
+    });
+    return { success: true };
+  }
+
   // =================================================================
   //  CORE OPERATION: markAsRead (Read Sync)
   // =================================================================
@@ -497,6 +523,18 @@ export class ChatService {
   async getMessages(userId: string, dto: GetMessagesDto) {
     const { conversationId, cursor, pageSize = 20 } = dto;
 
+    // get my clearedSeqId to filter out messages that should be hidden due to clear history
+    const myMember = await this.prisma.chatMember.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+      select: { clearedSeqId: true },
+    });
+
+    if (!myMember) {
+      throw new ForbiddenException('You are not a member of this conversation');
+    }
+
+    const clearedSeqId = myMember?.clearedSeqId ?? 0;
+
     const partner = await this.prisma.chatMember.findFirst({
       where: { conversationId, userId: { not: userId } },
       select: { lastReadSeqId: true },
@@ -505,10 +543,12 @@ export class ChatService {
     const whereCondition: any = {
       conversationId,
       hiddenByUsers: { none: { userId } },
+      seqId: { gt: clearedSeqId }, // find messages with seqId greater than clearedSeqId to implement clear history
     };
 
     if (cursor) {
-      whereCondition.seqId = { lt: cursor };
+      // If cursor is provided, we want messages with seqId less than cursor (for pagination)
+      whereCondition.seqId = { gt: clearedSeqId, lt: cursor };
     }
 
     const messages = await this.prisma.chatMessage.findMany({
@@ -539,6 +579,43 @@ export class ChatService {
       nextCursor,
       partnerLastReadSeqId: partner?.lastReadSeqId ?? 0,
     };
+  }
+
+  // =================================================================
+  //  CORE OPERATION: setMute (Personal Setting)
+  // =================================================================
+  async setMute(userId: string, conversationId: string, isMuted: boolean) {
+    const member = await this.prisma.chatMember.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+    });
+    if (!member) {
+      throw new ForbiddenException('Not a member of this conversation');
+    }
+
+    await this.prisma.chatMember.update({
+      where: { conversationId_userId: { conversationId, userId } },
+      data: { isMuted },
+    });
+
+    return { success: true, isMuted };
+  }
+
+  // =================================================================
+  //  CORE OPERATION: setPin (Personal Setting)
+  // =================================================================
+  async setPin(userId: string, conversationId: string, isPinned: boolean) {
+    const member = await this.prisma.chatMember.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+    });
+    if (!member)
+      throw new ForbiddenException('Not a member of this conversation');
+
+    await this.prisma.chatMember.update({
+      where: { conversationId_userId: { conversationId, userId } },
+      data: { isPinned },
+    });
+
+    return { success: true, isPinned };
   }
 
   // =================================================================

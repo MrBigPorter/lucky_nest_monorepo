@@ -46,6 +46,14 @@ import { InviteToGroupResponseDto } from '@api/common/chat/dto/invite-to-group.r
 import { LeaveGroupResponseDto } from '@api/common/chat/dto/leave-group.response.dto';
 import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
 import { IceServerDto } from '@api/common/chat/dto/get-ice-servers.dto';
+import {
+  ClearHistoryDto,
+  ClearHistoryResponseDto,
+  SetMuteDto,
+  SetMuteResponseDto,
+  SetPinDto,
+  SetPinResponseDto,
+} from '@api/common/chat/dto/chat-settings.dto';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -294,5 +302,26 @@ export class ChatController {
   @ApiResponse({ status: 200, type: [IceServerDto] })
   async getIceServers(@CurrentUserId() userId: string) {
     return this.chatService.getIceServers(userId);
+  }
+
+  @Post('settings/mute')
+  @ApiOkResponse({ type: SetMuteResponseDto })
+  async setMute(@CurrentUserId() userId: string, @Body() dto: SetMuteDto) {
+    return this.chatService.setMute(userId, dto.conversationId, dto.isMuted);
+  }
+
+  @Post('settings/pin')
+  @ApiOkResponse({ type: SetPinResponseDto })
+  async setPin(@CurrentUserId() userId: string, @Body() dto: SetPinDto) {
+    return this.chatService.setPin(userId, dto.conversationId, dto.isPinned);
+  }
+
+  @Post('settings/clear-history')
+  @ApiOkResponse({ type: ClearHistoryResponseDto })
+  async clearHistory(
+    @CurrentUserId() userId: string,
+    @Body() dto: ClearHistoryDto,
+  ) {
+    return this.chatService.clearHistory(userId, dto.conversationId);
   }
 }

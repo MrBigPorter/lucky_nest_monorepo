@@ -1223,6 +1223,7 @@ model ChatMember {
 
   // 阅读进度 (未读数 = Conversation.lastMsgSeqId - ChatMember.lastReadSeqId)
   lastReadSeqId  Int          @default(0)
+  clearedSeqId   Int          @default(0) @map("cleared_seq_id")
 
   joinedAt       DateTime     @default(now())
 
