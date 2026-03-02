@@ -26,6 +26,7 @@ export class MessageCreatedEvent {
     //  [新增] 必须补齐这些字段，否则前端会报错
     public readonly seqId: number,
     public readonly meta: any,
+    public readonly pushMemberIds?: string[], //only for push notification, can be omitted in Socket broadcast
   ) {}
 }
 

@@ -16,12 +16,13 @@ export class PushListener {
   //  异步执行：不阻塞主线程发消息
   @OnEvent(CHAT_EVENTS.MESSAGE_CREATED, { async: true })
   async handleFcmPush(event: MessageCreatedEvent) {
-    // 1. 熔断检查：如果 memberIds 为空 (说明是大群，或者单聊)，直接跳过
-    // 这是配合 ChatGroupService 大群熔断机制的关键
-    if (!event.memberIds || event.memberIds.length === 0) {
-      // 可以在这里打个 debug 日志，确认大群熔断生效
+    //  核心修改 1：优先使用过滤了免打扰的 pushMemberIds。如果没传，回退到 memberIds 防报错。
+    const targetIds = event.pushMemberIds || event.memberIds || [];
+
+    // 1. 熔断检查：如果 targetIds 为空 (说明是大群熔断，或者所有人刚好都开了免打扰)，直接跳过
+    if (targetIds.length === 0) {
       this.logger.debug(
-        `[FCM] Skip push for empty member list (Large Group or Private): ${event.conversationId}`,
+        `[FCM] Skip push for empty target list (Large Group or All Muted): ${event.conversationId}`,
       );
       return;
     }
@@ -32,12 +33,10 @@ export class PushListener {
       // 1. 获取预览文本
       const previewText = this._getPreviewText(event.type, event.content);
 
-      // 3.  性能优化：将“串行等待”改为“并发执行”
-      // 使用 Promise.allSettled 防止某一个人发送失败导致整个流程报错中断
-      const pushPromises = event.memberIds.map(async (targetId) => {
-        if (targetId === event.senderId) return; // 不推给自己
-
-        // TODO: 这里可以加 Redis 在线状态判断 (Online ? Skip : Push)
+      // 3. 性能优化：将“串行等待”改为“并发执行”
+      //  核心修改 2：用过滤后的 targetIds 替代原来的 event.memberIds 进行遍历发推送！
+      const pushPromises = targetIds.map(async (targetId) => {
+        if (targetId === event.senderId) return;
 
         return this.notificationService.sendPrivateMessage(
           targetId,
