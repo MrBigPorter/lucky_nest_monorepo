@@ -145,9 +145,14 @@ export class ChatService {
     // 优化：利用 Prisma 关联查询直接拿，或者复用之前的查询结果
     const members = await this.prisma.chatMember.findMany({
       where: { conversationId },
-      select: { userId: true },
+      select: { userId: true, isMuted: true },
     });
     const memberIds = members.map((m) => m.userId);
+
+    // only push to members who are not muted
+    const pushMemberIds = members
+      .filter((m) => !m.isMuted)
+      .map((m) => m.userId);
 
     this.eventEmitter.emit(
       CHAT_EVENTS.MESSAGE_CREATED,
@@ -163,6 +168,7 @@ export class ChatService {
         memberIds,
         message.seqId,
         message.meta,
+        pushMemberIds,
       ),
     );
 
