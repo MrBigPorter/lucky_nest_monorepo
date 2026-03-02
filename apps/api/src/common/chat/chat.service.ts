@@ -278,7 +278,7 @@ export class ChatService {
     const message = await this.prisma.chatMessage.findUnique({
       where: { id: messageId },
     });
-    if (!message) throw new NotFoundException('Message not found');
+    if (!message) return;
 
     await this.prisma.chatMessageHide.upsert({
       where: { userId_messageId: { userId, messageId } },
