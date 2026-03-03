@@ -184,10 +184,22 @@ export class KycService {
    * @param userId
    */
   async getMyKyc(userId: string) {
-    return this.prismaService.kycRecord.findFirst({
+    const record = await this.prismaService.kycRecord.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
+
+    if (record) {
+      return record;
+    }
+
+    return {
+      kycStatus: 0, // 0: Draft / 未认证状态 (最重要的字段)
+      idType: 0, // 默认证件类型为 0 或 未知
+      isSameAddress: true, // 布尔值兜底
+      riskLevel: 0, // 默认风控等级
+      createdAt: new Date(), // 创建时间兜底
+    };
   }
 
   /**

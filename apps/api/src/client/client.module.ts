@@ -17,6 +17,7 @@ import { PaymentChannelClientModule } from '@api/client/payment-channel/payment-
 import { GroupClientModule } from '@api/client/group/groups.module';
 import { UsersModule } from '@api/client/users/users.module';
 import { NotificationModule } from '@api/client/notification/notification.module';
+import { ClientCouponModule } from '@api/client/coupon/coupon.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { NotificationModule } from '@api/client/notification/notification.module
     GroupClientModule,
     UsersModule,
     NotificationModule,
+    ClientCouponModule,
   ],
   providers: [],
   controllers: [HealthController],
