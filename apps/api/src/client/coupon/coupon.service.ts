@@ -166,4 +166,69 @@ export class ClientCouponService {
     await this.claimCoupon(userId, coupon.id, 3);
     return { success: true, message: 'Successfully redeemed' };
   }
+
+  /**
+   * 4. 获取领券中心大厅可领取的券 (Level 3)
+   */
+  async getClaimableCoupons(userId: string) {
+    // 1. 查出所有允许手动领取的有效券模板
+    const claimableCoupons = await this.prisma.coupon.findMany({
+      where: {
+        issueType: 2, // 2-用户手动领取
+        status: 1, // 1-进行中
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (claimableCoupons.length === 0) return [];
+
+    // 2. 查出当前用户已经领过这些券的数量
+    const userCoupons = await this.prisma.userCoupon.findMany({
+      where: {
+        userId,
+        couponId: { in: claimableCoupons.map((c) => c.id) },
+      },
+      select: { couponId: true },
+    });
+
+    // 统计当前用户每种券领了多少张
+    const claimedCountMap = userCoupons.reduce(
+      (acc, curr) => {
+        acc[curr.couponId] = (acc[curr.couponId] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    // 3. 组装并计算进度返回给前端
+    return claimableCoupons.map((coupon) => {
+      const myClaimedCount = claimedCountMap[coupon.id] || 0;
+
+      // 计算进度百分比 (0-100)
+      const progress =
+        coupon.totalQuantity === -1
+          ? 0
+          : Math.min(100, (coupon.issuedQuantity / coupon.totalQuantity) * 100);
+
+      // 是否还可以领取
+      const isStockAvailable =
+        coupon.totalQuantity === -1 ||
+        coupon.issuedQuantity < coupon.totalQuantity;
+      const hasReachedLimit = myClaimedCount >= coupon.perUserLimit;
+      const canClaim = isStockAvailable && !hasReachedLimit;
+
+      return {
+        couponId: coupon.id,
+        couponName: coupon.couponName,
+        couponType: coupon.couponType,
+        discountValue: coupon.discountValue.toString(),
+        minPurchase: coupon.minPurchase.toString(),
+        totalQuantity: coupon.totalQuantity,
+        issuedQuantity: coupon.issuedQuantity,
+        progress: progress.toFixed(0),
+        canClaim,
+        hasReachedLimit,
+      };
+    });
+  }
 }
