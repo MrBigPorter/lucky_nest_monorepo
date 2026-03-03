@@ -18,6 +18,7 @@ import {
   RedeemCouponDto,
 } from '@api/client/coupon/dto/query-my-coupons-dto';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
+import { ClaimableCouponResponseDto } from '@api/client/coupon/dto/claimable-coupon-response.dto';
 
 @ApiTags('Client Coupons')
 @ApiBearerAuth()
@@ -73,5 +74,22 @@ export class ClientCouponController {
     @Body() dto: RedeemCouponDto,
   ) {
     return this.clientCouponService.redeemCode(userId, dto.code);
+  }
+
+  /**
+   * Get the list of claimable coupons for the Voucher Center (Level 3)
+   * @param userId
+   */
+  @Get('claimable')
+  @ApiOkResponse({
+    description: '返回可领取的优惠券列表',
+    type: [ClaimableCouponResponseDto],
+  })
+  async getClaimableCoupons(@CurrentUserId() userId: string) {
+    const result = await this.clientCouponService.getClaimableCoupons(userId);
+
+    return plainToInstance(ClaimableCouponResponseDto, result, {
+      excludeExtraneousValues: true,
+    });
   }
 }
