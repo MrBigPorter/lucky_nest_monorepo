@@ -204,30 +204,45 @@ export class ClientCouponService {
     return claimableCoupons.map((coupon) => {
       const myClaimedCount = claimedCountMap[coupon.id] || 0;
 
-      // 计算进度百分比 (0-100)
-      const progress =
-        coupon.totalQuantity === -1
-          ? 0
-          : Math.min(100, (coupon.issuedQuantity / coupon.totalQuantity) * 100);
+      let progressVal = 0;
+      if (coupon.totalQuantity !== -1 && coupon.totalQuantity > 0) {
+        const ratio = (coupon.issuedQuantity / coupon.totalQuantity) * 100;
 
-      // 是否还可以领取
+        if (coupon.issuedQuantity >= coupon.totalQuantity) {
+          progressVal = 100; // 只有真正抢光了，才给 100%
+        } else if (coupon.issuedQuantity > 0 && ratio < 1) {
+          progressVal = 1; // 只要发出去过，哪怕只有 0.1%，保底给 1%（制造热销感）
+        } else {
+          progressVal = Math.floor(ratio); // 强行向下取整，99.9% 也只显示 99%
+        }
+      }
+
+      // 核心逻辑计算
       const isStockAvailable =
         coupon.totalQuantity === -1 ||
         coupon.issuedQuantity < coupon.totalQuantity;
+
       const hasReachedLimit = myClaimedCount >= coupon.perUserLimit;
       const canClaim = isStockAvailable && !hasReachedLimit;
+
+      const isClaimed = hasReachedLimit;
+      const isSoldOut = !isStockAvailable;
 
       return {
         couponId: coupon.id,
         couponName: coupon.couponName,
         couponType: coupon.couponType,
-        discountValue: coupon.discountValue.toString(),
-        minPurchase: coupon.minPurchase.toString(),
+        discountValue: coupon.discountValue,
+        minPurchase: coupon.minPurchase,
         totalQuantity: coupon.totalQuantity,
         issuedQuantity: coupon.issuedQuantity,
-        progress: progress.toFixed(0),
+
+        progress: progressVal.toString(),
+
         canClaim,
         hasReachedLimit,
+        isClaimed,
+        isSoldOut,
       };
     });
   }

@@ -69,6 +69,9 @@ export class CouponResponseDto {
   @Expose()
   validType!: number;
 
+  @Expose()
+  validDays?: number;
+
   @ApiProperty({
     description: 'Issue Type: 1-System; 2-Claim; 3-Redeem Code; 4-Invite',
   })

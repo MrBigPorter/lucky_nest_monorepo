@@ -4,7 +4,7 @@ import {
   Get,
   Param,
   Query,
-  UseInterceptors,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -20,6 +20,8 @@ import {
 } from '@api/client/treasure/dto/treasure-response-dto';
 import { plainToInstance } from 'class-transformer';
 import { HotGroupItemDto } from '@api/client/treasure/dto/hot_croup_item.dto';
+import { CurrentUserId } from '@api/common/decorators/user.decorator';
+import { OptionalJwtAuthGuard } from '@api/common/jwt/option-jwt.guard';
 
 @Controller('treasure')
 export class TreasureController {
@@ -42,14 +44,19 @@ export class TreasureController {
 
   /**
    * 热门团列表
+   * @param userId
    * @param limit
    */
   @Get('hot-groups')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOkResponse({ type: [HotGroupItemDto] })
-  async getHotGroups(@Query('limit') limit?: number) {
+  async getHotGroups(
+    @CurrentUserId() userId?: string,
+    @Query('limit') limit?: number,
+  ) {
     // 限制最大查询数量，防止前端传个 10000 把数据库搞挂
     const take = Math.min(Number(limit) || 10, 20);
-    const list = await this.svc.getHotGroups(take);
+    const list = await this.svc.getHotGroups(take, userId);
 
     return plainToInstance(HotGroupItemDto, list);
   }

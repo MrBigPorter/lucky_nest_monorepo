@@ -362,6 +362,7 @@ export class ClientWalletService {
    */
   async createRecharge(userId: string, dto: CreateRechargeDto) {
     const amount = new Prisma.Decimal(dto.amount);
+    const { redirectUrl } = dto;
 
     //  1. 核心逻辑：先校验渠道是否存在、是否可用
     const channel = await this.prismaService.paymentChannel.findUnique({
@@ -411,6 +412,7 @@ export class ClientWalletService {
       let paymentUrl = await this.paymentService.createRechargeLink(
         order.rechargeNo,
         amount.toNumber(),
+        redirectUrl,
         channel.code,
       );
       // return { payUrl: order.payUrl, orderId: order.rechargeId };
