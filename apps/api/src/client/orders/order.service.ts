@@ -20,7 +20,7 @@ import { GroupService } from '@api/common/group/group.service';
 import { ERROR_KEYS } from '@api/common/error-codes.gen';
 import { throwBiz } from '@api/common/exceptions/biz.exception';
 import { RefundApplyDto } from '@api/client/orders/dto/refund-apply.dto';
-import { BizPrefix, OrderNoHelper } from '@lucky/shared';
+import { BizPrefix, COUPON_TYPE, OrderNoHelper } from '@lucky/shared';
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
@@ -45,8 +45,17 @@ export class OrderService {
   }
 
   async checkOut(userId: string, dto: CheckoutDto) {
-    const { treasureId, addressId, entries, groupId, paymentMethod, isGroup } =
-      dto;
+    //  FIX 1: Destructure couponId from DTO
+    const {
+      treasureId,
+      addressId,
+      entries,
+      groupId,
+      paymentMethod,
+      isGroup,
+      couponId,
+    } = dto;
+
     if (!entries || entries < 1) {
       throw new BadRequestException('entries must be at least 1');
     }
@@ -113,7 +122,6 @@ export class OrderService {
               payStatus: PAY_STATUS.PAID,
               orderStatus: ORDER_STATUS.PAID,
               NOT: {
-                // exclude refunded orders
                 refundStatus: REFUND_STATUS.REFUNDED,
               },
             },
@@ -122,7 +130,6 @@ export class OrderService {
           const alreadyBought = Number(agg._sum.buyQuantity || 0);
           const leftQuota = cap - alreadyBought;
           if (leftQuota <= 0) {
-            // reached purchase limit
             throw new BadRequestException(
               `purchase limit of ${cap} entries reached for this treasure`,
             );
@@ -134,69 +141,118 @@ export class OrderService {
           }
         }
 
-        // 默认为拼团价
+        // Default to group price
         let finalUnitPrice = treasure.unitAmount as unknown as Prisma.Decimal;
-        // 修改后 (正确逻辑：只有明确传入 false 才是单买，默认是拼团)
         const isSoloBuy = isGroup === false;
 
         if (isSoloBuy) {
-          // 单买价
           const soloPrice = treasure.soloAmount as unknown as Prisma.Decimal;
           if (!soloPrice || soloPrice.lte(0)) {
             throw new BadRequestException(
               'solo purchase not available for this treasure',
             );
           }
-          // use solo price
           finalUnitPrice = soloPrice;
         }
 
-        // 计算总价 (使用选定后的 finalUnitPrice)
+        // Calculate original total amount
         const originalAmount = finalUnitPrice.mul(entries);
 
         let couponAmount = D(0);
         let coinUsed = D(0);
         let coinAmount = D(0);
 
-        // coin payment
-        if (paymentMethod === 2) {
+        // ==========================================
+        //  FIX 2: Coupon Deduction Logic (Uncommented & Schema-Aligned)
+        // ==========================================
+        // ==========================================
+        // 1. 优惠券抵扣逻辑 (修复满减漏洞 & TS 类型限制)
+        // ==========================================
+        if (couponId) {
+          const userCoupon = await tx.userCoupon.findFirst({
+            where: { id: couponId, userId: userId, status: 0 },
+            include: { coupon: true },
+          });
+
+          if (!userCoupon) {
+            throw new BadRequestException('Invalid or already used coupon.');
+          }
+          if (userCoupon.validEndAt && new Date() > userCoupon.validEndAt) {
+            throw new BadRequestException('Coupon has expired.');
+          }
+          if (originalAmount.lessThan(userCoupon.coupon.minPurchase)) {
+            throw new BadRequestException(
+              'Order amount does not meet coupon minimum purchase requirement.',
+            );
+          }
+
+          if (userCoupon.coupon.discountType === COUPON_TYPE.FULL_REDUCTION) {
+            // 1 = Fixed amount deduction
+            couponAmount = userCoupon.coupon.discountValue;
+          } else if (userCoupon.coupon.discountType === COUPON_TYPE.DISCOUNT) {
+            // 2 = Percentage discount
+            const discount = originalAmount.mul(
+              userCoupon.coupon.discountValue.div(100),
+            );
+            const maxDiscount = userCoupon.coupon.maxDiscount
+              ? userCoupon.coupon.maxDiscount
+              : null;
+            couponAmount =
+              maxDiscount && discount.greaterThan(maxDiscount)
+                ? maxDiscount
+                : discount;
+          }
+
+          // 核心防御：优惠券抵扣金额【绝不能超过】商品原本的总价！
+          // 例如商品 50 块，满减券 100 块，实际只能抵扣 50 块。
+          if (couponAmount.greaterThan(originalAmount)) {
+            couponAmount = originalAmount;
+          }
+
+          // 立即更新优惠券为已使用状态，并记录【真实抵扣金额】
+          await tx.userCoupon.update({
+            where: { id: couponId },
+            data: {
+              status: 1,
+              usedAt: new Date(),
+              discountAmount: couponAmount,
+            },
+          });
+        }
+
+        // Calculate remaining amount after applying the coupon
+        let remainingAmount = originalAmount.sub(couponAmount);
+        if (remainingAmount.lt(0)) remainingAmount = D(0);
+
+        // ==========================================
+        //  FIX 3: Coin Deduction Logic (Only applies to remaining balance)
+        // ==========================================
+        if (paymentMethod === 2 && remainingAmount.gt(0)) {
           const w = await this.wallet.ensureWallet(userId, tx);
           const maxCoinUsable = treasure.maxUnitCoins?.mul(entries) || D(0);
-          const canUseCoins = w.coinBalance.lessThan(maxCoinUsable)
+
+          // Coins needed to pay off the remaining balance after coupon
+          const coinsNeededForRemaining = remainingAmount.mul(rate);
+
+          // Actual max coins allowed (min of product limit vs needed for remaining balance)
+          const actualMaxCoins = Prisma.Decimal.min(
+            maxCoinUsable,
+            coinsNeededForRemaining,
+          );
+
+          const canUseCoins = w.coinBalance.lessThan(actualMaxCoins)
             ? w.coinBalance
-            : maxCoinUsable;
+            : actualMaxCoins;
+
           coinUsed = canUseCoins;
           coinAmount = canUseCoins.div(rate);
-        } /*else if (userCouponId) { // Coupon payment (only if not using coins)
-                    const userCoupon = await tx.userCoupon.findFirst({
-                        where: { id: userCouponId, userId: userId, status: 0 },
-                        include: { coupon: true },
-                    });
+        }
 
-                    if (!userCoupon) {
-                        throw new BadRequestException('Invalid or used coupon.');
-                    }
-                    if (new Date() > userCoupon.validTo) {
-                        throw new BadRequestException('Coupon has expired.');
-                    }
-                    if (originalAmount.lt(userCoupon.coupon.minPurchaseAmount)) {
-                        throw new BadRequestException('Order amount does not meet coupon minimum purchase requirement.');
-                    }
+        //  FIX 4: Final amounts calculation
+        const finalAmount = remainingAmount.sub(coinAmount);
+        // Total discount is the sum of both coupon and coins
+        const discountAmount = couponAmount.add(coinAmount);
 
-                    if (userCoupon.coupon.type === 1 || userCoupon.coupon.type === 3) { // 满减 or 固定
-                        couponAmount = D(userCoupon.coupon.value);
-                    } else if (userCoupon.coupon.type === 2) { // 折扣
-                        const discount = originalAmount.mul(userCoupon.coupon.value.div(100));
-                        const maxDiscount = userCoupon.coupon.maxDiscountAmount ? D(userCoupon.coupon.maxDiscountAmount) : null;
-                        couponAmount = (maxDiscount && discount.gt(maxDiscount)) ? maxDiscount : discount;
-                    }
-                }*/
-
-        const discountAmount = couponAmount.gt(coinAmount)
-          ? couponAmount
-          : coinAmount;
-        const diff = originalAmount.sub(discountAmount);
-        const finalAmount = Prisma.Decimal.max(diff, D(0));
         const createdTxnIds: string[] = [];
 
         // deduce wallet coin balance before cash payment
@@ -213,6 +269,7 @@ export class OrderService {
           );
           createdTxnIds.push(coinTxnId);
         }
+
         if (finalAmount.gt(0)) {
           const { transactionId } = await this.wallet.debitCash(
             {
@@ -259,6 +316,7 @@ export class OrderService {
             coinUsed,
             groupId: null,
             isGroupOwner: 0,
+            userCouponId: couponId || null, //  FIX 5: Save the used coupon ID to the order
           },
           select: {
             orderId: true,
@@ -277,12 +335,11 @@ export class OrderService {
           },
         });
 
-        //4. 分支逻辑：单买跳过拼团
+        // Branch logic: skip grouping if it's a solo buy
         let finalGroupId = null;
         let isOwner = 0;
         let alreadyInGroup = false;
 
-        // 只有【不是单买】时，才进入拼团逻辑
         if (!isSoloBuy) {
           const res = await this.group.joinOrCreateGroup(
             { userId, treasureId, orderId: order.orderId, groupId: groupId },
@@ -292,6 +349,7 @@ export class OrderService {
           isOwner = res.isOwner;
           alreadyInGroup = res.alreadyInGroup;
         }
+
         // update order with groupId and isOwner
         await tx.order.update({
           where: { orderId: order.orderId },
