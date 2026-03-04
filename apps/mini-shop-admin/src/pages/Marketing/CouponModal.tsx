@@ -23,7 +23,7 @@ import {
   VALID_TYPE,
 } from '@lucky/shared';
 import { couponApi } from '@/api';
-import { Coupon, CreateCouponPayload } from '@/type/types.ts'; // 假设你的完整 Coupon 类型在这里
+import { Coupon, CreateCouponPayload } from '@/type/types.ts'; // Assuming your full Coupon type is here
 
 interface CouponFormModalProps {
   close: () => void;
@@ -130,23 +130,38 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
     form.reset(formData);
   }, [editingData, form]);
 
-  // 核心改动：统一处理提交逻辑
+  // Core change: Unified handling of submit logic
   const { run, loading } = useRequest(
     async (values: CreateCouponSchemaFormInput) => {
       const data: CreateCouponPayload = transformFormToPayload(values);
 
       if (isEditMode && editingData) {
-        // 编辑接口
+        // CRITICAL FIX: Strip sensitive fields if the coupon is already issued
+        // This prevents the backend's strict inequality check (e.g. 30 !== "30.00") from triggering a 400 error.
+        if (editingData?.issuedQuantity > 0) {
+          delete (data as any).couponType;
+          delete (data as any).discountType;
+          delete (data as any).discountValue;
+          delete (data as any).minPurchase;
+          delete (data as any).maxDiscount;
+          delete (data as any).validType;
+          delete (data as any).validDays;
+          delete (data as any).validStartAt;
+          delete (data as any).validEndAt;
+          delete (data as any).issueType;
+        }
+
+        // Update API
         return couponApi.update(editingData.id, data);
       } else {
-        // 创建接口
+        // Create API
         return couponApi.create(data);
       }
     },
     {
       manual: true,
       onSuccess: () => {
-        // 可以根据模式不同显示不同的 toast
+        // Close modal and refresh table list upon success
         confirm();
       },
     },
@@ -164,7 +179,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 可以在这里加个标题区分 */}
+      {/* Add a title to distinguish the mode */}
       <div className="text-lg font-semibold">
         {isEditMode ? 'Edit Coupon' : 'Create Coupon'}
       </div>
@@ -179,7 +194,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
               placeholder="e.g. New user ₱100-₱10"
             />
 
-            {/* Coupon Code 通常创建后也不建议随便改，看你业务需求，这里假设可以改 */}
+            {/* Coupon Code is usually not recommended to change after creation, assuming it can be changed here */}
             <FormTextField
               disabled={!!editingData?.couponCode}
               name="couponCode"
@@ -191,7 +206,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
               required
               label="Issue type"
               name="issueType"
-              // 假设 IssueType 也是关键字段，不能改
+              // Assuming IssueType is a critical field, cannot be changed
               disabled={isCriticalDisabled}
               options={ISSUE_TYPE_OPTIONS.map((option) => ({
                 label: option.label,
@@ -199,7 +214,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
               }))}
             />
 
-            {/* 🔥 关键字段开始锁定 */}
+            {/*  Critical fields lock start */}
             <FormSelectField
               required
               label="Coupon type"
@@ -248,13 +263,12 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
                 label="Max discount (₱)"
                 type="number"
                 name="maxDiscount"
-                // Max discount 通常也属于关键金额信息
+                // Max discount is usually critical amount info too
                 disabled={isCriticalDisabled}
               />
             )}
-            {/* 🔥 关键字段锁定结束 */}
 
-            {/* Total Quantity 通常可以增加，但不建议减少，这里先不做特殊处理，或者允许修改 */}
+            {/* Total Quantity can usually increase, but not decrease. Allowed to edit for now. */}
             <FormTextField
               required
               label="Total quantity (-1 = unlimited)"
@@ -269,7 +283,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
               name="perUserLimit"
             />
 
-            {/* Valid Type 也是关键字段 */}
+            {/* Valid Type is also a critical field */}
             <FormSelectField
               required
               label="Valid type"
@@ -297,7 +311,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
                   required
                   label="Valid start date"
                   name="validStartAt"
-                  // 日期范围通常也不让大改，看业务
+                  // Date range is usually not heavily modified, depends on business logic
                   disabled={isCriticalDisabled}
                 />
                 <FormDateField

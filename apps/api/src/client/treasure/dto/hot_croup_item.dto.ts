@@ -82,4 +82,18 @@ export class HotGroupItemDto {
   @DateToTimestamp()
   @Expose()
   salesEndAt?: number;
+
+  @ApiProperty({
+    description: '当前用户是否已参与',
+    example: true,
+  })
+  @Expose()
+  isJoined!: boolean; // 当前用户是否已参与
+
+  @ApiProperty({
+    description: '如果已参与，返回对应的 groupId；如果未参与，返回 null',
+    example: 'cg1a2b3c4d5e6f7g8h9i0j',
+  })
+  @Expose()
+  groupId!: string | null; // 如果已参与，返回对应的 groupId；如果未参与，返回 null
 }

@@ -32,7 +32,7 @@ export class QueryMyCouponsDto {
   @IsIn([0, 1, 2])
   status?: number;
 
-  // 💡 支付页扩展：传订单总金额，后端直接帮你过滤出“满足门槛”的券
+  //  支付页扩展：传订单总金额，后端直接帮你过滤出“满足门槛”的券
   @ApiPropertyOptional({ description: '当前订单金额，用于过滤可用券' })
   @IsOptional()
   @ToNumber()

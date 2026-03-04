@@ -1,15 +1,15 @@
-import { Exclude, Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { Exclude, Expose, Type, Transform } from 'class-transformer';
 import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 
 @Exclude()
 export class MyCouponResponseDto {
-  @ApiProperty({ description: '用户优惠券实例ID (下单抵扣时传这个ID)' })
+  @ApiProperty({ description: '用户领取的优惠券实例 ID (userCoupon 表主键)' })
   @Expose()
   userCouponId!: string;
 
-  @ApiProperty({ description: '使用状态: 0-未使用, 1-已使用, 2-已过期' })
+  @ApiProperty({ description: '状态: 0-未使用, 1-已使用, 2-已过期' })
   @Expose()
   status!: number;
 
@@ -23,16 +23,15 @@ export class MyCouponResponseDto {
   @DateToTimestamp()
   validEndAt!: number;
 
-  // --- 模板属性 (来自 Coupon 表) ---
-  @ApiProperty({ description: '券名' })
+  @ApiProperty({ description: '优惠券名称' })
   @Expose()
   couponName!: string;
 
-  @ApiProperty({ description: '类型: 1-满减 2-折扣 3-无门槛' })
+  @ApiProperty({ description: '优惠券类型' })
   @Expose()
   couponType!: number;
 
-  @ApiProperty({ description: '优惠数值 (减多少钱，或打几折)' })
+  @ApiProperty({ description: '优惠面值' })
   @Expose()
   @DecimalToString()
   discountValue!: string;
@@ -42,13 +41,12 @@ export class MyCouponResponseDto {
   @DecimalToString()
   minPurchase!: string;
 
-  @ApiProperty({ description: '使用规则描述' })
+  @ApiProperty({ description: '使用规则描述', nullable: true })
   @Expose()
   ruleDesc?: string;
 }
 
 export class MyCouponListResponseDto extends PaginatedResponseDto<MyCouponResponseDto> {
-  @ApiProperty({ type: [MyCouponResponseDto] })
-  @Expose()
-  override list!: MyCouponResponseDto[];
+  @ApiProperty({ isArray: true, type: MyCouponResponseDto })
+  list!: MyCouponResponseDto[];
 }

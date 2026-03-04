@@ -39,22 +39,18 @@ export class PaymentService {
   /** Create a recharge payment link using Xendit Invoice
    * @param orderNo
    * @param amount
+   * @param redirectUrl
    * @param channelCode
    * @param userEmail
    */
   async createRechargeLink(
     orderNo: string, //业务订单号
     amount: number, //金额 (数字类型)
+    redirectUrl: string,
     channelCode?: string, //支付渠道代码 (可选，用于指定支付方式)
     userEmail?: string, //用户邮箱 (可选，用于发回执)
   ) {
     try {
-      /*const frontendUrl = this.configService.get<string>(
-        'FRONTEND_URL',
-        'http://localhost:3000',
-      );*/
-      const frontendUrl = 'luckyapp://';
-
       // 构造基础 Payload
       const invoiceData: CreateInvoiceRequest = {
         externalId: orderNo,
@@ -63,8 +59,8 @@ export class PaymentService {
         invoiceDuration: 86400, // 24 hour,
         currency: 'PHP',
         payerEmail: userEmail,
-        successRedirectUrl: `${frontendUrl}wallet/recharge/success`,
-        failureRedirectUrl: `${frontendUrl}wallet/recharge/failure`,
+        successRedirectUrl: `${redirectUrl}wallet/recharge/success/${orderNo}`,
+        failureRedirectUrl: `${redirectUrl}wallet/recharge/failure/${orderNo}`,
       };
 
       if (channelCode) {

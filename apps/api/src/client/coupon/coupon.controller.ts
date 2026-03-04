@@ -5,20 +5,23 @@ import {
   Param,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { plainToInstance } from 'class-transformer';
 import { ClientCouponService } from '@api/client/coupon/coupon.service';
-import { MyCouponListResponseDto } from '@api/client/coupon/dto/my-coupon-response-dto';
+import {
+  MyCouponListResponseDto,
+  MyCouponResponseDto,
+} from '@api/client/coupon/dto/my-coupon-response-dto';
 import {
   QueryMyCouponsDto,
   RedeemCouponDto,
 } from '@api/client/coupon/dto/query-my-coupons-dto';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { ClaimableCouponResponseDto } from '@api/client/coupon/dto/claimable-coupon-response.dto';
+import { CouponActionResponseDto } from '@api/client/coupon/dto/coupon-action-response.dto';
 
 @ApiTags('Client Coupons')
 @ApiBearerAuth()
@@ -42,9 +45,7 @@ export class ClientCouponController {
 
     return {
       ...result,
-      list: plainToInstance(MyCouponListResponseDto, result.list, {
-        excludeExtraneousValues: true,
-      }),
+      list: plainToInstance(MyCouponResponseDto, result.list),
     };
   }
 
@@ -54,21 +55,21 @@ export class ClientCouponController {
    * @param couponId
    */
   @Post('claim/:couponId')
+  @ApiOkResponse({ type: CouponActionResponseDto })
   async claimCoupon(
     @CurrentUserId() userId: string,
     @Param('couponId') couponId: string,
   ) {
     // 限制必须是 issueType = 2 (用户手动领取) 的券
-    await this.clientCouponService.claimCoupon(userId, couponId, 2);
-    return { success: true, message: 'Coupon claimed successfully' };
+    return this.clientCouponService.claimCoupon(userId, couponId, 2);
   }
-
   /**
    * Redeem a coupon code (for coupons with issueType = 3)
    * @param userId
    * @param dto
    */
   @Post('redeem')
+  @ApiOkResponse({ type: CouponActionResponseDto })
   async redeemCoupon(
     @CurrentUserId() userId: string,
     @Body() dto: RedeemCouponDto,
@@ -88,8 +89,7 @@ export class ClientCouponController {
   async getClaimableCoupons(@CurrentUserId() userId: string) {
     const result = await this.clientCouponService.getClaimableCoupons(userId);
 
-    return plainToInstance(ClaimableCouponResponseDto, result, {
-      excludeExtraneousValues: true,
-    });
+    // 返回的是数组，直接转换
+    return plainToInstance(ClaimableCouponResponseDto, result);
   }
 }

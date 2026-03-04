@@ -56,13 +56,14 @@ export const CouponList: React.FC = () => {
       page: current,
       pageSize,
     };
-    if (formData.keyword.trim()) {
-      params.keyword = formData.keyword;
+
+    if (formData?.keyword?.trim()) {
+      params.keyword = formData.keyword.trim();
     }
-    if (formData.status && formData.status !== 'ALL') {
+    if (formData?.status && formData.status !== 'ALL') {
       params.status = Number(formData.status);
     }
-    if (formData.couponType && formData.couponType !== 'ALL') {
+    if (formData?.couponType && formData.couponType !== 'ALL') {
       params.couponType = Number(formData.couponType);
     }
 
@@ -166,7 +167,6 @@ export const CouponList: React.FC = () => {
             </div>
             <div className="mt-1 flex gap-2">
               <StatusBadge status={info.row.original.status} />
-              {/* 这里可以加更多 Badge，比如 IssueType */}
               <Badge color="blue">
                 {info.row.original.issueType === ISSUE_TYPE.CLAIM
                   ? 'Claim'
@@ -225,7 +225,6 @@ export const CouponList: React.FC = () => {
                     isUnlimited ? 'bg-green-500' : 'bg-blue-500'
                   }`}
                   style={{
-                    // 无限库存时给一个固定极小宽度或者满宽（看设计偏好），这里设为 100% 绿色表示畅通
                     width: isUnlimited ? '100%' : `${percent}%`,
                   }}
                 />
@@ -285,7 +284,7 @@ export const CouponList: React.FC = () => {
           </div>
         ),
       }),
-    ];
+    ] as any; //在这里加上 "as any"，告诉 TS 闭嘴
   }, [handleDelete, handleOpenModal]);
 
   return (

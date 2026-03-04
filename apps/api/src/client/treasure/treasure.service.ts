@@ -4,6 +4,7 @@ import { TreasureQueryDto } from '@api/client/treasure/dto/treasure-query.dto';
 import { RedisService } from '@api/common/redis/redis.service';
 import { TreasureFilterType } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
+import { GROUP_STATUS } from '@lucky/shared/dist/types/treasure';
 
 @Injectable()
 export class TreasureService {
@@ -259,12 +260,8 @@ export class TreasureService {
    * 逻辑：正在热卖 + 还没卖完 + 进度最快(或者剩余库存最少)
    * 缓存：建议在 Controller 层做 5秒 短缓存
    */
-  /**
-   * 获取热门拼团列表 (独立接口专用)
-   * 逻辑：正在热卖 + 还没卖完 + 进度最快(或者剩余库存最少)
-   * 缓存：建议在 Controller 层做 5秒 短缓存
-   */
-  async getHotGroups(limit = 10) {
+
+  async getHotGroups(limit = 10, userId?: string) {
     // 使用 SQL Raw 查询以获得最佳性能和复杂的排序逻辑
     const items = await this.prisma.$queryRawUnsafe<any[]>(
       `
@@ -307,21 +304,69 @@ export class TreasureService {
       limit,
     );
 
-    // 格式化数据返回给前端
-    return items.map((item) => ({
-      treasureId: item.treasure_id,
-      treasureName: item.treasure_name,
-      treasureCoverImg: item.treasure_cover_img,
-      unitAmount: item.unit_amount,
-      marketAmount: item.market_amount,
-      // 进度条 (数据库算好了，转成 number)
-      buyQuantityRate: Number(item.progress_percent) / 100, // 转回 0.xx 格式给前端
-      // 剩余库存 (用于显示 "仅剩 x 件")
-      stockLeft: item.seq_shelves_quantity - item.seq_buy_quantity,
-      // 参与人数 (用 seq_buy_quantity 模拟)
-      joinCount: item.seq_buy_quantity,
-      // 模拟头像 (如果数据库没有关联表，这里可以先返回空，前端做 Mock，或者在这里 Mock)
-      recentJoinAvatars: [],
-    }));
+    if (items.length === 0) return [];
+
+    const userGroupsMap = new Map<string, string>(); // treasureId -> groupId
+    const treasureIds = items.map((i) => i.treasure_id);
+
+    // 并发执行：查当前用户的参与状态 + 查这些商品的最近参与头像
+    const [userParticipations, recentAvatars] = await Promise.all([
+      // A. 查当前登录用户状态 (修正 status -> groupStatus)
+      userId
+        ? this.prisma.treasureGroupMember.findMany({
+            where: {
+              userId: userId,
+              group: {
+                treasureId: { in: treasureIds },
+                groupStatus: GROUP_STATUS.ACTIVE,
+              },
+            },
+            select: {
+              groupId: true,
+              group: { select: { treasureId: true } },
+            },
+          })
+        : Promise.resolve([]),
+
+      this.prisma.treasureGroupMember.findMany({
+        where: { group: { treasureId: { in: treasureIds } } },
+        take: 50, // 拿最近的 50 条在内存里分发，避免循环查库
+        orderBy: { joinedAt: 'desc' },
+        select: {
+          group: { select: { treasureId: true } },
+          user: { select: { avatar: true } },
+        },
+      }),
+    ]);
+
+    // 建立用户参与映射
+    userParticipations.forEach((p) => {
+      userGroupsMap.set(p.group.treasureId, p.groupId);
+    });
+
+    return items.map((item) => {
+      const myGroupId = userGroupsMap.get(item.treasure_id);
+
+      // 提取该商品的最近头像
+      const avatars = recentAvatars
+        .filter((a) => a.group.treasureId === item.treasure_id)
+        .map((a) => a.user.avatar)
+        .filter((v) => !!v)
+        .slice(0, 3) as string[];
+
+      return {
+        treasureId: item.treasure_id,
+        treasureName: item.treasure_name,
+        treasureCoverImg: item.treasure_cover_img,
+        unitAmount: item.unit_amount,
+        marketAmount: item.market_amount,
+        buyQuantityRate: Number(item.progress_percent) / 100,
+        stockLeft: item.seq_shelves_quantity - item.seq_buy_quantity,
+        joinCount: item.seq_buy_quantity,
+        recentJoinAvatars: avatars,
+        isJoined: !!myGroupId,
+        groupId: myGroupId || null,
+      };
+    });
   }
 }
