@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -27,6 +28,7 @@ import {
   GetRechargeHistoryDto,
   RechargeHistoryItemDto,
   RechargeHistoryResponseDto,
+  RechargeStatusResponseDto,
 } from '@api/client/wallet/dto/recharge.dto';
 
 @ApiBearerAuth()
@@ -121,5 +123,24 @@ export class WalletController {
         excludeExtraneousValues: true,
       }),
     };
+  }
+
+  /**
+   * Get recharge order status by recharge number
+   * @param userId
+   * @param rechargeNo
+   */
+  @Get('recharge/status/:rechargeNo')
+  @ApiOkResponse({
+    type: RechargeStatusResponseDto,
+  })
+  async getRechargeStatus(
+    @CurrentUserId() userId: string,
+    @Param('rechargeNo') rechargeNo: string,
+  ) {
+    const res = await this.clientWallet.getRechargeDetail(userId, rechargeNo);
+    return plainToInstance(RechargeStatusResponseDto, res, {
+      excludeExtraneousValues: true,
+    });
   }
 }

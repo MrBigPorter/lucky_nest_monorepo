@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -266,6 +268,52 @@ export class ClientWalletService {
         return { status: 'PROCESSED', xendit_status: status };
       }
     });
+  }
+
+  /**
+   * Get recharge order details
+   * @param userId
+   * @param rechargeNo
+   */
+  async getRechargeDetail(userId: string, rechargeNo: string) {
+    if (!rechargeNo) throw new BadRequestException('rechargeNo is required');
+
+    const order = await this.prismaService.rechargeOrder.findUnique({
+      where: { rechargeNo },
+      select: {
+        userId: true,
+        rechargeNo: true,
+        rechargeAmount: true,
+        rechargeStatus: true,
+        createdAt: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Recharge order not found: ${rechargeNo}`);
+    }
+
+    // 越权校验：只能查自己的订单
+    if (order.userId !== userId) {
+      throw new ForbiddenException('Invalid order permission');
+    }
+
+    // 转换状态给前端 (前端期望 'SUCCESS', 'FAILED', 'PROCESSING')
+    let statusStr = 'PROCESSING';
+    if (order.rechargeStatus === RECHARGE_STATUS.SUCCESS) {
+      statusStr = 'SUCCESS';
+    } else if (order.rechargeStatus !== RECHARGE_STATUS.PENDING) {
+      // 只要不是 PENDING 和 SUCCESS，统统认为是 FAILED
+      // (兼容未来可能增加的 CANCELLED / REFUNDED 等状态)
+      statusStr = 'FAILED';
+    }
+
+    return {
+      orderNo: order.rechargeNo,
+      amount: order.rechargeAmount,
+      status: statusStr,
+      createdAt: order.createdAt,
+    };
   }
 
   /** Apply for a withdrawal
