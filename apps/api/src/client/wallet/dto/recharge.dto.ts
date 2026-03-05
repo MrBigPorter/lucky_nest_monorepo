@@ -1,53 +1,64 @@
 import { IsOptional, IsInt, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { DateToTimestamp, DecimalToString } from '@api/common/dto/transforms';
 import { PaginatedResponseDto } from '@api/common/dto/paginated-response.dto';
 
+@Exclude()
 export class GetRechargeHistoryDto {
   @IsOptional()
   @IsInt()
   @Min(1)
   @Type(() => Number)
+  @Expose()
   page?: number = 1;
 
   @IsOptional()
   @IsInt()
   @Min(1)
   @Type(() => Number)
+  @Expose()
   pageSize?: number = 10;
 
   @IsOptional()
   @IsInt()
   @Type(() => Number)
+  @Expose()
   status?: number; // 对应 rechargeStatus: 1-待支付, 2-支付中...
 }
 
+@Exclude()
 export class RechargeHistoryItemDto {
   @ApiProperty({ description: '充值订单号', example: 'RO123456789' })
+  @Expose()
   rechargeNo!: string;
 
   @ApiProperty({ description: '充值金额 (字符串格式)', example: '100.00' })
   @DecimalToString()
+  @Expose()
   rechargeAmount!: string;
 
   @ApiProperty({ description: '实际到账金额 (字符串格式)', example: '100.00' })
   @DecimalToString()
+  @Expose()
   actualAmount!: string;
 
   @ApiProperty({
     description: '充值状态: 1-待支付 2-支付中 3-充值成功 4-充值失败 5-已取消',
     example: 1,
   })
+  @Expose()
   rechargeStatus!: number;
 
   @ApiProperty({
     description: '支付方式: 1-GCash 2-PayMaya 3-Bank 4-Card',
     example: 1,
   })
+  @Expose()
   paymentMethod!: number;
 
   @ApiProperty({ description: '渠道名称', example: 'GCash', required: false })
+  @Expose()
   paymentChannel?: string;
 
   @ApiProperty({
@@ -55,10 +66,12 @@ export class RechargeHistoryItemDto {
     example: 'PH_GCASH',
     required: false,
   })
+  @Expose()
   channelCode?: string;
 
   @ApiProperty({ description: '创建时间 (毫秒时间戳)', example: 1704067200000 })
   @DateToTimestamp()
+  @Expose()
   createdAt!: number;
 
   @ApiProperty({
@@ -67,11 +80,38 @@ export class RechargeHistoryItemDto {
     example: null,
   })
   @DateToTimestamp()
+  @Expose()
   paidAt!: number;
 }
 
+@Exclude()
 export class RechargeHistoryResponseDto extends PaginatedResponseDto<RechargeHistoryItemDto> {
   @ApiProperty({ description: '列表数据', type: [RechargeHistoryItemDto] })
   @Type(() => RechargeHistoryItemDto)
   list!: RechargeHistoryItemDto[];
+}
+
+@Exclude()
+export class RechargeStatusResponseDto {
+  @ApiProperty({ description: '充值订单号', example: 'R1234567890' })
+  @Expose()
+  orderNo!: string;
+
+  @ApiProperty({ description: '充值金额 (Decimal)', example: 100.0 })
+  @DecimalToString()
+  @Expose()
+  amount!: string;
+
+  @ApiProperty({
+    description: '订单当前状态',
+    enum: ['PROCESSING', 'SUCCESS', 'FAILED'],
+    example: 'PROCESSING',
+  })
+  @Expose()
+  status!: string;
+
+  @ApiProperty({ description: '订单创建时间' })
+  @DateToTimestamp()
+  @Expose()
+  createdAt!: number;
 }
