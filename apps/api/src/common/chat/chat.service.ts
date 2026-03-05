@@ -637,7 +637,7 @@ export class ChatService {
       data: {
         type: CONVERSATION_TYPE.BUSINESS,
         businessId,
-        name: `Business ${businessId}`,
+        name: `Business Official`,
         status: ConversationStatus.NORMAL,
         lastMsgContent: 'Welcome!',
         lastMsgTime: new Date(),
