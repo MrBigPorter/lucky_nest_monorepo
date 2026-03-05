@@ -171,13 +171,18 @@ export class ChatController {
   /**
    * Ensure a conversation with a business entity exists (e.g., merchant customer service), create if not
    * @param query
+   * @param userId
    */
   @Get('business')
-  async getBusinessChat(@Query() query: JoinBusinessChatDto) {
-    const conv = await this.chatService.ensureBusinessConversation(
+  async getBusinessChat(
+    @Query() query: JoinBusinessChatDto,
+    @CurrentUserId() userId: string,
+  ) {
+    const member = await this.chatService.addMemberToBusinessGroup(
       query.businessId,
+      userId,
     );
-    return { conversationId: conv.id };
+    return { conversationId: member.conversationId };
   }
 
   /**
