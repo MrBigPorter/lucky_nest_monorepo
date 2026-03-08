@@ -1,0 +1,10 @@
+/*
+  # 1. 修复了语法的 CSP：允许主站和本地开发嵌套
+  Content-Security-Policy: frame-ancestors 'self' https://app.joyminis.com http://localhost:* http://127.0.0.1:*;
+
+  # 2. 告诉 Flutter：我允许被你跨域嵌套
+  Cross-Origin-Resource-Policy: cross-origin
+
+  # 3.  满足 AWS WebAssembly 的底层隔离要求 (极度重要)
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Opener-Policy: same-origin
