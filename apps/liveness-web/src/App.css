@@ -1,8 +1,17 @@
-body, html, #root {
+/* index.css */
+html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* 防止出现滚动条 */
-  background-color: black;
+  overflow: hidden; /* 防止活体界面出现滚动条 */
+  background-color: #000; /* AWS 活体组件在黑底上效果最好 */
+}
+
+/* 如果你包了一层 div，确保它也是 flex 撑满的 */
+.liveness-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
 }

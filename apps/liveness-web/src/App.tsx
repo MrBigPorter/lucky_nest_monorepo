@@ -44,14 +44,14 @@ function App() {
           onAnalysisComplete={async () => {
             window.parent.postMessage(
               { type: "LIVENESS_RESULT", success: true },
-              "*",
+              "https://app.joyminis.com", //  安全：只允许主站接收结果，防止数据被截获
             );
           }}
           onError={(error: any) => {
             const errorMessage = error?.message || String(error);
             window.parent.postMessage(
               { type: "LIVENESS_RESULT", success: false, error: errorMessage },
-              "*",
+              "https://app.joyminis.com", //  同样指定目标域名
             );
           }}
         />
