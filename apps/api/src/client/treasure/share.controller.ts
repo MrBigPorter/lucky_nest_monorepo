@@ -1,5 +1,6 @@
-import { Controller, Get, Query, Header, Logger } from '@nestjs/common';
-import { TreasureService } from '@api/client/treasure/treasure.service'; // 注意路径，换成你实际的路径
+import { Controller, Get, Query, Logger, Res } from '@nestjs/common';
+import { Response } from 'express';
+import { TreasureService } from '@api/client/treasure/treasure.service';
 
 @Controller()
 export class ShareController {
@@ -8,44 +9,58 @@ export class ShareController {
   constructor(private readonly treasureService: TreasureService) {}
 
   /**
-   * 拦截 /share.html 请求，输出给 WhatsApp/FB 爬虫和普通用户
+   * Intercept /share.html requests, providing content for WhatsApp/FB crawlers and general users.
    */
   @Get('share.html')
-  @Header('Content-Type', 'text/html; charset=utf-8') // 必须声明这是网页
-  async getSharePage(@Query('pid') pid: string, @Query('gid') gid?: string) {
-    // 1. 定义兜底网页：如果 pid 没传或者报错，给一张默认卡片
+  async getSharePage(
+    @Query('pid') pid: string,
+    @Query('gid') gid: string,
+    @Res() res: Response,
+  ) {
+    // 1. Define default fallback content
     const fallbackHtml = this.generateHtml(
-      'Lucky App - Fortunate Journey',
-      'Come and explore the best treasures on Lucky App!',
+      'JoyMini - Fortunate Journey',
+      'Come and explore the best treasures on JoyMini!',
       'https://img.joyminis.com/images/joymini-banner.png',
       pid,
       gid,
     );
 
-    if (!pid) return fallbackHtml;
+    if (!pid) {
+      return res.type('text/html').send(fallbackHtml);
+    }
 
     try {
       const product = await this.treasureService.detail(pid);
 
-      if (!product) return fallbackHtml;
+      if (!product) {
+        return res.type('text/html').send(fallbackHtml);
+      }
 
-      // 3. 将查到的商品数据，塞进 HTML 模板里
-      return this.generateHtml(
+      // Sanitize description by removing HTML tags
+      const rawDesc =
+        product.desc || 'Come and explore the best treasures on JoyMini!';
+      const cleanDesc =
+        rawDesc.replace(/<[^>]*>/g, '').trim() || 'JoyMini treasures await!';
+
+      const html = this.generateHtml(
         product.treasureName,
-        product.desc || 'Come and get it on Lucky App!',
+        cleanDesc,
         product?.treasureCoverImg ||
           'https://img.joyminis.com/images/joymini-banner.png',
         pid,
         gid,
       );
+
+      return res.type('text/html').send(html);
     } catch (error: any) {
       this.logger.warn(`Share page failed for pid ${pid}: ${error.message}`);
-      return fallbackHtml; // 防止给爬虫报错
+      return res.type('text/html').send(fallbackHtml);
     }
   }
 
   /**
-   * 私有方法：生成带有真实数据的 HTML 字符串
+   * Generate HTML with dual-platform wake-up logic and a guidance mask.
    */
   private generateHtml(
     title: string,
@@ -54,11 +69,10 @@ export class ShareController {
     pid?: string,
     gid?: string,
   ): string {
-    const schemeQuery = gid ? `?groupId=${gid}` : '';
-    // 唤起你们的 App Scheme
-    const jumpScheme = pid
-      ? `luckyapp://product/${pid}${schemeQuery}`
-      : 'luckyapp://home';
+    // 1. Pre-assemble the protocol link on the server side
+    const schemeUrl = pid
+      ? `joymini://product/${pid}${gid ? '?groupId=' + gid : ''}`
+      : 'javascript:void(0);';
 
     return `
 <!DOCTYPE html>
@@ -66,39 +80,46 @@ export class ShareController {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>${title} - Lucky App</title>
-    
+    <title>${title} - JoyMini</title>
     <meta property="og:type" content="website" />
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${desc}" />
     <meta property="og:image" content="${imageUrl}" />
     
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${title}" />
-    <meta name="twitter:image" content="${imageUrl}" />
-
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 85vh; margin: 0; background: #fafafa; }
-        .logo { width: 80px; height: 80px; border-radius: 18px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .open-btn { display: block; width: 220px; height: 50px; line-height: 50px; background: #FF5722; color: white; text-align: center; border-radius: 25px; text-decoration: none; font-weight: 600; }
+        body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 85vh; margin: 0; background: #fafafa; }
+        .open-btn { display: block; width: 220px; height: 50px; line-height: 50px; background: #FF5722; color: white; text-align: center; border-radius: 25px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 12px rgba(255,87,34,0.3); }
+        /* Browser mask styling */
+        #browser-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 9999; flex-direction: column; align-items: flex-end; padding: 20px; box-sizing: border-box; }
+        .mask-text { color: white; font-size: 20px; font-weight: bold; text-align: right; margin-top: 20px; line-height: 1.5; }
+        .mask-arrow { color: white; font-size: 40px; margin-right: 10px; animation: bounce 1s infinite alternate; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
     </style>
 </head>
 <body>
-    <div class="logo" style="background: #FF5722; display: flex; align-items: center; justify-content: center;">
-        <span style="color: white; font-size: 40px; font-weight: bold;">L</span>
+    <div style="font-size: 18px; color: #333; margin-bottom: 8px; font-weight: 600; text-align: center; padding: 0 20px;">${title}</div>
+    <div style="font-size: 14px; color: #999; margin-bottom: 30px; text-align: center; padding: 0 20px;">${desc}</div>
+    
+    <a id="jumpBtn" class="open-btn" href="${schemeUrl}">Open in App</a>
+
+    <div id="browser-mask" onclick="this.style.display='none'">
+        <div class="mask-arrow">↗</div>
+        <div class="mask-text">Tap the "..." at the top right<br>and select "Open in Browser"<br>to view in JoyMini!</div>
     </div>
-    <div style="font-size: 16px; color: #666; margin-bottom: 30px;">Redirecting to Lucky App...</div>
-    <a href="javascript:void(0);" id="jumpBtn" class="open-btn">Open in App</a>
 
     <script>
-        const scheme = '${jumpScheme}';
-        
-        function doJump() {
-            window.location.href = scheme;
+        const ua = navigator.userAgent.toLowerCase();
+        const isMessenger = ua.indexOf("fban") > -1 || ua.indexOf("fbav") > -1 || ua.indexOf("messenger") > -1 || ua.indexOf("micromessenger") > -1;
+
+        if (isMessenger) {
+            // 3. If the environment blocks links (like Facebook or WeChat), use JS to prevent the <a> tag default behavior and show the browser mask instead.
+            const btn = document.getElementById('jumpBtn');
+            btn.onclick = function(e) {
+                e.preventDefault(); 
+                document.getElementById('browser-mask').style.display = 'flex';
+            };
         }
-        
-        window.onload = function() { setTimeout(doJump, 800); };
-        document.getElementById('jumpBtn').onclick = doJump;
+        // Standard browsers like Safari do not require specific btn.onclick logic; the <a> tag's href attribute handles the wake-up successfully.
     </script>
 </body>
 </html>

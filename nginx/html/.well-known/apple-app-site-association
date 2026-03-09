@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "A1B2C3D4E5.com.porter.lucky",
+        "appID": "A1B2C3D4E5.com.porter.joyminis",
         "paths": [ "/group/*", "*" ]
       }
     ]
