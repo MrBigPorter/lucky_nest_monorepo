@@ -14,9 +14,10 @@ export class ServerTimeInterceptor implements NestInterceptor {
       tap(() => {
         const ctx = context.switchToHttp();
         const response = ctx.getResponse<Response>();
-        // 在响应头中添加服务器时间
-        // x-server-time 是自定义头，前端以此为准
-        response.setHeader('x-server-time', Date.now().toString());
+
+        if (!response.headersSent) {
+          response.setHeader('x-server-time', Date.now().toString());
+        }
       }),
     );
   }

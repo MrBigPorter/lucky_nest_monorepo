@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.porter.joyminis",
+      "sha256_cert_fingerprints": [
+        "37:99:94:B2:80:2D:1A:97:76:3F:EB:7D:B3:3E:3B:79:A5:9C:39:05:E3:2D:EA:8F:D1:8F:00:EE:8D:B3:67:F6"
+      ]
+    }
+  }
+]

@@ -123,6 +123,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       details,
     };
 
+    //  核心修复：如果响应头已经发给了客户端（说明业务代码已经自己接管了返回），就不要再返回 JSON 报错了
+    if (res.headersSent) {
+      return;
+    }
+
     httpAdapter.reply(res, payload, status);
   }
 }
