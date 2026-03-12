@@ -24,7 +24,7 @@ RUN yarn install --immutable
 # 5. 拷贝全部源码
 COPY turbo.json tsconfig*.json ./
 COPY apps/api/ ./apps/api/
-COPY scripts/ ./scripts/
+COPY apps/api/ ./apps/api/
 
 # 6. 生成错误码、Prisma 客户端并编译 NestJS
 RUN yarn workspace @lucky/api prebuild
