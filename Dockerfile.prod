@@ -1,35 +1,41 @@
 # ==========================================
-# Stage 1: Builder (干苦力的“胖子”镜像，负责编译)
+# Stage 1: Builder (干苦力的“胖子”镜像，负责安装和编译)
 # ==========================================
+# 使用你本地一致的基础 Node 版本
 FROM node:20-bullseye-slim AS builder
 
 WORKDIR /app
 
-# 1. 安装底层编译环境
-RUN apt-get update && apt-get install -y python3 make g++ openssl && rm -rf /var/lib/apt/lists/*
+# 1. 安装底层编译环境 (专治 bcrypt, sharp 和 Prisma 报错)
+RUN apt-get update && apt-get install -y python3 make g++ openssl procps && rm -rf /var/lib/apt/lists/*
 
 # 2. 启用 Yarn 4
 RUN corepack enable && corepack prepare yarn@4.9.2 --activate
 
-# 3. 极其巧妙的缓存层
+# 3. 极其巧妙的缓存层：先只拷贝包管理骨架，利用 Docker 缓存加速依赖安装
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
+# 拷贝内部依赖的 package.json
 COPY apps/api/package.json ./apps/api/
+COPY apps/mini-shop-admin/package.json ./apps/mini-shop-admin/
 COPY packages/ ./packages/
 
-# 4. 安装所有依赖 (🚀 优化点：去掉了 --immutable，解决极其头疼的版本冲突报错)
+# 4. 安装所有依赖 (包含 devDependencies，因为 Nest 编译需要)
+# 注意：这里去掉了 --immutable，避免线上打包时因为 lockfile 微小差异导致报错自爆
 RUN yarn install
 
-# 5. 拷贝全部源码 (🚀 优化点：删除了重复拷贝的那一行)
+# 5. 拷贝全部源码
 COPY turbo.json tsconfig*.json ./
 COPY apps/api/ ./apps/api/
+# 如果你的 packages 里有需要编译的共享代码，也要拷贝进来
+# COPY packages/ ./packages/
 
-# 6. 生成错误码、Prisma 客户端并编译 NestJS
-RUN yarn workspace @lucky/api prebuild
-# 🚀 优化点：删除了危险的本地开发指令 run prestart:dev
+# 6. 生成 Prisma 客户端并编译 NestJS
+# 显式执行 Prisma 生成，确保客户端最新
+RUN yarn workspace @lucky/api prisma generate
 RUN yarn workspace @lucky/api build
 
-# 7. 终极瘦身
+# 7. 终极瘦身：剔除所有开发依赖，只保留生产运行必需的包
 RUN yarn workspaces focus @lucky/api --production
 
 # ==========================================
@@ -44,14 +50,15 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 
-# 1. 从 Builder 阶段提取精华
+# 1. 从 Builder 阶段把编译好的精华提取过来
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
+# 2. 暴露后端端口
 EXPOSE 3000
 
-# 3. 最终启动指令
+# 3. 最终启动指令 (挂载内存锁，守护服务器内存)
 CMD ["sh", "-c", "NODE_OPTIONS='--max-old-space-size=400' node apps/api/dist/main.js"]
