@@ -33,6 +33,7 @@ COPY apps/api/ ./apps/api/
 # 6. 生成 Prisma 客户端并编译 NestJS
 # 显式执行 Prisma 生成，确保客户端最新
 RUN yarn workspace @lucky/api prisma generate
+RUN yarn workspace @lucky/shared build
 RUN yarn workspace @lucky/api build
 
 # 7. 终极瘦身：剔除所有开发依赖，只保留生产运行必需的包
