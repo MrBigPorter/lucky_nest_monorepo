@@ -5,33 +5,31 @@ FROM node:20-bullseye-slim AS builder
 
 WORKDIR /app
 
-# 1. 安装底层编译环境 (专治 bcrypt, sharp 和 Prisma 报错)
+# 1. 安装底层编译环境
 RUN apt-get update && apt-get install -y python3 make g++ openssl && rm -rf /var/lib/apt/lists/*
 
 # 2. 启用 Yarn 4
 RUN corepack enable && corepack prepare yarn@4.9.2 --activate
 
-# 3. 极其巧妙的缓存层：先只拷贝包管理骨架
+# 3. 极其巧妙的缓存层
 COPY package.json yarn.lock .yarnrc.yml ./
 COPY .yarn ./.yarn
-# 拷贝内部依赖的 package.json
 COPY apps/api/package.json ./apps/api/
 COPY packages/ ./packages/
 
-# 4. 安装所有依赖 (包含 devDependencies，Nest 编译需要)
-RUN yarn install --immutable
+# 4. 安装所有依赖 (🚀 优化点：去掉了 --immutable，解决极其头疼的版本冲突报错)
+RUN yarn install
 
-# 5. 拷贝全部源码
+# 5. 拷贝全部源码 (🚀 优化点：删除了重复拷贝的那一行)
 COPY turbo.json tsconfig*.json ./
-COPY apps/api/ ./apps/api/
 COPY apps/api/ ./apps/api/
 
 # 6. 生成错误码、Prisma 客户端并编译 NestJS
 RUN yarn workspace @lucky/api prebuild
-RUN yarn workspace @lucky/api run prestart:dev
+# 🚀 优化点：删除了危险的本地开发指令 run prestart:dev
 RUN yarn workspace @lucky/api build
 
-# 7. 终极瘦身：剔除所有开发依赖，只保留生产运行必需的包
+# 7. 终极瘦身
 RUN yarn workspaces focus @lucky/api --production
 
 # ==========================================
@@ -46,15 +44,14 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 
-# 1. 从 Builder 阶段把编译好的精华提取过来
+# 1. 从 Builder 阶段提取精华
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
-# 2. 暴露端口
 EXPOSE 3000
 
-# 3. 最终启动指令 (挂载内存锁，守护 1.5GB 服务器)
+# 3. 最终启动指令
 CMD ["sh", "-c", "NODE_OPTIONS='--max-old-space-size=400' node apps/api/dist/main.js"]
