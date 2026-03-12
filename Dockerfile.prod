@@ -37,7 +37,10 @@ RUN yarn workspace @lucky/shared build
 RUN yarn workspace @lucky/api build
 
 # 7. 终极瘦身：剔除所有开发依赖，只保留生产运行必需的包
-RUN yarn workspaces focus @lucky/api --production
+# RUN yarn workspaces focus @lucky/api --production
+
+# 7. 保留全量依赖，不搞极限瘦身了，先确保能跑通！
+RUN yarn workspaces focus @lucky/api
 
 # ==========================================
 # Stage 2: Runner (极简“瘦子”镜像，最终发往服务器)
