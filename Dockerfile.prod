@@ -1,65 +1,48 @@
 # ==========================================
-# Stage 1: Builder (用来打包和编译的“胖子”镜像)
+# Stage 1: Builder (全量复刻环境)
 # ==========================================
-FROM node:20-alpine AS builder
+# 换成 debian 系统，内置了 prisma 需要的所有运行环境
+FROM node:20-bullseye-slim AS builder
 
-# 1. 设置工作目录
 WORKDIR /app
 
-# 2. 启用 Corepack，自动管理 Yarn 版本
+# 1. 安装基础编译工具 (专治各种不服)
+RUN apt-get update && apt-get install -y python3 make g++ openssl procps && rm -rf /var/lib/apt/lists/*
+
+# 2. 开启 Yarn 管理器
 RUN corepack enable
 
-# 3. 把所有的 package.json 和 yarn.lock 拷贝进来
-COPY package.json yarn.lock turbo.json ./
-COPY apps/api/package.json ./apps/api/
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/config/package.json ./packages/config/
+# 3. 【核心改动】全量拷贝！
+# 因为你的 .dockerignore 已经帮你过滤了垃圾文件
+# 这里的 COPY . . 会把整个 monorepo 的结构完整搬进来，确保一个配置都不漏
+COPY . .
 
-# 4. 安装所有依赖 (包含开发依赖，为了能顺利 build)
+# 4. 在完整的上下文里安装依赖
 RUN yarn install
 
-# 5. 把真正的源代码拷贝进来
-COPY apps/api ./apps/api
-COPY packages/shared ./packages/shared
-COPY packages/config ./packages/config
-
-# 6. 编译 NestJS 和 Shared 包
+# 5. 按照本地成功的逻辑：生成 -> 编译
+# 这里的路径一定是对的，因为结构和本地一模一样
+RUN yarn workspace @lucky/api prisma generate
 RUN npx turbo run build --filter=@lucky/api
 
-# 7. 保留全量依赖，不搞极限瘦身了，先确保能跑通！
-# 注意：这一步 Yarn 会重新整理 node_modules，极具破坏性！
+# 6. 准备生产环境
 RUN yarn workspaces focus @lucky/api
 
-# 8. 🚀 核心修复点：在管家清理完 node_modules 之后，再生成 Prisma！
-# 这步必须放在 focus 的后面，确保生成的客户端存活到最后
-RUN yarn workspace @lucky/api prisma generate
-
 # ==========================================
-# Stage 2: Runner (最终跑到服务器上的“瘦子”镜像)
+# Stage 2: Runner (最终生成的“瘦子”)
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:20-bullseye-slim AS runner
 
 WORKDIR /app
 
-# 1. 设置生产环境变量
+# 运行时也需要 openssl
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 
-# 2. 拷贝核心控制文件
-COPY package.json yarn.lock turbo.json ./
+# 7. 把 builder 里已经跑通的整套东西搬过来
+COPY --from=builder /app ./
 
-# 3. 拷贝 node_modules (这里面现在稳稳地躺着 Prisma 客户端)
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
-
-# 4. 拷贝编译好的业务代码 (dist) 和 package.json
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
-
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
-
-# 暴露端口给内网使用
 EXPOSE 3000
 
 # 启动命令
