@@ -1,0 +1,63 @@
+name: Deploy Backend to RackNerd
+
+# 触发条件：当你向 main 分支 push 代码时
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  # 阶段一：在 GitHub 的云端服务器打包镜像
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.prod # 使用根目录下的生产版 Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/joymini-backend:latest
+          # 开启云端缓存，下次打包从 5 分钟缩短到 1 分钟
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 阶段二：通过 SSH 连上你的 RackNerd 开启部署
+  deploy-via-ssh:
+    needs: build-and-push # 必须等镜像打包完才执行
+    runs-on: ubuntu-latest
+    steps:
+      - name: Executing remote ssh commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: root
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            # 进入咱们昨天建好的大本营
+            cd /root/joymini-backend
+            
+            # 1. 登录 Docker (让服务器也有权拉取你的私有镜像)
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            
+            # 2. 这里的名字要和上面 build 阶段的 tags 完全一致
+            #  关键点：请把 'your_username' 换成你真实的 Docker Hub 用户名
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/joymini-backend:latest
+            
+            # 3. 强制用新镜像重启容器
+            # 我们之前在服务器上放好的 docker-compose.yml 就会在这里起作用
+            docker compose up -d backend
+            
+            # 4. 瘦身：清理掉服务器上旧的、没用的镜像，防止 20G 硬盘爆掉
+            docker image prune -f
