@@ -15,7 +15,7 @@ COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 
 # 4. 安装所有依赖 (包含开发依赖，为了能顺利 build)
-RUN yarn install --immutable
+RUN yarn install
 
 # 5. 把真正的源代码拷贝进来
 COPY apps/api ./apps/api
