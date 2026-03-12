@@ -13,6 +13,7 @@ RUN corepack enable
 COPY package.json yarn.lock turbo.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/config/package.json ./packages/config/
 
 # 4. 安装所有依赖 (包含开发依赖，为了能顺利 build)
 RUN yarn install
@@ -20,6 +21,7 @@ RUN yarn install
 # 5. 把真正的源代码拷贝进来
 COPY apps/api ./apps/api
 COPY packages/shared ./packages/shared
+COPY packages/config ./packages/config
 
 # 6. 编译 NestJS 和 Shared 包
 RUN npx turbo run build --filter=@lucky/api
