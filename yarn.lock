@@ -4775,7 +4775,7 @@ __metadata:
     bcrypt: "npm:^6.0.0"
     bcryptjs: "npm:^3.0.3"
     bullmq: "npm:^5.66.5"
-    cache-manager: "npm:^5"
+    cache-manager: "npm:^6.0.0"
     cache-manager-redis-yet: "npm:^5"
     class-transformer: "npm:^0.5.1"
     class-validator: "npm:^0.14.2"
@@ -10860,7 +10860,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cache-manager@npm:^5, cache-manager@npm:^5.7.6":
+"cache-manager@npm:^5.7.6":
   version: 5.7.6
   resolution: "cache-manager@npm:5.7.6"
   dependencies:
@@ -10869,6 +10869,15 @@ __metadata:
     lru-cache: "npm:^10.2.2"
     promise-coalesce: "npm:^1.1.2"
   checksum: 10c0/fdf99c4cb3682187fd57f5b7053573dae91800f57f785c7644e5b923d4146833ab600759678eb1a5a94be74db9301850a0ff4391fc97cffd89a0f13ae4358175
+  languageName: node
+  linkType: hard
+
+"cache-manager@npm:^6.0.0":
+  version: 6.4.3
+  resolution: "cache-manager@npm:6.4.3"
+  dependencies:
+    keyv: "npm:^5.3.3"
+  checksum: 10c0/eb5af37e2206cf01390bf61ddd86d3cb86f281700a2621393835ac4f9bdd5872a618765f643fce76d1cbb56f512a13cef502665fb6259be9c16d5121c713a1f7
   languageName: node
   linkType: hard
 
@@ -15483,7 +15492,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"keyv@npm:^5.6.0":
+"keyv@npm:^5.3.3, keyv@npm:^5.6.0":
   version: 5.6.0
   resolution: "keyv@npm:5.6.0"
   dependencies:
