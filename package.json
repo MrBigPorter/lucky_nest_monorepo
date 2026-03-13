@@ -14,12 +14,12 @@
     "check-types": "turbo run check-types",
     "gen:shop:api": "node packages/config/gen-codes.js shop api",
     "gen:shop:client": "node packages/config/gen-codes.js shop client",
-    "docker:up": "docker compose up -d --build",
+    "docker:up": "docker compose --env-file deploy/.env.dev up -d --build",
     "docker:down": "docker compose down",
-    "docker:clean": "docker compose down -v",
-    "docker:logs": "docker compose logs -f api",
-    "docker:ps": "docker compose ps",
-    "docker:sh": "docker compose exec api sh",
+    "docker:logs": "docker compose logs -f",
+    "docker:prod": "docker compose -f compose.prod.yml --env-file deploy/.env.prod up -d --build",
+    "docker:prod:down": "docker compose -f compose.prod.yml down",
+    "docker:prod:logs": "docker compose -f compose.prod.yml logs -f",
     "pr:m:dev": "docker exec -it lucky-backend-dev sh -lc \"yarn workspace @lucky/api prisma migrate dev --name change && yarn workspace @lucky/api prisma generate\"",
     "pr:m:deploy": "docker exec -it lucky-backend-dev sh -lc \"yarn workspace @lucky/api prisma migrate deploy && yarn workspace @lucky/api prisma generate\"",
     "pr:m:status": "docker exec -it lucky-backend-dev sh -lc \"yarn workspace @lucky/api prisma migrate status\"",
@@ -45,7 +45,6 @@
     "packages/*"
   ],
   "dependencies": {
-    "rimraf": "^6.0.1",
-    "turbo": "^2.1.1"
+    "rimraf": "^6.0.1"
   }
 }

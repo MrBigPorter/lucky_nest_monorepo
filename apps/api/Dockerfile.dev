@@ -1,23 +1,17 @@
-# Use the base image from the monorepo Dockerfile
-# # This Dockerfile is for the development environment of the API workspace.
-# # It uses the base image defined in Dockerfile.base as its starting point.
-# before_script: docker build -f Dockerfile.base -t lucky-monorepo-base .
-# you should run this command to build the base image before building this Dockerfile.
+# ==========================================
+# API 开发环境 Dockerfile
+# ==========================================
+# 基于 base 镜像 (已包含 node + yarn + 全部依赖)
+# 构建 base: docker build -f Dockerfile.base -t lucky-monorepo-base .
 
 FROM lucky-monorepo-base
 
-# set the working directory to the app folder
 WORKDIR /app
 
-# copy the entire monorepo into the container
-COPY . .
+# Dev 模式下源码通过 compose volume 挂载 (.:/app)
+# 不需要 COPY 源码，避免浪费构建时间和镜像体积
 
-# generate the Prisma client， its's run on build time to ensure the client is up-to-date,
-# uncomment the following line if you want to generate the client during build,
-# use command `yarn workspace @lucky/api prisma generate` to generate it manually in compose.yml.
-#RUN yarn workspace @lucky/api prisma generate
+EXPOSE 3000
 
-# if you want uto use docker run  to start the development server
-# if use compose.yml, this line will be overridden by the command in compose.yml
 CMD ["yarn", "workspace", "@lucky/api", "start:dev"]
 
