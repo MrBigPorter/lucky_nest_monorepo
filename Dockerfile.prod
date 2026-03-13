@@ -1,49 +1,126 @@
-# ==========================================
-# Stage 1: Builder (全量复刻环境)
-# ==========================================
-# 换成 debian 系统，内置了 prisma 需要的所有运行环境
+# ============================================================
+# Stage 1: Builder — 安装依赖 + 编译
+# ============================================================
 FROM node:20-bullseye-slim AS builder
-
 WORKDIR /app
 
-# 1. 安装基础编译工具 (专治各种不服)
-RUN apt-get update && apt-get install -y python3 make g++ openssl procps && rm -rf /var/lib/apt/lists/*
+# 构建原生模块所需工具
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 make g++ openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-# 2. 开启 Yarn 管理器
-RUN corepack enable
+RUN corepack enable && corepack prepare yarn@4.9.2 --activate
 
-# 3. 【核心改动】全量拷贝！
-# 因为你的 .dockerignore 已经帮你过滤了垃圾文件
-# 这里的 COPY . . 会把整个 monorepo 的结构完整搬进来，确保一个配置都不漏
-COPY . .
+# 1) 先拷贝依赖声明 → 利用 Docker 缓存
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
 
-# 4. 在完整的上下文里安装依赖
+COPY apps/api/package.json ./apps/api/package.json
+COPY apps/mini-shop-admin/package.json ./apps/mini-shop-admin/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/eslint-config/package.json ./packages/eslint-config/package.json
+COPY packages/typescript-config/package.json ./packages/typescript-config/package.json
+COPY packages/config/package.json ./packages/config/package.json
+
+# 2) 安装依赖 (缓存层)
 RUN yarn install
 
-# 5. 按照本地成功的逻辑：生成 -> 编译
-# 这里的路径一定是对的，因为结构和本地一模一样
+# 3) 拷贝源码 (这层只在代码变时重建)
+COPY apps/api/ ./apps/api/
+COPY packages/ ./packages/
+COPY turbo.json tsconfig.json ./
+
+# 4) Prisma generate (prisma CLI 在 apps/api/node_modules/.bin/ 里)
 RUN yarn workspace @lucky/api prisma generate
-RUN npx turbo run build --filter=@lucky/api
 
-# 6. 准备生产环境
-RUN yarn workspaces focus @lucky/api
+# 5) Build API + 依赖包
+RUN yarn turbo run build --filter=@lucky/api
 
-# ==========================================
-# Stage 2: Runner (最终生成的“瘦子”)
-# ==========================================
-FROM node:20-bullseye-slim AS runner
-
+# ============================================================
+# Stage 2: Pruner — 裁剪 node_modules (中间层)
+# ============================================================
+FROM node:20-bullseye-slim AS pruner
 WORKDIR /app
 
-# 运行时也需要 openssl
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/node_modules ./node_modules
+
+# 🔪 删除构建工具、前端包、多余平台二进制 (~500MB)
+RUN rm -rf \
+    node_modules/turbo* \
+    node_modules/@esbuild \
+    node_modules/@rollup \
+    node_modules/@rolldown \
+    node_modules/@unrs \
+    node_modules/typescript \
+    node_modules/@angular-devkit \
+    node_modules/@nestjs/cli \
+    node_modules/@nestjs/schematics \
+    node_modules/@babel \
+    node_modules/ts-node \
+    node_modules/prettier \
+    node_modules/lucide-react \
+    node_modules/react \
+    node_modules/react-dom \
+    node_modules/react-router* \
+    node_modules/react-hook-form \
+    node_modules/react-day-picker \
+    node_modules/react-dropzone \
+    node_modules/react-quill* \
+    node_modules/react-remove-scroll* \
+    node_modules/react-refresh \
+    node_modules/@vitejs \
+    node_modules/vite \
+    node_modules/@tailwindcss \
+    node_modules/tailwindcss \
+    node_modules/tailwind-* \
+    node_modules/tailwindcss-animate \
+    node_modules/framer-motion \
+    node_modules/@radix-ui \
+    node_modules/@dnd-kit \
+    node_modules/@tanstack \
+    node_modules/@floating-ui \
+    node_modules/@unpic \
+    node_modules/recharts \
+    node_modules/zustand \
+    node_modules/eslint* \
+    node_modules/@eslint* \
+    node_modules/@typescript-eslint \
+    node_modules/@img/sharp-darwin* \
+    node_modules/@img/sharp-win32* \
+    node_modules/@img/sharp-linuxmusl* \
+    node_modules/@types \
+    node_modules/.cache
+
+# ============================================================
+# Stage 3: Production — 最终镜像
+# ============================================================
+FROM node:20-bullseye-slim AS production
+WORKDIR /app
+
+# 运行时只需要 openssl (Prisma 引擎需要)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# 从 pruner 拷贝裁剪后的 node_modules (干净的一层，没有冗余)
+COPY --from=pruner /app/node_modules ./node_modules
+
+# API 构建产物
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+# @prisma/client 在 workspace 自己的 node_modules 里 (未被 hoist 到根)
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+
+# 内部包 (运行时 @lucky/shared)
+COPY --from=builder /app/packages/shared ./packages/shared
+
+# entrypoint 脚本 (prisma migrate + start)
+COPY apps/api/docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENV NODE_ENV=production
-
-# 7. 把 builder 里已经跑通的整套东西搬过来
-COPY --from=builder /app ./
-
 EXPOSE 3000
 
-# 启动命令
-CMD ["yarn", "workspace", "@lucky/api", "start:prod"]
+ENTRYPOINT ["/entrypoint.sh"]
