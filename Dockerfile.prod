@@ -43,10 +43,14 @@ RUN yarn turbo run build --filter=@lucky/api
 FROM node:20-bullseye-slim AS pruner
 WORKDIR /app
 
+# 拷贝所有需要裁剪的 node_modules
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps_api_nm
+COPY --from=builder /app/packages/shared/node_modules ./shared_nm
 
-# 🔪 删除构建工具、前端包、多余平台二进制 (~500MB)
+# 🔪 根 node_modules — 删除构建工具 + 前端残留 + 跨平台二进制
 RUN rm -rf \
+    # ---- 构建工具 & CLI ----
     node_modules/turbo* \
     node_modules/@esbuild \
     node_modules/@rollup \
@@ -59,7 +63,16 @@ RUN rm -rf \
     node_modules/@babel \
     node_modules/ts-node \
     node_modules/prettier \
-    node_modules/lucide-react \
+    node_modules/webpack \
+    node_modules/rollup \
+    node_modules/rimraf \
+    # ---- Lint / Types ----
+    node_modules/eslint* \
+    node_modules/@eslint* \
+    node_modules/@typescript-eslint \
+    node_modules/@types \
+    node_modules/.cache \
+    # ---- 前端框架 & UI ----
     node_modules/react \
     node_modules/react-dom \
     node_modules/react-router* \
@@ -69,12 +82,7 @@ RUN rm -rf \
     node_modules/react-quill* \
     node_modules/react-remove-scroll* \
     node_modules/react-refresh \
-    node_modules/@vitejs \
-    node_modules/vite \
-    node_modules/@tailwindcss \
-    node_modules/tailwindcss \
-    node_modules/tailwind-* \
-    node_modules/tailwindcss-animate \
+    node_modules/lucide-react \
     node_modules/framer-motion \
     node_modules/@radix-ui \
     node_modules/@dnd-kit \
@@ -83,14 +91,60 @@ RUN rm -rf \
     node_modules/@unpic \
     node_modules/recharts \
     node_modules/zustand \
-    node_modules/eslint* \
-    node_modules/@eslint* \
-    node_modules/@typescript-eslint \
+    node_modules/@reduxjs \
+    node_modules/ahooks \
+    node_modules/quill \
+    node_modules/quill-delta \
+    # ---- 前端构建工具 ----
+    node_modules/@vitejs \
+    node_modules/vite \
+    node_modules/@tailwindcss \
+    node_modules/tailwindcss \
+    node_modules/tailwind-* \
+    node_modules/tailwindcss-animate \
+    node_modules/postcss \
+    node_modules/autoprefixer \
+    # ---- lightningcss 全平台 (~54MB) ----
+    node_modules/lightningcss* \
+    # ---- sharp 仅保留当前平台二进制 (删除 darwin/win32/musl) ----
     node_modules/@img/sharp-darwin* \
     node_modules/@img/sharp-win32* \
     node_modules/@img/sharp-linuxmusl* \
-    node_modules/@types \
-    node_modules/.cache
+    node_modules/@img/sharp-libvips-darwin* \
+    node_modules/@img/sharp-libvips-linuxmusl* \
+    # ---- 冗余的日期/工具库 ----
+    node_modules/date-fns-jalali \
+    node_modules/fast-check \
+    node_modules/caniuse-lite \
+    node_modules/codepage \
+    # ---- 通用清理: docs, tests, sourcemaps, .d.ts ----
+    && find node_modules -type f \( \
+        -name "*.md" -o -name "*.map" -o -name "*.ts" \
+        ! -name "*.d.ts" -o -name "CHANGELOG*" -o -name "LICENSE*" \
+        -o -name "*.flow" -o -name "*.mts" \
+    \) -delete 2>/dev/null \
+    && find node_modules -type d \( \
+        -name "test" -o -name "tests" -o -name "__tests__" \
+        -o -name "docs" -o -name "example" -o -name "examples" \
+    \) -exec rm -rf {} + 2>/dev/null || true
+
+# 🔪 apps/api/node_modules — 仅保留 @prisma/client，删除开发工具
+RUN rm -rf \
+    apps_api_nm/@angular-devkit \
+    apps_api_nm/typescript \
+    apps_api_nm/ts-node \
+    apps_api_nm/source-map \
+    apps_api_nm/picomatch \
+    # 删除 prisma CLI 引擎 (仅 prisma generate 时用，运行时不需要)
+    apps_api_nm/prisma/libquery_engine* \
+    apps_api_nm/prisma/schema-engine* \
+    apps_api_nm/prisma/*.node
+
+# 🔪 packages/shared/node_modules — 运行时不需要 typescript 和 @types
+RUN rm -rf \
+    shared_nm/typescript \
+    shared_nm/@types \
+    shared_nm/undici-types
 
 # ============================================================
 # Stage 3: Production — 最终镜像
@@ -98,23 +152,26 @@ RUN rm -rf \
 FROM node:20-bullseye-slim AS production
 WORKDIR /app
 
-# 运行时只需要 openssl (Prisma 引擎需要)
+# 运行时只需要 openssl (Prisma) + wget (healthcheck)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssl wget \
     && rm -rf /var/lib/apt/lists/*
 
-# 从 pruner 拷贝裁剪后的 node_modules (干净的一层，没有冗余)
+# 从 pruner 拷贝裁剪后的 node_modules
 COPY --from=pruner /app/node_modules ./node_modules
 
 # API 构建产物
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
-# @prisma/client 在 workspace 自己的 node_modules 里 (未被 hoist 到根)
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+# @prisma/client (裁剪后只保留 client)
+COPY --from=pruner /app/apps_api_nm ./apps/api/node_modules
 
-# 内部包 (运行时 @lucky/shared)
-COPY --from=builder /app/packages/shared ./packages/shared
+# 内部包 @lucky/shared (裁剪后)
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
+COPY --from=builder /app/packages/shared/src ./packages/shared/src
+COPY --from=pruner /app/shared_nm ./packages/shared/node_modules
 
 # entrypoint 脚本 (prisma migrate + start)
 COPY apps/api/docker/entrypoint.sh /entrypoint.sh
