@@ -1,63 +1,136 @@
-name: Deploy Backend to RackNerd
+# ============================================================
+# 后端部署 — 推送 main 分支时自动触发
+# ============================================================
+# 流程: GitHub 构建镜像 → 推送到 GHCR → SSH 到 VPS 拉取 + 重启
+# 优势: VPS 仅做 docker pull (不需要 2GB+ 内存来构建)
+#
+# 所需 Secrets:
+#   SSH_HOST          — VPS IP (192.210.207.88)
+#   SSH_USERNAME      — SSH 用户名 (root)
+#   SSH_PRIVATE_KEY   — Ed25519 私钥
+#   VPS_GHCR_PAT      — GitHub PAT (read:packages 权限)
+# ============================================================
 
-# 触发条件：当你向 main 分支 push 代码时
+name: Deploy Backend
+
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/shared/**'
+      - 'packages/config/**'
+      - 'Dockerfile.prod'
+      - 'compose.prod.yml'
+  workflow_dispatch: # 手动触发
+
+# 同一时间只允许一个后端部署, 后续排队 (不取消正在进行的)
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/lucky-backend-prod
 
 jobs:
-  # 阶段一：在 GitHub 的云端服务器打包镜像
-  build-and-push:
+  # =========================================
+  # 阶段一: 构建 + 推送镜像到 GHCR
+  # =========================================
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    permissions:
+      contents: read
+      packages: write
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Image
-        uses: docker/build-push-action@v5
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta (生成标签)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build & Push
+        uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.prod # 使用根目录下的生产版 Dockerfile
+          file: ./Dockerfile.prod
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/joymini-backend:latest
-          # 开启云端缓存，下次打包从 5 分钟缩短到 1 分钟
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          # GHA 层缓存 — 第二次构建可从 5min 降到 <1min
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # 阶段二：通过 SSH 连上你的 RackNerd 开启部署
-  deploy-via-ssh:
-    needs: build-and-push # 必须等镜像打包完才执行
+  # =========================================
+  # 阶段二: SSH 部署到 VPS
+  # =========================================
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
+    environment: production
+
     steps:
-      - name: Executing remote ssh commands
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GHCR_TOKEN: ${{ secrets.VPS_GHCR_PAT }}
+          GHCR_USER: ${{ github.repository_owner }}
+          IMAGE: ${{ env.IMAGE_NAME }}:latest
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: root
-          password: ${{ secrets.SSH_PASSWORD }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE
           script: |
-            # 进入咱们昨天建好的大本营
-            cd /root/joymini-backend
-            
-            # 1. 登录 Docker (让服务器也有权拉取你的私有镜像)
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-            
-            # 2. 这里的名字要和上面 build 阶段的 tags 完全一致
-            #  关键点：请把 'your_username' 换成你真实的 Docker Hub 用户名
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/joymini-backend:latest
-            
-            # 3. 强制用新镜像重启容器
-            # 我们之前在服务器上放好的 docker-compose.yml 就会在这里起作用
-            docker compose up -d backend
-            
-            # 4. 瘦身：清理掉服务器上旧的、没用的镜像，防止 20G 硬盘爆掉
+            set -e
+            cd /opt/lucky
+
+            # 1. 登录 GHCR
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            # 2. 拉取新镜像
+            echo "→ 拉取镜像: $IMAGE"
+            docker pull "$IMAGE"
+
+            # 3. 用新镜像重启后端 (不重建, 只替换)
+            BACKEND_IMAGE="$IMAGE" docker compose -f compose.prod.yml --env-file deploy/.env.prod up -d --no-build --force-recreate backend
+
+            # 4. 健康检查 (最多等 90 秒)
+            echo "→ 等待健康检查..."
+            for i in $(seq 1 30); do
+              if docker exec lucky-backend-prod wget -qO- http://localhost:3000/api/v1/health >/dev/null 2>&1; then
+                echo "✅ 健康检查通过 (第 ${i} 次, 约 $((i*3))s)"
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                echo "❌ 健康检查超时!"
+                docker logs --tail=50 lucky-backend-prod
+                exit 1
+              fi
+              sleep 3
+            done
+
+            # 5. 状态报告
+            docker compose -f compose.prod.yml ps
+
+            # 6. 清理旧镜像
             docker image prune -f
+

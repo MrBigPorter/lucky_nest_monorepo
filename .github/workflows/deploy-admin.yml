@@ -1,0 +1,85 @@
+# ============================================================
+# Admin 前端部署到 Cloudflare Pages
+# ============================================================
+# 流程: GitHub 构建静态文件 → Wrangler 推送到 Cloudflare Pages
+# 域名: admin.joyminis.com → Cloudflare Pages (CNAME)
+#
+# 所需 Secrets:
+#   CLOUDFLARE_API_TOKEN   — Cloudflare API Token (权限: Pages Edit)
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare 账户 ID
+#
+# Cloudflare 首次设置:
+#   1. Cloudflare Dashboard → Pages → Create project → Direct Upload
+#   2. 项目名: mini-shop-admin (对应下面 --project-name)
+#   3. Custom Domain → admin.joyminis.com
+# ============================================================
+
+name: Deploy Admin to Cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mini-shop-admin/**'
+      - 'packages/shared/**'
+      - 'packages/ui/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: true # 前端部署可以取消旧的
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable && corepack prepare yarn@4.9.2 --activate
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: |
+            .yarn/cache
+            .yarn/install-state.gz
+          key: yarn-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build shared packages
+        run: yarn turbo run build --filter=@lucky/shared
+
+      - name: Build Admin (vite only, skip tsc — 类型检查由 ci.yml 负责)
+        run: cd apps/mini-shop-admin && npx vite build
+        env:
+          NODE_ENV: production
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/mini-shop-admin/dist --project-name=mini-shop-admin --commit-dirty=true
+
+      - name: Summary
+        run: |
+          echo "### ✅ Admin 部署完成" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **项目**: mini-shop-admin" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://admin.joyminis.com" >> $GITHUB_STEP_SUMMARY
+

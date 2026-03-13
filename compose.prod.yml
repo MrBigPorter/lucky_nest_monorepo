@@ -1,24 +1,50 @@
 # ==========================================
-# 生产环境 Docker Compose
+# 生产环境 Docker Compose (1GB VPS)
 # ==========================================
-# 启动: docker compose -f compose.prod.yml --env-file deploy/.env.prod up -d --build
+# 本地构建 + 部署: ./deploy/deploy.sh
+# 仅重启:         ./deploy/deploy.sh --quick
 # 停止: docker compose -f compose.prod.yml down
 # 日志: docker compose -f compose.prod.yml logs -f
+# ==========================================
+# 内存预算 (1GB 服务器):
+#   OS + Docker: ~130 MB
+#   Backend:     ≤300 MB
+#   PostgreSQL:  ≤200 MB
+#   Redis:       ≤150 MB (maxmemory 128MB)
+#   Nginx:       ≤30 MB
+#   Swap 兜底:   1 GB
+#   总计:        ~810 MB + 1 GB swap
 # ==========================================
 
 services:
   # =========================================
-  # 后端 API (生产模式 — 多阶段构建)
+  # 后端 API (生产模式)
+  # =========================================
+  # 镜像来源:
+  #   - CI 部署: GHCR 拉取 (ghcr.io/mrbigporter/lucky-backend-prod:latest)
+  #   - 本地部署: deploy.sh 本地构建 (lucky-backend-prod:latest)
+  # 通过 BACKEND_IMAGE 环境变量切换, 默认本地镜像
   # =========================================
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    image: lucky-backend-prod:latest
+    image: ${BACKEND_IMAGE:-lucky-backend-prod:latest}
     container_name: lucky-backend-prod
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - deploy/.env.prod
+    environment:
+      # 限制 Node.js 堆内存 (防 OOM)
+      - NODE_OPTIONS=--max-old-space-size=256
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+        reservations:
+          memory: 150M
     expose:
       - "3000"
     healthcheck:
@@ -34,9 +60,13 @@ services:
     networks: [app]
 
   # =========================================
-  # Admin 前端 (构建静态文件)
+  # Admin 前端 (仅本地部署时使用)
+  # =========================================
+  # CI 部署: admin 由 Cloudflare Pages 托管, 不需要此服务
+  # 本地部署: deploy.sh 使用 --profile local 启动
   # =========================================
   admin-builder:
+    profiles: [local]
     build:
       context: .
       dockerfile: apps/mini-shop-admin/Dockerfile.prod
@@ -47,12 +77,21 @@ services:
     networks: [app]
 
   # =========================================
-  # Nginx 反向代理
+  # Nginx 反向代理 + API 网关
   # =========================================
   nginx:
     image: nginx:latest
     container_name: lucky-nginx-prod
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 30M
     ports:
       - "80:80"
       - "443:443"
@@ -63,8 +102,6 @@ services:
       - ./nginx/html:/var/www/html
       - admin_dist:/var/www/admin
     depends_on:
-      admin-builder:
-        condition: service_completed_successfully
       backend:
         condition: service_healthy
     networks: [app]
@@ -73,10 +110,21 @@ services:
   # Redis
   # =========================================
   redis:
-    image: redis:7
+    image: redis:7-alpine
     container_name: lucky-redis-prod
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
     command: redis-server /etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}"
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+        reservations:
+          memory: 64M
     env_file:
       - deploy/.env.prod
     volumes:
@@ -93,9 +141,28 @@ services:
   # PostgreSQL
   # =========================================
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: lucky-db-prod
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 64M
+    # 优化 PG 内存使用 (1GB 服务器)
+    command: >
+      postgres
+        -c shared_buffers=32MB
+        -c work_mem=4MB
+        -c maintenance_work_mem=32MB
+        -c effective_cache_size=128MB
+        -c max_connections=30
     env_file:
       - deploy/.env.prod
     volumes:
