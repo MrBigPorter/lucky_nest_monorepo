@@ -61,11 +61,8 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Build shared packages
-        run: yarn turbo run build --filter=@lucky/shared
-
       - name: Build Admin (vite only, skip tsc — 类型检查由 ci.yml 负责)
-        run: cd apps/mini-shop-admin && npx vite build
+        run: yarn workspace @lucky/mini-shop-admin exec vite build
         env:
           NODE_ENV: production
 
