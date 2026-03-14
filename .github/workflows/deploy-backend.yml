@@ -1,16 +1,6 @@
 # ============================================================
-# 后端部署 — 推送 main 分支时自动触发
+# 后端部署 — 推送 main 分支时自动触发 (包含 Telegram 通知)
 # ============================================================
-# 流程: GitHub 构建镜像 → 推送到 GHCR → SSH 到 VPS 拉取 + 重启
-# 优势: VPS 仅做 docker pull (不需要 2GB+ 内存来构建)
-#
-# 所需 Secrets:
-#   SSH_HOST          — VPS IP (***REDACTED***)
-#   SSH_USERNAME      — SSH 用户名 (root)
-#   SSH_PRIVATE_KEY   — Ed25519 私钥
-#   VPS_GHCR_PAT      — GitHub PAT (read:packages 权限)
-# ============================================================
-
 name: Deploy Backend
 
 on:
@@ -22,10 +12,9 @@ on:
       - 'packages/config/**'
       - 'Dockerfile.prod'
       - 'compose.prod.yml'
-  workflow_dispatch: # 手动触发
-  workflow_call: #  仅仅新增这一行！允许它被总控台遥控调用
+  workflow_dispatch:
+  workflow_call:
 
-# 同一时间只允许一个后端部署, 后续排队 (不取消正在进行的)
 concurrency:
   group: deploy-backend
   cancel-in-progress: false
@@ -36,7 +25,7 @@ env:
 
 jobs:
   # =========================================
-  # 阶段一: 构建 + 推送镜像到 GHCR
+  # 阶段一: 构建 + 推送镜像到 GHCR (兵工厂打包)
   # =========================================
   build:
     runs-on: ubuntu-latest
@@ -76,12 +65,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
-          # GHA 层缓存 — 第二次构建可从 5min 降到 <1min
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # =========================================
-  # 阶段二: SSH 部署到 VPS
+  # 阶段二: SSH 部署到 VPS (前线换弹)
   # =========================================
   deploy:
     needs: build
@@ -89,7 +77,7 @@ jobs:
     environment: production
 
     steps:
-      - name: Deploy via SSH
+      - name: Deploy via SSH (登录服务器执行脚本)
         uses: appleboy/ssh-action@v1.2.0
         env:
           GHCR_TOKEN: ${{ secrets.VPS_GHCR_PAT }}
@@ -135,3 +123,25 @@ jobs:
             # 6. 清理旧镜像
             docker image prune -f
 
+      # =========================================
+      # 阶段三: Telegram 战报通知
+      # =========================================
+      - name: 📱 Send Telegram Notification
+        if: always() # 无论成功失败，这步绝对不能丢！
+        run: |
+          STATUS_EMOJI="✅ 成功 (Success)"
+          if [ "${{ job.status }}" != "success" ]; then
+            STATUS_EMOJI="❌ 失败 (Failed)"
+          fi
+          
+          # 专门为后端定制的消息模板
+          MESSAGE="⚙️ *Lucky Backend 部署报告*
+          📌 *状态*: $STATUS_EMOJI
+          🏷️ *环境*: Production (VPS: ***REDACTED***)
+          🔗 *API*: [api.joyminis.com](https://api.joyminis.com/api/v1/health)
+          📝 *Commit ID*: \`${{ github.sha }}\`"
+          
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=$MESSAGE" \
+            -d "parse_mode=Markdown"
