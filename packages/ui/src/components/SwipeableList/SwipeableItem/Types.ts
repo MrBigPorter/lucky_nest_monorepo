@@ -1,4 +1,5 @@
 import React from "react";
+import type { ButtonVariant } from "../../../button.tsx";
 
 export type SwipeAction<T> = {
   label: string;
@@ -6,12 +7,12 @@ export type SwipeAction<T> = {
   onClick?: (item: T & { index: number }) => void;
   onCancel?: () => void;
   className?: string;
-  variant?: "destructive" | "default" | "custom";
+  variant?: ButtonVariant;
 };
 export type SwipeableItemProps<T> = {
   children: React.ReactNode;
   actions: SwipeAction<T>[];
-  threshold: number;
+  threshold?: number;
   onSwipeAction?: () => void;
   disabled?: boolean;
   itemIndex?: number;

@@ -24,7 +24,7 @@ export function SwipeableList<T>({
     <div className={cn("w-full flex flex-col", className)}>
       <AnimatePresence>
         {items.map((item) => (
-          <SwipeableItem
+          <SwipeableItem<T>
             key={item.key}
             disabled={disabled}
             actions={actions}

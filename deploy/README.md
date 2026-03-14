@@ -19,7 +19,7 @@ deploy/
 
 | 项目 | 值 |
 |------|-----|
-| IP | `192.210.207.88` |
+| IP | `***REDACTED***` |
 | 位置 | San Jose, CA |
 | OS | Ubuntu 22.04 |
 | RAM | 1 GB |
@@ -64,7 +64,7 @@ deploy/
 
 | Secret | 用途 | 示例 |
 |--------|------|------|
-| `SSH_HOST` | VPS IP | `192.210.207.88` |
+| `SSH_HOST` | VPS IP | `***REDACTED***` |
 | `SSH_USERNAME` | SSH 用户 | `root` |
 | `SSH_PRIVATE_KEY` | Ed25519 私钥 | `ssh-keygen -t ed25519` 生成 |
 | `VPS_GHCR_PAT` | GitHub PAT (read:packages) | 用于 VPS 拉取 GHCR 镜像 |
@@ -78,7 +78,7 @@ deploy/
 ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_deploy_key
 
 # 将公钥添加到 VPS
-ssh-copy-id -i ~/.ssh/github_deploy_key.pub root@192.210.207.88
+ssh-copy-id -i ~/.ssh/github_deploy_key.pub root@***REDACTED***
 
 # 将私钥内容复制到 GitHub Secrets → SSH_PRIVATE_KEY
 cat ~/.ssh/github_deploy_key
@@ -108,16 +108,16 @@ cp deploy/.env.example deploy/.env.prod
 
 ```bash
 # A. 初始化 VPS
-scp deploy/server-init.sh root@192.210.207.88:/root/
-ssh root@192.210.207.88 'chmod +x /root/server-init.sh && /root/server-init.sh'
+scp deploy/server-init.sh root@***REDACTED***:/root/
+ssh root@***REDACTED*** 'chmod +x /root/server-init.sh && /root/server-init.sh'
 
-# B. 配置 DNS A 记录 → 192.210.207.88
+# B. 配置 DNS A 记录 → ***REDACTED***
 #    - admin.joyminis.com
 #    - dev-api.joyminis.com
 #    - dev.joyminis.com
 
 # C. 申请 SSL 证书
-ssh root@192.210.207.88
+ssh root@***REDACTED***
 certbot certonly --standalone \
   -d admin.joyminis.com \
   -d dev-api.joyminis.com \
@@ -182,30 +182,30 @@ yarn pr:studio      # 打开 Prisma Studio (端口 5555)
 
 ```bash
 # 在 VPS 上安装 cron (每天凌晨 3 点备份)
-scp deploy/backup.sh root@192.210.207.88:/opt/lucky/deploy/
-ssh root@192.210.207.88 'chmod +x /opt/lucky/deploy/backup.sh'
-ssh root@192.210.207.88 '(crontab -l 2>/dev/null; echo "0 3 * * * /opt/lucky/deploy/backup.sh >> /var/log/lucky-backup.log 2>&1") | crontab -'
+scp deploy/backup.sh root@***REDACTED***:/opt/lucky/deploy/
+ssh root@***REDACTED*** 'chmod +x /opt/lucky/deploy/backup.sh'
+ssh root@***REDACTED*** '(crontab -l 2>/dev/null; echo "0 3 * * * /opt/lucky/deploy/backup.sh >> /var/log/lucky-backup.log 2>&1") | crontab -'
 
 # 手动备份
-ssh root@192.210.207.88 '/opt/lucky/deploy/backup.sh'
+ssh root@***REDACTED*** '/opt/lucky/deploy/backup.sh'
 
 # 下载备份到本地
-scp root@192.210.207.88:/opt/lucky/backups/backup_latest.dump.gz ./
+scp root@***REDACTED***:/opt/lucky/backups/backup_latest.dump.gz ./
 ```
 
 ### 监控
 
 ```bash
 # 在 VPS 上安装 cron (每 5 分钟检查)
-scp deploy/monitor.sh root@192.210.207.88:/opt/lucky/deploy/
-ssh root@192.210.207.88 'chmod +x /opt/lucky/deploy/monitor.sh'
-ssh root@192.210.207.88 '(crontab -l 2>/dev/null; echo "*/5 * * * * /opt/lucky/deploy/monitor.sh >> /var/log/lucky-monitor.log 2>&1") | crontab -'
+scp deploy/monitor.sh root@***REDACTED***:/opt/lucky/deploy/
+ssh root@***REDACTED*** 'chmod +x /opt/lucky/deploy/monitor.sh'
+ssh root@***REDACTED*** '(crontab -l 2>/dev/null; echo "*/5 * * * * /opt/lucky/deploy/monitor.sh >> /var/log/lucky-monitor.log 2>&1") | crontab -'
 
 # 查看监控日志
-ssh root@192.210.207.88 'tail -50 /var/log/lucky-monitor.log'
+ssh root@***REDACTED*** 'tail -50 /var/log/lucky-monitor.log'
 
 # 查看告警
-ssh root@192.210.207.88 'tail -20 /var/log/lucky-alerts.log'
+ssh root@***REDACTED*** 'tail -20 /var/log/lucky-alerts.log'
 ```
 
 ### 紧急回滚
@@ -225,40 +225,40 @@ yarn rollback:db
 
 ```bash
 # 在 VPS 上安装 cron (每周一凌晨 3 点自动续期)
-scp deploy/renew-cert.sh root@192.210.207.88:/opt/lucky/deploy/
-ssh root@192.210.207.88 'chmod +x /opt/lucky/deploy/renew-cert.sh'
-ssh root@192.210.207.88 '(crontab -l 2>/dev/null; echo "0 3 * * 1 /opt/lucky/deploy/renew-cert.sh >> /var/log/lucky-cert.log 2>&1") | crontab -'
+scp deploy/renew-cert.sh root@***REDACTED***:/opt/lucky/deploy/
+ssh root@***REDACTED*** 'chmod +x /opt/lucky/deploy/renew-cert.sh'
+ssh root@***REDACTED*** '(crontab -l 2>/dev/null; echo "0 3 * * 1 /opt/lucky/deploy/renew-cert.sh >> /var/log/lucky-cert.log 2>&1") | crontab -'
 
 # 手动续期
-ssh root@192.210.207.88 '/opt/lucky/deploy/renew-cert.sh'
+ssh root@***REDACTED*** '/opt/lucky/deploy/renew-cert.sh'
 
 # 查看续期日志
-ssh root@192.210.207.88 'tail -20 /var/log/lucky-cert.log'
+ssh root@***REDACTED*** 'tail -20 /var/log/lucky-cert.log'
 ```
 
 ### 常用运维命令
 
 ```bash
 # 查看日志
-ssh root@192.210.207.88 'cd /opt/lucky && docker compose -f compose.prod.yml logs -f --tail=100'
+ssh root@***REDACTED*** 'cd /opt/lucky && docker compose -f compose.prod.yml logs -f --tail=100'
 
 # 查看资源使用
-ssh root@192.210.207.88 'docker stats --no-stream'
+ssh root@***REDACTED*** 'docker stats --no-stream'
 
 # 重启某个服务
-ssh root@192.210.207.88 'cd /opt/lucky && docker compose -f compose.prod.yml restart backend'
+ssh root@***REDACTED*** 'cd /opt/lucky && docker compose -f compose.prod.yml restart backend'
 
 # 进入容器调试
-ssh root@192.210.207.88 'docker exec -it lucky-backend-prod sh'
+ssh root@***REDACTED*** 'docker exec -it lucky-backend-prod sh'
 
 # 执行数据库迁移
-ssh root@192.210.207.88 'docker exec lucky-backend-prod ./apps/api/node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma'
+ssh root@***REDACTED*** 'docker exec lucky-backend-prod ./apps/api/node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma'
 
 # 清理 Docker 垃圾
-ssh root@192.210.207.88 'docker system prune -af --filter "until=72h"'
+ssh root@***REDACTED*** 'docker system prune -af --filter "until=72h"'
 
 # 查看 swap 使用
-ssh root@192.210.207.88 'free -h && swapon --show'
+ssh root@***REDACTED*** 'free -h && swapon --show'
 ```
 
 ## 内存预算 (1GB 服务器)

@@ -63,12 +63,12 @@ export function SwipeableItem<T>({
         {actions.map((action, index) => (
           <Button
             key={index}
-            variant={
-              action.variant || (index === 0 ? "destructive" : "secondary")
-            }
+            variant={action.variant ?? (index === 0 ? "danger" : "secondary")}
             className={cn("h-full rounded-none", action.className)}
             onClick={() => {
-              action.onClick?.(item);
+              if (item !== undefined) {
+                action.onClick?.({ ...item, index });
+              }
               close();
             }}
           >

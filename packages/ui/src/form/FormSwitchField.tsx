@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { FieldValues } from "react-hook-form";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
