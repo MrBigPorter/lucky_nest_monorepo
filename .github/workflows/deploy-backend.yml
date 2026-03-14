@@ -99,28 +99,59 @@ jobs:
             echo "→ 拉取镜像: $IMAGE"
             docker pull "$IMAGE"
 
-            # 3. 用新镜像重启后端 (不重建, 只替换)
-            BACKEND_IMAGE="$IMAGE" docker compose -f compose.prod.yml --env-file deploy/.env.prod up -d --no-build --force-recreate backend
+            # 3. 运行数据库迁移 (临时容器 — 失败时不影响正在运行的后端!)
+            echo "→ 运行数据库迁移..."
+            NETWORK=$(docker inspect lucky-db-prod \
+              --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' \
+              | awk '{print $1}')
+            docker run --rm \
+              --network "$NETWORK" \
+              --env-file deploy/.env.prod \
+              "$IMAGE" \
+              ./apps/api/node_modules/.bin/prisma migrate deploy \
+                --schema=apps/api/prisma/schema.prisma
+            echo "✅ 迁移完成"
 
-            # 4. 健康检查 (最多等 90 秒)
+            # 4. 保存当前镜像 SHA (用于健康检查失败时自动回滚)
+            PREV_IMAGE=$(docker inspect lucky-backend-prod \
+              --format '{{.Config.Image}}' 2>/dev/null || echo "")
+
+            # 5. 用新镜像重启后端
+            echo "→ 重启后端容器..."
+            BACKEND_IMAGE="$IMAGE" docker compose -f compose.prod.yml \
+              --env-file deploy/.env.prod \
+              up -d --no-build --force-recreate backend
+
+            # 6. 健康检查 (最多等 90 秒)
             echo "→ 等待健康检查..."
+            HEALTHY=false
             for i in $(seq 1 30); do
               if docker exec lucky-backend-prod wget -qO- http://localhost:3000/api/v1/health >/dev/null 2>&1; then
                 echo "✅ 健康检查通过 (第 ${i} 次, 约 $((i*3))s)"
+                HEALTHY=true
                 break
-              fi
-              if [ "$i" -eq 30 ]; then
-                echo "❌ 健康检查超时!"
-                docker logs --tail=50 lucky-backend-prod
-                exit 1
               fi
               sleep 3
             done
 
-            # 5. 状态报告
+            # 7. 健康检查失败 → 自动回滚到旧镜像
+            if [ "$HEALTHY" = false ]; then
+              echo "❌ 健康检查超时! 正在回滚..."
+              docker logs --tail=50 lucky-backend-prod
+              if [ -n "$PREV_IMAGE" ]; then
+                echo "→ 回滚到旧镜像: $PREV_IMAGE"
+                BACKEND_IMAGE="$PREV_IMAGE" docker compose -f compose.prod.yml \
+                  --env-file deploy/.env.prod \
+                  up -d --no-build --force-recreate backend
+                echo "⚠️  已回滚到旧版本！请检查新镜像日志排查原因。"
+              fi
+              exit 1
+            fi
+
+            # 8. 状态报告
             docker compose -f compose.prod.yml ps
 
-            # 6. 清理旧镜像
+            # 9. 清理旧镜像
             docker image prune -f
 
       # =========================================
