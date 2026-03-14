@@ -38,18 +38,18 @@ jobs:
       deployments: write
 
     steps:
-      - name: Checkout
+      - name: Checkout # check out code to the runner
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js  # install Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Enable Corepack (Yarn 4)
+      - name: Enable Corepack (Yarn 4)  # set up Corepack to use Yarn 4
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
-      - name: Cache Yarn
+      - name: Cache Yarn  # use Yarn cache to speed up installs (zip 包层)
         uses: actions/cache@v4
         with:
           path: |
@@ -58,18 +58,20 @@ jobs:
           key: yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-
 
-      - name: Install dependencies
+      - name: Install dependencies # install all dependencies with Yarn (using the cache)
         run: yarn install --immutable
 
+      # build react app (generate static files in apps/mini-shop-admin/dist)
       - name: Build Admin (vite only, skip tsc — 类型检查由 ci.yml 负责)
         run: yarn workspace @lucky/mini-shop-admin exec vite build
         env:
           NODE_ENV: production
+          VITE_API_BASE_URL: https://api.joyminis.com
 
-      - name: Install Wrangler
+      - name: Install Wrangler  # install Wrangler CLI to deploy to Cloudflare Pages
         run: npm install -g wrangler@3
 
-      # 项目不存在时自动创建 (首次部署); 已存在时会报错但 continue-on-error 跳过
+      # if the project already exists, this command will fail, but we can ignore the error and continue to deploy
       - name: Create Cloudflare Pages project (if not exists)
         continue-on-error: true
         run: wrangler pages project create mini-shop-admin --production-branch=main
@@ -77,6 +79,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # deploy to Cloudflare Pages (using the generated static files)
       - name: Deploy to Cloudflare Pages
         run: wrangler pages deploy apps/mini-shop-admin/dist --project-name=mini-shop-admin --commit-dirty=true
         env:
