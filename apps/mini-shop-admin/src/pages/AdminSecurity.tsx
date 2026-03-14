@@ -24,7 +24,7 @@ import {
   MOCK_OPERATION_LOGS,
 } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
-import { AdminUser, Role, OperationLog } from '../../types.ts';
+import { AdminUser, Role, OperationLog } from '@/type/types';
 
 // --- SUB-COMPONENT: ADMIN USERS ---
 const AdminUsers: React.FC = () => {
@@ -44,9 +44,10 @@ const AdminUsers: React.FC = () => {
       add({
         ...formData,
         id: Date.now().toString(),
-        status: 'active',
+        status: 1,
         lastLogin: 'Never',
-      } as AdminUser);
+        lastLoginIp: '',
+      } as unknown as AdminUser);
     }
     setIsModalOpen(false);
   };
@@ -87,8 +88,8 @@ const AdminUsers: React.FC = () => {
                   <Badge color="blue">{u.roleName}</Badge>
                 </td>
                 <td className="py-4">
-                  <Badge color={u.status === 'active' ? 'green' : 'red'}>
-                    {u.status}
+                  <Badge color={u.status === 1 ? 'green' : 'red'}>
+                    {u.status === 1 ? 'active' : 'inactive'}
                   </Badge>
                 </td>
                 <td className="py-4 text-sm text-gray-500">{u.lastLogin}</td>

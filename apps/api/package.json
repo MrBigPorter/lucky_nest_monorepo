@@ -8,6 +8,8 @@
     "start": "node dist/main.js",
     "clean": "rimraf dist",
     "generate": "nest g",
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src --max-warnings 0",
     "pr:fmt": "prisma format",
     "pr:val": "prisma validate",
     "pr:dev": "prisma migrate dev",
@@ -71,6 +73,7 @@
     "xendit-node": "^7.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
     "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^11.0.9",
     "@nestjs/testing": "^11.1.7",
@@ -82,11 +85,15 @@
     "@types/passport": "^0",
     "@types/passport-jwt": "^4.0.1",
     "date-fns": "^4.1.0",
+    "eslint": "^9.15.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "globals": "^15.13.0",
     "prisma": "^6.18.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.15.0",
     "yaml": "^2.8.1"
   }
 }

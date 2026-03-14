@@ -24,6 +24,7 @@ on:
       - 'packages/shared/**'
       - 'packages/ui/**'
   workflow_dispatch:
+  workflow_call: #  仅仅新增这一行！允许它被总控台遥控调用
 
 concurrency:
   group: deploy-admin

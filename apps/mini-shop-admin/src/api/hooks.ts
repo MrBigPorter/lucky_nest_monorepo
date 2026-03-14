@@ -5,7 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi, categoryApi, userApi, treasureApi } from './index.ts';
-import type { Product, Category, TreasureGroup } from '@/type/types.ts';
+import type { Product, Category, TreasureGroup, CreateProduct } from '@/type/types.ts';
 import type { PaginationParams } from './types.ts';
 
 /**
@@ -33,7 +33,8 @@ export const useCreateProduct = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Product>) => productApi.createProduct(data),
+    mutationFn: (data: Partial<Product>) =>
+      productApi.createProduct(data as unknown as CreateProduct),
     onSuccess: () => {
       // 创建成功后刷新列表
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -124,7 +125,7 @@ export const useUsers = (params?: PaginationParams) => {
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => userApi.getCurrentUser(),
+    queryFn: () => userApi.getUserById('me'),
     staleTime: Infinity, // 当前用户信息不会自动刷新
   });
 };

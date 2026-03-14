@@ -17,7 +17,6 @@ import {
   Input,
   Select,
   Badge,
-  Modal,
   DragHandle,
 } from '../components/UIComponents.tsx';
 import {
@@ -26,7 +25,7 @@ import {
   MOCK_COUPONS,
 } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
-import { LotteryActivity, ActivityPrize } from '../../types.ts';
+import { LotteryActivity, ActivityPrize } from '@/type/types';
 
 export const ActivityConfig: React.FC = () => {
   const {
@@ -447,20 +446,20 @@ export const ActivityConfig: React.FC = () => {
                             value={prize.value}
                             onChange={(e) => {
                               const prod = MOCK_PRODUCTS.find(
-                                (p) => p.id === e.target.value,
+                                (p) => p.treasureId === e.target.value,
                               );
                               updatePrize(idx, 'value', e.target.value);
                               // Smart Link: Auto-fill name and image
                               if (prod) {
-                                updatePrize(idx, 'name', prod.name);
-                                updatePrize(idx, 'image', prod.image);
+                                updatePrize(idx, 'name', prod.treasureName);
+                                updatePrize(idx, 'image', prod.treasureCoverImg);
                               }
                             }}
                             options={[
                               { label: 'Select Product...', value: '' },
                               ...MOCK_PRODUCTS.map((p) => ({
-                                label: p.name,
-                                value: p.id,
+                                label: p.treasureName,
+                                value: p.treasureId,
                               })),
                             ]}
                           />
@@ -476,14 +475,14 @@ export const ActivityConfig: React.FC = () => {
                                 updatePrize(
                                   idx,
                                   'name',
-                                  `${coupon.code} (-${coupon.discount})`,
+                                  `${coupon.couponCode ?? coupon.couponName} (-${coupon.discountValue})`,
                                 );
                               }
                             }}
                             options={[
                               { label: 'Select Coupon...', value: '' },
                               ...MOCK_COUPONS.map((c) => ({
-                                label: c.code,
+                                label: c.couponCode ?? c.couponName,
                                 value: c.id,
                               })),
                             ]}

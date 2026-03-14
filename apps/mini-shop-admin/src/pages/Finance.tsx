@@ -180,8 +180,8 @@ const DepositRecords: React.FC = () => {
 
   const filteredDeposits = deposits.filter(
     (d) =>
-      d.orderNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.user.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      d.rechargeNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.user.nickname.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -216,40 +216,40 @@ const DepositRecords: React.FC = () => {
           <tbody className="divide-y divide-gray-100 dark:divide-white/5">
             {filteredDeposits.map((d) => (
               <tr
-                key={d.id}
+                key={d.rechargeId}
                 className="group hover:bg-gray-50 dark:hover:bg-white/5"
               >
                 <td className="py-4 pl-4 font-mono text-sm text-gray-500">
-                  {d.orderNo}
+                  {d.rechargeNo}
                 </td>
                 <td className="py-4">
                   <div className="flex items-center gap-3">
-                    <img src={d.user.avatar} className="w-8 h-8 rounded-full" />
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10" />
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {d.user.name}
+                      {d.user.nickname}
                     </span>
                   </div>
                 </td>
                 <td className="py-4 font-bold text-gray-900 dark:text-white">
-                  ₱{d.amount.toLocaleString()}
+                  ₱{Number(d.rechargeAmount).toLocaleString()}
                 </td>
-                <td className="py-4 text-sm text-green-500">+₱{d.bonus}</td>
-                <td className="py-4 text-sm">{d.method}</td>
+                <td className="py-4 text-sm text-green-500">—</td>
+                <td className="py-4 text-sm">{d.paymentChannel}</td>
                 <td className="py-4">
                   <Badge
                     color={
-                      d.status === 'success'
+                      d.rechargeStatus === 3
                         ? 'green'
-                        : d.status === 'failed'
+                        : d.rechargeStatus === 4
                           ? 'red'
                           : 'yellow'
                     }
                   >
-                    {d.status.toUpperCase()}
+                    {d.rechargeStatus === 3 ? 'SUCCESS' : d.rechargeStatus === 4 ? 'FAILED' : 'PENDING'}
                   </Badge>
                 </td>
                 <td className="py-4 text-right pr-6 text-sm text-gray-500">
-                  {d.date}
+                  {new Date(d.createdAt).toLocaleDateString()}
                 </td>
               </tr>
             ))}

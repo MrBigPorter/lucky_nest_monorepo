@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  FileText,
-  HelpCircle,
-  Plus,
-  Edit2,
-  Trash2,
-  Globe,
-  Eye,
-} from 'lucide-react';
+import { FileText, HelpCircle, Plus, Edit2, Trash2, Eye } from 'lucide-react';
 import {
   Card,
   Button,
@@ -18,7 +10,7 @@ import {
 } from '../components/UIComponents.tsx';
 import { MOCK_ARTICLES, MOCK_FAQS } from '../constants.ts';
 import { useMockData } from '../hooks/useMockData.ts';
-import { Article, Faq } from '../../types.ts';
+import { Article, Faq } from '@/type/types';
 
 const ArticleManager: React.FC = () => {
   const {
@@ -132,7 +124,10 @@ const ArticleManager: React.FC = () => {
               label="Category"
               value={formData.category}
               onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value as any })
+                setFormData({
+                  ...formData,
+                  category: e.target.value as Article['category'],
+                })
               }
               options={[
                 { label: 'Announcement', value: 'announcement' },
@@ -144,7 +139,10 @@ const ArticleManager: React.FC = () => {
               label="Status"
               value={formData.status}
               onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value as any })
+                setFormData({
+                  ...formData,
+                  status: e.target.value as Article['status'],
+                })
               }
               options={[
                 { label: 'Published', value: 'published' },

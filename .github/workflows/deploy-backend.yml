@@ -5,7 +5,7 @@
 # 优势: VPS 仅做 docker pull (不需要 2GB+ 内存来构建)
 #
 # 所需 Secrets:
-#   SSH_HOST          — VPS IP (192.210.207.88)
+#   SSH_HOST          — VPS IP (107.175.53.104)
 #   SSH_USERNAME      — SSH 用户名 (root)
 #   SSH_PRIVATE_KEY   — Ed25519 私钥
 #   VPS_GHCR_PAT      — GitHub PAT (read:packages 权限)
@@ -23,6 +23,7 @@ on:
       - 'Dockerfile.prod'
       - 'compose.prod.yml'
   workflow_dispatch: # 手动触发
+  workflow_call: #  仅仅新增这一行！允许它被总控台遥控调用
 
 # 同一时间只允许一个后端部署, 后续排队 (不取消正在进行的)
 concurrency:

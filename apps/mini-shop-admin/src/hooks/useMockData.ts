@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 // Generic hook to handle list data with simulated delay
 export function useMockData<T>(initialData: T[]) {

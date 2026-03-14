@@ -15,10 +15,15 @@ import { Card, Badge } from '@/components/UIComponents';
 import { MOCK_STATS, MOCK_ORDERS, TRANSLATIONS } from '@/constants';
 import { useAppStore } from '@/store/useAppStore';
 
+interface IconProps {
+  size?: number;
+  className?: string;
+}
+
 const StatCard: React.FC<{
   title: string;
   value: string | number;
-  icon: React.ReactNode;
+  icon: React.ReactElement<IconProps>;
   trend?: string;
   color: string;
 }> = ({ title, value, icon, trend, color }) => (
@@ -26,13 +31,13 @@ const StatCard: React.FC<{
     <div
       className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}
     >
-      {React.cloneElement(icon as React.ReactElement<any>, { size: 60 })}
+      {React.cloneElement(icon, { size: 60 })}
     </div>
     <div className="relative z-10">
       <div
         className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${color} bg-opacity-10 dark:bg-opacity-20`}
       >
-        {React.cloneElement(icon as React.ReactElement<any>, {
+        {React.cloneElement(icon, {
           className: color.replace('bg-', 'text-'),
           size: 24,
         })}
@@ -207,7 +212,7 @@ export const Dashboard: React.FC = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-white/5">
               {MOCK_ORDERS.slice(0, 5).map((order) => (
                 <tr
-                  key={order.id}
+                  key={order.orderId}
                   className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   <td className="py-4 pl-2 text-gray-500 font-mono text-sm">
@@ -216,31 +221,36 @@ export const Dashboard: React.FC = () => {
                   <td className="py-4">
                     <div className="flex items-center gap-3">
                       <img
-                        src={order.product.image}
+                        src={order.treasure.treasureCoverImg}
+                        alt={order.treasure.treasureName}
                         className="w-8 h-8 rounded-lg object-cover"
                       />
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {order.product.name}
+                        {order.treasure.treasureName}
                       </span>
                     </div>
                   </td>
                   <td className="py-4 text-gray-500 text-sm">
-                    {order.user.name}
+                    {order.user.nickname}
                   </td>
                   <td className="py-4 font-bold text-gray-900 dark:text-white">
-                    ₱{order.amount.toLocaleString()}
+                    ₱{order.finalAmount.toLocaleString()}
                   </td>
                   <td className="py-4">
                     <Badge
                       color={
-                        order.status === 'paid'
+                        order.orderStatus === 2
                           ? 'green'
-                          : order.status === 'refunded'
+                          : order.orderStatus === 4
                             ? 'red'
                             : 'yellow'
                       }
                     >
-                      {order.status.toUpperCase()}
+                      {order.orderStatus === 2
+                        ? 'PAID'
+                        : order.orderStatus === 4
+                          ? 'CANCELLED'
+                          : 'PENDING'}
                     </Badge>
                   </td>
                 </tr>

@@ -73,7 +73,7 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
   }, [isOpen, detail, reset]);
 
   const onSubmit = (data: editCategoryFormInput) => {
-    run(detail.id, data);
+    run(String(detail.id), data);
   };
 
   return (

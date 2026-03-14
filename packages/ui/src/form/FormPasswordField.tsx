@@ -6,7 +6,7 @@ import { FormMessage } from "./FormMessage.tsx";
 import type { FieldValues } from "react-hook-form";
 import { FormControl } from "./FormControl.tsx";
 import { FormControlContainer } from "./FormControlContainer.tsx";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   formContainerVariants,
   FormHelpTextVariants,
@@ -22,7 +22,7 @@ import { getVariantClassNames } from "./formTheme";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
-import { BaseFieldProps } from "@ui-kit/form/types/baseFieldType";
+import { BaseFieldProps } from "./types/baseFieldType";
 
 /**
  * `FormTextField` is a reusable form component that wraps

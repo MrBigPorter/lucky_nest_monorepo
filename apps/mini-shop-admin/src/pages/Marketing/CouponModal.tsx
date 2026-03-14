@@ -138,7 +138,7 @@ export const CouponModal: React.FC<CouponFormModalProps> = ({
       if (isEditMode && editingData) {
         // CRITICAL FIX: Strip sensitive fields if the coupon is already issued
         // This prevents the backend's strict inequality check (e.g. 30 !== "30.00") from triggering a 400 error.
-        if (editingData?.issuedQuantity > 0) {
+        if ((editingData?.issuedQuantity ?? 0) > 0) {
           delete (data as any).couponType;
           delete (data as any).discountType;
           delete (data as any).discountValue;

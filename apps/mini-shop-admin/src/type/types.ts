@@ -834,6 +834,58 @@ export interface TreasureGroup {
   expiresAt: string;
 }
 
+// ── Real API types for Group Buying Management ──────────────────────────────
+
+export interface AdminGroupUser {
+  id: string;
+  nickname: string | null;
+  avatar: string | null;
+}
+
+export interface AdminGroupMember {
+  isOwner: number; // 1 = owner, 0 = member
+  joinedAt: number; // ms timestamp
+  user: AdminGroupUser;
+}
+
+export interface AdminGroupTreasurePreview {
+  treasureId: string;
+  treasureName: string;
+  treasureCoverImg: string;
+  unitAmount: number;
+}
+
+export interface AdminGroupItem {
+  groupId: string;
+  treasureId: string;
+  treasure?: AdminGroupTreasurePreview;
+  groupStatus: number; // 1=ACTIVE 2=SUCCESS 3=FAILED
+  currentMembers: number;
+  maxMembers: number;
+  expireAt: number; // ms timestamp
+  updatedAt: number; // ms timestamp
+  creator: AdminGroupUser;
+  members: AdminGroupMember[];
+}
+
+export interface AdminGroupDetail {
+  groupId: string;
+  groupStatus: number;
+  currentMembers: number;
+  maxMembers: number;
+  expireAt: number;
+  treasure: AdminGroupTreasurePreview;
+  members: AdminGroupMember[];
+}
+
+export interface AdminGroupListParams {
+  page?: number;
+  pageSize?: number;
+  treasureId?: string;
+  status?: number;
+  includeExpired?: boolean;
+}
+
 export interface SignInRule {
   id?: string;
   day: number;

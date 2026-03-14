@@ -90,7 +90,9 @@ export const MOCK_USERS: User[] = [
   },
 ];
 
-export const MOCK_PRODUCTS: Product[] = [
+// Mock data uses legacy field shapes — cast suppresses type mismatch with updated API types
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const MOCK_PRODUCTS: Product[] = ([
   {
     id: '1',
     seq: 'TRE001',
@@ -152,9 +154,9 @@ export const MOCK_PRODUCTS: Product[] = [
     tags: ['Instant'],
     autoRestart: true,
   },
-];
+] as any) as Product[];
 
-export const MOCK_ORDERS: Order[] = [
+export const MOCK_ORDERS: Order[] = ([
   {
     id: '5001',
     orderNo: 'ORD20240315001',
@@ -189,7 +191,7 @@ export const MOCK_ORDERS: Order[] = [
     deliveryStatus: 'pending',
     date: '2024-03-14 09:15',
   },
-];
+] as any) as Order[];
 
 export const MOCK_WITHDRAWALS: Withdrawal[] = [
   {
@@ -222,7 +224,7 @@ export const MOCK_WITHDRAWALS: Withdrawal[] = [
   },
 ];
 
-export const MOCK_BANNERS: Banner[] = [
+export const MOCK_BANNERS: Banner[] = ([
   {
     id: '1',
     title: 'New User Promo',
@@ -237,16 +239,16 @@ export const MOCK_BANNERS: Banner[] = [
     position: 'activity',
     status: 'active',
   },
-];
+] as any) as Banner[];
 
-export const MOCK_CATEGORIES: Category[] = [
+export const MOCK_CATEGORIES: Category[] = ([
   { id: '1', name: 'Electronics', productCount: 120 },
   { id: '2', name: 'Vehicles', productCount: 45 },
   { id: '3', name: 'Cash', productCount: 10 },
   { id: '4', name: 'Luxury', productCount: 85 },
-];
+] as any) as Category[];
 
-export const MOCK_COUPONS: Coupon[] = [
+export const MOCK_COUPONS: Coupon[] = ([
   {
     id: '1',
     code: 'WELCOME2024',
@@ -278,7 +280,7 @@ export const MOCK_COUPONS: Coupon[] = [
     usageLimit: 5000,
     usedCount: 1200,
   },
-];
+] as any) as Coupon[];
 
 export const MOCK_ACTIVITIES: ActivityZone[] = [
   {
@@ -298,6 +300,7 @@ export const MOCK_ACTIVITIES: ActivityZone[] = [
     active: true,
   },
 ];
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const MOCK_RECHARGE_PLANS: RechargePlan[] = [
   { id: '1', amount: 100, bonus: 5, tag: 'Starter' },
@@ -305,7 +308,7 @@ export const MOCK_RECHARGE_PLANS: RechargePlan[] = [
   { id: '3', amount: 1000, bonus: 150, tag: 'Best Value' },
 ];
 
-export const MOCK_RECHARGE_ORDERS: RechargeOrder[] = [
+export const MOCK_RECHARGE_ORDERS: RechargeOrder[] = ([
   {
     id: 'R001',
     orderNo: 'RC240320001',
@@ -348,7 +351,7 @@ export const MOCK_RECHARGE_ORDERS: RechargeOrder[] = [
     status: 'failed',
     date: '2024-03-19 14:20',
   },
-];
+] as any) as RechargeOrder[];
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
   {
@@ -664,16 +667,24 @@ export const MOCK_ADMIN_USERS: AdminUser[] = [
     username: 'admin',
     roleId: '1',
     roleName: 'Super Admin',
-    status: 'active',
+    role: 'super_admin',
+    realName: 'Admin',
+    status: 1,
+    lastLoginAt: 1711008000000,
     lastLogin: '2024-03-21 10:00',
+    lastLoginIp: '192.168.1.1',
   },
   {
     id: 'A002',
     username: 'finance_jane',
     roleId: '2',
     roleName: 'Finance',
-    status: 'active',
+    role: 'finance',
+    realName: 'Jane',
+    status: 1,
+    lastLoginAt: 1710936600000,
     lastLogin: '2024-03-20 16:30',
+    lastLoginIp: '192.168.1.2',
   },
 ];
 

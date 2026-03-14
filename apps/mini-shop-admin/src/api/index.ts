@@ -220,6 +220,24 @@ export const categoryApi = {
 };
 
 /**
+ * 拼团管理 API (Admin)
+ */
+export const groupApi = {
+  // 获取拼团列表
+  getList: (params?: import('@/type/types').AdminGroupListParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminGroupItem>>(
+      '/v1/admin/groups/list',
+      params,
+    ),
+
+  // 获取拼团详情
+  getDetail: (groupId: string) =>
+    http.get<import('@/type/types').AdminGroupDetail>(
+      `/v1/admin/groups/${groupId}`,
+    ),
+};
+
+/**
  * 夺宝组相关 API
  */
 export const treasureApi = {

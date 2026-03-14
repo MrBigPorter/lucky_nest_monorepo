@@ -1,135 +1,350 @@
-import React, { useState } from 'react';
-import { Users, Timer } from 'lucide-react';
-import { Card, Button, Badge } from '@/components/UIComponents';
-import { MOCK_GROUPS, TRANSLATIONS } from '@/constants';
-import { useMockData } from '@/hooks/useMockData';
-import { useAppStore } from '@/store/useAppStore';
-import { TreasureGroup } from '@/type/types.ts';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { Users, Timer, Eye } from 'lucide-react';
+import { Badge } from '@/components/UIComponents';
+import { AdminGroupItem, AdminGroupListParams } from '@/type/types.ts';
+import { groupApi } from '@/api';
+import { GROUP_STATUS } from '@lucky/shared';
+import { SmartTable, ProColumns, ActionType } from '@/components/scaffold/SmartTable';
+import { FormSchema } from '@/type/search.ts';
+import { Button, ModalManager, cn } from '@repo/ui';
+import { SmartImage } from '@/components/ui/SmartImage.tsx';
+import { Card } from '@/components/UIComponents.tsx';
+import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
+import { format, formatDistanceToNow } from 'date-fns';
+import { useRequest } from 'ahooks';
 
-export const GroupManagement: React.FC = () => {
-  const { lang } = useAppStore();
-  const t = TRANSLATIONS[lang];
-  const { data: groups, update } = useMockData<TreasureGroup>(MOCK_GROUPS);
+// ── Status helpers ───────────────────────────────────────────────────────────
+const GROUP_STATUS_CONFIG: Record<number, { label: string; color: string }> = {
+  [GROUP_STATUS.ACTIVE]: { label: 'Active', color: 'blue' },
+  [GROUP_STATUS.SUCCESS]: { label: 'Completed', color: 'green' },
+  [GROUP_STATUS.FAILED]: { label: 'Failed', color: 'red' },
+};
 
-  const handleStatusChange = (id: string, status: 'completed' | 'failed') => {
-    update(id, { status });
+const getProgressColor = (current: number, max: number) => {
+  const pct = max > 0 ? (current / max) * 100 : 0;
+  if (pct >= 100) return 'bg-emerald-500';
+  if (pct > 50) return 'bg-primary-500';
+  return 'bg-blue-500';
+};
+
+// ── Detail Modal ─────────────────────────────────────────────────────────────
+const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => {
+  const { data, loading } = useRequest(() => groupApi.getDetail(groupId));
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center text-gray-400">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="p-8 text-center text-gray-400">No data found.</div>
+    );
+  }
+
+  const statusCfg = GROUP_STATUS_CONFIG[data.groupStatus] ?? {
+    label: 'Unknown',
+    color: 'gray',
   };
-
-  const getProgressColor = (current: number, target: number) => {
-    const percentage = (current / target) * 100;
-    if (percentage >= 100) return 'bg-emerald-500';
-    if (percentage > 50) return 'bg-primary-500';
-    return 'bg-blue-500';
-  };
+  const pct = data.maxMembers > 0 ? Math.min((data.currentMembers / data.maxMembers) * 100, 100) : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Group Buying
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-            Manage open groups and team status
+    <div className="space-y-5 p-1">
+      {/* Product row */}
+      <div className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-100 dark:border-white/10">
+        <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+          <SmartImage
+            src={data.treasure?.treasureCoverImg}
+            width={56}
+            height={56}
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-gray-900 dark:text-white line-clamp-1">
+            {data.treasure?.treasureName ?? '–'}
+          </p>
+          <p className="text-xs text-gray-400 font-mono mt-0.5">
+            ID: {data.groupId.slice(-8)}
           </p>
         </div>
-        <div className="flex gap-2">
-          <span className="px-3 py-1 bg-white dark:bg-white/5 rounded-lg text-sm text-gray-500 shadow-sm border border-gray-100 dark:border-white/5">
-            Active:{' '}
-            <strong className="text-gray-900 dark:text-white">
-              {groups.filter((g) => g.status === 'active').length}
-            </strong>
+        <Badge color={statusCfg.color as any}>{statusCfg.label}</Badge>
+      </div>
+
+      {/* Progress */}
+      <div>
+        <div className="flex justify-between text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+          <span className="flex items-center gap-1">
+            <Users size={12} /> Members
           </span>
+          <span>
+            {data.currentMembers} / {data.maxMembers}
+          </span>
+        </div>
+        <div className="h-2 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+          <div
+            className={cn('h-full rounded-full transition-all', getProgressColor(data.currentMembers, data.maxMembers))}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {groups.map((group) => (
-          <Card
-            key={group.id}
-            className="relative overflow-hidden hover:shadow-lg transition-all duration-300"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <img
-                  src={group.creator.avatar}
-                  className="w-10 h-10 rounded-full border-2 border-white dark:border-dark-800 shadow-sm"
-                />
-                <div>
-                  <div className="font-bold text-gray-900 dark:text-white text-sm">
-                    {group.creator.name}'s Team
-                  </div>
-                  <div className="text-xs text-gray-500">ID: {group.id}</div>
-                </div>
-              </div>
-              <Badge
-                color={
-                  group.status === 'active'
-                    ? 'blue'
-                    : group.status === 'completed'
-                      ? 'green'
-                      : 'red'
-                }
-              >
-                {group.status.toUpperCase()}
-              </Badge>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-3 mb-4 flex items-center gap-3">
-              <img
-                src={group.product.image}
-                className="w-12 h-12 rounded bg-white"
-              />
-              <div className="overflow-hidden">
-                <div className="text-sm font-medium truncate text-gray-900 dark:text-white">
-                  {group.product.name}
-                </div>
-                <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                  <Timer size={10} /> Expires: {group.expiresAt.split(' ')[1]}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-xs font-medium text-gray-600 dark:text-gray-400">
-                <span>Progress</span>
-                <span>
-                  {group.currentSize} / {group.targetSize} Members
-                </span>
-              </div>
-              <div className="h-2 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${getProgressColor(group.currentSize, group.targetSize)}`}
-                  style={{
-                    width: `${Math.min((group.currentSize / group.targetSize) * 100, 100)}%`,
-                  }}
-                ></div>
-              </div>
-            </div>
-
-            {group.status === 'active' && (
-              <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-white/5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1 text-red-500 hover:bg-red-500/10"
-                  onClick={() => handleStatusChange(group.id, 'failed')}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-500/10 border-green-200 dark:border-green-500/20"
-                  onClick={() => handleStatusChange(group.id, 'completed')}
-                >
-                  Complete
-                </Button>
-              </div>
-            )}
-          </Card>
-        ))}
+      {/* Expire info */}
+      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+        <Timer size={12} />
+        {data.expireAt
+          ? `Expires ${format(new Date(data.expireAt), 'yyyy-MM-dd HH:mm')} (${formatDistanceToNow(new Date(data.expireAt), { addSuffix: true })})`
+          : 'No expiry'}
       </div>
+
+      {/* Members list */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Members ({data.members.length})
+        </p>
+        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+          {data.members.map((m, i) => (
+            <div
+              key={m.user.id ?? i}
+              className="flex items-center gap-2.5 p-2 rounded-lg bg-gray-50 dark:bg-white/5"
+            >
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                {m.user.avatar ? (
+                  <img src={m.user.avatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <span className="text-[10px] font-bold text-gray-400 uppercase">
+                    {m.user.nickname?.slice(0, 1) ?? 'U'}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {m.user.nickname ?? 'Anonymous'}
+                </p>
+                <p className="text-[10px] text-gray-400 font-mono">
+                  Joined {format(new Date(m.joinedAt), 'MM-dd HH:mm')}
+                </p>
+              </div>
+              {m.isOwner === 1 && (
+                <Badge color="purple">Leader</Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export const GroupManagement: React.FC = () => {
+  const actionRef = useRef<ActionType>(null);
+
+  const handleViewDetail = useCallback((record: AdminGroupItem) => {
+    ModalManager.open({
+      title: 'Group Detail',
+      size: 'lg',
+      renderChildren: () => <GroupDetailModalContent groupId={record.groupId} />,
+    });
+  }, []);
+
+  const columns: ProColumns<AdminGroupItem>[] = useMemo(
+    () => [
+      {
+        title: 'Group / Product',
+        dataIndex: 'groupId',
+        width: 260,
+        render: (_, row) => (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800">
+              {row.treasure?.treasureCoverImg ? (
+                <SmartImage
+                  src={row.treasure.treasureCoverImg}
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Users size={16} className="text-gray-400" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
+                {row.treasure?.treasureName ?? 'Unknown Product'}
+              </p>
+              <p className="text-[10px] text-gray-400 font-mono">
+                #{row.groupId.slice(-8)}
+              </p>
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: 'Leader',
+        dataIndex: 'creator',
+        width: 160,
+        render: (_, row) => (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              {row.creator?.avatar ? (
+                <img src={row.creator.avatar} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <span className="text-[9px] font-bold text-gray-400 uppercase">
+                  {row.creator?.nickname?.slice(0, 1) ?? 'U'}
+                </span>
+              )}
+            </div>
+            <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[100px]">
+              {row.creator?.nickname ?? 'Anonymous'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: 'Progress',
+        dataIndex: 'currentMembers',
+        width: 160,
+        render: (_, row) => {
+          const pct = row.maxMembers > 0 ? Math.min((row.currentMembers / row.maxMembers) * 100, 100) : 0;
+          return (
+            <div className="w-full max-w-[140px]">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="font-bold text-gray-900 dark:text-gray-100">
+                  {row.currentMembers}/{row.maxMembers}
+                </span>
+                <span className="text-gray-400 text-[10px]">{Math.round(pct)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full', getProgressColor(row.currentMembers, row.maxMembers))}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: 'Status',
+        dataIndex: 'groupStatus',
+        width: 100,
+        render: (_, row) => {
+          const cfg = GROUP_STATUS_CONFIG[row.groupStatus] ?? { label: 'Unknown', color: 'gray' };
+          return <Badge color={cfg.color as any}>{cfg.label}</Badge>;
+        },
+      },
+      {
+        title: 'Expires At',
+        dataIndex: 'expireAt',
+        width: 140,
+        render: (_, row) =>
+          row.expireAt ? (
+            <div className="flex flex-col text-[11px] text-gray-500">
+              <span>{format(new Date(row.expireAt), 'MM-dd HH:mm')}</span>
+              <span className="text-[10px] text-gray-400">
+                {formatDistanceToNow(new Date(row.expireAt), { addSuffix: true })}
+              </span>
+            </div>
+          ) : (
+            <span className="text-gray-300">–</span>
+          ),
+      },
+      {
+        title: 'Actions',
+        width: 80,
+        valueType: 'option',
+        render: (_, row) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+            onClick={() => handleViewDetail(row)}
+          >
+            <Eye size={16} />
+          </Button>
+        ),
+      },
+    ],
+    [handleViewDetail],
+  );
+
+  const searchSchema: FormSchema<AdminGroupListParams>[] = useMemo(
+    () => [
+      {
+        type: 'input',
+        key: 'treasureId',
+        label: 'Product ID',
+        placeholder: 'Filter by product ID…',
+      },
+      {
+        type: 'select',
+        key: 'status',
+        label: 'Status',
+        defaultValue: '',
+        options: [
+          { label: 'All', value: '' },
+          { label: 'Active', value: String(GROUP_STATUS.ACTIVE) },
+          { label: 'Completed', value: String(GROUP_STATUS.SUCCESS) },
+          { label: 'Failed', value: String(GROUP_STATUS.FAILED) },
+        ],
+      },
+      {
+        type: 'select',
+        key: 'includeExpired',
+        label: 'Include Expired',
+        defaultValue: 'false',
+        options: [
+          { label: 'No', value: 'false' },
+          { label: 'Yes', value: 'true' },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const requestGroups = useCallback(async (params: AdminGroupListParams & { pageSize: number; page: number }) => {
+    const { page, pageSize, treasureId, status, includeExpired } = params;
+    const apiParams: AdminGroupListParams = { page, pageSize };
+    if (treasureId) apiParams.treasureId = treasureId;
+    if (status) apiParams.status = Number(status);
+    if (includeExpired !== undefined) {
+      apiParams.includeExpired = String(includeExpired) === 'true';
+    }
+    try {
+      const res = await groupApi.getList(apiParams);
+      return { data: res.list, total: res.total, success: true };
+    } catch {
+      return { data: [], total: 0, success: false };
+    }
+  }, []);
+
+  return (
+    <div className="p-4">
+      <PageHeader
+        title="Group Buying"
+        description="Monitor active groups and team progress in real time."
+      />
+      <Card>
+        <SmartTable<AdminGroupItem>
+          ref={actionRef}
+          rowKey="groupId"
+          headerTitle={
+            <div className="flex items-center gap-2">
+              <Users className="text-primary-500" size={20} />
+              <span className="font-semibold text-lg">Groups</span>
+            </div>
+          }
+          columns={columns}
+          request={requestGroups}
+          searchSchema={searchSchema}
+          defaultPageSize={20}
+        />
+      </Card>
     </div>
   );
 };

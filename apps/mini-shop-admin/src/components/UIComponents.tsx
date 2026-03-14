@@ -84,7 +84,7 @@ export const Breadcrumbs: React.FC<{ items: string[] }> = ({ items }) => (
 );
 
 // --- Card ---
-interface CardPropsCardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   title?: string;
   action?: React.ReactNode;
@@ -498,6 +498,7 @@ export const Dropdown: React.FC<{
     icon?: React.ReactNode;
     onClick: () => void;
     danger?: boolean;
+    disabled?: boolean;
   }[];
 }> = ({ trigger, items }) => {
   const [open, setOpen] = useState(false);

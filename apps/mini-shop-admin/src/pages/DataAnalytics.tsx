@@ -20,12 +20,13 @@ import {
   ArrowRight,
   MousePointer,
 } from 'lucide-react';
-import { Card, Badge, DateRangePicker } from '../components/UIComponents.tsx';
+import { Card, DateRangePicker } from '../components/UIComponents.tsx';
 import {
   MOCK_FUNNEL_DATA,
   MOCK_PRODUCT_METRICS,
   MOCK_COHORT_DATA,
 } from '../constants.ts';
+import { ProductMetric } from '@/type/types';
 
 // --- SUB-COMPONENT: CONVERSION FUNNEL ---
 const ConversionFunnel: React.FC = () => {
@@ -122,7 +123,7 @@ const ConversionFunnel: React.FC = () => {
                 radius={[0, 4, 4, 0]}
                 barSize={40}
               >
-                {MOCK_FUNNEL_DATA.map((entry, index) => (
+                {MOCK_FUNNEL_DATA.map((_entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fillOpacity={1 - index * 0.15}
@@ -225,7 +226,7 @@ const ProductMatrix: React.FC = () => {
                 cursor={{ strokeDasharray: '3 3' }}
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const data = payload[0].payload as any;
+                    const data = payload[0].payload as ProductMetric;
                     return (
                       <div className="bg-gray-900 text-white p-3 rounded-lg shadow-xl border border-white/10 text-sm">
                         <div className="font-bold mb-1">{data.name}</div>

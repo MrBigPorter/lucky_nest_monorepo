@@ -10,7 +10,7 @@ import { MainContent } from './MainContent';
 export const Layout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { lang, isSidebarCollapsed } = useAppStore();
+  const { lang } = useAppStore();
   const t = TRANSLATIONS[lang];
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
