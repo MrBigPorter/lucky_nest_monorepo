@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -15,30 +16,113 @@ import {
   PieChart,
   Headphones,
 } from 'lucide-react';
-import { Dashboard } from '../pages/Dashboard';
-import { UserManagement } from '../pages/UserManagement';
-import { AdminUserManagement } from '../pages/AdminUserManagement';
-import { ProductManagement } from '../pages/ProductManagement';
-import { CategoryManagement } from '../pages/CategoryManagement.tsx';
-import { GroupManagement } from '../pages/GroupManagement';
-import { OrderManagement } from '../pages/OrderManagement';
-import { Marketing } from '../pages/Marketing';
-import { Finance } from '../pages/Finance';
-import { SystemSettings } from '../pages/SystemSettings';
-import { LotteryControl } from '../pages/LotteryControl';
-import { VipConfig } from '../pages/VipConfig';
-import { NotificationCenter } from '../pages/NotificationCenter';
-import { ActivityConfig } from '../pages/ActivityConfig';
-import { AdminSecurity } from '../pages/AdminSecurity';
-import { ContentCMS } from '../pages/ContentCMS';
-import { DataAnalytics } from '../pages/DataAnalytics';
-import { ServiceCenter } from '../pages/ServiceCenter';
-import { ActSectionManagement } from '@/pages/ActSectionManagement.tsx';
-import { BannerManagement } from '@/pages/BannerManagement.tsx';
-import { FinancePage } from '@/pages/FinancePage.tsx';
-import { AddressList } from '@/pages/AddressList.tsx';
-import { KycList } from '@/pages/KycList.tsx';
-import { PaymentChannelList } from '@/pages/PaymentChannelList.tsx';
+
+// ---- 懒加载页面组件 (路由级代码拆分) ----
+// 各页面使用 named export，通过 .then() 转为 default export 供 React.lazy 使用
+const Dashboard = React.lazy(() =>
+  import('../pages/Dashboard').then((m) => ({ default: m.Dashboard })),
+);
+const UserManagement = React.lazy(() =>
+  import('../pages/UserManagement').then((m) => ({
+    default: m.UserManagement,
+  })),
+);
+const AdminUserManagement = React.lazy(() =>
+  import('../pages/AdminUserManagement').then((m) => ({
+    default: m.AdminUserManagement,
+  })),
+);
+const ProductManagement = React.lazy(() =>
+  import('../pages/ProductManagement').then((m) => ({
+    default: m.ProductManagement,
+  })),
+);
+const CategoryManagement = React.lazy(() =>
+  import('../pages/CategoryManagement').then((m) => ({
+    default: m.CategoryManagement,
+  })),
+);
+const GroupManagement = React.lazy(() =>
+  import('../pages/GroupManagement').then((m) => ({
+    default: m.GroupManagement,
+  })),
+);
+const OrderManagement = React.lazy(() =>
+  import('../pages/OrderManagement').then((m) => ({
+    default: m.OrderManagement,
+  })),
+);
+const Marketing = React.lazy(() =>
+  import('../pages/Marketing').then((m) => ({ default: m.Marketing })),
+);
+const Finance = React.lazy(() =>
+  import('../pages/Finance').then((m) => ({ default: m.Finance })),
+);
+const SystemSettings = React.lazy(() =>
+  import('../pages/SystemSettings').then((m) => ({
+    default: m.SystemSettings,
+  })),
+);
+const LotteryControl = React.lazy(() =>
+  import('../pages/LotteryControl').then((m) => ({
+    default: m.LotteryControl,
+  })),
+);
+const VipConfig = React.lazy(() =>
+  import('../pages/VipConfig').then((m) => ({ default: m.VipConfig })),
+);
+const NotificationCenter = React.lazy(() =>
+  import('../pages/NotificationCenter').then((m) => ({
+    default: m.NotificationCenter,
+  })),
+);
+const ActivityConfig = React.lazy(() =>
+  import('../pages/ActivityConfig').then((m) => ({
+    default: m.ActivityConfig,
+  })),
+);
+const AdminSecurity = React.lazy(() =>
+  import('../pages/AdminSecurity').then((m) => ({
+    default: m.AdminSecurity,
+  })),
+);
+const ContentCMS = React.lazy(() =>
+  import('../pages/ContentCMS').then((m) => ({ default: m.ContentCMS })),
+);
+const DataAnalytics = React.lazy(() =>
+  import('../pages/DataAnalytics').then((m) => ({
+    default: m.DataAnalytics,
+  })),
+);
+const ServiceCenter = React.lazy(() =>
+  import('../pages/ServiceCenter').then((m) => ({
+    default: m.ServiceCenter,
+  })),
+);
+const ActSectionManagement = React.lazy(() =>
+  import('@/pages/ActSectionManagement').then((m) => ({
+    default: m.ActSectionManagement,
+  })),
+);
+const BannerManagement = React.lazy(() =>
+  import('@/pages/BannerManagement').then((m) => ({
+    default: m.BannerManagement,
+  })),
+);
+const FinancePage = React.lazy(() =>
+  import('@/pages/FinancePage').then((m) => ({ default: m.FinancePage })),
+);
+const AddressList = React.lazy(() =>
+  import('@/pages/AddressList').then((m) => ({ default: m.AddressList })),
+);
+const KycList = React.lazy(() =>
+  import('@/pages/KycList').then((m) => ({ default: m.KycList })),
+);
+const PaymentChannelList = React.lazy(() =>
+  import('@/pages/PaymentChannelList').then((m) => ({
+    default: m.PaymentChannelList,
+  })),
+);
 
 export interface RouteConfig {
   path: string;
