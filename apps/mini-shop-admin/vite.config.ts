@@ -11,7 +11,12 @@ export default defineConfig({
     watch: {
       ignored: ['!**/node_modules/@lucky/shared/**'],
     },
-    allowedHosts: ['mini-shop-admin', 'admin.joyminis.com', 'dev.joyminis.com'],
+    allowedHosts: [
+      'mini-shop-admin',
+      'admin.joyminis.com',
+      'dev.joyminis.com',
+      'admin-dev.joyminis.com',
+    ],
   },
   plugins: [tailwindcss(), react()],
   resolve: {
