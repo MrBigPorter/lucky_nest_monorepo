@@ -5,6 +5,7 @@ import { seedBanners } from './seed-banners';
 import { seedAdvertisements } from './seed-ads';
 import { seedActSections } from './seed-sections';
 import { seedTestUserWallet } from './seed-wallet';
+import { seedInitialAdmins } from './admin.seed';
 
 async function main() {
   await seedSystemConfigExchangeRate();
@@ -14,6 +15,7 @@ async function main() {
   await seedAdvertisements();
   await seedActSections();
   await seedTestUserWallet();
+  await seedInitialAdmins();
 }
 
 main()
