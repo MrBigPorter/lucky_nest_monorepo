@@ -1,28 +1,35 @@
-name: 🚀 部署总控台 (单独/全部发布)
+name: 🚀 Master Deployment Control
 
 on:
   workflow_dispatch:
     inputs:
       deploy_admin:
-        description: '🌐 发布 Admin 前端 (推送到 Cloudflare)'
+        description: '🌐 Deploy Admin Frontend (Cloudflare)'
         type: boolean
         default: true
       deploy_api:
-        description: '⚙️ 发布 Backend 后端 (推送到 VPS)'
+        description: '⚙️ Deploy Backend API (VPS)'
         type: boolean
         default: true
 
-jobs:
-  # 1. 如果勾选了前端，就遥控呼叫 deploy-admin.yml
-  run-admin-deploy:
-    name: 🌐 启动前端部署
-    if: ${{ inputs.deploy_admin }}
-    uses: ./.github/workflows/deploy-admin.yml
-    secrets: inherit # 把密钥自动透传过去
+# 🔑 KEY FIX: Explicitly grant permissions to the master workflow
+# This allows the child workflows to inherit the rights they need.
+permissions:
+  contents: read
+  deployments: write   # Required for Cloudflare Pages status
+  packages: write      # Required for GHCR (Docker) pushing
 
-  # 2. 如果勾选了后端，就遥控呼叫 deploy-backend.yml
+jobs:
+  # 1. Calls the Admin deployment workflow
+  run-admin-deploy:
+    name: 🌐 Trigger Admin Deploy
+    if: ${{ inputs.deploy_admin == true }}
+    uses: ./.github/workflows/deploy-admin.yml
+    secrets: inherit # Pass all repository secrets down
+
+  # 2. Calls the Backend deployment workflow
   run-backend-deploy:
-    name: ⚙️ 启动后端部署
-    if: ${{ inputs.deploy_api }}
+    name: ⚙️ Trigger Backend Deploy
+    if: ${{ inputs.deploy_api == true }}
     uses: ./.github/workflows/deploy-backend.yml
-    secrets: inherit # 把密钥自动透传过去
+    secrets: inherit # Pass all repository secrets down
