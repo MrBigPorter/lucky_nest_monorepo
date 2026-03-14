@@ -1,5 +1,5 @@
 {
-  "name": "y",
+  "name": "lucky-nest-monorepo",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
