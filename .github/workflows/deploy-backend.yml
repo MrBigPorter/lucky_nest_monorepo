@@ -17,7 +17,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/api/**'
+#      - 'apps/api/**'
       - 'packages/shared/**'
       - 'packages/config/**'
       - 'Dockerfile.prod'
