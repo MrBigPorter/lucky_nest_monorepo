@@ -10,7 +10,7 @@
 # ============================================================
 set -euo pipefail
 
-VPS_IP="192.210.207.88"
+VPS_IP="107.175.53.104"
 VPS_USER="root"
 VPS_DIR="/opt/lucky"
 SSH_TARGET="${VPS_USER}@${VPS_IP}"

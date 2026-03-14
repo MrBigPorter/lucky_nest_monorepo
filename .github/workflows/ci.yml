@@ -1,7 +1,7 @@
 # ============================================================
 # CI 检查 — PR 和 main 推送时运行
 # ============================================================
-# 流程: 安装依赖 → Lint → 类型检查 → 测试
+# 流程: 安装依赖 → Prisma 生成 → Lint → 类型检查 → 测试
 # 目的: 在代码合并前发现问题, 避免部署失败
 # ============================================================
 
@@ -31,10 +31,14 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install build tools (native modules: bcrypt, sharp)
+        run: sudo apt-get install -y python3 make g++ openssl
+
       - name: Enable Corepack (Yarn 4)
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
-      - name: Cache Yarn
+      # ---- 依赖缓存 (zip 包层) ----
+      - name: Cache Yarn zip cache
         uses: actions/cache@v4
         with:
           path: |
@@ -43,6 +47,19 @@ jobs:
           key: yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-
 
+      # ---- node_modules 缓存 (加速 link 步骤) ----
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        id: nm-cache
+        with:
+          path: |
+            node_modules
+            apps/api/node_modules
+            apps/mini-shop-admin/node_modules
+            packages/*/node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+      # ---- Turbo 远程缓存 ----
       - name: Cache Turbo
         uses: actions/cache@v4
         with:
@@ -53,7 +70,13 @@ jobs:
             turbo-main-
 
       - name: Install dependencies
+        if: steps.nm-cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
+
+      # Prisma generate 必须在类型检查前运行
+      # (生成 @prisma/client 的 TypeScript 类型定义)
+      - name: Generate Prisma Client
+        run: yarn workspace @lucky/api prisma generate
 
       - name: Lint
         run: yarn turbo run lint
@@ -63,6 +86,6 @@ jobs:
         run: yarn turbo run check-types
 
       - name: Test
+        # 目前仅 packages/ui 等有测试, 其他包跳过
         run: yarn turbo run test
         continue-on-error: true
-

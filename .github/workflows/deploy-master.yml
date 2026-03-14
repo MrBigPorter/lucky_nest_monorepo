@@ -1,0 +1,28 @@
+name: 🚀 部署总控台 (单独/全部发布)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_admin:
+        description: '🌐 发布 Admin 前端 (推送到 Cloudflare)'
+        type: boolean
+        default: true
+      deploy_api:
+        description: '⚙️ 发布 Backend 后端 (推送到 VPS)'
+        type: boolean
+        default: true
+
+jobs:
+  # 1. 如果勾选了前端，就遥控呼叫 deploy-admin.yml
+  run-admin-deploy:
+    name: 🌐 启动前端部署
+    if: ${{ inputs.deploy_admin }}
+    uses: ./.github/workflows/deploy-admin.yml
+    secrets: inherit # 把密钥自动透传过去
+
+  # 2. 如果勾选了后端，就遥控呼叫 deploy-backend.yml
+  run-backend-deploy:
+    name: ⚙️ 启动后端部署
+    if: ${{ inputs.deploy_api }}
+    uses: ./.github/workflows/deploy-backend.yml
+    secrets: inherit # 把密钥自动透传过去

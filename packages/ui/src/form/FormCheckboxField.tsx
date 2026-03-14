@@ -1,4 +1,3 @@
-import * as React from "react";
 import type { FieldValues } from "react-hook-form";
 import clsx from "clsx";
 import { AnimatePresence } from "framer-motion";
@@ -42,7 +41,6 @@ export function FormCheckboxField<
   size = "md",
   helpText,
   variant = "default",
-  layout = "horizontal",
   description,
   disabled,
 }: Readonly<FormCheckboxFieldProps<TFieldValues>>) {
