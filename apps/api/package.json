@@ -16,7 +16,11 @@
     "pr:deploy": "prisma migrate deploy",
     "codes:gen": "node scripts/gen-error-codes.mjs",
     "prebuild": "npm run codes:gen",
+    "seed": "tsx scripts/seed/index.ts",
     "seed:treasures": "tsx scripts/seed/seed-treasures.ts"
+  },
+  "prisma": {
+    "seed": "tsx scripts/seed/index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.956.0",
