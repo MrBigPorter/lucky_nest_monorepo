@@ -35,7 +35,10 @@ COPY apps/admin-next/ ./apps/admin-next/
 COPY packages/        ./packages/
 COPY turbo.json tsconfig.json ./
 
-# 4) 构建 (next build → output: 'export' → 输出到 out/)
+# 4) Pre-build @repo/ui (avoid transpilePackages TypeScript compilation in Next.js)
+RUN node packages/ui/scripts/build.js
+
+# 5) 构建 (next build → output: 'export' → 输出到 out/)
 # 构建时注入后端 API 地址（通过 ARG 传入，可在 compose/CI 中覆盖）
 ARG NEXT_PUBLIC_API_BASE_URL=https://api.joyminis.com
 ARG NEXT_PUBLIC_APP_ENV=production

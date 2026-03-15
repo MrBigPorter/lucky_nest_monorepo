@@ -3,7 +3,7 @@ import {
   WithdrawStatus,
   RECHARGE_STATUS,
 } from '@lucky/shared';
-import { ButtonVariant } from '@repo/ui/button';
+import type { ButtonVariant } from '@repo/ui';
 
 export const STATUS_CONFIG = {
   [WITHDRAW_STATUS.PENDING_AUDIT as WithdrawStatus]: {

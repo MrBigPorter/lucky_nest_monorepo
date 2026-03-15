@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { clientUserApi } from '@/api';
 import { ClientUserDevice } from '@/type/types';
-import { Badge } from '@repo/ui/components/ui/badge';
+import { Badge } from '@repo/ui';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
 

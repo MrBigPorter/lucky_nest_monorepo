@@ -11,7 +11,7 @@ import { addressApi } from '@/api'; // 假设你有这个 API 定义
 import { AddressEditModal } from './address/AddressEditModal';
 import { MapPin, Edit, Trash2 } from 'lucide-react';
 import { FormSchema } from '@/type/search';
-import { Badge } from '@repo/ui/components/ui/badge';
+import { Badge } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
 import {
   AddressResponse,
