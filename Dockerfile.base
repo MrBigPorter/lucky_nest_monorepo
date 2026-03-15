@@ -24,6 +24,8 @@ COPY .yarn ./.yarn
 # copy from workspaces
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/mini-shop-admin/package.json ./apps/mini-shop-admin/package.json
+COPY apps/admin-next/package.json ./apps/admin-next/package.json
+COPY apps/liveness-web/package.json ./apps/liveness-web/package.json
 
 # copy from packages
 COPY packages/shared/package.json ./packages/shared/package.json

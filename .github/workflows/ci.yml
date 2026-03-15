@@ -55,6 +55,7 @@ jobs:
           path: |
             node_modules
             apps/api/node_modules
+            apps/admin-next/node_modules
             apps/mini-shop-admin/node_modules
             apps/liveness-web/node_modules
             packages/*/node_modules

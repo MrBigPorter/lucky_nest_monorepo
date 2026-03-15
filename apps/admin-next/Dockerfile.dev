@@ -1,0 +1,17 @@
+# ==========================================
+# Admin Next 开发环境 Dockerfile
+# ==========================================
+# 基于 base 镜像 (已包含 node + yarn + 全部依赖)
+# 构建 base: docker build -f Dockerfile.base -t lucky-monorepo-base .
+
+FROM lucky-monorepo-base
+
+WORKDIR /app
+
+# Dev 模式下源码通过 compose volume 挂载 (.:/app)
+# 不需要 COPY 源码
+
+EXPOSE 4001
+
+CMD ["yarn", "workspace", "@lucky/admin-next", "dev"]
+
