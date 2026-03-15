@@ -36,7 +36,7 @@ export async function dismissDevOverlay(page: Page) {
  * Use a longer timeout (default 60 s) for cold Turbopack compilations
  * (login flow, first page visit after server restart).
  */
-export async function waitForDashboard(page: Page, timeout = 30_000) {
+export async function waitForDashboard(page: Page, timeout = 60_000) {
   await page.locator('aside').waitFor({ state: 'visible', timeout });
 }
 
