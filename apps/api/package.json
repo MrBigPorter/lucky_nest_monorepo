@@ -17,7 +17,9 @@
     "codes:gen": "node scripts/gen-error-codes.mjs",
     "prebuild": "npm run codes:gen",
     "seed": "tsx scripts/seed/index.ts",
-    "seed:treasures": "tsx scripts/seed/seed-treasures.ts"
+    "seed:treasures": "tsx scripts/seed/seed-treasures.ts",
+    "create-admin": "tsx scripts/cli/create-admin.ts",
+    "build:cli": "tsc -p tsconfig.cli.json"
   },
   "prisma": {
     "seed": "tsx scripts/seed/index.ts"

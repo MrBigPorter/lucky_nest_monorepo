@@ -80,6 +80,8 @@ sync_configs() {
     # 核心配置
     scp compose.prod.yml                    "$SSH_TARGET:$VPS_DIR/"
     scp deploy/.env.prod                    "$SSH_TARGET:$VPS_DIR/deploy/"
+    scp deploy/init-db.sh                   "$SSH_TARGET:$VPS_DIR/deploy/"
+    scp deploy/baseline-db.sh              "$SSH_TARGET:$VPS_DIR/deploy/"
     scp nginx/nginx.prod.conf               "$SSH_TARGET:$VPS_DIR/nginx/"
     scp nginx/whitelist.conf                "$SSH_TARGET:$VPS_DIR/nginx/"
     scp redis/redis.conf                    "$SSH_TARGET:$VPS_DIR/redis/"
@@ -150,6 +152,9 @@ fi
 # ============================================================
 log "在 VPS 上启动服务..."
 
+# 将本地标志传入 heredoc (本地展开)
+_DEPLOY_BACKEND=$BUILD_BACKEND
+
 ssh "$SSH_TARGET" << REMOTE_SCRIPT
     set -e
     cd $VPS_DIR
@@ -160,7 +165,44 @@ ssh "$SSH_TARGET" << REMOTE_SCRIPT
     echo "→ 拉取基础镜像 (nginx, redis, postgres)..."
     docker compose -f compose.prod.yml --env-file deploy/.env.prod pull nginx redis db 2>/dev/null || true
 
-    # 如果部署了 admin 镜像, 使用 --profile local 启动 admin-builder
+    # ── 数据库迁移 (仅部署后端时执行，与 CI 保持一致) ──────────────
+    if [ "$_DEPLOY_BACKEND" = "true" ]; then
+        echo "→ 运行数据库迁移..."
+        NETWORK=\$(docker inspect lucky-db-prod \
+            --format '{{range \$k,\$v := .NetworkSettings.Networks}}{{\$k}}{{end}}' 2>/dev/null \
+            | awk '{print \$1}')
+        if [ -n "\$NETWORK" ]; then
+            MIGRATE_OUT=\$(docker run --rm \
+              --network "\$NETWORK" \
+              --env-file deploy/.env.prod \
+              --entrypoint "" \
+              lucky-backend-prod:latest \
+              ./apps/api/node_modules/.bin/prisma migrate deploy \
+                --schema=apps/api/prisma/schema.prisma 2>&1) && MIGRATE_OK=true || MIGRATE_OK=false
+
+            echo "\$MIGRATE_OUT"
+
+            if [ "\$MIGRATE_OK" = false ]; then
+                if echo "\$MIGRATE_OUT" | grep -q "P3005"; then
+                    echo ""
+                    echo "❌ P3005: 数据库已有表但无迁移历史记录！"
+                    echo "   请先执行基线操作:"
+                    echo "   bash deploy/baseline-db.sh"
+                    echo ""
+                fi
+                exit 1
+            fi
+            echo "✅ 迁移完成"
+        else
+            echo "⚠️  DB 容器未运行，跳过迁移 (首次部署请先运行 init-db.sh)"
+        fi
+    fi
+
+    # ── 保存当前后端镜像 SHA (用于回滚) ──────────────────────────────
+    PREV_IMAGE=\$(docker inspect lucky-backend-prod \
+        --format '{{.Config.Image}}' 2>/dev/null || echo "")
+
+    # ── 启动/更新服务 ─────────────────────────────────────────────
     COMPOSE_CMD="docker compose -f compose.prod.yml --env-file deploy/.env.prod"
     if docker images --format '{{.Repository}}' | grep -q 'lucky-admin-builder'; then
         COMPOSE_CMD="\$COMPOSE_CMD --profile local"
@@ -170,8 +212,35 @@ ssh "$SSH_TARGET" << REMOTE_SCRIPT
     echo "→ 启动/更新服务 (不在服务器上构建)..."
     \$COMPOSE_CMD up -d --no-build --force-recreate
 
-    echo "→ 等待服务健康..."
-    sleep 5
+    # ── 健康检查 + 自动回滚 (仅后端, 与 CI 保持一致) ─────────────────
+    if [ "$_DEPLOY_BACKEND" = "true" ]; then
+        echo "→ 等待后端健康检查 (最多 90s)..."
+        HEALTHY=false
+        for i in \$(seq 1 30); do
+            if docker exec lucky-backend-prod wget -qO- http://localhost:3000/api/v1/health >/dev/null 2>&1; then
+                echo "✅ 健康检查通过 (第 \${i} 次, 约 \$((i*3))s)"
+                HEALTHY=true
+                break
+            fi
+            sleep 3
+        done
+
+        if [ "\$HEALTHY" = false ]; then
+            echo "❌ 健康检查超时! 正在回滚..."
+            docker logs --tail=50 lucky-backend-prod
+            if [ -n "\$PREV_IMAGE" ]; then
+                echo "→ 回滚到旧镜像: \$PREV_IMAGE"
+                BACKEND_IMAGE="\$PREV_IMAGE" docker compose -f compose.prod.yml \
+                    --env-file deploy/.env.prod \
+                    up -d --no-build --force-recreate backend
+                echo "⚠️  已回滚到旧版本！请检查新镜像日志排查原因。"
+            fi
+            exit 1
+        fi
+    else
+        echo "→ 等待服务就绪..."
+        sleep 5
+    fi
 
     echo "→ 服务状态:"
     docker compose -f compose.prod.yml ps
