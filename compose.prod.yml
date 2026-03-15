@@ -60,20 +60,23 @@ services:
     networks: [app]
 
   # =========================================
-  # Admin 前端 (仅本地部署时使用)
+  # Admin 前端构建器 (仅本地/自托管部署时使用)
   # =========================================
-  # CI 部署: admin 由 Cloudflare Pages 托管, 不需要此服务
-  # 本地部署: deploy.sh 使用 --profile local 启动
+  # CI 部署: admin-next 由 Cloudflare Pages 托管，不需要此服务
+  # 本地/自托管部署: deploy.sh 使用 --profile local 启动
   # =========================================
   admin-builder:
     profiles: [local]
     build:
       context: .
-      dockerfile: apps/mini-shop-admin/Dockerfile.prod
-    image: lucky-admin-builder:latest
-    container_name: lucky-admin-builder
+      dockerfile: apps/admin-next/Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.joyminis.com}
+        NEXT_PUBLIC_APP_ENV: production
+    image: lucky-admin-next-builder:latest
+    container_name: lucky-admin-next-builder
     volumes:
-      - admin_dist:/app/apps/mini-shop-admin/dist
+      - admin_dist:/app/apps/admin-next/out
     networks: [app]
 
   # =========================================
@@ -118,7 +121,7 @@ services:
       options:
         max-size: "5m"
         max-file: "3"
-    command: redis-server /etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}"
+    command: redis-server /etc/redis/redis.conf --requirepass "${REDIS_PASSWORD:-changeme}"
     deploy:
       resources:
         limits:
@@ -131,7 +134,7 @@ services:
       - redis_data:/data
       - ./redis/redis.conf:/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-changeme} ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10

@@ -1,5 +1,5 @@
 # ============================================================
-# Admin 前端部署到 Cloudflare Pages (包含 Telegram 通知)
+# Admin 前端部署到 Cloudflare Pages — admin-next (Next.js)
 # ============================================================
 name: Deploy Admin to Cloudflare
 
@@ -7,7 +7,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/mini-shop-admin/**'
+      - 'apps/admin-next/**'
       - 'packages/shared/**'
       - 'packages/ui/**'
   workflow_dispatch:
@@ -25,19 +25,19 @@ jobs:
       deployments: write
 
     steps:
-      # ================= 阶段 1：准备工作 (拿图纸、备工具) =================
-      - name: 1. Checkout Code (下载最新代码)
+      # ================= 阶段 1：准备工作 =================
+      - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: 2. Setup Node.js (安装 Node.js 20 运行环境)
+      - name: 2. Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: 3. Enable Corepack (激活 Yarn 4 包管理器)
+      - name: 3. Enable Corepack (Yarn 4)
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
-      - name: 4. Cache Yarn (开启缓存，让下次打包飞快)
+      - name: 4. Cache Yarn
         uses: actions/cache@v4
         with:
           path: |
@@ -46,54 +46,66 @@ jobs:
           key: yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-
 
-      - name: 5. Install dependencies (安装所有依赖包)
+      - name: 5. Cache node_modules
+        uses: actions/cache@v4
+        id: nm-cache
+        with:
+          path: |
+            node_modules
+            apps/admin-next/node_modules
+            packages/shared/node_modules
+            packages/ui/node_modules
+          key: nm-admin-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+
+      - name: 6. Install dependencies
+        if: steps.nm-cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
-      # ================= 阶段 2：核心加工厂 (打包编译) =================
-      - name: 6. Build Admin (核心：打包 React 代码并注入后端域名)
-        run: yarn workspace @lucky/mini-shop-admin exec vite build
+      # ================= 阶段 2：打包 =================
+      - name: 7. Build Admin Next (Next.js static export)
+        run: yarn workspace @lucky/admin-next build
         env:
           NODE_ENV: production
-          #  这里是修复 405 报错的关键！强行把正式环境的后端地址塞进代码里
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_APP_ENV: production
 
-      # ================= 阶段 3：快递发货 (传到 Cloudflare) =================
-      - name: 7. Install Wrangler (安装 Cloudflare 的官方上传工具)
+      # ================= 阶段 3：部署到 Cloudflare =================
+      - name: 8. Install Wrangler
         run: npm install -g wrangler@3
 
-      - name: 8. Create Cloudflare Project (如果项目不存在就自动建一个)
-        run: wrangler pages project create mini-shop-admin --production-branch=main || echo "项目已存在，直接跳过"
+      - name: 9. Create Cloudflare Project (首次自动建项目)
+        run: wrangler pages project create admin-next --production-branch=main || echo "项目已存在，跳过"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: 9. Deploy to Cloudflare Pages (把打包好的 dist 文件夹推到线上)
-        run: wrangler pages deploy apps/mini-shop-admin/dist --project-name=mini-shop-admin --commit-dirty=true
+      - name: 10. Deploy to Cloudflare Pages
+        run: wrangler pages deploy apps/admin-next/out --project-name=admin-next --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      # ================= 阶段 4：战报总结与通知 =================
-      - name: 10. GitHub Summary (在网页后台生成一份图文报告)
+      # ================= 阶段 4：通知 =================
+      - name: 11. GitHub Summary
         run: |
-          echo "### ✅ Admin 部署完成" >> $GITHUB_STEP_SUMMARY
-          echo "- **项目**: mini-shop-admin" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Admin Next 部署完成" >> $GITHUB_STEP_SUMMARY
+          echo "- **项目**: admin-next (Next.js)" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **URL**: https://admin.joyminis.com" >> $GITHUB_STEP_SUMMARY
 
-      - name: 11. 📱 Send Telegram Notification (推送到手机 Telegram)
-        if: always() # 无论成功还是失败，必须发通知！
+      - name: 12. 📱 Telegram Notification
+        if: always()
         run: |
           STATUS_EMOJI="✅ 成功 (Success)"
           if [ "${{ job.status }}" != "success" ]; then
             STATUS_EMOJI="❌ 失败 (Failed)"
           fi
-          MESSAGE="🌐 *Mini Shop Admin 部署报告*
+          MESSAGE="🌐 *Admin Next 部署报告*
           📌 *状态*: $STATUS_EMOJI
           🏷️ *环境*: Production (Cloudflare)
           🔗 *访问*: [admin.joyminis.com](https://admin.joyminis.com)
           📝 *Commit ID*: \`${{ github.sha }}\`"
-          
+
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "text=$MESSAGE" \

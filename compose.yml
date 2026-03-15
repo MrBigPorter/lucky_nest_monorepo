@@ -31,14 +31,14 @@ services:
       - deploy/.env.dev
     command: >
       sh -lc "corepack enable &&
-              yarn install &&
+              yarn workspaces focus @lucky/api &&
               yarn workspace @lucky/api prisma generate &&
               yarn workspace @lucky/api start:dev"
     expose:
       - "3000"
     volumes:
       - .:/app
-      - /app/node_modules
+      - backend_nm:/app/node_modules
     environment:
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
@@ -49,22 +49,32 @@ services:
     networks: [app]
 
   # =========================================
-  # Admin 前端 (开发模式)
+  # Admin 前端 (开发模式 — Next.js)
   # =========================================
-  mini-shop-admin:
+  admin-next:
     build:
       context: .
-      dockerfile: apps/mini-shop-admin/Dockerfile.dev
-    container_name: lucky-mini-shop-admin-dev
+      dockerfile: apps/admin-next/Dockerfile.dev
+    container_name: lucky-admin-next-dev
     command: >
       sh -lc "corepack enable &&
-              yarn install &&
-              yarn workspace @lucky/mini-shop-admin dev"
+              yarn workspaces focus @lucky/admin-next &&
+              yarn workspace @lucky/admin-next dev"
     expose:
-      - "4000"
+      - "4001"
     volumes:
       - .:/app
-      - /app/node_modules
+      - admin_next_nm:/app/node_modules
+      - admin_next_build:/app/apps/admin-next/.next
+      - pkg_shared_nm:/app/packages/shared/node_modules
+      - pkg_ui_nm:/app/packages/ui/node_modules
+      - pkg_eslint_nm:/app/packages/eslint-config/node_modules
+      - pkg_tsconfig_nm:/app/packages/typescript-config/node_modules
+      - pkg_config_nm:/app/packages/config/node_modules
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: /api
+      NEXT_PUBLIC_APP_ENV: development
+      HOSTNAME: "0.0.0.0"
     depends_on:
       - backend
     networks: [app]
@@ -87,7 +97,7 @@ services:
       - ./nginx/html:/var/www/html
     depends_on:
       - backend
-      - mini-shop-admin
+      - admin-next
     networks: [app]
 
   # =========================================
@@ -96,7 +106,7 @@ services:
   redis:
     image: redis:7
     container_name: lucky-redis
-    command: redis-server /etc/redis/redis.conf --requirepass "${REDIS_PASSWORD}"
+    command: redis-server /etc/redis/redis.conf --requirepass "${REDIS_PASSWORD:-devpassword}"
     env_file:
       - deploy/.env.dev
     ports:
@@ -105,7 +115,7 @@ services:
       - redis_data:/data
       - ./redis/redis.conf:/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-devpassword} ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -137,3 +147,12 @@ networks:
 volumes:
   db_data:
   redis_data:
+  backend_nm:
+  admin_next_nm:
+  admin_next_build:
+  pkg_shared_nm:
+  pkg_ui_nm:
+  pkg_eslint_nm:
+  pkg_tsconfig_nm:
+  pkg_config_nm:
+
