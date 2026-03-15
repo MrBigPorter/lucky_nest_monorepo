@@ -28,10 +28,12 @@ export async function loginViaUI(page: Page): Promise<void> {
   await page.getByLabel('Username').fill(TEST_ADMIN.username);
   await page.getByLabel('Password').fill(TEST_ADMIN.password);
   await page.getByRole('button', { name: /sign in/i }).click({ force: true });
-  // Wait for navigation away from /login — Next.js dev server may need time to compile
-  // the dashboard chunks on first request, so use a generous timeout.
+  // Wait for navigation away from /login.
+  // Turbopack compiles dashboard lazily on first request — can take 60-600 s on cold start.
+  // Use 'commit' so we only wait for the URL to change, not for the full page load.
   await page.waitForURL((url) => !url.pathname.includes('/login'), {
-    timeout: 45_000,
+    timeout: 600_000,
+    waitUntil: 'commit',
   });
 }
 
