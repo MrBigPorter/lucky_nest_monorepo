@@ -51,6 +51,12 @@
   "engines": {
     "node": ">=18"
   },
+  "resolutions": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react-hook-form": "^7.71.2",
+    "@hookform/resolvers": "^5.2.2"
+  },
   "packageManager": "yarn@4.9.2",
   "workspaces": [
     "apps/*",

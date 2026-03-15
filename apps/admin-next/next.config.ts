@@ -20,19 +20,21 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Transpile monorepo packages so webpack can handle TypeScript
+  // Transpile monorepo packages so both webpack & Turbopack handle TypeScript
   transpilePackages: ['@lucky/shared', '@repo/ui'],
-  webpack: (config, { isServer }) => {
-    // 解析 @lucky/shared monorepo 包
-    config.resolve.alias['@lucky/shared'] = path.resolve(
-      __dirname,
-      '../../packages/shared/src/index.ts',
-    );
-    config.resolve.alias['@repo/ui'] = path.resolve(
-      __dirname,
-      '../../packages/ui/src',
-    );
 
+  // 允许通过 nginx 反向代理的开发域名访问 /_next/* 资源
+  allowedDevOrigins: ['admin-dev.joyminis.com'],
+
+  // ── Turbopack 开发模式：仅处理 node:crypto shim ──
+  // @lucky/shared 和 @repo/ui 已通过 yarn workspaces symlink 解析，无需 alias
+  turbopack: {
+    resolveAlias: {
+      'node:crypto': './src/lib/crypto-shim.ts',
+    },
+  },
+
+  webpack: (config, { isServer }) => {
     // Polyfill Node.js built-ins for browser bundles
     if (!isServer) {
       config.resolve.fallback = {

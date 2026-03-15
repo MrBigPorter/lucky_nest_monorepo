@@ -1,0 +1,69 @@
+'use client';
+
+import React from 'react';
+import { Button, cn } from '@repo/ui';
+import { Plus } from 'lucide-react';
+
+interface PageHeaderProps {
+  /** 页面大标题 */
+  title: string;
+  /** 页面描述/副标题 */
+  description?: string;
+  /** 中间区域 (搜索框/输入框)，会自动占据剩余空间 */
+  searchBar?: React.ReactNode;
+  /** 右侧操作区 (通常放按钮) */
+  action?: React.ReactNode;
+  /** 额外的容器样式 */
+  className?: string;
+  /** 可选按钮文本 */
+  buttonText?: string;
+  /** 可选按钮点击事件 */
+  buttonOnClick?: () => void;
+  /** 按钮前缀图标，默认为加号图标 */
+  buttonPrefixIcon?: React.ReactNode;
+  /** 是否显示按钮图标，默认为 true */
+  showButtonIcon?: boolean;
+}
+
+export const PageHeader: React.FC<PageHeaderProps> = ({
+  title,
+  description,
+  searchBar, // 新增
+  action,
+  className,
+  buttonText,
+  buttonOnClick,
+  buttonPrefixIcon = <Plus size={18} />,
+  showButtonIcon = true,
+}) => {
+  return (
+    // 1. 移除了 justify-between，改用 gap-4 控制间距
+    <div className={cn('flex items-center gap-4 mb-6', className)}>
+      {/* 2. 左侧标题区：添加 shrink-0 防止被压缩 */}
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          {title}
+        </h1>
+        {description && (
+          <p className="text-gray-500 text-sm mt-1">{description}</p>
+        )}
+      </div>
+
+      {/* 3. 中间区域：flex-1 是关键，它会吃掉所有剩余空间 */}
+      {/* 如果没有 searchBar，这个空 div 配合 flex-1 依然会把左右两边推到边缘 */}
+      <div className="flex-1">{searchBar}</div>
+
+      {/* 4. 右侧操作区：添加 shrink-0 防止被压缩，并保持右对齐 */}
+      <div className="flex items-center gap-2 shrink-0">
+        {action}
+
+        {buttonText && buttonOnClick && (
+          <Button onClick={buttonOnClick} className="gap-2.5">
+            {showButtonIcon && buttonPrefixIcon}
+            {buttonText}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+};
