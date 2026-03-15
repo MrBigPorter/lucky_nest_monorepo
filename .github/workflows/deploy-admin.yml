@@ -53,8 +53,10 @@ jobs:
           path: |
             node_modules
             apps/admin-next/node_modules
-            packages/shared/node_modules
             packages/ui/node_modules
+            packages/config/node_modules
+            packages/typescript-config/node_modules
+            packages/eslint-config/node_modules
           key: nm-admin-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
       - name: 6. Install dependencies

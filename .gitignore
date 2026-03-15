@@ -27,6 +27,11 @@ data/
 backup.sql
 # Testing
 coverage
+# Playwright E2E
+playwright-report/
+test-results/
+apps/admin-next/playwright-report/
+apps/admin-next/test-results/
 
 # Turbo
 .turbo
