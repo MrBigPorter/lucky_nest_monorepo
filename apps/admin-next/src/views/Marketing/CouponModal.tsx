@@ -15,7 +15,7 @@ import {
   FormSelectField,
   FormTextField,
 } from '@repo/ui';
-import { FormTextareaField } from '@repo/ui/form/FormTextareaField';
+import { FormTextareaField } from '@repo/ui';
 import {
   DISCOUNT_TYPE_OPTIONS,
   ISSUE_TYPE_OPTIONS,

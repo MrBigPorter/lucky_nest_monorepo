@@ -20,18 +20,39 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Transpile monorepo packages so both webpack & Turbopack handle TypeScript
-  transpilePackages: ['@lucky/shared', '@repo/ui'],
+  // @lucky/shared: TS source via workspace symlink — still needs transpilation
+  // @repo/ui: pre-built to dist/ by `yarn workspace @repo/ui build` — no transpilation needed
+  transpilePackages: ['@lucky/shared'],
 
   // 允许通过 nginx 反向代理的开发域名访问 /_next/* 资源
   allowedDevOrigins: ['admin-dev.joyminis.com'],
 
   // ── Turbopack 开发模式：仅处理 node:crypto shim ──
-  // @lucky/shared 和 @repo/ui 已通过 yarn workspaces symlink 解析，无需 alias
   turbopack: {
     resolveAlias: {
       'node:crypto': './src/lib/crypto-shim.ts',
     },
+  },
+
+  experimental: {
+    // Tree-shake heavy barrel-export packages so Turbopack only compiles used exports
+    // @repo/ui is pre-built ESM with individual files — optimizePackageImports
+    // ensures only the imported components (e.g. `cn`) are compiled, not the full barrel
+    optimizePackageImports: [
+      '@repo/ui',
+      'lucide-react',
+      'recharts',
+      'lodash',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-tooltip',
+      '@tanstack/react-table',
+      'date-fns',
+      'framer-motion',
+    ],
   },
 
   webpack: (config, { isServer }) => {
