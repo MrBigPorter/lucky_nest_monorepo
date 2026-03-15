@@ -156,42 +156,128 @@ export const MOCK_PRODUCTS: Product[] = ([
   },
 ] as any) as Product[];
 
-export const MOCK_ORDERS: Order[] = ([
+export const MOCK_ORDERS: Order[] = [
   {
-    id: '5001',
+    orderId: '5001',
     orderNo: 'ORD20240315001',
-    user: { id: '1001', name: 'CryptoKing' },
-    product: {
-      id: '1',
-      name: 'iPhone 15 Pro Max',
-      image:
+    originalAmount: 500,
+    finalAmount: 500,
+    couponAmount: 0,
+    coinAmount: 0,
+    buyQuantity: 50,
+    unitPrice: 10,
+    orderStatus: 2,
+    paidAt: 1710509400,
+    createdAt: 1710509400,
+    user: {
+      id: '1001',
+      nickname: 'CryptoKing',
+      phone: '09171234567',
+    },
+    treasure: {
+      treasureId: '1',
+      treasureName: 'iPhone 15 Pro Max',
+      treasureCoverImg:
         'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=50&q=80',
     },
-    amount: 500,
-    shares: 50,
-    status: 'paid',
-    isWinning: false,
-    date: '2024-03-15 14:30',
   },
   {
-    id: '5002',
+    orderId: '5002',
     orderNo: 'ORD20240314088',
-    user: { id: '1002', name: 'Lizzie_99' },
-    product: {
-      id: '3',
-      name: 'Cash ₱50,000',
-      image:
+    originalAmount: 100,
+    finalAmount: 100,
+    couponAmount: 0,
+    coinAmount: 0,
+    buyQuantity: 1,
+    unitPrice: 100,
+    orderStatus: 2,
+    paidAt: 1710414900,
+    createdAt: 1710414900,
+    user: {
+      id: '1002',
+      nickname: 'Lizzie_99',
+      phone: '09181234567',
+    },
+    treasure: {
+      treasureId: '3',
+      treasureName: 'Cash ₱50,000',
+      treasureCoverImg:
         'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=50&q=80',
     },
-    amount: 100,
-    shares: 1,
-    status: 'paid',
-    isWinning: true,
-    luckyCode: '100555',
-    deliveryStatus: 'pending',
-    date: '2024-03-14 09:15',
   },
-] as any) as Order[];
+  {
+    orderId: '5003',
+    orderNo: 'ORD20240313055',
+    originalAmount: 250,
+    finalAmount: 200,
+    couponAmount: 50,
+    coinAmount: 0,
+    buyQuantity: 20,
+    unitPrice: 10,
+    orderStatus: 1,
+    paidAt: 0,
+    createdAt: 1710327600,
+    user: {
+      id: '1003',
+      nickname: 'JohnDoe88',
+      phone: '09191234567',
+    },
+    treasure: {
+      treasureId: '2',
+      treasureName: 'MacBook Pro M3',
+      treasureCoverImg:
+        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=50&q=80',
+    },
+  },
+  {
+    orderId: '5004',
+    orderNo: 'ORD20240312099',
+    originalAmount: 150,
+    finalAmount: 150,
+    couponAmount: 0,
+    coinAmount: 0,
+    buyQuantity: 15,
+    unitPrice: 10,
+    orderStatus: 4,
+    paidAt: 0,
+    createdAt: 1710241200,
+    user: {
+      id: '1004',
+      nickname: 'SunnyGirl',
+      phone: '09201234567',
+    },
+    treasure: {
+      treasureId: '4',
+      treasureName: 'Sony PS5',
+      treasureCoverImg:
+        'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=50&q=80',
+    },
+  },
+  {
+    orderId: '5005',
+    orderNo: 'ORD20240311022',
+    originalAmount: 300,
+    finalAmount: 300,
+    couponAmount: 0,
+    coinAmount: 0,
+    buyQuantity: 30,
+    unitPrice: 10,
+    orderStatus: 2,
+    paidAt: 1710154800,
+    createdAt: 1710154800,
+    user: {
+      id: '1005',
+      nickname: 'LuckyWinner',
+      phone: '09211234567',
+    },
+    treasure: {
+      treasureId: '5',
+      treasureName: 'Toyota Vios 2024',
+      treasureCoverImg:
+        'https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=50&q=80',
+    },
+  },
+];
 
 export const MOCK_WITHDRAWALS: Withdrawal[] = [
   {
