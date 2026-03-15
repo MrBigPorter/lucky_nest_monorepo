@@ -55,16 +55,23 @@ NETWORK=$(docker inspect lucky-db-prod \
   | awk '{print $1}')
 
 # 用生产镜像执行 migrate (镜像内含 prisma binary + schema + 迁移文件)
+# --entrypoint "" 覆盖 entrypoint.sh，直接执行 prisma 命令，避免启动 NestJS
 docker run --rm \
   --network "$NETWORK" \
   --env DATABASE_URL="$DB_URL" \
+  --entrypoint "" \
   "$BACKEND_IMAGE" \
   ./apps/api/node_modules/.bin/prisma migrate deploy \
     --schema=apps/api/prisma/schema.prisma
 
-echo "✅ 迁移完成 — $(docker run --rm --network "$NETWORK" --env DATABASE_URL="$DB_URL" \
-  "$BACKEND_IMAGE" ./apps/api/node_modules/.bin/prisma migrate status \
-    --schema=apps/api/prisma/schema.prisma 2>&1 | grep -c 'Applied' || echo '?') 个迁移已应用"
+APPLIED=$(docker run --rm \
+  --network "$NETWORK" \
+  --env DATABASE_URL="$DB_URL" \
+  --entrypoint "" \
+  "$BACKEND_IMAGE" \
+  ./apps/api/node_modules/.bin/prisma migrate status \
+    --schema=apps/api/prisma/schema.prisma 2>&1 | grep -c 'Applied' || echo '?')
+echo "✅ 迁移完成 — ${APPLIED} 个迁移已应用"
 
 if [ "$MIGRATE_ONLY" = true ]; then
   echo ""
@@ -120,3 +127,13 @@ echo ""
 docker compose -f "$COMPOSE_FILE" ps
 echo ""
 echo "查看后端日志: docker logs -f lucky-backend-prod"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  💡 创建/重置超级管理员 (推荐方式):"
+echo ""
+echo "     docker exec -it lucky-backend-prod \\"
+echo "       node apps/api/dist/cli/create-admin.js"
+echo ""
+echo "  📝 交互式输入用户名、显示名、密码 (密码不回显)"
+echo "  🔁 可重复运行 — 已存在则提示是否重置密码"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

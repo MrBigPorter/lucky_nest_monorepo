@@ -37,6 +37,10 @@ RUN yarn workspace @lucky/api prisma generate
 # 5) Build API + 依赖包
 RUN yarn turbo run build --filter=@lucky/api
 
+# 6) 编译 CLI 脚本 (独立 tsc, 不走 webpack, 产物放入 dist/cli/)
+#    生产使用: docker exec -it lucky-backend-prod node apps/api/dist/cli/create-admin.js
+RUN cd apps/api && node_modules/.bin/tsc -p tsconfig.cli.json
+
 # ============================================================
 # Stage 2: Pruner — 裁剪 node_modules (中间层)
 # ============================================================
@@ -120,7 +124,6 @@ RUN rm -rf \
     node_modules/@img/sharp-libvips-linux-x64* \
     # ---- 冗余的日期/工具库 ----
     node_modules/date-fns-jalali \
-    node_modules/fast-check \
     node_modules/caniuse-lite \
     node_modules/codepage \
     # ---- 通用清理: docs, tests, sourcemaps, .d.ts ----
