@@ -1,20 +1,36 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { Users, Timer, Eye } from 'lucide-react';
-import { Badge } from '@/components/UIComponents';
+import { Badge, BadgeColor } from '@/components/UIComponents';
+import { Card } from '@/components/UIComponents.tsx';
 import { AdminGroupItem, AdminGroupListParams } from '@/type/types.ts';
 import { groupApi } from '@/api';
 import { GROUP_STATUS } from '@lucky/shared';
-import { SmartTable, ProColumns, ActionType } from '@/components/scaffold/SmartTable';
+import {
+  SmartTable,
+  ProColumns,
+  ActionType,
+} from '@/components/scaffold/SmartTable';
 import { FormSchema } from '@/type/search.ts';
 import { Button, ModalManager, cn } from '@repo/ui';
 import { SmartImage } from '@/components/ui/SmartImage.tsx';
-import { Card } from '@/components/UIComponents.tsx';
 import { PageHeader } from '@/components/scaffold/PageHeader.tsx';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useRequest } from 'ahooks';
 
+// 表单层类型：select/input 值均为字符串，与 API 层类型解耦
+type GroupSearchForm = {
+  page?: number;
+  pageSize?: number;
+  treasureId?: string;
+  status?: string; // form 传字符串，如 'ALL' / '1' / '2'
+  includeExpired?: string; // form 传字符串，如 'true' / 'false'
+};
+
 // ── Status helpers ───────────────────────────────────────────────────────────
-const GROUP_STATUS_CONFIG: Record<number, { label: string; color: string }> = {
+const GROUP_STATUS_CONFIG: Record<
+  number,
+  { label: string; color: BadgeColor }
+> = {
   [GROUP_STATUS.ACTIVE]: { label: 'Active', color: 'blue' },
   [GROUP_STATUS.SUCCESS]: { label: 'Completed', color: 'green' },
   [GROUP_STATUS.FAILED]: { label: 'Failed', color: 'red' },
@@ -28,7 +44,9 @@ const getProgressColor = (current: number, max: number) => {
 };
 
 // ── Detail Modal ─────────────────────────────────────────────────────────────
-const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => {
+const GroupDetailModalContent: React.FC<{ groupId: string }> = ({
+  groupId,
+}) => {
   const { data, loading } = useRequest(() => groupApi.getDetail(groupId));
 
   if (loading) {
@@ -40,16 +58,17 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => 
   }
 
   if (!data) {
-    return (
-      <div className="p-8 text-center text-gray-400">No data found.</div>
-    );
+    return <div className="p-8 text-center text-gray-400">No data found.</div>;
   }
 
   const statusCfg = GROUP_STATUS_CONFIG[data.groupStatus] ?? {
     label: 'Unknown',
     color: 'gray',
   };
-  const pct = data.maxMembers > 0 ? Math.min((data.currentMembers / data.maxMembers) * 100, 100) : 0;
+  const pct =
+    data.maxMembers > 0
+      ? Math.min((data.currentMembers / data.maxMembers) * 100, 100)
+      : 0;
 
   return (
     <div className="space-y-5 p-1">
@@ -71,7 +90,7 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => 
             ID: {data.groupId.slice(-8)}
           </p>
         </div>
-        <Badge color={statusCfg.color as any}>{statusCfg.label}</Badge>
+        <Badge color={statusCfg.color}>{statusCfg.label}</Badge>
       </div>
 
       {/* Progress */}
@@ -86,7 +105,10 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => 
         </div>
         <div className="h-2 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
           <div
-            className={cn('h-full rounded-full transition-all', getProgressColor(data.currentMembers, data.maxMembers))}
+            className={cn(
+              'h-full rounded-full transition-all',
+              getProgressColor(data.currentMembers, data.maxMembers),
+            )}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -113,7 +135,11 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => 
             >
               <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                 {m.user.avatar ? (
-                  <img src={m.user.avatar} className="w-full h-full object-cover" alt="" />
+                  <img
+                    src={m.user.avatar}
+                    className="w-full h-full object-cover"
+                    alt=""
+                  />
                 ) : (
                   <span className="text-[10px] font-bold text-gray-400 uppercase">
                     {m.user.nickname?.slice(0, 1) ?? 'U'}
@@ -128,9 +154,7 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({ groupId }) => 
                   Joined {format(new Date(m.joinedAt), 'MM-dd HH:mm')}
                 </p>
               </div>
-              {m.isOwner === 1 && (
-                <Badge color="purple">Leader</Badge>
-              )}
+              {m.isOwner === 1 && <Badge color="purple">Leader</Badge>}
             </div>
           ))}
         </div>
@@ -147,7 +171,9 @@ export const GroupManagement: React.FC = () => {
     ModalManager.open({
       title: 'Group Detail',
       size: 'lg',
-      renderChildren: () => <GroupDetailModalContent groupId={record.groupId} />,
+      renderChildren: () => (
+        <GroupDetailModalContent groupId={record.groupId} />
+      ),
     });
   }, []);
 
@@ -192,7 +218,11 @@ export const GroupManagement: React.FC = () => {
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               {row.creator?.avatar ? (
-                <img src={row.creator.avatar} className="w-full h-full object-cover" alt="" />
+                <img
+                  src={row.creator.avatar}
+                  className="w-full h-full object-cover"
+                  alt=""
+                />
               ) : (
                 <span className="text-[9px] font-bold text-gray-400 uppercase">
                   {row.creator?.nickname?.slice(0, 1) ?? 'U'}
@@ -210,18 +240,26 @@ export const GroupManagement: React.FC = () => {
         dataIndex: 'currentMembers',
         width: 160,
         render: (_, row) => {
-          const pct = row.maxMembers > 0 ? Math.min((row.currentMembers / row.maxMembers) * 100, 100) : 0;
+          const pct =
+            row.maxMembers > 0
+              ? Math.min((row.currentMembers / row.maxMembers) * 100, 100)
+              : 0;
           return (
             <div className="w-full max-w-[140px]">
               <div className="flex justify-between text-xs mb-1">
                 <span className="font-bold text-gray-900 dark:text-gray-100">
                   {row.currentMembers}/{row.maxMembers}
                 </span>
-                <span className="text-gray-400 text-[10px]">{Math.round(pct)}%</span>
+                <span className="text-gray-400 text-[10px]">
+                  {Math.round(pct)}%
+                </span>
               </div>
               <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
-                  className={cn('h-full rounded-full', getProgressColor(row.currentMembers, row.maxMembers))}
+                  className={cn(
+                    'h-full rounded-full',
+                    getProgressColor(row.currentMembers, row.maxMembers),
+                  )}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -234,8 +272,11 @@ export const GroupManagement: React.FC = () => {
         dataIndex: 'groupStatus',
         width: 100,
         render: (_, row) => {
-          const cfg = GROUP_STATUS_CONFIG[row.groupStatus] ?? { label: 'Unknown', color: 'gray' };
-          return <Badge color={cfg.color as any}>{cfg.label}</Badge>;
+          const cfg = GROUP_STATUS_CONFIG[row.groupStatus] ?? {
+            label: 'Unknown',
+            color: 'gray',
+          };
+          return <Badge color={cfg.color}>{cfg.label}</Badge>;
         },
       },
       {
@@ -247,7 +288,9 @@ export const GroupManagement: React.FC = () => {
             <div className="flex flex-col text-[11px] text-gray-500">
               <span>{format(new Date(row.expireAt), 'MM-dd HH:mm')}</span>
               <span className="text-[10px] text-gray-400">
-                {formatDistanceToNow(new Date(row.expireAt), { addSuffix: true })}
+                {formatDistanceToNow(new Date(row.expireAt), {
+                  addSuffix: true,
+                })}
               </span>
             </div>
           ) : (
@@ -273,7 +316,7 @@ export const GroupManagement: React.FC = () => {
     [handleViewDetail],
   );
 
-  const searchSchema: FormSchema<AdminGroupListParams>[] = useMemo(
+  const searchSchema: FormSchema<GroupSearchForm>[] = useMemo(
     () => [
       {
         type: 'input',
@@ -285,9 +328,9 @@ export const GroupManagement: React.FC = () => {
         type: 'select',
         key: 'status',
         label: 'Status',
-        defaultValue: '',
+        defaultValue: 'ALL',
         options: [
-          { label: 'All', value: '' },
+          { label: 'All', value: 'ALL' },
           { label: 'Active', value: String(GROUP_STATUS.ACTIVE) },
           { label: 'Completed', value: String(GROUP_STATUS.SUCCESS) },
           { label: 'Failed', value: String(GROUP_STATUS.FAILED) },
@@ -307,21 +350,24 @@ export const GroupManagement: React.FC = () => {
     [],
   );
 
-  const requestGroups = useCallback(async (params: AdminGroupListParams & { pageSize: number; page: number }) => {
-    const { page, pageSize, treasureId, status, includeExpired } = params;
-    const apiParams: AdminGroupListParams = { page, pageSize };
-    if (treasureId) apiParams.treasureId = treasureId;
-    if (status) apiParams.status = Number(status);
-    if (includeExpired !== undefined) {
-      apiParams.includeExpired = String(includeExpired) === 'true';
-    }
-    try {
-      const res = await groupApi.getList(apiParams);
-      return { data: res.list, total: res.total, success: true };
-    } catch {
-      return { data: [], total: 0, success: false };
-    }
-  }, []);
+  const requestGroups = useCallback(
+    async (params: GroupSearchForm & { pageSize: number; page: number }) => {
+      const { page, pageSize, treasureId, status, includeExpired } = params;
+      const apiParams: AdminGroupListParams = { page, pageSize };
+      if (treasureId) apiParams.treasureId = treasureId;
+      if (status && status !== 'ALL') apiParams.status = Number(status);
+      if (includeExpired !== undefined) {
+        apiParams.includeExpired = String(includeExpired) === 'true';
+      }
+      try {
+        const res = await groupApi.getList(apiParams);
+        return { data: res.list, total: res.total, success: true };
+      } catch {
+        return { data: [], total: 0, success: false };
+      }
+    },
+    [],
+  );
 
   return (
     <div className="p-4">

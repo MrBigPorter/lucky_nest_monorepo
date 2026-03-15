@@ -215,6 +215,7 @@ export const routes: RouteConfig[] = [
     component: ServiceCenter,
     icon: Headphones,
     group: 'Management',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
 
   // ── Operations ────────────────────────────────────────────────
@@ -224,6 +225,7 @@ export const routes: RouteConfig[] = [
     component: DataAnalytics,
     icon: PieChart,
     group: 'Operations',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
   {
     path: '/lottery',
@@ -231,6 +233,7 @@ export const routes: RouteConfig[] = [
     component: LotteryControl,
     icon: Zap,
     group: 'Operations',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
   {
     path: '/activity',
@@ -238,6 +241,7 @@ export const routes: RouteConfig[] = [
     component: ActivityConfig,
     icon: Gift,
     group: 'Operations',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
   {
     path: '/vip',
@@ -245,6 +249,7 @@ export const routes: RouteConfig[] = [
     component: VipConfig,
     icon: Crown,
     group: 'Operations',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
   {
     path: '/notifications',
@@ -252,6 +257,7 @@ export const routes: RouteConfig[] = [
     component: NotificationCenter,
     icon: Bell,
     group: 'Operations',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
   {
     path: '/marketing',
@@ -259,6 +265,7 @@ export const routes: RouteConfig[] = [
     component: Marketing,
     icon: Ticket,
     group: 'Operations',
+    // Coupons tab 已接入真实 API（couponApi），其余 tab 仍为 Mock
   },
 
   // ── System ────────────────────────────────────────────────────
@@ -288,8 +295,9 @@ export const routes: RouteConfig[] = [
     path: '/admin-security',
     name: 'admin_security',
     component: AdminSecurity,
-    icon: KeyRound, // 安全/密钥语义
+    icon: KeyRound,
     group: 'System',
+    hidden: true, // Admin Users 已由 /admin-users 覆盖；Roles & Logs 仅 Mock，后端无对应 API
   },
   {
     path: '/content',
@@ -297,6 +305,7 @@ export const routes: RouteConfig[] = [
     component: ContentCMS,
     icon: FileText,
     group: 'System',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
   {
     path: '/system',
@@ -304,5 +313,6 @@ export const routes: RouteConfig[] = [
     component: SystemSettings,
     icon: Settings,
     group: 'System',
+    hidden: true, // 仅 Mock 数据，未接入真实 API
   },
 ];

@@ -17,7 +17,17 @@ module.exports = {
       { allowConstantExport: true },
     ],
     'react/react-in-jsx-scope': 'off',
-    'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    'prettier/prettier': [
+      'error',
+      {
+        semi: true,
+        singleQuote: true,
+        trailingComma: 'all',
+        printWidth: 80,
+        tabWidth: 2,
+        endOfLine: 'auto',
+      },
+    ],
   },
   settings: {
     react: {
