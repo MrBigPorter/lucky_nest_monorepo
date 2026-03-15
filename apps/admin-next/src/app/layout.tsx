@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+// Quill rich-text editor styles (used in product create/edit forms)
+import 'react-quill-new/dist/quill.snow.css';
 
 export const metadata: Metadata = {
   title: 'Lucky Admin',

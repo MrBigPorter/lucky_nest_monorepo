@@ -30,10 +30,18 @@ services:
     env_file:
       - deploy/.env.dev
     command: >
-      sh -lc "corepack enable &&
-              yarn workspaces focus @lucky/api &&
-              yarn workspace @lucky/api prisma generate &&
-              yarn workspace @lucky/api start:dev"
+      sh -c "corepack enable &&
+             LOCK_HASH=$$(md5sum /app/yarn.lock | cut -d' ' -f1) &&
+             CACHE=/app/node_modules/.backend-install-hash &&
+             if [ ! -f \"$$CACHE\" ] || [ \"$$(cat $$CACHE 2>/dev/null)\" != \"$$LOCK_HASH\" ]; then
+               echo '>>> yarn.lock changed - running install...' &&
+               yarn workspaces focus @lucky/api &&
+               echo \"$$LOCK_HASH\" > \"$$CACHE\";
+             else
+               echo '>>> yarn.lock unchanged - skipping install';
+             fi &&
+             export PATH=/app/node_modules/.bin:$$PATH &&
+             yarn workspace @lucky/api start:dev"
     expose:
       - "3000"
     volumes:
@@ -57,9 +65,19 @@ services:
       dockerfile: apps/admin-next/Dockerfile.dev
     container_name: lucky-admin-next-dev
     command: >
-      sh -lc "corepack enable &&
-              yarn workspaces focus @lucky/admin-next &&
-              yarn workspace @lucky/admin-next dev"
+      sh -c "corepack enable &&
+             LOCK_HASH=$$(md5sum /app/yarn.lock | cut -d' ' -f1) &&
+             CACHE=/app/node_modules/.admin-install-hash &&
+             if [ ! -f \"$$CACHE\" ] || [ \"$$(cat $$CACHE 2>/dev/null)\" != \"$$LOCK_HASH\" ]; then
+               echo '>>> yarn.lock changed - running install...' &&
+               yarn workspaces focus @lucky/admin-next &&
+               echo \"$$LOCK_HASH\" > \"$$CACHE\";
+             else
+               echo '>>> yarn.lock unchanged - skipping install';
+             fi &&
+             echo '>>> Building @repo/ui (pre-build for fast Next.js compilation)...' &&
+             node /app/packages/ui/scripts/build.js &&
+             yarn workspace @lucky/admin-next dev"
     expose:
       - "4001"
     volumes:

@@ -13,7 +13,7 @@ import { DepositDetailModal } from './DepositDetailModal';
 import { DEPOSIT_STATUS_CONFIG, CHANNEL_OPTIONS } from './type';
 import { Search, ArrowDownLeft, RefreshCw } from 'lucide-react'; // Added RefreshCw icon
 import { FormSchema } from '@/type/search';
-import { Badge } from '@repo/ui/components/ui/badge';
+import { Badge } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
 import { useRequest } from 'ahooks';
 import { RECHARGE_STATUS } from '@lucky/shared';

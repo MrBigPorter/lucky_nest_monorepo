@@ -13,7 +13,7 @@ import { Eye, Shield, Edit2, Trash2, Ban, MoreHorizontal } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { KycRecord, KycRecordListParams } from '@/type/types';
 import { KYC_STATUS, KycIdCardType, KycIdCardTypeLabel } from '@lucky/shared';
-import { Badge, BadgeVariant } from '@repo/ui/components/ui/badge';
+import { Badge, BadgeVariant } from '@repo/ui';
 import { kycApi } from '@/api';
 import { Card } from '@/components/UIComponents';
 import {

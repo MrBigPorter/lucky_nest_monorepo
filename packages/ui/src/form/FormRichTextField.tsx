@@ -1,7 +1,8 @@
 import { useMemo, useRef, useCallback } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+// CSS is imported by the consuming app (apps/admin-next/src/app/layout.tsx)
+// to avoid side-effect imports in pre-built library bundles.
 import { twMerge } from "tailwind-merge";
 
 interface FormRichTextFieldProps {
