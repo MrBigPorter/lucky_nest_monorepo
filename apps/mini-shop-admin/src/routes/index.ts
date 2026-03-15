@@ -15,126 +15,121 @@ import {
   FileText,
   PieChart,
   Headphones,
+  UserCheck,
+  MapPin,
+  LayoutGrid,
+  Image,
+  Tag,
+  UsersRound,
+  Wallet,
+  KeyRound,
 } from 'lucide-react';
 
-// ---- 懒加载页面组件 (路由级代码拆分) ----
-// 各页面使用 named export，通过 .then() 转为 default export 供 React.lazy 使用
-const Dashboard = React.lazy(() =>
-  import('../pages/Dashboard').then((m) => ({ default: m.Dashboard })),
+// ── 懒加载工具函数 ───────────────────────────────────────────────
+// 消除 26 个相同的 .then((m) => ({ default: m.XXX })) 样板代码
+const lazyPage = (
+  loader: () => Promise<Record<string, React.ComponentType>>,
+  name: string,
+): React.LazyExoticComponent<React.ComponentType> =>
+  React.lazy(() => loader().then((m) => ({ default: m[name] })));
+
+// ── 懒加载页面 ───────────────────────────────────────────────────
+const Dashboard = lazyPage(() => import('../pages/Dashboard'), 'Dashboard');
+const UserManagement = lazyPage(
+  () => import('../pages/UserManagement'),
+  'UserManagement',
 );
-const UserManagement = React.lazy(() =>
-  import('../pages/UserManagement').then((m) => ({
-    default: m.UserManagement,
-  })),
+const KycList = lazyPage(() => import('@/pages/KycList'), 'KycList');
+const AddressList = lazyPage(
+  () => import('@/pages/AddressList'),
+  'AddressList',
 );
-const AdminUserManagement = React.lazy(() =>
-  import('../pages/AdminUserManagement').then((m) => ({
-    default: m.AdminUserManagement,
-  })),
+const AdminUserManagement = lazyPage(
+  () => import('../pages/AdminUserManagement'),
+  'AdminUserManagement',
 );
-const ProductManagement = React.lazy(() =>
-  import('../pages/ProductManagement').then((m) => ({
-    default: m.ProductManagement,
-  })),
+const ProductManagement = lazyPage(
+  () => import('../pages/ProductManagement'),
+  'ProductManagement',
 );
-const CategoryManagement = React.lazy(() =>
-  import('../pages/CategoryManagement').then((m) => ({
-    default: m.CategoryManagement,
-  })),
+const CategoryManagement = lazyPage(
+  () => import('../pages/CategoryManagement'),
+  'CategoryManagement',
 );
-const GroupManagement = React.lazy(() =>
-  import('../pages/GroupManagement').then((m) => ({
-    default: m.GroupManagement,
-  })),
+const ActSectionManagement = lazyPage(
+  () => import('@/pages/ActSectionManagement'),
+  'ActSectionManagement',
 );
-const OrderManagement = React.lazy(() =>
-  import('../pages/OrderManagement').then((m) => ({
-    default: m.OrderManagement,
-  })),
+const BannerManagement = lazyPage(
+  () => import('@/pages/BannerManagement'),
+  'BannerManagement',
 );
-const Marketing = React.lazy(() =>
-  import('../pages/Marketing').then((m) => ({ default: m.Marketing })),
+const GroupManagement = lazyPage(
+  () => import('../pages/GroupManagement'),
+  'GroupManagement',
 );
-const Finance = React.lazy(() =>
-  import('../pages/Finance').then((m) => ({ default: m.Finance })),
+const OrderManagement = lazyPage(
+  () => import('../pages/OrderManagement'),
+  'OrderManagement',
 );
-const SystemSettings = React.lazy(() =>
-  import('../pages/SystemSettings').then((m) => ({
-    default: m.SystemSettings,
-  })),
+const ServiceCenter = lazyPage(
+  () => import('../pages/ServiceCenter'),
+  'ServiceCenter',
 );
-const LotteryControl = React.lazy(() =>
-  import('../pages/LotteryControl').then((m) => ({
-    default: m.LotteryControl,
-  })),
+const DataAnalytics = lazyPage(
+  () => import('../pages/DataAnalytics'),
+  'DataAnalytics',
 );
-const VipConfig = React.lazy(() =>
-  import('../pages/VipConfig').then((m) => ({ default: m.VipConfig })),
+const LotteryControl = lazyPage(
+  () => import('../pages/LotteryControl'),
+  'LotteryControl',
 );
-const NotificationCenter = React.lazy(() =>
-  import('../pages/NotificationCenter').then((m) => ({
-    default: m.NotificationCenter,
-  })),
+const ActivityConfig = lazyPage(
+  () => import('../pages/ActivityConfig'),
+  'ActivityConfig',
 );
-const ActivityConfig = React.lazy(() =>
-  import('../pages/ActivityConfig').then((m) => ({
-    default: m.ActivityConfig,
-  })),
+const VipConfig = lazyPage(() => import('../pages/VipConfig'), 'VipConfig');
+const NotificationCenter = lazyPage(
+  () => import('../pages/NotificationCenter'),
+  'NotificationCenter',
 );
-const AdminSecurity = React.lazy(() =>
-  import('../pages/AdminSecurity').then((m) => ({
-    default: m.AdminSecurity,
-  })),
+const Marketing = lazyPage(() => import('../pages/Marketing'), 'Marketing');
+const PaymentChannelList = lazyPage(
+  () => import('@/pages/PaymentChannelList'),
+  'PaymentChannelList',
 );
-const ContentCMS = React.lazy(() =>
-  import('../pages/ContentCMS').then((m) => ({ default: m.ContentCMS })),
+const Finance = lazyPage(() => import('../pages/Finance'), 'Finance');
+const FinancePage = lazyPage(
+  () => import('@/pages/FinancePage'),
+  'FinancePage',
 );
-const DataAnalytics = React.lazy(() =>
-  import('../pages/DataAnalytics').then((m) => ({
-    default: m.DataAnalytics,
-  })),
+const AdminSecurity = lazyPage(
+  () => import('../pages/AdminSecurity'),
+  'AdminSecurity',
 );
-const ServiceCenter = React.lazy(() =>
-  import('../pages/ServiceCenter').then((m) => ({
-    default: m.ServiceCenter,
-  })),
+const ContentCMS = lazyPage(() => import('../pages/ContentCMS'), 'ContentCMS');
+const SystemSettings = lazyPage(
+  () => import('../pages/SystemSettings'),
+  'SystemSettings',
 );
-const ActSectionManagement = React.lazy(() =>
-  import('@/pages/ActSectionManagement').then((m) => ({
-    default: m.ActSectionManagement,
-  })),
-);
-const BannerManagement = React.lazy(() =>
-  import('@/pages/BannerManagement').then((m) => ({
-    default: m.BannerManagement,
-  })),
-);
-const FinancePage = React.lazy(() =>
-  import('@/pages/FinancePage').then((m) => ({ default: m.FinancePage })),
-);
-const AddressList = React.lazy(() =>
-  import('@/pages/AddressList').then((m) => ({ default: m.AddressList })),
-);
-const KycList = React.lazy(() =>
-  import('@/pages/KycList').then((m) => ({ default: m.KycList })),
-);
-const PaymentChannelList = React.lazy(() =>
-  import('@/pages/PaymentChannelList').then((m) => ({
-    default: m.PaymentChannelList,
-  })),
-);
+
+// ── 类型定义 ─────────────────────────────────────────────────────
+export type RouteGroup = 'Overview' | 'Management' | 'Operations' | 'System';
 
 export interface RouteConfig {
   path: string;
-  name: string; // For translation keys
-  component: React.ComponentType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: React.ComponentType<any>;
-  group: 'Overview' | 'Management' | 'Operations' | 'System';
+  /** 对应 TRANSLATIONS 中的 key */
+  name: string;
+  component: React.LazyExoticComponent<React.ComponentType>;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  group: RouteGroup;
+  /** true = 路由保留但不在侧边栏显示 */
+  hidden?: boolean;
 }
 
+// ── 路由表 ───────────────────────────────────────────────────────
 export const routes: RouteConfig[] = [
-  // Overview
+  // ── Overview ──────────────────────────────────────────────────
   {
     path: '/',
     name: 'dashboard',
@@ -143,7 +138,7 @@ export const routes: RouteConfig[] = [
     group: 'Overview',
   },
 
-  // Management
+  // ── Management ────────────────────────────────────────────────
   {
     path: '/users',
     name: 'users',
@@ -155,14 +150,14 @@ export const routes: RouteConfig[] = [
     path: '/kyc',
     name: 'kyc',
     component: KycList,
-    icon: Users,
+    icon: UserCheck, // 身份核验语义更准确
     group: 'Management',
   },
   {
     path: '/address',
     name: 'address',
     component: AddressList,
-    icon: Users,
+    icon: MapPin, // 地址用定位图标
     group: 'Management',
   },
   {
@@ -180,31 +175,31 @@ export const routes: RouteConfig[] = [
     group: 'Management',
   },
   {
+    path: '/categories',
+    name: 'categories',
+    component: CategoryManagement,
+    icon: Tag, // 分类用标签图标
+    group: 'Management',
+  },
+  {
     path: '/act/section',
     name: 'actSection',
     component: ActSectionManagement,
-    icon: ShoppingBag,
+    icon: LayoutGrid, // 区块布局语义
     group: 'Management',
   },
   {
     path: '/banners',
     name: 'banners',
     component: BannerManagement,
-    icon: ShoppingBag,
-    group: 'Management',
-  },
-  {
-    path: '/categories',
-    name: 'categories',
-    component: CategoryManagement,
-    icon: ShoppingBag,
+    icon: Image, // 图片/轮播图语义
     group: 'Management',
   },
   {
     path: '/groups',
     name: 'groups',
     component: GroupManagement,
-    icon: Users,
+    icon: UsersRound, // 多人团购语义
     group: 'Management',
   },
   {
@@ -222,7 +217,7 @@ export const routes: RouteConfig[] = [
     group: 'Management',
   },
 
-  // Operations
+  // ── Operations ────────────────────────────────────────────────
   {
     path: '/analytics',
     name: 'analytics',
@@ -266,7 +261,7 @@ export const routes: RouteConfig[] = [
     group: 'Operations',
   },
 
-  // System
+  // ── System ────────────────────────────────────────────────────
   {
     path: '/payment/channels',
     name: 'paymentChannels',
@@ -278,21 +273,22 @@ export const routes: RouteConfig[] = [
     path: '/finance',
     name: 'finance',
     component: Finance,
-    icon: CreditCard,
+    icon: Wallet, // 财务用钱包图标，与支付渠道的 CreditCard 区分
     group: 'System',
   },
   {
-    path: '/FinancePage',
+    path: '/finance/detail', // 修正：原路径 /FinancePage 大写不规范
     name: 'finance_page',
     component: FinancePage,
-    icon: CreditCard,
+    icon: Wallet,
     group: 'System',
+    hidden: true, // 与 /finance 功能重叠，暂隐藏，保留路由可直接访问
   },
   {
     path: '/admin-security',
     name: 'admin_security',
     component: AdminSecurity,
-    icon: Shield,
+    icon: KeyRound, // 安全/密钥语义
     group: 'System',
   },
   {

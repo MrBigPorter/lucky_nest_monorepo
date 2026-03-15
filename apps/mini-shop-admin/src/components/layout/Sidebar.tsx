@@ -72,17 +72,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   );
 
-  const groupedRoutes = routes.reduce(
-    (acc, route) => {
-      const group = route.group;
-      if (!acc[group]) {
-        acc[group] = [];
-      }
-      acc[group].push(route);
-      return acc;
-    },
-    {} as Record<string, RouteConfig[]>,
-  );
+  const groupedRoutes = routes
+    .filter((route) => !route.hidden) // 过滤 hidden 路由，不在侧边栏显示
+    .reduce(
+      (acc, route) => {
+        const group = route.group;
+        if (!acc[group]) acc[group] = [];
+        acc[group].push(route);
+        return acc;
+      },
+      {} as Record<string, RouteConfig[]>,
+    );
 
   return (
     <>

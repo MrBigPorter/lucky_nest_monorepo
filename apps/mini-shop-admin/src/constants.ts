@@ -39,60 +39,9 @@ export const MOCK_STATS: DashboardStats = {
   pendingIssues: 12,
 };
 
-export const MOCK_USERS: User[] = [
-  {
-    id: '1001',
-    nickname: 'CryptoKing',
-    avatar: 'https://i.pravatar.cc/150?u=1',
-    phone: '+63 917 123 4567',
-    email: 'king@crypto.com',
-    vipLevel: 3,
-    realBalance: 5400,
-    coinBalance: 200,
-    kycStatus: 4,
-    joinDate: '2023-11-01',
-    status: 'active',
-    inviterId: '',
-  },
-  {
-    id: '1002',
-    nickname: 'Lizzie_99',
-    avatar: 'https://i.pravatar.cc/150?u=2',
-    phone: '+63 918 987 6543',
-    email: 'liz@gmail.com',
-    vipLevel: 1,
-    realBalance: 120,
-    coinBalance: 50,
-    kycStatus: 1,
-    kycImages: {
-      front: 'https://placehold.co/400x250/000/fff?text=ID+Front',
-      back: '',
-      holding: '',
-    },
-    joinDate: '2024-01-15',
-    status: 'active',
-    inviterId: '1001',
-  },
-  {
-    id: '1003',
-    nickname: 'WinnerGuy',
-    avatar: 'https://i.pravatar.cc/150?u=3',
-    phone: '+63 922 555 1212',
-    email: 'winner@yahoo.com',
-    vipLevel: 0,
-    realBalance: 0,
-    coinBalance: 10,
-    kycStatus: 0,
-    joinDate: '2024-02-10',
-    status: 'banned',
-    banReason: 'Multiple accounts detected',
-    inviterId: '1002',
-  },
-];
-
 // Mock data uses legacy field shapes — cast suppresses type mismatch with updated API types
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export const MOCK_PRODUCTS: Product[] = ([
+export const MOCK_PRODUCTS: Product[] = [
   {
     id: '1',
     seq: 'TRE001',
@@ -154,7 +103,7 @@ export const MOCK_PRODUCTS: Product[] = ([
     tags: ['Instant'],
     autoRestart: true,
   },
-] as any) as Product[];
+] as any as Product[];
 
 export const MOCK_ORDERS: Order[] = [
   {
@@ -310,7 +259,7 @@ export const MOCK_WITHDRAWALS: Withdrawal[] = [
   },
 ];
 
-export const MOCK_BANNERS: Banner[] = ([
+export const MOCK_BANNERS: Banner[] = [
   {
     id: '1',
     title: 'New User Promo',
@@ -325,16 +274,16 @@ export const MOCK_BANNERS: Banner[] = ([
     position: 'activity',
     status: 'active',
   },
-] as any) as Banner[];
+] as any as Banner[];
 
-export const MOCK_CATEGORIES: Category[] = ([
+export const MOCK_CATEGORIES: Category[] = [
   { id: '1', name: 'Electronics', productCount: 120 },
   { id: '2', name: 'Vehicles', productCount: 45 },
   { id: '3', name: 'Cash', productCount: 10 },
   { id: '4', name: 'Luxury', productCount: 85 },
-] as any) as Category[];
+] as any as Category[];
 
-export const MOCK_COUPONS: Coupon[] = ([
+export const MOCK_COUPONS: Coupon[] = [
   {
     id: '1',
     code: 'WELCOME2024',
@@ -366,7 +315,7 @@ export const MOCK_COUPONS: Coupon[] = ([
     usageLimit: 5000,
     usedCount: 1200,
   },
-] as any) as Coupon[];
+] as any as Coupon[];
 
 export const MOCK_ACTIVITIES: ActivityZone[] = [
   {
@@ -394,7 +343,7 @@ export const MOCK_RECHARGE_PLANS: RechargePlan[] = [
   { id: '3', amount: 1000, bonus: 150, tag: 'Best Value' },
 ];
 
-export const MOCK_RECHARGE_ORDERS: RechargeOrder[] = ([
+export const MOCK_RECHARGE_ORDERS: RechargeOrder[] = [
   {
     id: 'R001',
     orderNo: 'RC240320001',
@@ -437,7 +386,7 @@ export const MOCK_RECHARGE_ORDERS: RechargeOrder[] = ([
     status: 'failed',
     date: '2024-03-19 14:20',
   },
-] as any) as RechargeOrder[];
+] as any as RechargeOrder[];
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
   {
@@ -1015,12 +964,19 @@ export const TRANSLATIONS = {
   en: {
     dashboard: 'Dashboard',
     users: 'User Management',
-    admin: 'admin User',
+    admin: 'Admin Accounts',
     products: 'Products',
+    categories: 'Categories',
+    actSection: 'Act Sections',
+    banners: 'Banners',
     groups: 'Group Buying',
     orders: 'Orders & Delivery',
+    kyc: 'KYC Review',
+    address: 'Address',
     marketing: 'Marketing',
     finance: 'Finance Center',
+    finance_page: 'Finance',
+    paymentChannels: 'Payment Channels',
     system: 'System Settings',
     logout: 'Logout',
     revenue: 'Total Revenue',
@@ -1041,7 +997,7 @@ export const TRANSLATIONS = {
     vip: 'VIP Config',
     notifications: 'Notifications',
     activity: 'Activity Config',
-    admin_security: 'Admin & Security',
+    admin_security: 'Security',
     content_cms: 'Content CMS',
     analytics: 'Data Analytics',
     service: 'Service Center',
@@ -1051,10 +1007,17 @@ export const TRANSLATIONS = {
     users: '用户管理',
     admin: '管理员账号',
     products: '商品管理',
+    categories: '分类管理',
+    actSection: '活动区块',
+    banners: '轮播图',
     groups: '拼团管理',
     orders: '订单与发货',
+    kyc: 'KYC 审核',
+    address: '收货地址',
     marketing: '营销中心',
     finance: '财务中心',
+    finance_page: '财务明细',
+    paymentChannels: '支付渠道',
     system: '系统设置',
     logout: '退出登录',
     revenue: '总收入',
