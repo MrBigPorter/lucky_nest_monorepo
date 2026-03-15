@@ -107,6 +107,7 @@ jobs:
             docker run --rm \
               --network "$NETWORK" \
               --env-file deploy/.env.prod \
+              --entrypoint "" \
               "$IMAGE" \
               ./apps/api/node_modules/.bin/prisma migrate deploy \
                 --schema=apps/api/prisma/schema.prisma
