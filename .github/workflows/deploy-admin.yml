@@ -64,10 +64,13 @@ jobs:
         run: yarn install --immutable
 
       # ================= 阶段 2：打包 =================
-      - name: 7. Build @repo/ui (pre-build for fast Next.js compilation)
+      - name: 7. Build @lucky/shared
+        run: node packages/shared/scripts/build.js
+
+      - name: 8. Build @repo/ui (pre-build for fast Next.js compilation)
         run: node packages/ui/scripts/build.js
 
-      - name: 8. Build Admin Next (Next.js static export)
+      - name: 9. Build Admin Next (Next.js static export)
         run: yarn workspace @lucky/admin-next build
         env:
           NODE_ENV: production
