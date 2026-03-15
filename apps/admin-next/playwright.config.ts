@@ -23,8 +23,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: process.env.CI ? 'github' : [['list'], ['html', { open: 'never' }]],
-  // Default per-test timeout — generous for slow dev server
-  timeout: 60_000,
+  // Default per-test timeout — generous for dev server after warmup
+  timeout: 120_000,
 
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'https://admin-dev.joyminis.com',
@@ -38,12 +38,13 @@ export default defineConfig({
 
   projects: [
     // Step 1: 登录一次 + 预热所有路由 → 保存 storageState
-    // Uses a very long timeout because Turbopack compiles pages lazily on first request.
+    // Timeout is generous: Turbopack cold-compiles each page on first request.
+    // With persistent cache enabled, subsequent runs only need ~30s total.
+    // Worst-case cold start: 14 routes × 2min = 28min → 30min ceiling.
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
-      // 5 minutes: login (up to 60s) + 14 warm-up routes × ~20s each
-      timeout: 300_000,
+      timeout: 1_800_000, // 30 minutes — covers cold-start compilation of all pages
     },
     // Step 2: 所有业务测试复用登录状态
     {
