@@ -20,8 +20,11 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // @lucky/shared: TS source via workspace symlink — still needs transpilation
-  // @repo/ui: pre-built to dist/ by `yarn workspace @repo/ui build` — no transpilation needed
+  // @lucky/shared: lightweight utils (dayjs/decimal/numbro), no heavy deps.
+  // Keep in transpilePackages so Turbopack handles it natively (avoids CJS interop).
+  // dist/ is pre-built before dev server starts (compose.yml + CI) for reliability.
+  // @repo/ui: pre-built to dist/ — removed from transpilePackages (had framer-motion,
+  //   react-quill-new pulling 1186s cold compile; now 10s with optimizePackageImports).
   transpilePackages: ['@lucky/shared'],
 
   // 允许通过 nginx 反向代理的开发域名访问 /_next/* 资源

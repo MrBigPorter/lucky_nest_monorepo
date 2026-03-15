@@ -35,7 +35,8 @@ COPY apps/admin-next/ ./apps/admin-next/
 COPY packages/        ./packages/
 COPY turbo.json tsconfig.json ./
 
-# 4) Pre-build @repo/ui (avoid transpilePackages TypeScript compilation in Next.js)
+# 4) Pre-build workspace packages (avoid transpilePackages TS compilation overhead)
+RUN node packages/shared/scripts/build.js
 RUN node packages/ui/scripts/build.js
 
 # 5) 构建 (next build → output: 'export' → 输出到 out/)

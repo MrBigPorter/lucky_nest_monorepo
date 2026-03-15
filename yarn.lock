@@ -5035,6 +5035,7 @@ __metadata:
     axios-mock-adapter: "npm:^2.1.0"
     copy-to-clipboard: "npm:^3.3.3"
     date-fns: "npm:^3.6.0"
+    esbuild: "npm:^0.25.0"
     eslint: "npm:^8.57.0"
     eslint-config-next: "npm:^15.2.0"
     eslint-config-prettier: "npm:^9.1.0"

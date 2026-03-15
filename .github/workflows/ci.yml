@@ -157,6 +157,9 @@ jobs:
         run: yarn workspace @lucky/admin-next playwright install chromium --with-deps
 
       # 构建 Next.js（静态导出 + 本地 serve，无需后端）
+      - name: Build @lucky/shared
+        run: node packages/shared/scripts/build.js
+
       - name: Build @repo/ui
         run: node packages/ui/scripts/build.js
 
