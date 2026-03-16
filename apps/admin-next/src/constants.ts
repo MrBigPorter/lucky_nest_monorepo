@@ -39,6 +39,7 @@ export const TRANSLATIONS = {
     content_cms: 'Content CMS',
     analytics: 'Data Analytics',
     service: 'Service Center',
+    roles: 'Role Management',
   },
   zh: {
     dashboard: '仪表盘',
@@ -80,5 +81,6 @@ export const TRANSLATIONS = {
     content_cms: '内容管理',
     analytics: '数据分析',
     service: '客服中心',
+    roles: '角色权限',
   },
 };

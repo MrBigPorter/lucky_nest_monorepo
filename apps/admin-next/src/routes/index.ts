@@ -178,6 +178,12 @@ export const routes: RouteConfig[] = [
     hidden: true,
   },
   {
+    path: '/roles',
+    name: 'roles',
+    icon: KeyRound,
+    group: 'System',
+  },
+  {
     path: '/admin-security',
     name: 'admin_security',
     icon: KeyRound,

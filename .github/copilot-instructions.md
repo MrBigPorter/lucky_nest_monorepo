@@ -8,8 +8,8 @@
 ## 🎯 当前任务（每次对话从这里开始）
 
 **阶段**: Phase 4 — 业务功能补全（进行中）  
-**上次停留**: 数据分析仪表板接入真实统计接口完成（2026-03-16）  
-**立即执行**: 接续 Phase 4，下一项：RBAC 权限角色管理界面（后端 RolesGuard 已有，缺前端页面）
+**上次停留**: RBAC 权限角色管理界面完成（2026-03-16）  
+**立即执行**: 接续 Phase 4，下一项：通知/推送管理（Firebase Admin SDK 已集成，缺管理界面）
 
 ---
 
@@ -134,7 +134,7 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 
 **待完成**:
 - [x] 操作日志审计页面（2026-03-16 完成：后端字段对齐、双重请求 bug 修复、Jest→Vitest 测试重写）
-- [ ] RBAC 权限角色管理界面（后端 `RolesGuard` 已有，缺前端页面）
+- [x] RBAC 权限角色管理界面（后端 `RolesGuard` 已有，缺前端页面，2026-03-16 完成：rbac.config 补 FINANCE 角色权限 + RoleDescriptions，后端新增 GET /admin/user/roles-summary，前端 RolesManagement 卡片视图 + 内联用户面板）
 - [x] 数据分析仪表板（接入真实统计接口，替换当前 mock 图表，2026-03-16 完成：后端 StatsModule 新增 overview + trend 接口，前端 AnalyticsOverview SSR + AnalyticsTrendSection Client Component）
 - [ ] 通知/推送管理（Firebase Admin SDK 已集成，缺管理界面）
 
