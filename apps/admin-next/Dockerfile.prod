@@ -1,11 +1,14 @@
 # ============================================================
-# Admin Next — 生产构建 Dockerfile (Next.js static export)
+# Admin Next — 生产构建 Dockerfile (Next.js standalone)
 # ============================================================
-# 多阶段构建：安装依赖 → next build → 输出 out/ 静态文件
-# 用法：compose.prod.yml 中的 admin-builder 服务
+# 多阶段构建：安装依赖 → next build → standalone 产物 → 轻量 runner
+# 旧: output: 'export' + busybox (静态文件) → 已迁移到 Node.js 服务器
+# 用法: compose.prod.yml 中的 admin-next 服务
 # ============================================================
 
-# Stage 1: Builder
+# ============================================================
+# Stage 1: Builder — 安装依赖 + next build
+# ============================================================
 FROM node:20-bullseye-slim AS builder
 WORKDIR /app
 
@@ -35,12 +38,11 @@ COPY apps/admin-next/ ./apps/admin-next/
 COPY packages/        ./packages/
 COPY turbo.json tsconfig.json ./
 
-# 4) Pre-build workspace packages (avoid transpilePackages TS compilation overhead)
+# 4) Pre-build workspace packages
 RUN node packages/shared/scripts/build.js
 RUN node packages/ui/scripts/build.js
 
-# 5) 构建 (next build → output: 'export' → 输出到 out/)
-# 构建时注入后端 API 地址（通过 ARG 传入，可在 compose/CI 中覆盖）
+# 5) 构建 (next build → output: 'standalone')
 ARG NEXT_PUBLIC_API_BASE_URL=https://api.joyminis.com
 ARG NEXT_PUBLIC_APP_ENV=production
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
@@ -50,13 +52,30 @@ ENV NODE_ENV=production
 RUN yarn workspace @lucky/admin-next build
 
 # ============================================================
-# Stage 2: 输出 — 仅保留 out/ 静态文件
+# Stage 2: Runner — 仅包含 standalone 产物 (体积最小)
 # ============================================================
-FROM busybox:latest
-WORKDIR /app/apps/admin-next/out
+FROM node:20-alpine AS runner
+WORKDIR /app
 
-COPY --from=builder /app/apps/admin-next/out ./
+ENV NODE_ENV=production
+# Next.js standalone server 监听端口
+ENV PORT=3001
+ENV HOSTNAME=0.0.0.0
 
-# 容器启动后立即退出 — out/ 通过 volume 共享给 nginx
-CMD ["true"]
+# 创建非 root 用户 (安全最佳实践)
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
 
+# standalone 产物 (包含精简版 node_modules)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin-next/.next/standalone ./
+# 静态资源 (_next/static/)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin-next/.next/static ./apps/admin-next/.next/static
+# public 目录
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin-next/public ./apps/admin-next/public
+
+USER nextjs
+
+EXPOSE 3001
+
+# standalone 模式的启动入口
+CMD ["node", "apps/admin-next/server.js"]

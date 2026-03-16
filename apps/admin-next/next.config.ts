@@ -2,12 +2,11 @@ import type { NextConfig } from 'next';
 import path from 'path';
 import webpack from 'webpack';
 
-const isProd = process.env.NODE_ENV === 'production';
-
 const nextConfig: NextConfig = {
-  // 静态导出 → Cloudflare Pages 部署 (仅生产模式)
-  // 开发模式下不设置，以支持 Middleware 认证
-  ...(isProd ? { output: 'export' } : {}),
+  // standalone 模式 — 生产用 Node.js 服务器运行 (支持 SSR / Middleware / Server Components)
+  // 产物: .next/standalone/ — 包含完整 server.js，通过 Docker 部署到 VPS
+  // 旧: output: 'export' (静态导出 → Cloudflare Pages) — 已迁移到 VPS 自托管
+  output: 'standalone',
   // Skip type errors caused by @types/react version mismatch across monorepo packages
   typescript: {
     ignoreBuildErrors: true,
@@ -16,7 +15,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   trailingSlash: true,
-  // 静态导出模式下必须禁用 Next.js 内置图片优化
+  // standalone 模式下仍保留 unoptimized，后续可配置 remotePatterns 启用优化
   images: {
     unoptimized: true,
   },

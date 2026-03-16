@@ -1,9 +1,11 @@
-import { useMemo, useRef, useCallback } from "react";
+"use client";
+// react-quill-new 在模块初始化时访问 document/window，不支持 SSR。
+// 用 useEffect 懒加载，避免 Server Component 渲染时崩溃。
+// 这是标准的 SSR-safe editor 处理方式（next-themes, shadcn/ui 等均用此模式）。
+import { useMemo, useRef, useCallback, useState, useEffect } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import ReactQuill from "react-quill-new";
-// CSS is imported by the consuming app (apps/admin-next/src/app/layout.tsx)
-// to avoid side-effect imports in pre-built library bundles.
 import { twMerge } from "tailwind-merge";
+import type ReactQuillType from "react-quill-new";
 
 interface FormRichTextFieldProps {
   name: string;
@@ -25,7 +27,13 @@ export const FormRichTextField = ({
   onUpload,
 }: FormRichTextFieldProps) => {
   const { control } = useFormContext();
-  const quillRef = useRef<ReactQuill>(null);
+  // 懒加载 ReactQuill：useEffect 只在客户端执行，避免 SSR 崩溃
+  const [ReactQuill, setReactQuill] = useState<typeof ReactQuillType | null>(null);
+  const quillRef = useRef<ReactQuillType>(null);
+
+  useEffect(() => {
+    import("react-quill-new").then((mod) => setReactQuill(() => mod.default));
+  }, []);
 
   // 自定义图片处理逻辑
   const imageHandler = useCallback(() => {
@@ -104,24 +112,27 @@ export const FormRichTextField = ({
               error ? "border-red-500" : "border-gray-200 dark:border-gray-800",
             )}
           >
-            {/* 通过 style 强制控制高度，防止工具栏被顶走 */}
-            <ReactQuill
-              ref={quillRef}
-              theme="snow"
-              value={field.value || ""}
-              onChange={field.onChange}
-              placeholder={placeholder}
-              modules={modules}
-              style={{
-                height: "300px",
-                display: "flex",
-                flexDirection: "column",
-              }}
-              className="flex-1"
-            />
+            {/* ReactQuill 未加载前显示骨架屏占位 */}
+            {!ReactQuill ? (
+              <div className="h-[340px] bg-gray-100 dark:bg-gray-800 animate-pulse rounded" />
+            ) : (
+              <ReactQuill
+                ref={quillRef}
+                theme="snow"
+                value={field.value || ""}
+                onChange={field.onChange}
+                placeholder={placeholder}
+                modules={modules}
+                style={{
+                  height: "300px",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+                className="flex-1"
+              />
+            )}
           </div>
 
-          {/* 这里需要一段 CSS 来配合，见下文 */}
 
           {error && (
             <span className="text-xs text-red-500">{error.message}</span>

@@ -169,16 +169,7 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
           NEXT_PUBLIC_APP_ENV: production
 
-      # 用 npx serve 本地服务静态导出文件
-      - name: Start static server
-        run: |
-          npm install -g serve
-          serve apps/admin-next/out -l 4001 &
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-          # 等待服务器就绪
-          npx wait-on http://localhost:4001 --timeout 30000
-
-      # 启动 mock API server（拦截登录等请求，返回假 token）
+      # 启动 mock API server（先启动，让 Next.js 环境变量指向它）
       - name: Start mock API server
         run: |
           cat > /tmp/mock-api.js << 'EOF'
@@ -199,6 +190,12 @@ jobs:
           server.listen(3001, () => console.log('Mock API on :3001'));
           EOF
           node /tmp/mock-api.js &
+
+      # 启动 Next.js standalone 服务器 (output: 'standalone' — 不再用 serve out/)
+      - name: Start Next.js server
+        run: |
+          PORT=4001 yarn workspace @lucky/admin-next start &
+          npx wait-on http://localhost:4001 --timeout 60000
 
       - name: Run Playwright E2E tests
         run: yarn workspace @lucky/admin-next e2e
