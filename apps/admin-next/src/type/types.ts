@@ -1016,6 +1016,7 @@ export interface AdminUser {
   lastLoginIp: string;
 }
 
+/** @deprecated 使用 AdminOperationLog 替代 */
 export interface OperationLog {
   id: string;
   adminName: string;
@@ -1023,6 +1024,49 @@ export interface OperationLog {
   target: string; // e.g., "User: 1001"
   ip: string;
   date: string;
+}
+
+/**
+ * 操作日志审计 — 对应 Prisma AdminOperationLog 模型
+ */
+export interface AdminOperationLog {
+  id: string;
+  createdAt: string;
+  adminId: string | null;
+  /** 操作时记录的管理员用户名（历史快照） */
+  adminName: string;
+  /** 模块名称，e.g. "users", "orders", "products" */
+  module: string;
+  /** 操作类型，e.g. "LOGIN", "CREATE", "UPDATE", "DELETE" */
+  action: string;
+  /** 操作详情 / 备注 */
+  details: string | null;
+  /** 请求 IP */
+  requestIp: string | null;
+  /** 关联的管理员用户（JOIN 查询） */
+  admin?: {
+    id: string;
+    username: string;
+    realName: string | null;
+  };
+}
+
+/**
+ * 操作日志列表查询参数
+ */
+export interface AdminOperationLogListParams {
+  page?: number;
+  pageSize?: number;
+  /** 按管理员 ID 过滤 */
+  adminId?: string;
+  /** 按操作类型过滤，e.g. "CREATE"，传 "ALL" 或不传表示全部 */
+  action?: string;
+  /** 关键词搜索（匹配 adminName / details / module） */
+  keyword?: string;
+  /** 开始日期，ISO 字符串，e.g. "2026-01-01" */
+  startDate?: string;
+  /** 结束日期，ISO 字符串，e.g. "2026-12-31" */
+  endDate?: string;
 }
 
 // --- CONTENT CMS TYPES ---

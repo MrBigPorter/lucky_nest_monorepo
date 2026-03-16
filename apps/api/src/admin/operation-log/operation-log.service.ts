@@ -8,26 +8,26 @@ export class OperationLogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getList(query: QueryOperationLogDto) {
-    const { page = 1, pageSize = 10, adminId, operationType, keyword, startDate, endDate } = query;
+    const { page = 1, pageSize = 10, adminId, action, keyword, startDate, endDate } = query;
 
     const where: Prisma.AdminOperationLogWhereInput = {};
 
     // Filter by adminId
     if (adminId) {
-      where.adminUserId = adminId;
+      where.adminId = adminId;
     }
 
-    // Filter by operationType
-    if (operationType && operationType !== 'ALL') {
-      where.operationType = operationType;
+    // Filter by action (operationType)
+    if (action && action !== 'ALL') {
+      where.action = action;
     }
 
-    // Filter by keyword (search in description, targetId, adminUser.username)
+    // Filter by keyword (search in adminName, details, module)
     if (keyword) {
       where.OR = [
-        { description: { contains: keyword } },
-        { targetId: { contains: keyword } },
-        { adminUser: { username: { contains: keyword } } },
+        { adminName: { contains: keyword } },
+        { details: { contains: keyword } },
+        { module: { contains: keyword } },
       ];
     }
 
@@ -49,11 +49,11 @@ export class OperationLogService {
         take: pageSize,
         orderBy: { createdAt: 'desc' },
         include: {
-          adminUser: {
+          admin: {
             select: {
               id: true,
               username: true,
-              email: true,
+              realName: true,
             },
           },
         },

@@ -7,14 +7,12 @@ import {
   ProColumns,
   ActionType,
 } from '@/components/scaffold/SmartTable';
-import { FileText, User, CalendarDays } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { AdminOperationLog, AdminOperationLogListParams } from '@/type/types';
 import { Card } from '@/components/UIComponents';
-import { useToastStore } from '@/store/useToastStore';
 import { adminOperationLogApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
-import { useAntdTable } from 'ahooks';
 import { format } from 'date-fns';
 
 interface OperationLogListProps {
@@ -22,135 +20,123 @@ interface OperationLogListProps {
   onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
-type OperationLogSearchForm = {
-  adminId?: string;
-  operationType?: string;
-  dateRange?: { from: string; to: string };
-  keyword?: string;
-};
-
 export const OperationLogList: React.FC<OperationLogListProps> = ({
   initialFormParams,
   onParamsChange,
 }) => {
   const actionRef = useRef<ActionType>(null);
-  const addToast = useToastStore((state) => state.addToast);
 
-  // --- 数据请求 ---
-  const getTableData = async (
-    { current, pageSize }: { current: number; pageSize: number },
-    formData: OperationLogSearchForm,
-  ) => {
-    const params: AdminOperationLogListParams = {
-      page: current,
-      pageSize,
-    };
+  // ── SmartTable request（唯一的数据获取入口）────────────────────
+  const requestLogs = useCallback(
+    async (params: {
+      page: number;
+      pageSize: number;
+      [key: string]: unknown;
+    }) => {
+      const apiParams: AdminOperationLogListParams = {
+        page: params.page,
+        pageSize: params.pageSize,
+      };
+      if (params.adminId) apiParams.adminId = String(params.adminId);
+      if (params.action && params.action !== 'ALL')
+        apiParams.action = String(params.action);
+      if (params.keyword) apiParams.keyword = String(params.keyword);
+      if (params.startDate) apiParams.startDate = String(params.startDate);
+      if (params.endDate) apiParams.endDate = String(params.endDate);
 
-    if (formData.adminId) params.adminId = formData.adminId;
-    if (formData.operationType && formData.operationType !== 'ALL')
-      params.operationType = formData.operationType;
-    if (formData.keyword) params.keyword = formData.keyword;
-    if (formData.dateRange?.from) params.startDate = formData.dateRange.from;
-    if (formData.dateRange?.to) params.endDate = formData.dateRange.to;
+      const res = await adminOperationLogApi.getList(apiParams);
+      return { data: res.list, total: res.total };
+    },
+    [],
+  );
 
-    const res = await adminOperationLogApi.getList(params); // 假设这个 API 存在
-    return { list: res.list, total: res.total };
-  };
-
-  const {
-    tableProps,
-    refresh,
-    run,
-    search: { reset },
-  } = useAntdTable(getTableData, {
-    defaultPageSize: 10,
-    defaultParams: [
-      { current: 1, pageSize: 10 },
-      {
-        adminId: (initialFormParams?.adminId as string) || '',
-        operationType: (initialFormParams?.operationType as string) || 'ALL',
-        keyword: (initialFormParams?.keyword as string) || '',
-        dateRange: initialFormParams?.dateRange as
-          | { from: string; to: string }
-          | undefined,
-      },
-    ],
-  });
-
-  const handleSearch = (values: OperationLogSearchForm) => {
-    run({ current: 1, pageSize: 10 }, values);
-    onParamsChange?.(values);
-  };
-
-  const handleReset = () => {
-    reset();
-    onParamsChange?.({
-      adminId: '',
-      operationType: 'ALL',
-      keyword: '',
-      dateRange: undefined,
-    });
-  };
-
-  // --- 表格列定义 ---
+  // ── 表格列定义（字段名与 Prisma 模型完全对齐）────────────────────
   const columns: ProColumns<AdminOperationLog>[] = useMemo(
     () => [
       {
-        title: 'Admin User',
-        dataIndex: 'adminUser',
+        title: 'Admin',
+        dataIndex: 'adminName',
         render: (_, row) => (
           <div>
-            <div className="font-medium">{row.adminUser?.username || 'N/A'}</div>
-            <div className="text-xs text-gray-500 font-mono">
-              ID: {row.adminUser?.id || 'N/A'}
+            <div className="font-medium">
+              {row.admin?.username || row.adminName}
+            </div>
+            {row.admin?.realName && (
+              <div className="text-xs text-gray-500">{row.admin.realName}</div>
+            )}
+            <div className="text-xs text-gray-400 font-mono">
+              {row.adminId || '—'}
             </div>
           </div>
         ),
       },
       {
-        title: 'Operation Type',
-        dataIndex: 'operationType',
-        render: (type) => (
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            {type}
+        title: 'Module',
+        dataIndex: 'module',
+        render: (mod) => (
+          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300">
+            {mod as string}
           </span>
         ),
       },
       {
-        title: 'Target / Description',
-        dataIndex: 'targetId',
-        render: (_, row) => (
-          <div>
-            <div className="font-medium">{row.description}</div>
-            {row.targetId && (
-              <div className="text-xs text-gray-500 font-mono">
-                Target ID: {row.targetId}
-              </div>
-            )}
-          </div>
+        title: 'Action',
+        dataIndex: 'action',
+        render: (action) => {
+          const colorMap: Record<string, string> = {
+            LOGIN: 'bg-green-100 text-green-800',
+            LOGOUT: 'bg-gray-100 text-gray-700',
+            CREATE: 'bg-blue-100 text-blue-800',
+            UPDATE: 'bg-yellow-100 text-yellow-800',
+            DELETE: 'bg-red-100 text-red-800',
+            AUDIT: 'bg-purple-100 text-purple-800',
+            EXPORT: 'bg-orange-100 text-orange-800',
+          };
+          const cls =
+            colorMap[action as string] || 'bg-gray-100 text-gray-700';
+          return (
+            <span
+              className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}
+            >
+              {action as string}
+            </span>
+          );
+        },
+      },
+      {
+        title: 'Details',
+        dataIndex: 'details',
+        render: (details) => (
+          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+            {(details as string | null) || '—'}
+          </span>
         ),
       },
       {
         title: 'IP Address',
-        dataIndex: 'ipAddress',
+        dataIndex: 'requestIp',
         render: (ip) => (
-          <span className="font-mono text-sm text-gray-700">{ip}</span>
+          <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
+            {(ip as string | null) || '—'}
+          </span>
         ),
       },
       {
-        title: 'Timestamp',
+        title: 'Time',
         dataIndex: 'createdAt',
         valueType: 'dateTime',
         render: (date) => (
-          <div className="text-xs text-gray-500">
-            {date ? format(new Date(date as string), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}
+          <div className="text-xs text-gray-500 whitespace-nowrap">
+            {date
+              ? format(new Date(date as string), 'yyyy-MM-dd HH:mm:ss')
+              : '—'}
           </div>
         ),
       },
       {
-        title: 'Details',
+        title: 'View',
         valueType: 'option',
-        width: 80,
+        width: 70,
         render: (_, row) => (
           <Button
             variant="ghost"
@@ -160,49 +146,38 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
                 title: 'Operation Details',
                 size: 'md',
                 renderChildren: ({ close }) => (
-                  <div className="p-4 space-y-2">
-                    <p>
-                      <strong>Admin:</strong> {row.adminUser?.username} (ID:{' '}
-                      {row.adminUser?.id})
-                    </p>
-                    <p>
-                      <strong>Type:</strong> {row.operationType}
-                    </p>
-                    <p>
-                      <strong>Description:</strong> {row.description}
-                    </p>
-                    <p>
-                      <strong>Target ID:</strong> {row.targetId || 'N/A'}
-                    </p>
-                    <p>
-                      <strong>IP:</strong> {row.ipAddress}
-                    </p>
-                    <p>
-                      <strong>Time:</strong>{' '}
+                  <div className="p-4 space-y-3 text-sm">
+                    <div>
+                      <span className="font-semibold">Admin: </span>
+                      {row.admin?.username || row.adminName}
+                      {row.admin?.realName ? ` (${row.admin.realName})` : ''}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Module: </span>
+                      {row.module}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Action: </span>
+                      {row.action}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Details: </span>
+                      {row.details || '—'}
+                    </div>
+                    <div>
+                      <span className="font-semibold">IP Address: </span>
+                      {row.requestIp || '—'}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Time: </span>
                       {row.createdAt
                         ? format(
-                            new Date(row.createdAt as string),
+                            new Date(row.createdAt),
                             'yyyy-MM-dd HH:mm:ss',
                           )
-                        : 'N/A'}
-                    </p>
-                    {row.oldValue && (
-                      <div>
-                        <strong>Old Value:</strong>{' '}
-                        <pre className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs overflow-auto">
-                          {JSON.stringify(row.oldValue, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                    {row.newValue && (
-                      <div>
-                        <strong>New Value:</strong>{' '}
-                        <pre className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs overflow-auto">
-                          {JSON.stringify(row.newValue, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                    <div className="flex justify-end mt-4">
+                        : '—'}
+                    </div>
+                    <div className="flex justify-end pt-2">
                       <Button onClick={close}>Close</Button>
                     </div>
                   </div>
@@ -218,22 +193,22 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
     [],
   );
 
-  // --- 搜索表单配置 ---
+  // ── 搜索表单配置 ─────────────────────────────────────────────
   const searchSchema: FormSchema[] = useMemo(
     () => [
       {
         type: 'input',
         key: 'keyword',
         label: 'Keyword',
-        placeholder: 'Admin ID, Username, Description, Target ID',
+        placeholder: 'Admin name, module, details…',
       },
       {
         type: 'select',
-        key: 'operationType',
-        label: 'Operation Type',
+        key: 'action',
+        label: 'Action Type',
         defaultValue: 'ALL',
         options: [
-          { label: 'All Types', value: 'ALL' },
+          { label: 'All Actions', value: 'ALL' },
           { label: 'Login', value: 'LOGIN' },
           { label: 'Logout', value: 'LOGOUT' },
           { label: 'Create', value: 'CREATE' },
@@ -274,7 +249,7 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
             searchSchema={searchSchema}
             initialFormParams={initialFormParams}
             onParamsChange={onParamsChange}
-            request={getTableData}
+            request={requestLogs}
           />
         </div>
       </Card>
