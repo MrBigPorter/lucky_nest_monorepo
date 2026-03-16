@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OperationLogService } from './operation-log.service';
-import { PrismaService } from '../../common/prisma/prisma.service';
+import { PrismaService } from '@api/common/prisma/prisma.service';
 import { QueryOperationLogDto } from './dto/query-operation-log.dto';
 
 describe('OperationLogService', () => {
