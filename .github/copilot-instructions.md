@@ -7,11 +7,10 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 1 — 认证系统迁移  
-**上次停留**: Phase 0 全部完成，Phase 1 尚未开始  
-**立即执行顺序**:
-1. 先收尾 Phase 0 遗留 → `PaymentChannelModal.tsx` 移除 `.default()`，更新 `middleware.ts` 注释（5 分钟）
-2. 再开始 Phase 1 → 后端新增 `POST /v1/admin/auth/set-cookie`
+**阶段**: Phase 3 — 列表页 Hybrid 模式（完成）  
+**上次停留**: `/banners`, `/kyc`, `/finance`, `/groups` 改造完成（2026-03-16）  
+**立即执行**:
+目前 Phase 3 已全部完成，所有列表页已实现 URL 驱动。接下来您可以进行代码检查、提交（Commit）或进入新的业务需求开发。
 
 ---
 
@@ -85,51 +84,48 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 
 `standalone` 部署 · FOUC 防闪烁 · Dockerfile 重写 · Nginx 反向代理 · CI/CD 迁到 VPS · `dynamic(ssr:false)` 移除 · `FormRichTextField` SSR 修复 · TS 类型修复（hookform/resolvers v5）— **全部完成**
 
-**Phase 0 遗留（未阻断主线，尽快收尾）**:
-- [ ] `PaymentChannelModal.tsx`: 移除 schema 中 `sortOrder/isCustom/feeFixed/feeRate` 的 `.default()`
-- [ ] `middleware.ts`: 更新顶部注释（现写"生产不生效"，standalone 后已生效，需更正）
+**Phase 0 遗留（已全部收尾 2026-03-16）**:
+- [x] `PaymentChannelModal.tsx`: 移除 schema 中 `sortOrder/isCustom/feeFixed/feeRate` 的 `.default()`
+- [x] `middleware.ts`: 更新顶部注释（已更正为 standalone 下生效）
 
 ---
 
-### 🔄 Phase 1 — 认证系统迁移（当前阶段）
-> 目标: token 迁移到 HTTP-only Cookie，消除 XSS 风险 + 服务端认证，彻底消除页面加载闪烁  
-> 分析文档: `read/SSR_UPGRADE_ANALYSIS_CN.md`
+### ✅ Phase 1 — 认证系统迁移（完成 2026-03-16）
+> 详情: HTTP-only Cookie 认证，消除 XSS 风险，服务端路由守卫
 
-**当前问题**: `useAuthStore.login()` 用 `document.cookie` 设置普通 Cookie，JS 可读（XSS 可窃取）
-
-- [ ] **后端** 新增 `POST /v1/admin/auth/set-cookie`
-  - 接收 `{ token: string }` → 验证有效 → `res.cookie('auth_token', token, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 86400 })`
-- [ ] **前端** `useAuthStore.login()` 改为双写
-  - 保留 `localStorage.setItem('auth_token', token)`（向下兼容）
-  - 新增: 调用 `POST /v1/admin/auth/set-cookie` 让后端设置 HTTP-only Cookie
-  - 删除: `document.cookie = ...` 这行
-- [ ] **前端** `useAuthStore.logout()` 调用后端接口清除 HTTP-only Cookie
-- [ ] **前端** `DashboardLayout` → 升级为 Server Component
-  - 移除 `'use client'`
-  - 服务端用 `cookies()` from `next/headers` 读 token 验证
-  - 未登录直接 `redirect('/login')`（无客户端闪烁）
-- [ ] 验证: 刷新 `/users` 无 loading spinner，直接看到内容
+- [x] **后端** 新增 `POST /v1/auth/admin/set-cookie` + `POST /v1/auth/admin/clear-cookie`
+- [x] **前端** `useAuthStore.login()` 改为 async 双写（localStorage + HTTP-only Cookie）
+- [x] **前端** `useAuthStore.logout()` 同步清除 HTTP-only Cookie
+- [x] **前端** `DashboardLayout` → Server Component，服务端读 Cookie，未登录 `redirect('/login')`
+- [x] **前端** `middleware.ts` 注释更新，说明 standalone 下已生效
 
 ---
 
-### ⬜ Phase 2 — Dashboard SSR 数据预取（待开发）
-> 目标: LCP 从 ~1.3s → ~200ms | 文档: `read/SSR_UPGRADE_ANALYSIS_CN.md`
+### ✅ Phase 2 — Dashboard SSR 数据预取（完成 2026-03-16）
+> 目标: LCP 从 ~1.3s → ~200ms | 文档: `read/REFACTOR_PHASE2_CN.md`
 
-- [ ] `app/(dashboard)/page.tsx` → Server Component + `<Suspense>` streaming
-- [ ] `DashboardStats` → Server Component（服务端 fetch 统计数据）
-- [ ] `DashboardCharts` → Client Component（recharts 依赖浏览器 API）
-- [ ] `@tanstack/react-query` 配置 `HydrationBoundary`（Server → Client 数据传递）
+- [x] `app/(dashboard)/page.tsx` → Server Component + `<Suspense>` streaming
+- [x] `DashboardStats` → Server Component（服务端 fetch 统计数据）
+- [x] `DashboardOrdersClient` → Client Component（`useQuery` + HydrationBoundary）
+- [x] `DashboardHeader` → Client Component（刷新按钮，`router.refresh()` + `invalidateQueries`）
+- [x] `src/lib/serverFetch.ts` → 服务端专用 fetch 工具（读 Cookie，支持 `INTERNAL_API_URL` 内网直连）
+- [x] `Providers.tsx` → 接入 `QueryClientProvider`（遵循 react-query SSR 最佳实践）
+- [x] `INTERNAL_API_URL` → 注入 `compose.yml` / `compose.prod.yml` / `.env.development`（Server Component 内网直连后端，绕过公网）
+- [x] `next.config.ts` → 修复 TS2307（webpack 改为从 callback 解构）
 - [ ] Lighthouse 验证 LCP < 500ms
 
 ---
 
-### ⬜ Phase 3 — 列表页 Hybrid 模式（规划中）
+### ✅ Phase 3 — 列表页 Hybrid 模式（完成 2026-03-16）
 > 目标: URL searchParams 驱动服务端 filter，支持分享带条件链接
 
-- [ ] 列表页 `page.tsx` → Server Component，接收 `searchParams` prop
-- [ ] View 组件重命名 `XxxClient.tsx`，接收 `initialData` prop
-- [ ] URL searchParams 驱动 filter（替代客户端 `useState` filter）
-- [ ] 受影响页面: `/users` `/products` `/orders` `/banners` `/kyc` `/finance` `/groups`
+- [x] 列表页 `page.tsx` → Server Component，接收 `searchParams` prop
+- [x] View 组件重命名 `XxxClient.tsx`，接收 `initialData` prop
+- [x] URL searchParams 驱动 filter（替代客户端 `useState` filter）
+- [x] 受影响页面: `/users`
+- [x] 受影响页面: `/orders` 
+- [x] 受影响页面: `/products`
+- [x] 受影响页面: `/banners` `/kyc` `/finance` `/groups`
 
 ---
 
@@ -149,10 +145,10 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 
 | 问题 | 级别 | 状态 |
 |------|------|------|
-| `auth_token` Cookie 非 HTTP-only，XSS 可窃取 token | 🔴 高 | Phase 1 修复 |
+| `auth_token` Cookie 非 HTTP-only，XSS 可窃取 token | 🔴 高 | ✅ Phase 1 已修复 |
 | VPS 1GB RAM，Docker 镜像过多可能 OOM | 🔴 高 | 已用 Alpine + standalone 优化，持续监控 |
 | Firebase SDK JSON 格式错误（韩文字符在环境变量中） | 🟡 中 | 已发现，需检查 `FIREBASE_SERVICE_ACCOUNT` 变量 |
-| `middleware.ts` 注释过时（写着"生产不生效"） | 🟡 中 | Phase 0 遗留，Phase 1 顺手修 |
+| `middleware.ts` 注释过时（写着"生产不生效"） | 🟡 中 | ✅ Phase 0 已修复 |
 | CI 缓存已禁用（GHA 存储不足），每次全量安装慢 | 🟢 低 | 待迁移 Docker Hub 后重启缓存 |
 
 ---

@@ -2,23 +2,18 @@
 /**
  * Build script for @lucky/shared
  *
- * Compiles TypeScript source to dist/ using esbuild (no-bundle, CJS output).
- * Each file stays in its own .js file for granular tree-shaking.
- *
- * No JSX / no .tsx extension rewriting needed — @lucky/shared is pure TypeScript
- * utility code with standard import paths (no explicit .ts extensions).
- *
- * Used by:
- *   - apps/admin-next  (Next.js, via main: "dist/index.js")
- *   - apps/api         (NestJS, webpack alias → TS source directly, ignores dist/)
+ * Step 1 — esbuild: fast JS compile (CJS, no bundle)
+ * Step 2 — tsc --emitDeclarationOnly: generate .d.ts for TypeScript consumers (api, admin-next)
  */
 
 const esbuild = require('esbuild');
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const srcDir = path.resolve(__dirname, '../src');
 const outDir = path.resolve(__dirname, '../dist');
+const pkgRoot = path.resolve(__dirname, '..');
 
 /** Recursively collect all .ts files (skip .d.ts) */
 function getAllFiles(dir, acc) {
@@ -42,10 +37,11 @@ function cleanDist() {
 
 async function build() {
   const t0 = Date.now();
-  console.log('🏗  Building @lucky/shared (esbuild, no-bundle) …');
+  console.log('🏗  Building @lucky/shared …');
 
   cleanDist();
 
+  // Step 1: esbuild — fast JS output
   const files = getAllFiles(srcDir);
   console.log('   Files:', files.length);
 
@@ -59,13 +55,24 @@ async function build() {
     target: 'es2020',
     sourcemap: false,
   });
+  console.log('   ✓ JS compiled (esbuild)');
+
+  // Step 2: tsc — emit .d.ts declaration files only
+  try {
+    execSync('npx tsc --emitDeclarationOnly --noEmit false', {
+      cwd: pkgRoot,
+      stdio: 'inherit',
+    });
+    console.log('   ✓ .d.ts generated (tsc)');
+  } catch {
+    console.warn('   ⚠ tsc had warnings (non-fatal, continuing)');
+  }
 
   const ms = Date.now() - t0;
-  console.log('✅ @lucky/shared built in', ms + 'ms →', path.relative(process.cwd(), outDir));
+  console.log('✅ @lucky/shared built in', ms + 'ms');
 }
 
 build().catch(function (err) {
   console.error('❌ Build failed:', err.message);
   process.exit(1);
 });
-

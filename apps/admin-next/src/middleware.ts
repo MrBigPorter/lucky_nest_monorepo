@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Middleware — only active in dev (Next.js server mode).
- * In production (output: 'export'), middleware is NOT executed.
- * Auth protection is handled client-side in:
- *   - DashboardLayout (protected pages)
- *   - Login view (redirect if already authenticated)
+ * Middleware — 在 dev 和 production 均生效（output: 'standalone' 模式支持 Node.js middleware）。
+ * 职责: 服务端路由守卫，读取 Cookie 中的 auth_token 判断是否已登录。
+ *   - 未登录访问受保护页面 → 302 跳转 /login
+ *   - 已登录访问 /login → 302 跳转 /（防止重复登录）
+ * 注: 静态资源（/_next/*、favicon 等）直接放行，不走认证逻辑。
  */
 
 const PUBLIC_PATHS = ['/login'];

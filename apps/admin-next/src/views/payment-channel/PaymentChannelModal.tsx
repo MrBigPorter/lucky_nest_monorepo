@@ -33,16 +33,16 @@ const PaymentChannelSchema = z.object({
   icon: z.string().url('Must be a valid URL').or(z.literal('')),
   type: z.number(), // 1=Recharge, 2=Withdraw
   status: z.number(), // 0=Disabled, 1=Active, 2=Maintenance
-  sortOrder: z.coerce.number().default(0),
+  sortOrder: z.coerce.number(),
 
   // Limits
   minAmount: z.coerce.number().min(0),
   maxAmount: z.coerce.number().min(0),
-  isCustom: z.boolean().default(true),
+  isCustom: z.boolean(),
 
   // Fee (Withdraw)
-  feeFixed: z.coerce.number().default(0),
-  feeRate: z.coerce.number().min(0).max(1).default(0),
+  feeFixed: z.coerce.number(),
+  feeRate: z.coerce.number().min(0).max(1),
 
   // UI Helper for Fixed Amounts (Recharge)
   // 这个字段只存在于表单中，提交时会被转换

@@ -21,7 +21,15 @@ import { RECHARGE_STATUS } from '@lucky/shared';
 // Assuming your RECHARGE_STATUS enum/const looks something like this:
 // const RECHARGE_STATUS = { PENDING: 0, SUCCESS: 1, FAILED: 2 };
 
-export const DepositList: React.FC = () => {
+interface DepositListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const DepositList: React.FC<DepositListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null); // State for loading effect
   const addToast = useToastStore((state) => state.addToast);
@@ -276,6 +284,8 @@ export const DepositList: React.FC = () => {
         ref={actionRef}
         columns={columns}
         searchSchema={searchSchema}
+        initialFormParams={initialFormParams}
+        onParamsChange={onParamsChange}
         request={requestDeposits}
         toolBarRender={toolBarRender}
       />

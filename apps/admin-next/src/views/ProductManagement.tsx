@@ -109,7 +109,18 @@ const DateRangeDisplay = ({ start, end }: { start?: number; end?: number }) => {
 // -----------------------------------------------------------------------------
 // 主组件
 // -----------------------------------------------------------------------------
-export const ProductManagement: React.FC = () => {
+interface ProductManagementProps {
+  // Phase 3: URL searchParams 驱动 filter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialFormParams?: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onParamsChange?: (params: Record<string, any>) => void;
+}
+
+export const ProductManagement: React.FC<ProductManagementProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -513,6 +524,8 @@ export const ProductManagement: React.FC = () => {
           columns={columns}
           request={requestProducts}
           searchSchema={searchSchema}
+          initialFormParams={initialFormParams}
+          onParamsChange={onParamsChange}
         />
       </Card>
     </div>

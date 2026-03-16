@@ -49,10 +49,18 @@
 ## 2. 核心文档链接
 
 - **[项目架构与核心上下文 (ARCHITECTURE.md)](./ARCHITECTURE.md)**
-  - **必读！** 这份文档是项目的“地图”，它描述了整个项目的技术选型、分层结构、各个应用（`api`, `admin`, `web` 等）的职责以及它们之间的关系。在进行任何开发前，请先阅读此文档。
+  - **必读！** 这份文档是项目的"地图"，它描述了整个项目的技术选型、分层结构、各个应用（`api`, `admin`, `web` 等）的职责以及它们之间的关系。在进行任何开发前，请先阅读此文档。
 
 - **[项目优化待办事项 (TODO.md)](./TODO.md)**
   - 这份文档记录了对项目进行结构优化和功能增强的详细步骤。你可以按照这个清单来了解项目的后续开发计划，或者参与其中。
+
+### SSR 升级系列文档
+
+| 文档 | 内容 |
+|------|------|
+| [SSR 升级完整分析 (SSR_UPGRADE_ANALYSIS_CN.md)](./SSR_UPGRADE_ANALYSIS_CN.md) | 为什么升级、升级路线图、各页面渲染策略决策 |
+| [Phase 0 — 基础设施 (REFACTOR_PHASE0_CN.md)](./REFACTOR_PHASE0_CN.md) | standalone 模式、Dockerfile、Nginx、CI/CD 迁移 |
+| [Phase 2 — Dashboard SSR (REFACTOR_PHASE2_CN.md)](./REFACTOR_PHASE2_CN.md) | Server Component、HydrationBoundary、serverFetch、内网直连 |
 
 ---
 
