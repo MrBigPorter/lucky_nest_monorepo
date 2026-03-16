@@ -37,40 +37,41 @@ jobs:
       - name: 3. Enable Corepack (Yarn 4)
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
-      - name: 4. Cache Yarn
-        uses: actions/cache@v4
-        with:
-          path: |
-            .yarn/cache
-            .yarn/install-state.gz
-          key: yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-
+      # ---- Yarn 缓存 — 暂时禁用，GHA 存储空间不足，后续迁移 Docker Hub ----
+      # - name: 4. Cache Yarn
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       .yarn/cache
+      #       .yarn/install-state.gz
+      #     key: yarn-${{ hashFiles('yarn.lock') }}
+      #     restore-keys: yarn-
 
-      - name: 5. Cache node_modules
-        uses: actions/cache@v4
-        id: nm-cache
-        with:
-          path: |
-            node_modules
-            apps/admin-next/node_modules
-            packages/ui/node_modules
-            packages/config/node_modules
-            packages/typescript-config/node_modules
-            packages/eslint-config/node_modules
-          key: nm-admin-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      # ---- node_modules 缓存 — 暂时禁用 ----
+      # - name: 5. Cache node_modules
+      #   uses: actions/cache@v4
+      #   id: nm-cache
+      #   with:
+      #     path: |
+      #       node_modules
+      #       apps/admin-next/node_modules
+      #       packages/ui/node_modules
+      #       packages/config/node_modules
+      #       packages/typescript-config/node_modules
+      #       packages/eslint-config/node_modules
+      #     key: nm-admin-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
-      - name: 6. Install dependencies
-        if: steps.nm-cache.outputs.cache-hit != 'true'
+      - name: 4. Install dependencies
         run: yarn install --immutable
 
       # ================= 阶段 2：打包 =================
-      - name: 7. Build @lucky/shared
+      - name: 5. Build @lucky/shared
         run: node packages/shared/scripts/build.js
 
-      - name: 8. Build @repo/ui (pre-build for fast Next.js compilation)
+      - name: 6. Build @repo/ui (pre-build for fast Next.js compilation)
         run: node packages/ui/scripts/build.js
 
-      - name: 9. Build Admin Next (Next.js static export)
+      - name: 7. Build Admin Next (Next.js static export)
         run: yarn workspace @lucky/admin-next build
         env:
           NODE_ENV: production
