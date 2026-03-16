@@ -18,10 +18,12 @@ export class QueryOperationLogDto {
   @IsString()
   adminId?: string;
 
+  /** 操作类型，对应 AdminOperationLog.action，e.g. "LOGIN" / "CREATE" */
   @IsOptional()
   @IsString()
-  operationType?: string;
+  action?: string;
 
+  /** 关键词搜索（匹配 adminName / details / module） */
   @IsOptional()
   @IsString()
   keyword?: string;

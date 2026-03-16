@@ -6,7 +6,6 @@ import { describe } from 'vitest';
 
 describe('OperationLogService', () => {
   let service: OperationLogService;
-  let prisma: PrismaService;
 
   const mockPrismaService = {
     adminOperationLog: {
@@ -27,7 +26,6 @@ describe('OperationLogService', () => {
     }).compile();
 
     service = module.get<OperationLogService>(OperationLogService);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
@@ -43,15 +41,17 @@ describe('OperationLogService', () => {
       const mockLogs = [
         {
           id: '1',
-          adminUserId: 'admin-1',
-          operationType: 'LOGIN',
-          description: 'Admin login',
-          ipAddress: '127.0.0.1',
+          adminId: 'admin-1',
+          adminName: 'testadmin',
+          module: 'auth',
+          action: 'LOGIN',
+          details: 'Admin login',
+          requestIp: '127.0.0.1',
           createdAt: new Date(),
-          adminUser: {
+          admin: {
             id: 'admin-1',
             username: 'testadmin',
-            email: 'test@example.com',
+            realName: 'Test Admin',
           },
         },
       ];
@@ -59,11 +59,7 @@ describe('OperationLogService', () => {
       mockPrismaService.adminOperationLog.findMany.mockResolvedValue(mockLogs);
       mockPrismaService.adminOperationLog.count.mockResolvedValue(1);
 
-      const query: QueryOperationLogDto = {
-        page: 1,
-        pageSize: 10,
-      };
-
+      const query: QueryOperationLogDto = { page: 1, pageSize: 10 };
       const result = await service.getList(query);
 
       expect(result).toEqual({
@@ -73,23 +69,21 @@ describe('OperationLogService', () => {
         pageSize: 10,
       });
 
-      expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
-        {
-          where: {},
-          skip: 0,
-          take: 10,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            adminUser: {
-              select: {
-                id: true,
-                username: true,
-                email: true,
-              },
+      expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith({
+        where: {},
+        skip: 0,
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          admin: {
+            select: {
+              id: true,
+              username: true,
+              realName: true,
             },
           },
         },
-      );
+      });
     });
 
     it('should filter by adminId', async () => {
@@ -106,54 +100,48 @@ describe('OperationLogService', () => {
 
       expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            adminUserId: 'admin-123',
-          },
+          where: { adminId: 'admin-123' },
         }),
       );
     });
 
-    it('should filter by operationType', async () => {
+    it('should filter by action', async () => {
       mockPrismaService.adminOperationLog.findMany.mockResolvedValue([]);
       mockPrismaService.adminOperationLog.count.mockResolvedValue(0);
 
       const query: QueryOperationLogDto = {
         page: 1,
         pageSize: 10,
-        operationType: 'AUDIT',
+        action: 'AUDIT',
       };
 
       await service.getList(query);
 
       expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            operationType: 'AUDIT',
-          },
+          where: { action: 'AUDIT' },
         }),
       );
     });
 
-    it('should ignore operationType filter when value is ALL', async () => {
+    it('should ignore action filter when value is ALL', async () => {
       mockPrismaService.adminOperationLog.findMany.mockResolvedValue([]);
       mockPrismaService.adminOperationLog.count.mockResolvedValue(0);
 
       const query: QueryOperationLogDto = {
         page: 1,
         pageSize: 10,
-        operationType: 'ALL',
+        action: 'ALL',
       };
 
       await service.getList(query);
 
       expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {},
-        }),
+        expect.objectContaining({ where: {} }),
       );
     });
 
-    it('should filter by keyword', async () => {
+    it('should filter by keyword (adminName, details, module)', async () => {
       mockPrismaService.adminOperationLog.findMany.mockResolvedValue([]);
       mockPrismaService.adminOperationLog.count.mockResolvedValue(0);
 
@@ -169,9 +157,9 @@ describe('OperationLogService', () => {
         expect.objectContaining({
           where: {
             OR: [
-              { description: { contains: 'test' } },
-              { targetId: { contains: 'test' } },
-              { adminUser: { username: { contains: 'test' } } },
+              { adminName: { contains: 'test' } },
+              { details: { contains: 'test' } },
+              { module: { contains: 'test' } },
             ],
           },
         }),
@@ -185,14 +173,12 @@ describe('OperationLogService', () => {
       const startDate = '2026-03-01';
       const endDate = '2026-03-16';
 
-      const query: QueryOperationLogDto = {
+      await service.getList({
         page: 1,
         pageSize: 10,
         startDate,
         endDate,
-      };
-
-      await service.getList(query);
+      });
 
       expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -210,12 +196,7 @@ describe('OperationLogService', () => {
       mockPrismaService.adminOperationLog.findMany.mockResolvedValue([]);
       mockPrismaService.adminOperationLog.count.mockResolvedValue(0);
 
-      const query: QueryOperationLogDto = {
-        page: 3,
-        pageSize: 20,
-      };
-
-      await service.getList(query);
+      await service.getList({ page: 3, pageSize: 20 });
 
       expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -233,7 +214,7 @@ describe('OperationLogService', () => {
         page: 1,
         pageSize: 10,
         adminId: 'admin-123',
-        operationType: 'UPDATE',
+        action: 'UPDATE',
         keyword: 'product',
         startDate: '2026-03-01',
         endDate: '2026-03-16',
@@ -244,12 +225,12 @@ describe('OperationLogService', () => {
       expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            adminUserId: 'admin-123',
-            operationType: 'UPDATE',
+            adminId: 'admin-123',
+            action: 'UPDATE',
             OR: [
-              { description: { contains: 'product' } },
-              { targetId: { contains: 'product' } },
-              { adminUser: { username: { contains: 'product' } } },
+              { adminName: { contains: 'product' } },
+              { details: { contains: 'product' } },
+              { module: { contains: 'product' } },
             ],
             createdAt: {
               gte: new Date('2026-03-01'),
