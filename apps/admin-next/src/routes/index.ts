@@ -24,6 +24,9 @@ import {
   KeyRound,
   Zap,
   MessageSquare,
+  Megaphone,
+  LogIn,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export type RouteGroup = 'Overview' | 'Management' | 'Operations' | 'System';
@@ -168,6 +171,24 @@ export const routes: RouteConfig[] = [
     icon: Ticket,
     group: 'Operations',
   },
+  {
+    path: '/ads',
+    name: 'ads',
+    icon: Megaphone,
+    group: 'Operations',
+  },
+  {
+    path: '/flash-sale',
+    name: 'flashSale',
+    icon: Zap,
+    group: 'Operations',
+  },
+  {
+    path: '/login-logs',
+    name: 'loginLogs',
+    icon: LogIn,
+    group: 'Operations',
+  },
 
   // ── System ────────────────────────────────────────────────────
   {
@@ -193,6 +214,12 @@ export const routes: RouteConfig[] = [
     path: '/roles',
     name: 'roles',
     icon: KeyRound,
+    group: 'System',
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    icon: SlidersHorizontal,
     group: 'System',
   },
   {

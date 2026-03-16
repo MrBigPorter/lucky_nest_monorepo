@@ -94,4 +94,3 @@ export class FlashSaleController {
     return this.service.removeProduct(productId);
   }
 }
-

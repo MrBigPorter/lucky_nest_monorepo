@@ -9,4 +9,3 @@ import { AdsService } from './ads.service';
   providers: [AdsService],
 })
 export class AdsModule {}
-

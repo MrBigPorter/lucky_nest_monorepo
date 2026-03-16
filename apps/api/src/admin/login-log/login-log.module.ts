@@ -9,4 +9,3 @@ import { LoginLogService } from './login-log.service';
   providers: [LoginLogService],
 })
 export class LoginLogModule {}
-

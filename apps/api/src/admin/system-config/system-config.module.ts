@@ -9,4 +9,3 @@ import { SystemConfigService } from './system-config.service';
   providers: [SystemConfigService],
 })
 export class SystemConfigModule {}
-

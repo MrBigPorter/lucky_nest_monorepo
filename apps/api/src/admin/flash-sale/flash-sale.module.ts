@@ -9,4 +9,3 @@ import { FlashSaleService } from './flash-sale.service';
   providers: [FlashSaleService],
 })
 export class FlashSaleModule {}
-

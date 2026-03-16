@@ -18,4 +18,3 @@ export class LoginLogController {
     return this.loginLogService.getList(query);
   }
 }
-
