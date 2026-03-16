@@ -154,7 +154,6 @@ export const routes: RouteConfig[] = [
     name: 'notifications',
     icon: Bell,
     group: 'Operations',
-    hidden: true,
   },
   {
     path: '/marketing',

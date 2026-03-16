@@ -15,6 +15,8 @@ import { ClientUserModule } from '@api/admin/client-user/client-user.module';
 import { AdminPaymentChannelModule } from '@api/admin/payment-channel/payment-channel.module';
 import { GroupAdminModule } from '@api/admin/group/groups.module';
 import { StatsModule } from '@api/admin/stats/stats.module';
+import { OperationLogModule } from '@api/admin/operation-log/operation-log.module';
+import { AdminNotificationModule } from '@api/admin/notification/notification.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { StatsModule } from '@api/admin/stats/stats.module';
     AdminPaymentChannelModule,
     GroupAdminModule,
     StatsModule,
+    OperationLogModule,
+    AdminNotificationModule,
   ],
   providers: [],
   controllers: [],
