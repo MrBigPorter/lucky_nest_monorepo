@@ -4,4 +4,3 @@ import { AdsManagement } from '@/views/AdsManagement';
 export default function AdsPage() {
   return <AdsManagement />;
 }
-
