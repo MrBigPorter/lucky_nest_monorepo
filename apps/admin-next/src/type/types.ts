@@ -1190,3 +1190,51 @@ export interface RoleSummaryItem {
   permissionsByModule: Record<string, string[]>;
 }
 
+// ─── Notification / Push ─────────────────────────────────────────────────────
+
+export interface AdminPushLog {
+  id: string;
+  createdAt: string;
+  adminId: string;
+  adminName: string;
+  /** broadcast | targeted */
+  type: 'broadcast' | 'targeted';
+  targetUserId?: string;
+  title: string;
+  body: string;
+  extraData?: Record<string, any>;
+  /** sent | failed */
+  status: 'sent' | 'failed';
+  successCount: number;
+  failureCount: number;
+}
+
+export interface DeviceStats {
+  total: number;
+  android: number;
+  ios: number;
+  web: number;
+  activeInLast7Days: number;
+}
+
+export interface QueryPushLogParams {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  keyword?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface SendBroadcastPayload {
+  title: string;
+  body: string;
+  extraData?: Record<string, any>;
+}
+
+export interface SendTargetedPayload {
+  targetUserId: string;
+  title: string;
+  body: string;
+  extraData?: Record<string, any>;
+}

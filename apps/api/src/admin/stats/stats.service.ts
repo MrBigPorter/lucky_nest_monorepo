@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { RECHARGE_STATUS, WITHDRAW_STATUS } from '@lucky/shared';
 
 /** 提现待审核状态 = 1 */
@@ -38,12 +38,12 @@ export class StatsService {
       pendingWithdrawAmountResult,
       totalDepositResult,
     ] = await Promise.all([
-      this.prisma.user.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where: { status: 1 } }),
       this.prisma.user.count({
-        where: { deletedAt: null, createdAt: { gte: todayStart } },
+        where: { status: 1, createdAt: { gte: todayStart } },
       }),
       this.prisma.user.count({
-        where: { deletedAt: null, createdAt: { gte: monthStart } },
+        where: { status: 1, createdAt: { gte: monthStart } },
       }),
       this.prisma.order.count(),
       this.prisma.order.count({ where: { createdAt: { gte: todayStart } } }),
