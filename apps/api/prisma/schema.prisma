@@ -136,6 +136,7 @@ model AdminUser {
   lastLoginAt   DateTime?           @map("last_login_at")
   lastLoginIp   String?             @map("last_login_ip") @db.VarChar(50)
   operationLogs AdminOperationLog[]
+  pushLogs      AdminPushLog[]
 
   @@index([status], map: "idx_admin_status")
   @@map("admin_users")
@@ -156,6 +157,35 @@ model AdminOperationLog {
   @@index([module, action])
   @@index([createdAt])
   @@map("admin_operation_logs")
+}
+
+/// 管理员推送日志 (记录每次后台发送的推送)
+model AdminPushLog {
+  id           String    @id @default(cuid()) @map("push_log_id") @db.VarChar(32)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  /// 操作管理员
+  adminId      String    @map("admin_id") @db.VarChar(32)
+  adminName    String    @map("admin_name") @db.VarChar(100)
+  /// broadcast=全员广播 | targeted=定向推送
+  type         String    @map("type") @db.VarChar(20)
+  /// 定向推送目标用户 ID (广播时为空)
+  targetUserId String?   @map("target_user_id") @db.VarChar(32)
+  /// 推送标题
+  title        String    @map("title") @db.VarChar(200)
+  /// 推送正文
+  body         String    @map("body")
+  /// 附带数据 (JSON)
+  extraData    Json?     @map("extra_data")
+  /// sent=成功 failed=失败
+  status       String    @default("sent") @map("status") @db.VarChar(20)
+  successCount Int       @default(0) @map("success_count")
+  failureCount Int       @default(0) @map("failure_count")
+  admin        AdminUser @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([adminId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("admin_push_logs")
 }
 
 model OauthAccount {
@@ -1268,6 +1298,8 @@ model FriendRequest {
   toUser     User     @relation("RequestReceived", fields: [toUserId], references: [id])
 
   @@unique([fromUserId, toUserId]) // 防止重复申请
-  @@index([toUserId, status])      // 方便查“谁加了我”
+  @@index([toUserId, status])      // 方便查"谁加了我"
   @@map("friend_requests")
 }
+
+

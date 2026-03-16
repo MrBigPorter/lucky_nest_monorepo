@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OperationLogService } from './operation-log.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { QueryOperationLogDto } from './dto/query-operation-log.dto';
-import { describe } from 'vitest';
 
 describe('OperationLogService', () => {
   let service: OperationLogService;
@@ -69,21 +68,23 @@ describe('OperationLogService', () => {
         pageSize: 10,
       });
 
-      expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith({
-        where: {},
-        skip: 0,
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          admin: {
-            select: {
-              id: true,
-              username: true,
-              realName: true,
+      expect(mockPrismaService.adminOperationLog.findMany).toHaveBeenCalledWith(
+        {
+          where: {},
+          skip: 0,
+          take: 10,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            admin: {
+              select: {
+                id: true,
+                username: true,
+                realName: true,
+              },
             },
           },
         },
-      });
+      );
     });
 
     it('should filter by adminId', async () => {

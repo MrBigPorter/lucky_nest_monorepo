@@ -624,3 +624,34 @@ export const rolesApi = {
     ),
 };
 
+/**
+ * 通知/推送管理 API
+ */
+export const notificationApi = {
+  /** GET /v1/admin/notifications/logs — 推送历史（分页） */
+  getLogs: (params: import('@/type/types').QueryPushLogParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminPushLog>>(
+      '/v1/admin/notifications/logs',
+      params,
+    ),
+
+  /** GET /v1/admin/notifications/devices/stats — 设备统计 */
+  getDeviceStats: () =>
+    http.get<import('@/type/types').DeviceStats>(
+      '/v1/admin/notifications/devices/stats',
+    ),
+
+  /** POST /v1/admin/notifications/broadcast — 全员广播 */
+  sendBroadcast: (data: import('@/type/types').SendBroadcastPayload) =>
+    http.post<import('@/type/types').AdminPushLog>(
+      '/v1/admin/notifications/broadcast',
+      data,
+    ),
+
+  /** POST /v1/admin/notifications/targeted — 定向推送 */
+  sendTargeted: (data: import('@/type/types').SendTargetedPayload) =>
+    http.post<import('@/type/types').AdminPushLog>(
+      '/v1/admin/notifications/targeted',
+      data,
+    ),
+};
