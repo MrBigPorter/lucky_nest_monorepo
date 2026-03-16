@@ -176,6 +176,23 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * 验证 token 有效性（用于 set-cookie 接口）
+   * 如果 token 无效或已过期，抛出 UnauthorizedException
+   */
+  async verifyAdminToken(token: string): Promise<boolean> {
+    try {
+      const secret =
+        process.env.ADMIN_JWT_SECRET ||
+        process.env.JWT_SECRET ||
+        'please_change_me_very_secret';
+      await this.jwt.verifyAsync(token, { secret });
+      return true;
+    } catch {
+      throw new UnauthorizedException('Token is invalid or expired');
+    }
+  }
+
   private async loginAuth(
     ok: boolean,
     params: {

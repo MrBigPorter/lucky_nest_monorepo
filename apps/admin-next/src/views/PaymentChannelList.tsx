@@ -15,6 +15,7 @@ import { useToastStore } from '@/store/useToastStore';
 import { paymentChannelApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { PaymentChannelModal } from './payment-channel/PaymentChannelModal';
+import { useAntdTable } from 'ahooks';
 
 // --- 辅助组件：状态标签 ---
 const StatusBadge = ({ status }: { status: number }) => {
@@ -69,10 +70,85 @@ const TypeBadge = ({ type }: { type: number }) => {
   );
 };
 
+interface PaymentChannelListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+type PaymentChannelSearchForm = {
+  name: string;
+  type: string;
+  status: string;
+};
+
 // --- 主组件 ---
-export const PaymentChannelList: React.FC = () => {
+export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((s) => s.addToast);
+
+  const getTableData = async (
+    {
+      current,
+      pageSize,
+    }: {
+      current: number;
+      pageSize: number;
+    },
+    formData: PaymentChannelSearchForm,
+  ) => {
+    const params: PaymentChannelListParams = {
+      page: current,
+      pageSize,
+    };
+    if (formData?.status && formData?.status !== 'ALL') {
+      params.status = Number(formData.status);
+    }
+    if (formData?.type && formData?.type !== 'ALL') {
+      params.type = Number(formData.type);
+    }
+    if (formData?.name) {
+      params.name = formData.name;
+    }
+    const res = await paymentChannelApi.getList(params);
+    return { list: res.list, total: res.total };
+  };
+
+  const {
+    tableProps,
+    refresh,
+    run,
+    search: { reset },
+  } = useAntdTable(getTableData, {
+    defaultPageSize: 10,
+    defaultParams: [
+      { current: 1, pageSize: 10 },
+      {
+        name: (initialFormParams?.name as string) || '',
+        status: (initialFormParams?.status as string) || 'ALL',
+        type: (initialFormParams?.type as string) || 'ALL',
+      },
+    ],
+  });
+
+  // 搜索回调：直接拿到所有值
+  const handleSearch = (values: PaymentChannelSearchForm) => {
+    // 自动重置到第一页，并带上所有条件
+    run({ current: 1, pageSize: 10 }, values);
+    onParamsChange?.(values);
+  };
+  
+  const handleReset = () => {
+    reset();
+    onParamsChange?.({ name: '', status: 'ALL', type: 'ALL' });
+  };
+
+  const dataSource = useMemo(
+    () => tableProps.dataSource || [],
+    [tableProps.dataSource],
+  );
 
   // 打开弹窗
   const handleEdit = useCallback((record?: PaymentChannel) => {
@@ -83,11 +159,11 @@ export const PaymentChannelList: React.FC = () => {
         <PaymentChannelModal
           data={record}
           close={close}
-          reload={() => actionRef.current?.reload()}
+          reload={refresh}
         />
       ),
     });
-  }, []);
+  }, [refresh]);
 
   // 删除操作 (使用 ModalManager 而不是原生 confirm 会更好，这里保持逻辑不变但优化体验)
   const handleDelete = useCallback(
@@ -103,12 +179,12 @@ export const PaymentChannelList: React.FC = () => {
       try {
         await paymentChannelApi.delete(id, 0);
         addToast('success', 'Channel disabled successfully');
-        actionRef.current?.reload();
+        refresh();
       } catch (e) {
         addToast('error', 'Failed to disable channel');
       }
     },
-    [addToast],
+    [addToast, refresh],
   );
 
   const columns: ProColumns<PaymentChannel>[] = useMemo(
@@ -274,7 +350,9 @@ export const PaymentChannelList: React.FC = () => {
         type: 'select',
         key: 'type',
         label: 'Type',
+        defaultValue: 'ALL',
         options: [
+          { label: 'All', value: 'ALL' },
           { label: 'Money In (Recharge)', value: '1' },
           { label: 'Money Out (Withdraw)', value: '2' },
         ],
@@ -283,7 +361,9 @@ export const PaymentChannelList: React.FC = () => {
         type: 'select',
         key: 'status',
         label: 'Status',
+        defaultValue: 'ALL',
         options: [
+          { label: 'All', value: 'ALL' },
           { label: 'Active', value: '1' },
           { label: 'Maintenance', value: '2' },
           { label: 'Disabled', value: '0' },
@@ -292,15 +372,6 @@ export const PaymentChannelList: React.FC = () => {
     ],
     [],
   );
-
-  const requestList = useCallback(async (params: PaymentChannelListParams) => {
-    const res = await paymentChannelApi.getList(params);
-    return {
-      data: res.list,
-      total: res.total,
-      success: true,
-    };
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -313,16 +384,33 @@ export const PaymentChannelList: React.FC = () => {
 
       <Card className="border-none shadow-sm">
         <div className="p-0">
+          <div className="p-4 mb-2">
+            <SchemaSearchForm<PaymentChannelSearchForm>
+              schema={searchSchema}
+              initialValues={{
+                name: (initialFormParams?.name as string) || '',
+                type: (initialFormParams?.type as string) || 'ALL',
+                status: (initialFormParams?.status as string) || 'ALL',
+              }}
+              onSearch={handleSearch}
+              onReset={handleReset}
+            />
+          </div>
           {/* SmartTable 内部通常自带 padding，或者保持 p-0 让表格贴边 */}
-          <SmartTable<PaymentChannel>
+          <BaseTable
+            data={dataSource}
             rowKey="id"
-            ref={actionRef}
             columns={columns}
-            searchSchema={searchSchema}
-            request={requestList}
-            // 移除 headerTitle，因为 PageHeader 已经有了，界面会更清爽
-            // 也可以保留，看你的设计规范
-            toolBarRender={() => []}
+            loading={tableProps.loading}
+            pagination={{
+              ...tableProps.pagination,
+              onChange: (page, pageSize) => {
+                tableProps.onChange?.({
+                  current: page,
+                  pageSize: pageSize || 10,
+                });
+              },
+            }}
           />
         </div>
       </Card>
