@@ -1238,3 +1238,79 @@ export interface SendTargetedPayload {
   body: string;
   extraData?: Record<string, any>;
 }
+
+// ─── IM / Chat Moderation ─────────────────────────────────────────────────────
+
+export type ConversationType = 'GROUP' | 'DIRECT' | 'SUPPORT' | 'BUSINESS';
+
+export interface ChatConversationMember {
+  userId: string;
+  nickname: string | null;
+  avatar: string | null;
+  role: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  type: ConversationType;
+  name: string | null;
+  status: number; // 1=正常 2=已关闭
+  lastMsgContent: string | null;
+  lastMsgTime: number;
+  lastMsgSeqId: number;
+  memberCount: number;
+  members: ChatConversationMember[];
+}
+
+export interface ChatMessage {
+  id: string;
+  seqId: number;
+  content: string;
+  type: number; // 0=text 1=image 2=audio 3=video 99=system
+  isRecalled: boolean;
+  createdAt: number;
+  meta: Record<string, any> | null;
+  senderId: string | null;
+  sender: { id: string; nickname: string; avatar: string | null } | null;
+  isSystem: boolean;
+}
+
+export interface QueryConversationsParams {
+  page?: number;
+  pageSize?: number;
+  type?: ConversationType;
+  keyword?: string;
+  status?: number;
+}
+
+export interface QueryMessagesParams {
+  cursor?: number;
+  pageSize?: number;
+}
+
+export interface AdminReplyPayload {
+  content: string;
+  /** 0=TEXT, 1=IMAGE, 2=AUDIO, 3=VIDEO, 5=FILE, 6=LOCATION */
+  type?: number;
+  meta?: Record<string, unknown>;
+  agentName?: string;
+}
+
+export interface AdminUploadTokenResult {
+  url: string;
+  key: string;
+  cdnUrl: string | null;
+  isPrivate: boolean;
+}
+
+export interface CloseConversationPayload {
+  reason?: string;
+}
+
+export interface ChatMessagesResult {
+  list: ChatMessage[];
+  nextCursor: number | null;
+  totalSeqId: number;
+}
+
+

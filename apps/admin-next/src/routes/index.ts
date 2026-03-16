@@ -23,6 +23,7 @@ import {
   Wallet,
   KeyRound,
   Zap,
+  MessageSquare,
 } from 'lucide-react';
 
 export type RouteGroup = 'Overview' | 'Management' | 'Operations' | 'System';
@@ -153,6 +154,12 @@ export const routes: RouteConfig[] = [
     path: '/notifications',
     name: 'notifications',
     icon: Bell,
+    group: 'Operations',
+  },
+  {
+    path: '/im',
+    name: 'im',
+    icon: MessageSquare,
     group: 'Operations',
   },
   {

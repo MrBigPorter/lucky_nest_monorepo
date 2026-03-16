@@ -7,9 +7,9 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 4 — 业务功能补全（**完成** 2026-03-16）  
-**上次停留**: 通知/推送管理完成（2026-03-16）  
-**立即执行**: Phase 4 全部完成 ✅ — 下一步可进入 Phase 5 或部署验收
+**阶段**: Phase 5 — 遗漏功能补全  
+**上次停留**: Phase 4 全部完成（2026-03-16）  
+**立即执行**: 按下方 Phase 5 清单逐项推进
 
 ---
 
@@ -128,6 +128,42 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 
 ---
 
+### 🚧 Phase 5 — 遗漏功能补全
+
+> **依据**: 对比 Prisma schema 与已有 admin 模块，发现以下模型有数据无管控界面。
+
+#### 5-A. 广告管理（Advertisement）
+> `advertisements` 表已有，`/client/ads/` 已有客户端接口，admin 侧完全缺失
+
+- [ ] **后端** 新建 `apps/api/src/admin/ads/` — CRUD + 状态切换接口
+- [ ] **前端** 新建 `app/(dashboard)/ads/page.tsx` + `views/AdsManagement.tsx`
+
+#### 5-B. 秒杀活动管理（Flash Sale）
+> `flash_sale_sessions` / `flash_sale_products` 表已有，前后端均无 admin 实现
+
+- [ ] **后端** 新建 `apps/api/src/admin/flash-sale/` — 场次 CRUD + 商品绑定接口
+- [ ] **前端** 新建 `app/(dashboard)/flash-sale/page.tsx` + `views/FlashSaleManagement.tsx`
+
+#### 5-C. 系统配置管理（System Config）
+> `system_configs` KV 表已有，seed 脚本已初始化汇率，无 admin UI
+
+- [ ] **后端** 新建 `apps/api/src/admin/system-config/` — 列表查询 + 单项更新接口
+- [ ] **前端** 新建 `app/(dashboard)/settings/page.tsx` + `views/SystemConfig.tsx`
+
+#### 5-D. IM / 聊天管理（Chat Moderation）
+> `conversations` / `chat_messages` / `chat_members` 表完整，客户端 Socket 已运行，admin 无任何管控
+
+- [x] **后端** 新建 `apps/api/src/admin/chat/` — 会话列表 + 消息查询 + 撤回接口
+- [x] **前端** 新建 `app/(dashboard)/im/page.tsx` + `views/CustomerServiceDesk.tsx`（客服接待台：左侧会话列表 + 右侧聊天窗口 + 10s 轮询）
+
+#### 5-E. 用户登录日志（User Login Log）
+> `user_login_logs` 表数据丰富，无 admin 查询页（安全审计用）
+
+- [ ] **后端** 新建 `apps/api/src/admin/login-log/` — 分页查询（按用户/IP/时间筛选）
+- [ ] **前端** 新建 `app/(dashboard)/login-logs/page.tsx` + `views/LoginLogList.tsx`
+
+---
+
 ## 四、业务功能状态
 
 **已完成（13 项）**: 登录登出 · 后台用户管理 · Banner · 分类 · 产品 · 订单 · 用户+KYC · 财务（充值/提现/审核）· 支付渠道 · 优惠券 · Act Section · 地址 · 拼团
@@ -146,7 +182,7 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 |------|------|------|
 | `auth_token` Cookie 非 HTTP-only，XSS 可窃取 token | 🔴 高 | ✅ Phase 1 已修复 |
 | VPS 1GB RAM，Docker 镜像过多可能 OOM | 🔴 高 | 已用 Alpine + standalone 优化，持续监控 |
-| Firebase SDK JSON 格式错误（韩文字符在环境变量中） | 🟡 中 | 已发现，需检查 `FIREBASE_SERVICE_ACCOUNT` 变量 |
+| Firebase SDK JSON 格式错误（韩文字符在环境变量中） | 🟡 中 | ✅ 已修复，`.env.dev` / `.env.prod` 均为标准英文 JSON，无非法字符 |
 | `middleware.ts` 注释过时（写着"生产不生效"） | 🟡 中 | ✅ Phase 0 已修复 |
 | CI 缓存已禁用（GHA 存储不足），每次全量安装慢 | 🟢 低 | 待迁移 Docker Hub 后重启缓存 |
 
