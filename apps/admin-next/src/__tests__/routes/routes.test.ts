@@ -32,9 +32,9 @@ describe('routes 配置', () => {
     expect(orders?.hidden).toBeFalsy();
   });
 
-  it('analytics 路由被隐藏 (功能未上线)', () => {
+  it('analytics 路由已上线，不被隐藏', () => {
     const analytics = routes.find((r) => r.name === 'analytics');
-    expect(analytics?.hidden).toBe(true);
+    expect(analytics?.hidden).toBeFalsy();
   });
 
   it('所有 group 值合法', () => {
