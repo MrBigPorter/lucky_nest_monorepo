@@ -42,6 +42,10 @@ export const TRANSLATIONS = {
     service: 'Service Center',
     roles: 'Role Management',
     im: 'Customer Service',
+    ads: 'Advertisements',
+    flashSale: 'Flash Sale',
+    loginLogs: 'Login Logs',
+    settings: 'System Config',
   },
   zh: {
     dashboard: '仪表盘',
@@ -86,5 +90,9 @@ export const TRANSLATIONS = {
     service: '客服中心',
     roles: '角色权限',
     im: '客服接待台',
+    ads: '广告管理',
+    flashSale: '秒杀活动',
+    loginLogs: '登录日志',
+    settings: '系统配置',
   },
 };
