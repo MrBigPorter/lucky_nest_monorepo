@@ -2,6 +2,8 @@ import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { NotificationService } from '@api/client/notification/notification.service';
+import { OperationLogService } from '@api/admin/operation-log/operation-log.service';
+import { OpModule, OpAction } from '@lucky/shared';
 import { QueryPushLogDto } from './dto/query-push-log.dto';
 import { AdminSendBroadcastDto } from './dto/send-broadcast.dto';
 import { AdminSendTargetedDto } from './dto/send-targeted.dto';
@@ -13,6 +15,7 @@ export class AdminNotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    private readonly operationLogService: OperationLogService,
   ) {}
 
   // ─── Push Logs ────────────────────────────────────────────────────────────
@@ -135,6 +138,15 @@ export class AdminNotificationService {
       );
     }
 
+    // 写操作审计日志
+    await this.operationLogService.log({
+      adminId,
+      adminName,
+      module: OpModule.SYSTEM,
+      action: OpAction.SYSTEM.SEND_NOTIF,
+      details: `Broadcast: "${dto.title}" — ${successCount} dispatched`,
+    });
+
     return log;
   }
 
@@ -174,7 +186,7 @@ export class AdminNotificationService {
       }
     }
 
-    return this.prisma.adminPushLog.create({
+    const pushLog = await this.prisma.adminPushLog.create({
       data: {
         adminId,
         adminName,
@@ -190,6 +202,17 @@ export class AdminNotificationService {
         failureCount,
       },
     });
+
+    // 写操作审计日志
+    await this.operationLogService.log({
+      adminId,
+      adminName,
+      module: OpModule.SYSTEM,
+      action: OpAction.SYSTEM.SEND_NOTIF,
+      details: `Targeted: "${dto.title}" → user ${dto.targetUserId} (${status}, ${successCount} devices)`,
+    });
+
+    return pushLog;
   }
 }
 

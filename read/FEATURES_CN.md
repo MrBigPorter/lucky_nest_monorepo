@@ -1,8 +1,8 @@
 # Lucky Nest Admin — 已完成核心功能文档
 
-> **最后更新**: 2026-03-16  
-> **阶段**: Phase 4 业务功能补全（进行中）  
-> **约定**: 所有 Admin 接口路径以 `/v1/` 为 baseURL 前缀，受 `AdminJwtAuthGuard` + `PermissionsGuard` 双重保护。
+> **最后更新**: 2026-03-16（Phase 5-D 客服接待台）  
+> **阶段**: Phase 5 遗漏功能补全（进行中）  
+> **约定**: 所有 Admin 接口路径以 `/v1/` 为 baseURL 前缀，受 `AdminJwtAuthGuard` + `RolesGuard` 双重保护。
 
 ---
 
@@ -24,7 +24,9 @@
 14. [支付渠道管理](#14-支付渠道管理)
 15. [数据分析仪表板](#15-数据分析仪表板)
 16. [操作日志审计](#16-操作日志审计)
-17. [地区数据（Region）](#17-地区数据region)
+17. [通知 / 推送管理（Firebase FCM）](#17-通知--推送管理firebase-fcm)
+18. [地区数据（Region）](#18-地区数据region)
+19. [客服接待台（IM Chat Moderation）](#19-客服接待台im-chat-moderation)
 
 ---
 
@@ -643,7 +645,161 @@ model AdminOperationLog {
 
 ---
 
-## 17. 地区数据（Region）
+## 17. 通知 / 推送管理（Firebase FCM）
+
+### 后端接口
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| `GET` | `/v1/admin/notifications/logs` | `ADMIN` / `SUPER_ADMIN` | 分页查询推送历史，支持类型/关键词/日期筛选 |
+| `GET` | `/v1/admin/notifications/devices/stats` | `ADMIN` / `SUPER_ADMIN` | 设备统计（按平台 + 7天活跃数） |
+| `POST` | `/v1/admin/notifications/broadcast` | `ADMIN` / `SUPER_ADMIN` | 全员广播推送（通过 Firebase Topic `all_users`） |
+| `POST` | `/v1/admin/notifications/targeted` | `ADMIN` / `SUPER_ADMIN` | 向指定用户的所有绑定设备推送 |
+
+### 请求 / 返回结构
+
+```typescript
+// POST /v1/admin/notifications/broadcast
+interface SendBroadcastPayload {
+  title: string
+  body: string
+  extraData?: Record<string, any>
+}
+
+// POST /v1/admin/notifications/targeted
+interface SendTargetedPayload {
+  targetUserId: string   // 客户端用户 ID
+  title: string
+  body: string
+  extraData?: Record<string, any>
+}
+
+// GET /v1/admin/notifications/devices/stats
+interface DeviceStats {
+  total: number
+  android: number
+  ios: number
+  web: number
+  activeInLast7Days: number
+}
+
+// GET /v1/admin/notifications/logs（分页）
+interface AdminPushLog {
+  id: string
+  createdAt: string
+  adminId: string
+  adminName: string
+  type: 'broadcast' | 'targeted'
+  targetUserId?: string
+  title: string
+  body: string
+  extraData?: Record<string, any>
+  status: 'sent' | 'failed'
+  successCount: number
+  failureCount: number
+}
+```
+
+### 关键代码
+
+```
+apps/api/src/admin/notification/
+  ├── notification.controller.ts    # 4 个路由
+  ├── notification.service.ts       # 调用 client NotificationService 发推送 + 写日志
+  └── dto/
+      ├── query-push-log.dto.ts
+      ├── send-broadcast.dto.ts
+      └── send-targeted.dto.ts
+
+apps/api/src/client/notification/
+  └── notification.service.ts       # Firebase Admin SDK 封装
+      # sendPrivateMessage()    — 多设备 sendEachForMulticast
+      # sendBroadcast()         — Topic 消息（all_users）
+      # registerDevice()        — FCM Token 上报 + 自动订阅 Topic
+      # sendCallWakeUpPush()    — 音视频通话静默唤醒推送
+
+apps/admin-next/src/
+  ├── app/(dashboard)/notifications/page.tsx
+  └── views/NotificationManagement.tsx
+      # Tab 1: 📢 全员广播表单（title + body）
+      # Tab 2: 🎯 定向推送表单（targetUserId + title + body）
+      # Tab 3: 📋 推送历史列表（类型筛选 + 刷新）
+      # 顶部: 设备统计卡片（Total / Android / iOS / Web / 7d Active）
+```
+
+### Firebase 初始化机制
+
+```typescript
+// onModuleInit() 读取环境变量 FIREBASE_ADMIN_CREDENTIALS（JSON 字符串）
+// 若未设置则打印 warn 并跳过，不会导致启动失败
+if (!admin.apps.length) {
+  const serviceAccount = JSON.parse(firebaseConfig);
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+}
+```
+
+### 数据模型
+
+```prisma
+model AdminPushLog {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  adminId      String    // 操作管理员
+  adminName    String
+  type         String    // broadcast | targeted
+  targetUserId String?   // 定向推送目标用户 ID
+  title        String
+  body         String
+  extraData    Json?
+  status       String    // sent | failed
+  successCount Int       @default(0)
+  failureCount Int       @default(0)
+  admin        AdminUser @relation(...)
+  @@map("admin_push_logs")
+}
+
+// 设备表（FCM Token 为主键）
+model Device {
+  token      String   @id    // FCM Token
+  platform   String          // android | ios | web
+  userId     String?         // 绑定用户（退出登录置 null，Token 保留）
+  lastActive DateTime        // 用于清洗死粉（超 6 个月不活跃）
+  @@map("devices")
+}
+```
+
+### 推送流程
+
+```
+管理员填表 → POST /broadcast
+  → AdminNotificationService.sendBroadcast()
+    → client.NotificationService.sendBroadcast()   ← Firebase Topic 推送
+    → prisma.adminPushLog.create()                  ← 记录推送日志
+  → 返回 AdminPushLog
+
+管理员填 userId → POST /targeted
+  → AdminNotificationService.sendTargeted()
+    → prisma.device.findMany(userId)                ← 查询用户设备 Token
+    → client.NotificationService.sendPrivateMessage() ← sendEachForMulticast
+    → prisma.adminPushLog.create()
+```
+
+### 环境变量
+
+```bash
+# deploy/.env.dev 和 deploy/.env.prod 中均已配置
+FIREBASE_ADMIN_CREDENTIALS='{"type":"service_account","project_id":"adroit-outlet-444914-m0",...}'
+```
+
+> ⚠️ 注意：该变量值为 **完整 JSON 字符串**，不能换行，`private_key` 中的换行用 `\n` 转义。
+
+### 数据库迁移
+
+迁移文件: `apps/api/prisma/migrations/20260316132335_add_admin_push_log/migration.sql`（已生成）
+
+---
+
+## 18. 地区数据（Region）
 
 ### 后端接口
 
@@ -654,6 +810,167 @@ model AdminOperationLog {
 | `GET` | `/v1/admin/region/barangays/:cityId` | 乡镇列表（最细粒度） |
 
 > 地区数据用于地址录入时的三级联动下拉。数据从 `Province` / `City` / `Barangay` 表读取，由 seed 脚本初始化。
+
+---
+
+## 19. 客服接待台（IM Chat Moderation）
+
+> **Phase 5-D** | 完成时间：2026-03-16
+
+### 背景 & 设计思路
+
+项目的 IM 模块（`conversations` / `chat_messages` / `chat_members`）已完整运行，客户端 Socket.io 网关负责实时推送。  
+Admin 侧只需要**只读查看 + 文字回复 + 关闭工单**，不需要接入 Socket，采用 **HTTP 轮询（10 s）** 即可满足客服场景需求。
+
+Admin 以 **`senderId = null`（系统消息）** 身份回复，前端通过 `isSystem: true` 标志渲染为右侧客服气泡，用户端收到的消息预览格式为 `[AgentName]: 内容`。
+
+### 后端接口
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| `GET` | `/v1/admin/chat/conversations` | `ADMIN` / `EDITOR` | 客服会话列表，默认筛选 `SUPPORT` 类型，支持 keyword / status 分页 |
+| `GET` | `/v1/admin/chat/conversations/:id/messages` | `ADMIN` / `EDITOR` | 消息历史，游标分页，admin 无权限限制（可看任意成员发的消息） |
+| `POST` | `/v1/admin/chat/conversations/:id/reply` | `ADMIN` / `EDITOR` | 客服回复（`senderId=null`，写 `meta.agentName`） |
+| `POST` | `/v1/admin/chat/messages/:id/force-recall` | `ADMIN` | 强制撤回（无 2 分钟限制） |
+| `PATCH` | `/v1/admin/chat/conversations/:id/close` | `ADMIN` / `EDITOR` | 关闭会话，写入 `type=99` 系统消息，`status` 置 2 |
+
+### 请求 / 返回结构
+
+```typescript
+// GET /v1/admin/chat/conversations
+interface QueryConversationsParams {
+  page?: number
+  pageSize?: number
+  type?: 'GROUP' | 'DIRECT' | 'SUPPORT' | 'BUSINESS'  // 默认 SUPPORT
+  keyword?: string   // 模糊匹配会话名 / 成员昵称
+  status?: number    // 1=正常 2=已关闭
+}
+
+// 返回列表项
+interface ChatConversation {
+  id: string
+  type: string
+  name: string | null
+  status: number          // 1=Active 2=Closed
+  lastMsgContent: string | null
+  lastMsgTime: number     // 毫秒时间戳
+  lastMsgSeqId: number
+  memberCount: number
+  members: Array<{
+    userId: string
+    nickname: string | null
+    avatar: string | null
+    role: string
+  }>
+}
+
+// GET /v1/admin/chat/conversations/:id/messages 返回
+interface ChatMessagesResult {
+  list: ChatMessage[]
+  nextCursor: number | null  // 下一页游标（seqId），null=无更多
+  totalSeqId: number
+}
+
+interface ChatMessage {
+  id: string
+  seqId: number
+  content: string
+  type: number        // 0=text 1=image 2=audio 3=video 99=system
+  isRecalled: boolean
+  createdAt: number   // 毫秒时间戳
+  meta: Record<string, any> | null
+  senderId: string | null
+  sender: { id: string; nickname: string; avatar: string | null } | null
+  isSystem: boolean   // senderId === null
+}
+
+// POST /v1/admin/chat/conversations/:id/reply
+interface AdminReplyPayload {
+  content: string
+  agentName?: string  // 客服标签，默认取 JWT 中 username
+}
+
+// PATCH /v1/admin/chat/conversations/:id/close
+interface CloseConversationPayload {
+  reason?: string  // 默认 'Closed by support agent'
+}
+```
+
+### 关键代码
+
+```
+apps/api/src/admin/chat/
+  ├── admin-chat.module.ts       # 模块（仅依赖 PrismaModule）
+  ├── admin-chat.service.ts      # 5 个方法，使用 Prisma.XxxWhereInput 强类型
+  ├── admin-chat.controller.ts   # AdminJwtAuthGuard + RolesGuard
+  └── dto/
+      ├── query-conversations.dto.ts
+      └── admin-chat.dto.ts      # QueryMessagesDto / AdminReplyDto / CloseConversationDto
+
+apps/admin-next/src/
+  ├── app/(dashboard)/im/page.tsx           # Server Component 包装
+  ├── views/CustomerServiceDesk.tsx         # 完整客服接待台（'use client'）
+  ├── api/index.ts → chatApi                # 5 个 API 方法
+  └── type/types.ts → ChatConversation / ChatMessage / ChatMessagesResult
+```
+
+### 前端 UI 结构
+
+```
+CustomerServiceDesk（'use client'）
+  ├── 左侧面板（w-80）
+  │   ├── 搜索框（keyword 过滤）
+  │   ├── 状态标签（All / Active / Closed）
+  │   ├── 会话列表（ConversationItem × n）
+  │   │   └── 用户头像 + 昵称 + 最后消息预览 + 时间 + 状态徽章
+  │   └── 分页（total > 30 时显示）
+  └── 右侧面板（flex-1）
+      └── ChatWindow（key=conv.id，切换会话重置状态）
+          ├── 顶栏：用户信息 + StatusBadge + Close Ticket 按钮 + 刷新按钮
+          ├── 消息区（overflow-y-auto）
+          │   ├── "Load earlier messages"（游标向上翻页）
+          │   ├── MessageBubble × n
+          │   │   ├── type=99（系统）→ 居中灰色胶囊
+          │   │   ├── isSystem=true → 右侧青色气泡（客服）
+          │   │   └── isSystem=false → 左侧白色气泡（用户）
+          │   └── 滚动锚点 div（新消息自动滚底）
+          └── 回复栏
+              ├── textarea（Enter 发送 / Shift+Enter 换行）
+              └── 发送按钮（POST /reply）
+```
+
+### 轮询机制
+
+| 位置 | 间隔 | 说明 |
+|------|------|------|
+| 会话列表 | 15 s | `useRequest` `pollingInterval: 15000`，刷新左侧未读状态 |
+| 消息区 | 10 s | `useRequest` `pollingInterval: 10000`，用最新一页覆盖（不影响已加载的历史） |
+
+### 消息写入机制
+
+```typescript
+// admin-chat.service.ts — replyToConversation()
+// 1. 事务内更新 conversation.lastMsgSeqId += 1
+// 2. 创建 ChatMessage：senderId: null（系统身份）
+//    meta: { agentName: 'AdminUsername', isSupport: true }
+// 3. 自动将已关闭（status=2）的会话重新激活（status=1）
+
+// 关闭会话：type=99 系统消息，内容为 reason
+// meta: { closedBy: adminName, isClose: true }
+```
+
+### 路由 & 导航
+
+```
+侧边栏路由: Operations 组 → /im（MessageSquare 图标）
+翻译键: im → "Customer Service"（en）/ "客服接待台"（zh）
+```
+
+### 与客户端 Socket 的关系
+
+- Admin **不接入** Socket.io Gateway，避免复杂度
+- 用户发消息 → Socket 推给其他在线客户端 → Admin 侧 10 s 轮询自动刷新
+- Admin 回复 → HTTP POST 写数据库 → 下次用户端拉消息或收到 Socket 推送时看到
 
 ---
 
@@ -675,24 +992,26 @@ model AdminOperationLog {
 所有 API 方法统一在 `apps/admin-next/src/api/index.ts` 中定义：
 
 ```typescript
-userApi          // 后台管理员 CRUD
-clientUserApi    // 客户端用户管理
-orderApi         // 订单管理
-productApi       // 产品（treasure）管理
-categoryApi      // 分类管理
-bannerApi        // Banner 管理
-couponApi        // 优惠券管理
-financeApi       // 财务（流水/充值/提现/统计）
-paymentChannelApi // 支付渠道
-kycApi           // KYC 审核
-actSectionApi    // Act Section
-groupApi         // 拼团
-addressApi       // 地址
-regionApi        // 地区（省市区）
-statsApi         // 数据统计
+userApi              // 后台管理员 CRUD
+clientUserApi        // 客户端用户管理
+orderApi             // 订单管理
+productApi           // 产品（treasure）管理
+categoryApi          // 分类管理
+bannerApi            // Banner 管理
+couponApi            // 优惠券管理
+financeApi           // 财务（流水/充值/提现/统计）
+paymentChannelApi    // 支付渠道
+kycApi               // KYC 审核
+actSectionApi        // Act Section
+groupApi             // 拼团
+addressApi           // 地址
+regionApi            // 地区（省市区）
+statsApi             // 数据统计
 adminOperationLogApi // 操作日志
-rolesApi         // 角色权限汇总
-uploadApi        // 文件上传
+rolesApi             // 角色权限汇总
+notificationApi      // 推送通知（广播/定向/日志/设备统计）
+chatApi              // 客服 IM（会话列表/消息历史/回复/撤回/关闭）
+uploadApi            // 文件上传
 ```
 
 ---

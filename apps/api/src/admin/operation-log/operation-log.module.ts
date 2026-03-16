@@ -7,6 +7,7 @@ import { OperationLogService } from './operation-log.service';
   imports: [PrismaModule],
   controllers: [OperationLogController],
   providers: [OperationLogService],
+  exports: [OperationLogService],
 })
 export class OperationLogModule {}
 
