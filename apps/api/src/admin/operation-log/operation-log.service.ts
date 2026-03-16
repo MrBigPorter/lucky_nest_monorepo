@@ -8,11 +8,19 @@ export class OperationLogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getList(query: QueryOperationLogDto) {
-    const { page = 1, pageSize = 10, adminId, action, keyword, startDate, endDate } = query;
+    const {
+      page = 1,
+      pageSize = 10,
+      adminId,
+      action,
+      keyword,
+      startDate,
+      endDate,
+    } = query;
 
     const where: Prisma.AdminOperationLogWhereInput = {};
 
-    // Filter by adminId
+    // Filter by adminIdx
     if (adminId) {
       where.adminId = adminId;
     }

@@ -1,52 +1,12 @@
 'use client';
 
 /**
- * MarketingClient — Client Component
- * Phase 3: URL searchParams 驱动 filter
+ * MarketingClient — Client Component wrapper
+ * Marketing view manages its own state internally (no URL filter needed)
  */
-import React, { useCallback, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React from 'react';
 import { Marketing } from '@/views/Marketing';
 
 export function MarketingClient() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // ── URL → 初始 filter 参数 ──────────────────────────────────
-  const urlFilterParams = useMemo(() => {
-    const params: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      if (key !== 'page' && key !== 'pageSize' && value) {
-        params[key] = value;
-      }
-    });
-    return params;
-  }, [searchParams]);
-
-  // ── filter 变化 → 更新 URL ──────────────────────────────────
-  const handleParamsChange = useCallback(
-    (formData: Record<string, unknown>) => {
-      const qs = new URLSearchParams();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (
-          value !== undefined &&
-          value !== null &&
-          value !== '' &&
-          value !== 'ALL'
-        ) {
-          qs.set(key, String(value));
-        }
-      });
-      const newUrl = qs.toString() ? `/marketing?${qs.toString()}` : '/marketing';
-      router.replace(newUrl, { scroll: false });
-    },
-    [router],
-  );
-
-  return (
-    <Marketing
-      initialFormParams={urlFilterParams}
-      onParamsChange={handleParamsChange}
-    />
-  );
+  return <Marketing />;
 }

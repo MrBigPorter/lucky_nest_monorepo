@@ -1,12 +1,8 @@
 'use client';
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Button, ModalManager, cn } from '@repo/ui';
-import {
-  ActionType,
-  ProColumns,
-  SmartTable,
-} from '@/components/scaffold/SmartTable';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { Edit, CreditCard, ArrowRightLeft, Power } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { PaymentChannel, PaymentChannelListParams } from '@/type/types';
@@ -16,6 +12,8 @@ import { paymentChannelApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { PaymentChannelModal } from './payment-channel/PaymentChannelModal';
 import { useAntdTable } from 'ahooks';
+import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
+import { BaseTable } from '@/components/scaffold/BaseTable';
 
 // --- 辅助组件：状态标签 ---
 const StatusBadge = ({ status }: { status: number }) => {
@@ -86,7 +84,6 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
   initialFormParams,
   onParamsChange,
 }) => {
-  const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((s) => s.addToast);
 
   const getTableData = async (
@@ -187,76 +184,66 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
     [addToast, refresh],
   );
 
-  const columns: ProColumns<PaymentChannel>[] = useMemo(
-    () => [
-      {
-        title: 'Channel Info',
-        dataIndex: 'name',
-        width: 240,
-        render: (_, row) => (
-          <div className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl border border-gray-200 bg-gray-50 p-1.5 flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-all">
-              {row.icon ? (
-                <img
-                  src={row.icon}
-                  className="w-full h-full object-contain"
-                  alt={row.name}
-                />
-              ) : (
-                <CreditCard size={20} className="text-gray-400" />
-              )}
-            </div>
-            <div className="flex flex-col">
-              <div className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-sm">
-                {row.name}
-                {row.isCustom && (
-                  <span className="text-[10px] leading-none bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">
-                    Custom
-                  </span>
+  const columns: ColumnDef<PaymentChannel>[] = useMemo(() => {
+    const col = createColumnHelper<PaymentChannel>();
+    return [
+      col.accessor('name', {
+        header: 'Channel Info',
+        size: 240,
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-center gap-3 group">
+              <div className="w-10 h-10 rounded-xl border border-gray-200 bg-gray-50 p-1.5 flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-all">
+                {row.icon ? (
+                  <img src={row.icon} className="w-full h-full object-contain" alt={row.name} />
+                ) : (
+                  <CreditCard size={20} className="text-gray-400" />
                 )}
               </div>
-              <div className="text-xs text-gray-500 font-mono mt-0.5 flex items-center gap-1">
-                <span className="bg-gray-100 px-1 rounded text-[10px] text-gray-600">
-                  CODE
-                </span>
-                {row.code}
+              <div className="flex flex-col">
+                <div className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-sm">
+                  {row.name}
+                  {row.isCustom && (
+                    <span className="text-[10px] leading-none bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">
+                      Custom
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 font-mono mt-0.5 flex items-center gap-1">
+                  <span className="bg-gray-100 px-1 rounded text-[10px] text-gray-600">CODE</span>
+                  {row.code}
+                </div>
               </div>
             </div>
-          </div>
-        ),
-      },
-      {
-        title: 'Type',
-        dataIndex: 'type',
-        width: 120,
-        valueType: 'select',
-        valueEnum: {
-          '1': { text: 'Recharge' },
-          '2': { text: 'Withdraw' },
+          );
         },
-        render: (_, row) => <TypeBadge type={row.type} />,
-      },
-      {
-        title: 'Limits Range',
-        dataIndex: 'minAmount',
-        width: 180,
-        render: (_, row) => (
-          <div className="flex flex-col justify-center">
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 font-mono">
-              ₱{row.minAmount.toLocaleString()} - ₱
-              {row.maxAmount.toLocaleString()}
+      }),
+      col.accessor('type', {
+        header: 'Type',
+        size: 120,
+        cell: (info) => <TypeBadge type={info.getValue()} />,
+      }),
+      col.accessor('minAmount', {
+        header: 'Limits Range',
+        size: 180,
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex flex-col justify-center">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 font-mono">
+                ₱{row.minAmount.toLocaleString()} - ₱{row.maxAmount.toLocaleString()}
+              </div>
             </div>
-          </div>
-        ),
-      },
-      {
-        title: 'Fees',
-        dataIndex: 'feeFixed',
-        width: 150,
-        render: (_, row) => {
-          if (row.type === 1)
-            return <span className="text-gray-400 text-xs italic">No Fee</span>;
-
+          );
+        },
+      }),
+      col.accessor('feeFixed', {
+        header: 'Fees',
+        size: 150,
+        cell: (info) => {
+          const row = info.row.original;
+          if (row.type === 1) return <span className="text-gray-400 text-xs italic">No Fee</span>;
           const isFree = row.feeFixed === 0 && row.feeRate === 0;
           if (isFree)
             return (
@@ -264,7 +251,6 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
                 FREE
               </span>
             );
-
           return (
             <div className="flex items-center gap-1 text-xs">
               {row.feeFixed > 0 && (
@@ -272,9 +258,7 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
                   ₱{row.feeFixed}
                 </span>
               )}
-              {row.feeFixed > 0 && row.feeRate > 0 && (
-                <span className="text-gray-400">+</span>
-              )}
+              {row.feeFixed > 0 && row.feeRate > 0 && <span className="text-gray-400">+</span>}
               {row.feeRate > 0 && (
                 <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200 font-medium">
                   {(row.feeRate * 100).toFixed(1)}%
@@ -283,58 +267,53 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
             </div>
           );
         },
-      },
-      {
-        title: 'Sort',
-        dataIndex: 'sortOrder',
-        width: 80,
-        render: (val) => (
-          <span className="font-mono text-gray-500 text-xs">#{val}</span>
+      }),
+      col.accessor('sortOrder', {
+        header: 'Sort',
+        size: 80,
+        cell: (info) => (
+          <span className="font-mono text-gray-500 text-xs">#{info.getValue()}</span>
         ),
-      },
-      {
-        title: 'Status',
-        dataIndex: 'status',
-        width: 100,
-        valueType: 'select',
-        valueEnum: {
-          '1': { text: 'Active', status: 'Success' },
-          '0': { text: 'Disabled', status: 'Default' },
-          '2': { text: 'Maintenance', status: 'Error' },
-        },
-        render: (_, row) => <StatusBadge status={row.status} />,
-      },
-      {
-        title: 'Action',
-        valueType: 'option',
-        fixed: 'right',
-        width: 100,
-        render: (_, row) => (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-500 hover:text-primary-600 hover:bg-primary-50"
-              onClick={() => handleEdit(row)}
-              title="Edit Configuration"
-            >
-              <Edit size={16} />
-            </Button>
-            {row.status !== 0 && (
+      }),
+      col.accessor('status', {
+        header: 'Status',
+        size: 100,
+        cell: (info) => <StatusBadge status={info.getValue()} />,
+      }),
+      col.display({
+        id: 'actions',
+        header: 'Action',
+        size: 100,
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                onClick={() => handleDelete(row.id)}
-                title="Disable Channel"
+                className="text-gray-500 hover:text-primary-600 hover:bg-primary-50"
+                onClick={() => handleEdit(row)}
+                title="Edit Configuration"
               >
-                <Power size={16} />
+                <Edit size={16} />
               </Button>
-            )}
-          </div>
-        ),
-      },
-    ],
+              {row.status !== 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => handleDelete(row.id)}
+                  title="Disable Channel"
+                >
+                  <Power size={16} />
+                </Button>
+              )}
+            </div>
+          );
+        },
+      }),
+    ] as ColumnDef<PaymentChannel>[];
+  },
     [handleEdit, handleDelete],
   );
 
@@ -404,7 +383,7 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
             loading={tableProps.loading}
             pagination={{
               ...tableProps.pagination,
-              onChange: (page, pageSize) => {
+              onChange: (page: number, pageSize: number) => {
                 tableProps.onChange?.({
                   current: page,
                   pageSize: pageSize || 10,
