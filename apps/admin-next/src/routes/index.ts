@@ -121,7 +121,6 @@ export const routes: RouteConfig[] = [
     name: 'analytics',
     icon: PieChart,
     group: 'Operations',
-    hidden: true,
   },
   {
     path: '/lottery',
