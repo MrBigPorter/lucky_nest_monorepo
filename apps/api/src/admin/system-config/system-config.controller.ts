@@ -32,4 +32,3 @@ export class SystemConfigController {
     return this.service.update(key, dto);
   }
 }
-

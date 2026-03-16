@@ -712,4 +712,106 @@ export const chatApi = {
     ),
 };
 
+/**
+ * 广告管理 API
+ */
+export const adsApi = {
+  getList: (params: import('@/type/types').QueryAdsParams) =>
+    http.get<PaginatedResponse<import('@/type/types').Advertisement>>(
+      '/v1/admin/ads',
+      params,
+    ),
+  create: (data: import('@/type/types').CreateAdPayload) =>
+    http.post<import('@/type/types').Advertisement>('/v1/admin/ads', data),
+  update: (id: string, data: import('@/type/types').UpdateAdPayload) =>
+    http.patch<import('@/type/types').Advertisement>(
+      `/v1/admin/ads/${id}`,
+      data,
+    ),
+  toggleStatus: (id: string) =>
+    http.patch<import('@/type/types').Advertisement>(
+      `/v1/admin/ads/${id}/toggle-status`,
+      {},
+    ),
+  remove: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/ads/${id}`),
+};
 
+/**
+ * 秒杀活动管理 API
+ */
+export const flashSaleApi = {
+  getSessions: () =>
+    http.get<{ list: import('@/type/types').FlashSaleSession[] }>(
+      '/v1/admin/flash-sale/sessions',
+    ),
+  createSession: (
+    data: import('@/type/types').CreateFlashSaleSessionPayload,
+  ) =>
+    http.post<import('@/type/types').FlashSaleSession>(
+      '/v1/admin/flash-sale/sessions',
+      data,
+    ),
+  updateSession: (
+    id: string,
+    data: import('@/type/types').UpdateFlashSaleSessionPayload,
+  ) =>
+    http.patch<import('@/type/types').FlashSaleSession>(
+      `/v1/admin/flash-sale/sessions/${id}`,
+      data,
+    ),
+  deleteSession: (id: string) =>
+    http.delete<{ success: boolean }>(
+      `/v1/admin/flash-sale/sessions/${id}`,
+    ),
+  getSessionProducts: (sessionId: string) =>
+    http.get<{ list: import('@/type/types').FlashSaleProduct[] }>(
+      `/v1/admin/flash-sale/sessions/${sessionId}/products`,
+    ),
+  bindProduct: (
+    sessionId: string,
+    data: import('@/type/types').BindFlashSaleProductPayload,
+  ) =>
+    http.post<import('@/type/types').FlashSaleProduct>(
+      `/v1/admin/flash-sale/sessions/${sessionId}/products`,
+      data,
+    ),
+  updateProduct: (
+    productId: string,
+    data: import('@/type/types').UpdateFlashSaleProductPayload,
+  ) =>
+    http.patch<import('@/type/types').FlashSaleProduct>(
+      `/v1/admin/flash-sale/products/${productId}`,
+      data,
+    ),
+  removeProduct: (productId: string) =>
+    http.delete<{ success: boolean }>(
+      `/v1/admin/flash-sale/products/${productId}`,
+    ),
+};
+
+/**
+ * 系统配置管理 API
+ */
+export const systemConfigApi = {
+  getAll: () =>
+    http.get<{ list: import('@/type/types').SystemConfigItem[] }>(
+      '/v1/admin/system-config',
+    ),
+  update: (key: string, value: string) =>
+    http.patch<import('@/type/types').SystemConfigItem>(
+      `/v1/admin/system-config/${key}`,
+      { value },
+    ),
+};
+
+/**
+ * 用户登录日志 API
+ */
+export const loginLogApi = {
+  getList: (params: import('@/type/types').QueryLoginLogParams) =>
+    http.get<PaginatedResponse<import('@/type/types').UserLoginLog>>(
+      '/v1/admin/login-logs/list',
+      params,
+    ),
+};

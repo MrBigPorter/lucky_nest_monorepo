@@ -1164,7 +1164,7 @@ export interface StatsOverview {
  */
 export interface StatsTrend {
   orders: Array<{
-    date: string;    // "YYYY-MM-DD"
+    date: string; // "YYYY-MM-DD"
     count: number;
     revenue: string; // Decimal 字符串
   }>;
@@ -1313,4 +1313,133 @@ export interface ChatMessagesResult {
   totalSeqId: number;
 }
 
+// ─── Advertisement ────────────────────────────────────────────────────────────
 
+export interface Advertisement {
+  id: string;
+  title: string | null;
+  fileType: number; // 1=image 2=video
+  img: string | null;
+  videoUrl: string | null;
+  adPosition: number; // 1=home-top 2=home-mid 3=category 4=detail
+  sortOrder: number;
+  jumpUrl: string | null;
+  relatedId: string | null;
+  jumpCate: number | null;
+  startTime: number | null;
+  endTime: number | null;
+  status: number; // 0=disabled 1=enabled
+  viewCount: number;
+  clickCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface QueryAdsParams {
+  page?: number;
+  pageSize?: number;
+  status?: number;
+  adPosition?: number;
+}
+
+export interface CreateAdPayload {
+  title?: string;
+  fileType: number;
+  img?: string;
+  videoUrl?: string;
+  adPosition: number;
+  sortOrder?: number;
+  jumpUrl?: string;
+  relatedId?: string;
+  jumpCate?: number;
+  startTime?: string;
+  endTime?: string;
+  status?: number;
+}
+
+export type UpdateAdPayload = Partial<CreateAdPayload>;
+
+// ─── Flash Sale ───────────────────────────────────────────────────────────────
+
+export interface FlashSaleSession {
+  id: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  status: number; // 1=active 0=inactive
+  productCount: number;
+}
+
+export interface FlashSaleProduct {
+  id: string;
+  treasureId: string;
+  flashStock: number;
+  flashPrice: string;
+  sortOrder: number;
+  product: {
+    treasureId: string;
+    treasureName: string;
+    unitAmount: string;
+    treasureCoverImg: string | null;
+  } | null;
+}
+
+export interface CreateFlashSaleSessionPayload {
+  title: string;
+  startTime: string;
+  endTime: string;
+  status?: number;
+}
+
+export type UpdateFlashSaleSessionPayload =
+  Partial<CreateFlashSaleSessionPayload>;
+
+export interface BindFlashSaleProductPayload {
+  treasureId: string;
+  flashPrice: string;
+  flashStock?: number;
+  sortOrder?: number;
+}
+
+export interface UpdateFlashSaleProductPayload {
+  flashPrice?: string;
+  flashStock?: number;
+  sortOrder?: number;
+}
+
+// ─── System Config ────────────────────────────────────────────────────────────
+
+export interface SystemConfigItem {
+  key: string;
+  value: string;
+}
+
+// ─── User Login Log ───────────────────────────────────────────────────────────
+
+export interface UserLoginLog {
+  id: string;
+  userId: string;
+  userNickname: string | null;
+  userAvatar: string | null;
+  loginTime: number;
+  loginType: number; // 1=password 2=sms 3=third-party
+  loginMethod: string | null; // password/google/facebook
+  loginIp: string | null;
+  loginDevice: string | null;
+  countryCode: string | null;
+  city: string | null;
+  loginStatus: number; // 1=success 0=fail
+  failReason: string | null;
+  tokenIssued: number;
+}
+
+export interface QueryLoginLogParams {
+  page?: number;
+  pageSize?: number;
+  userId?: string;
+  loginIp?: string;
+  loginMethod?: string;
+  loginStatus?: number;
+  startDate?: string;
+  endDate?: string;
+}

@@ -57,4 +57,3 @@ export class AdsController {
     return this.service.remove(id);
   }
 }
-
