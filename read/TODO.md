@@ -97,8 +97,51 @@
 
 - [ ] **数据分析**: 在 `DataAnalytics.tsx` 页面，对接真实的数据统计接口，替换当前的模拟图表。
 - [ ] **权限角色管理 (RBAC)**:
-  - [ ] **后端**: 创建 `RoleController`，实现对角色和权限的“增删改查”。
+  - [ ] **后端**: 创建 `RoleController`，实现对角色和权限的"增删改查"。
   - [ ] **前端**: 在 `AdminSecurity.tsx` 页面，实现一个可视化的角色和权限分配界面。
 - [ ] **操作日志审计**:
   - [ ] **后端**: 创建 `AdminLogController`，提供对 `AdminOperationLog` 表的查询和筛选接口。
   - [ ] **前端**: 创建一个新页面，用于展示管理员的操作日志，支持按管理员、模块、时间范围进行查询。
+
+---
+
+## 第五阶段：Next Admin SSR 升级重构 (进行中)
+
+> 详细分析：[SSR 升级完整分析](./SSR_UPGRADE_ANALYSIS_CN.md)  
+> 迭代记录：[Phase 0 重构记录](./REFACTOR_PHASE0_CN.md)
+
+### Phase 0 — 基础设施准备 ✅ 已完成 (2026-03-16)
+
+- [x] `next.config.ts`：`output: 'export'` → `output: 'standalone'`（解锁 Server 特性）
+- [x] `useAppStore.ts`：加 `zustand/persist` 中间件，修复主题刷新重置 Bug
+- [x] `useAppStore.ts`：移除 action 里的 DOM 操作（职责分离）
+- [x] `app/layout.tsx`：加内联 script 防主题闪烁（FOUC）
+- [x] `Dockerfile.prod`：重写为 standalone 多阶段构建（Builder → Alpine Runner）
+- [x] `compose.prod.yml`：`admin-builder` 改为持久运行的 `admin-next` 服务
+- [x] `nginx.prod.conf`：静态文件 → 反向代理 admin-next:3001
+- [x] `deploy-admin.yml`：Cloudflare Pages → GHCR Docker + VPS SSH
+- [x] `deploy-master.yml`：移除 `deployments: write`，更新描述
+- [x] `ci.yml` E2E：`serve out/` → `next start -p 4001`
+- [x] `deploy.sh`：同步镜像名和 Dockerfile 路径
+
+### Phase 1 — 认证系统迁移 (待开发)
+
+- [ ] 后端新增 `POST /v1/admin/auth/set-cookie` 接口（设置 HTTP-only Cookie）
+- [ ] `useAuthStore.login()` 改为双写（localStorage + HTTP-only Cookie）
+- [ ] `middleware.ts` 生产生效验证（standalone 后自动生效）
+- [ ] `DashboardLayout` 去掉 `dynamic(ssr:false)` → 改为 Server Component
+- [ ] 服务端读 Cookie 验证 token（彻底消除加载闪烁）
+
+### Phase 2 — Dashboard SSR 数据预取 (待开发)
+
+- [ ] `app/(dashboard)/page.tsx` 去掉 `'use client'` → Server Component
+- [ ] `DashboardStats` 提取为 Server Component（`Suspense` streaming）
+- [ ] `DashboardCharts` 提取为独立 Client Component
+- [ ] Lighthouse 验证 LCP/FCP 改善数据
+
+### Phase 3 — 列表页 Hybrid 模式 (规划中)
+
+- [ ] 每个列表页 `page.tsx` 改 Server Component，预取第 1 页数据
+- [ ] 原有 View 组件重命名 `XxxClient.tsx`，接收 `initialData` prop
+- [ ] URL searchParams 驱动服务端 filter（支持分享带条件链接）
+

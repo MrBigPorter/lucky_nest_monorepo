@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Theme, Language } from '../type/types';
 
 interface AppState {
@@ -10,19 +11,34 @@ interface AppState {
   toggleSidebar: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  theme: 'dark',
-  lang: 'en',
-  isSidebarCollapsed: false,
-  toggleTheme: () =>
-    set((state) => {
-      const newTheme = state.theme === 'dark' ? 'light' : 'dark';
-      document.documentElement.classList.remove('light', 'dark');
-      document.documentElement.classList.add(newTheme);
-      return { theme: newTheme };
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      theme: 'dark',
+      lang: 'en',
+      isSidebarCollapsed: false,
+      toggleTheme: () =>
+        set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+      toggleLang: () =>
+        set((state) => ({ lang: state.lang === 'en' ? 'zh' : 'en' })),
+      toggleSidebar: () =>
+        set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
     }),
-  toggleLang: () =>
-    set((state) => ({ lang: state.lang === 'en' ? 'zh' : 'en' })),
-  toggleSidebar: () =>
-    set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
-}));
+    {
+      name: 'app-store', // localStorage key
+      storage: createJSONStorage(() => {
+        // SSR 安全：服务端没有 localStorage，返回空实现
+        if (typeof window === 'undefined') {
+          return {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          };
+        }
+        return localStorage;
+      }),
+      // 只持久化 theme 和 lang，sidebar 状态不持久化
+      partialize: (state) => ({ theme: state.theme, lang: state.lang }),
+    },
+  ),
+);

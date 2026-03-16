@@ -22,7 +22,7 @@ SSH_TARGET="${VPS_USER}@${VPS_IP}"
 
 # 镜像名称
 BACKEND_IMAGE="lucky-backend-prod:latest"
-ADMIN_IMAGE="lucky-admin-builder:latest"
+ADMIN_IMAGE="lucky-admin-next-prod:latest"
 
 # 颜色
 RED='\033[0;31m'
@@ -118,13 +118,15 @@ if [ "$SKIP_BUILD" = false ]; then
     fi
 
     if [ "$BUILD_ADMIN" = true ]; then
-        log "构建前端镜像: $ADMIN_IMAGE"
+        log "构建 admin-next 镜像: $ADMIN_IMAGE"
         docker build \
             --platform linux/amd64 \
-            -f apps/mini-shop-admin/Dockerfile.prod \
+            -f apps/admin-next/Dockerfile.prod \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.joyminis.com \
+            --build-arg NEXT_PUBLIC_APP_ENV=production \
             -t "$ADMIN_IMAGE" \
             .
-        log "✅ 前端镜像构建完成"
+        log "✅ admin-next 镜像构建完成"
     fi
 fi
 
@@ -203,14 +205,13 @@ ssh "$SSH_TARGET" << REMOTE_SCRIPT
         --format '{{.Config.Image}}' 2>/dev/null || echo "")
 
     # ── 启动/更新服务 ─────────────────────────────────────────────
-    COMPOSE_CMD="docker compose -f compose.prod.yml --env-file deploy/.env.prod"
-    if docker images --format '{{.Repository}}' | grep -q 'lucky-admin-builder'; then
-        COMPOSE_CMD="\$COMPOSE_CMD --profile local"
-        echo "→ 检测到 admin 镜像, 启用 admin-builder (--profile local)"
-    fi
+    BACKEND_IMAGE_VAL="lucky-backend-prod:latest"
+    ADMIN_IMAGE_VAL="lucky-admin-next-prod:latest"
 
     echo "→ 启动/更新服务 (不在服务器上构建)..."
-    \$COMPOSE_CMD up -d --no-build --force-recreate
+    BACKEND_IMAGE="\$BACKEND_IMAGE_VAL" ADMIN_IMAGE="\$ADMIN_IMAGE_VAL" \
+        docker compose -f compose.prod.yml --env-file deploy/.env.prod \
+        up -d --no-build --force-recreate
 
     # ── 健康检查 + 自动回滚 (仅后端, 与 CI 保持一致) ─────────────────
     if [ "$_DEPLOY_BACKEND" = "true" ]; then
