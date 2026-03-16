@@ -655,3 +655,61 @@ export const notificationApi = {
       data,
     ),
 };
+
+/**
+ * 客服 / IM 聊天管理 API
+ */
+export const chatApi = {
+  /** GET /v1/admin/chat/conversations — 会话列表 */
+  getConversations: (params: import('@/type/types').QueryConversationsParams) =>
+    http.get<PaginatedResponse<import('@/type/types').ChatConversation>>(
+      '/v1/admin/chat/conversations',
+      params,
+    ),
+
+  /** GET /v1/admin/chat/conversations/:id/messages — 消息历史 */
+  getMessages: (
+    conversationId: string,
+    params: import('@/type/types').QueryMessagesParams,
+  ) =>
+    http.get<import('@/type/types').ChatMessagesResult>(
+      `/v1/admin/chat/conversations/${conversationId}/messages`,
+      params,
+    ),
+
+  /** POST /v1/admin/chat/conversations/:id/reply — 客服回复 */
+  reply: (
+    conversationId: string,
+    data: import('@/type/types').AdminReplyPayload,
+  ) =>
+    http.post<import('@/type/types').ChatMessage>(
+      `/v1/admin/chat/conversations/${conversationId}/reply`,
+      data,
+    ),
+
+  /** POST /v1/admin/chat/messages/:id/force-recall — 强制撤回 */
+  forceRecall: (messageId: string) =>
+    http.post<{ success: boolean; messageId: string }>(
+      `/v1/admin/chat/messages/${messageId}/force-recall`,
+      {},
+    ),
+
+  /** PATCH /v1/admin/chat/conversations/:id/close — 关闭会话 */
+  closeConversation: (
+    conversationId: string,
+    data: import('@/type/types').CloseConversationPayload,
+  ) =>
+    http.patch<{ success: boolean; conversationId: string }>(
+      `/v1/admin/chat/conversations/${conversationId}/close`,
+      data,
+    ),
+
+  /** POST /v1/admin/chat/upload-token — 获取媒体上传签名 URL */
+  getUploadToken: (fileName: string, fileType: string) =>
+    http.post<import('@/type/types').AdminUploadTokenResult>(
+      '/v1/admin/chat/upload-token',
+      { fileName, fileType },
+    ),
+};
+
+

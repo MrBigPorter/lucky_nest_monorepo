@@ -41,6 +41,7 @@ export const TRANSLATIONS = {
     operationLogs: 'Operation Logs',
     service: 'Service Center',
     roles: 'Role Management',
+    im: 'Customer Service',
   },
   zh: {
     dashboard: '仪表盘',
@@ -84,5 +85,6 @@ export const TRANSLATIONS = {
     operationLogs: '操作日志',
     service: '客服中心',
     roles: '角色权限',
+    im: '客服接待台',
   },
 };

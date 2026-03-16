@@ -17,6 +17,11 @@ import { GroupAdminModule } from '@api/admin/group/groups.module';
 import { StatsModule } from '@api/admin/stats/stats.module';
 import { OperationLogModule } from '@api/admin/operation-log/operation-log.module';
 import { AdminNotificationModule } from '@api/admin/notification/notification.module';
+import { AdminChatModule } from '@api/admin/chat/admin-chat.module';
+import { LoginLogModule } from '@api/admin/login-log/login-log.module';
+import { SystemConfigModule } from '@api/admin/system-config/system-config.module';
+import { AdsModule } from '@api/admin/ads/ads.module';
+import { FlashSaleModule } from '@api/admin/flash-sale/flash-sale.module';
 
 @Module({
   imports: [
@@ -38,6 +43,11 @@ import { AdminNotificationModule } from '@api/admin/notification/notification.mo
     StatsModule,
     OperationLogModule,
     AdminNotificationModule,
+    AdminChatModule,
+    LoginLogModule,
+    SystemConfigModule,
+    AdsModule,
+    FlashSaleModule,
   ],
   providers: [],
   controllers: [],
