@@ -1,17 +1,22 @@
 'use client';
 
 import React, { useRef, useMemo, useCallback } from 'react';
-import { Badge } from '@repo/ui'; // 假设有 Tag 组件
+import { Badge } from '@repo/ui';
 import {
   SmartTable,
   ProColumns,
   ActionType,
 } from '@/components/scaffold/SmartTable';
 import { financeApi } from '@/api';
-import { TransactionListParams, TransactionRecord } from '@/type/types';
-import { TRANSACTION_TYPES_OPTIONS, NumHelper } from '@lucky/shared';
+import { TransactionsListParams, WalletTransaction } from '@/type/types';
+import { TRANSACTION_TYPE, NumHelper } from '@lucky/shared';
 import { ArrowDownRight, ArrowUpRight, Repeat } from 'lucide-react';
 import { FormSchema } from '@/type/search';
+
+// Build a local options array from the shared enum (no TRANSACTION_TYPES_OPTIONS in shared)
+const TRANSACTION_TYPE_OPTIONS = Object.entries(TRANSACTION_TYPE).map(
+  ([key, value]) => ({ label: key, value }),
+);
 
 interface TransactionListProps {
   initialFormParams?: Record<string, unknown>;
@@ -24,18 +29,20 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 }) => {
   const actionRef = useRef<ActionType>(null);
 
-  // 金额渲染组件
   const AmountDisplay = ({
     amount,
     type,
   }: {
     amount: string | number;
-    type: string;
+    type: number;
   }) => {
-    const isIncome = type === 'INCOME'; // 假设类型中区分了收入和支出
+    const isIncome =
+      type === TRANSACTION_TYPE.RECHARGE ||
+      type === TRANSACTION_TYPE.REWARD ||
+      type === TRANSACTION_TYPE.INVITE_REWARD ||
+      type === TRANSACTION_TYPE.REFUND;
     const color = isIncome ? 'text-emerald-500' : 'text-rose-500';
     const sign = isIncome ? '+' : '-';
-
     return (
       <div className={`font-mono font-bold ${color}`}>
         {sign}
@@ -44,11 +51,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     );
   };
 
-  const columns: ProColumns<TransactionRecord>[] = useMemo(
+  const columns: ProColumns<WalletTransaction>[] = useMemo(
     () => [
       {
         title: 'Transaction No.',
-        dataIndex: 'transactionId',
+        dataIndex: 'transactionNo',
         copyable: true,
         width: 180,
       },
@@ -72,31 +79,28 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         dataIndex: 'transactionType',
         width: 120,
         valueType: 'select',
-        valueEnum: TRANSACTION_TYPES_OPTIONS.reduce(
-          (acc, item) => {
+        valueEnum: TRANSACTION_TYPE_OPTIONS.reduce(
+          (acc: Record<number, { text: string }>, item) => {
             acc[item.value] = { text: item.label };
             return acc;
           },
-          {} as Record<string, { text: string }>,
+          {},
         ),
         render: (_, row) => {
-          // 你可以根据实际的 transactionType 返回不同的 Badge 颜色和图标
           let icon = <Repeat size={14} className="mr-1 inline" />;
-          let color: 'default' | 'success' | 'warning' | 'error' | 'info' =
-            'default';
+          let color: 'default' | 'success' | 'warning' | 'error' | 'info' = 'default';
 
-          if (row.transactionType.includes('RECHARGE')) {
+          if (row.transactionType === TRANSACTION_TYPE.RECHARGE) {
             icon = <ArrowDownRight size={14} className="mr-1 inline" />;
             color = 'success';
-          } else if (row.transactionType.includes('WITHDRAW')) {
+          } else if (row.transactionType === TRANSACTION_TYPE.WITHDRAWAL) {
             icon = <ArrowUpRight size={14} className="mr-1 inline" />;
             color = 'warning';
           }
 
           const label =
-            TRANSACTION_TYPES_OPTIONS.find(
-              (o) => o.value === row.transactionType,
-            )?.label || row.transactionType;
+            TRANSACTION_TYPE_OPTIONS.find((o) => o.value === row.transactionType)?.label ||
+            String(row.transactionType);
 
           return (
             <Badge variant="outline" color={color}>
@@ -112,15 +116,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         width: 140,
         align: 'right',
         render: (_, row) => (
-          <AmountDisplay
-            amount={row.amount}
-            type={row.transactionType.includes('WITHDRAW') ? 'EXPENSE' : 'INCOME'} // 简化判断，实际按你的业务逻辑
-          />
+          <AmountDisplay amount={row.amount} type={row.transactionType} />
         ),
       },
       {
         title: 'Balance After',
-        dataIndex: 'balanceAfter',
+        dataIndex: 'afterBalance',
         width: 120,
         align: 'right',
         render: (dom) => (
@@ -135,12 +136,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         width: 200,
         render: (_, row) => (
           <div className="flex flex-col">
-            <span className="text-sm text-gray-700">
-              {row.remark || '-'}
-            </span>
-            {row.referenceId && (
+            <span className="text-sm text-gray-700">{row.remark || '-'}</span>
+            {row.relatedId && (
               <span className="text-xs text-gray-400 font-mono mt-1">
-                Ref: {row.referenceId}
+                Ref: {row.relatedId}
               </span>
             )}
           </div>
@@ -154,6 +153,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         sorter: true,
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -172,9 +172,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         defaultValue: 'ALL',
         options: [
           { label: 'All Types', value: 'ALL' },
-          ...TRANSACTION_TYPES_OPTIONS.map((opt) => ({
+          ...TRANSACTION_TYPE_OPTIONS.map((opt) => ({
             label: opt.label,
-            value: opt.value,
+            value: String(opt.value),
           })),
         ],
       },
@@ -191,16 +191,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   );
 
   const requestTransactions = useCallback(
-    async (params: TransactionListParams) => {
-      const { dateRange, ...rest } = params;
-      const requestData = { ...rest };
+    async (params: TransactionsListParams) => {
+      const { ...rest } = params;
+      const requestData: Partial<TransactionsListParams> = { ...rest };
 
-      if (requestData.transactionType === 'ALL')
-        delete requestData.transactionType;
-
-      if (dateRange?.to && dateRange.from) {
-        requestData.startDate = dateRange.from;
-        requestData.endDate = dateRange.to;
+      if ((requestData as Record<string, unknown>).transactionType === 'ALL') {
+        delete (requestData as Record<string, unknown>).transactionType;
       }
 
       const res = await financeApi.getTransactions(requestData);
@@ -215,8 +211,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   return (
     <div className="p-4">
-      <SmartTable<TransactionRecord>
-        rowKey="transactionId"
+      <SmartTable<WalletTransaction>
+        rowKey="id"
         headerTitle="Wallet Transactions"
         ref={actionRef}
         columns={columns}

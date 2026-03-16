@@ -7,7 +7,7 @@ import { useToastStore } from '@/store/useToastStore';
 import { AdminUser } from '@/type/types';
 import { userApi } from '@/api';
 import { useAntdTable, useRequest } from 'ahooks';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { CreateAdminUserModal } from '@/views/admin/CreateAdminUserModal';
 import { EditAdminUserModal } from '@/views/admin/EditAdminUserModal';
 import { EditAdminPasswordModal } from '@/views/admin/EditAdminPassowordModal';
@@ -161,7 +161,7 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
     onParamsChange?.({ username: '', realName: '', role: 'ALL', status: 'ALL' });
   };
 
-  const columns = useMemo(() => {
+  const columns: ColumnDef<AdminUser>[] = useMemo(() => {
     const columnHelper = createColumnHelper<AdminUser>();
 
     return [

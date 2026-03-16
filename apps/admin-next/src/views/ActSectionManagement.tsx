@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Card, Badge } from '@/components/UIComponents';
 import { useAntdTable, useRequest } from 'ahooks';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 
 import { Button, ModalManager } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
@@ -186,7 +186,7 @@ export const ActSectionManagement: React.FC<ActSectionManagementProps> = ({
     });
   };
 
-  const columns = useMemo(() => {
+  const columns: ColumnDef<actSectionWithProducts>[] = useMemo(() => {
     // --- Table Columns ---
     const columnHelper = createColumnHelper<actSectionWithProducts>();
 
