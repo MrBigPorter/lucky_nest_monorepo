@@ -7,7 +7,13 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { AdminListDto } from '@api/admin/user/dto/admin-list.dto';
 import { CreateAdminDto } from '@api/admin/user/dto/create-admin.dto';
-import { ADMIN_USER_STATUS, Role } from '@lucky/shared';
+import {
+  ADMIN_USER_STATUS,
+  Role,
+  RolePermissions,
+  RoleDescriptions,
+  OpModuleLabel,
+} from '@lucky/shared';
 import { UpdateAdminDto } from '@api/admin/user/dto/update-admin.dto';
 import { PasswordService } from '@api/common/service/password.service';
 
@@ -183,6 +189,62 @@ export class UserService {
         lastLoginAt: true,
         lastLoginIp: true,
       },
+    });
+  }
+
+  /**
+   * 获取所有角色及权限汇总 -- roles summary
+   * 返回每个角色的描述、权限列表、用户人数
+   */
+  async getRolesSummary() {
+    // 1. 按角色分组统计人数
+    const grouped = await this.prisma.adminUser.groupBy({
+      by: ['role'],
+      _count: { id: true },
+      where: { status: ADMIN_USER_STATUS.ACTIVE },
+    });
+
+    const countMap: Record<string, number> = {};
+    for (const row of grouped) {
+      countMap[row.role] = row._count.id;
+    }
+
+    // 2. 构建每个角色的汇总信息
+    const ALL_ROLES = Object.values(Role);
+
+    return ALL_ROLES.map((role) => {
+      const permissions: string[] =
+        role === Role.SUPER_ADMIN
+          ? ['*'] // 超级管理员拥有全部权限
+          : [
+              ...((RolePermissions as Record<string, readonly string[]>)[role] ??
+                []),
+            ];
+
+      // 将权限按模块分组
+      const permsByModule: Record<string, string[]> = {};
+      if (role === Role.SUPER_ADMIN) {
+        permsByModule['*'] = ['Full access to all modules'];
+      } else {
+        for (const perm of permissions) {
+          const [mod, action] = perm.split(':');
+          const modLabel = OpModuleLabel[mod] ?? mod;
+          if (!permsByModule[modLabel]) permsByModule[modLabel] = [];
+          permsByModule[modLabel].push(action);
+        }
+      }
+
+      const desc = RoleDescriptions[role];
+
+      return {
+        role,
+        nameEn: desc.en,
+        nameZh: desc.zh,
+        description: desc.description,
+        userCount: countMap[role] ?? 0,
+        permissions,
+        permissionsByModule: permsByModule,
+      };
     });
   }
 }
