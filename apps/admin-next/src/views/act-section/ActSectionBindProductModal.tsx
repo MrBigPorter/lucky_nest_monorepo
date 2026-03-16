@@ -6,7 +6,7 @@ import { actSectionApi, productApi } from '@/api';
 import { actSectionWithProducts, Product } from '@/type/types';
 import { Button, ModalManager } from '@repo/ui';
 import { Input } from '@/components/UIComponents';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { Link, Link2Off, Search } from 'lucide-react';
 import { useToastStore } from '@/store/useToastStore';
 import { BaseTable } from '@/components/scaffold/BaseTable';
@@ -128,7 +128,7 @@ export const ActSectionBindProductModal: React.FC<Props> = ({
   }, []);
 
   // 3. 表格列定义
-  const columns = useMemo(() => {
+  const columns: ColumnDef<Product>[] = useMemo(() => {
     const columnHelper = createColumnHelper<Product>();
     return [
       columnHelper.accessor('treasureName', {

@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/scaffold/PageHeader';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { useAntdTable, useRequest } from 'ahooks';
 import { orderApi } from '@/api';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { ORDER_STATUS, ORDER_STATUS_LABEL } from '@lucky/shared';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { ModalManager } from '@repo/ui';
@@ -241,7 +241,7 @@ export const OrderManagement: React.FC = () => {
   );
 
   // 7. Table Configuration
-  const columns = useMemo(() => {
+  const columns: ColumnDef<Order>[] = useMemo(() => {
     const columnsHelper = createColumnHelper<Order>();
     return [
       columnsHelper.accessor('orderNo', {

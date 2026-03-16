@@ -4,7 +4,7 @@ import React, { useCallback, useMemo } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
 import { bannerApi } from '@/api';
 import { Button, ModalManager } from '@repo/ui';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import {
   Edit3,
   Trash2,
@@ -161,7 +161,7 @@ export const BannerManagement: React.FC<BannerManagementProps> = ({
     [deleteBanner],
   );
 
-  const columns = useMemo(() => {
+  const columns: ColumnDef<Banner>[] = useMemo(() => {
     const columnHelper = createColumnHelper<Banner>();
     return [
       columnHelper.display({

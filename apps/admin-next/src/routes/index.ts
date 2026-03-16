@@ -123,6 +123,12 @@ export const routes: RouteConfig[] = [
     group: 'Operations',
   },
   {
+    path: '/operation-logs',
+    name: 'operationLogs',
+    icon: FileText,
+    group: 'Operations',
+  },
+  {
     path: '/lottery',
     name: 'lottery',
     icon: Zap,
