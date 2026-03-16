@@ -45,7 +45,15 @@ const StatusBadge: React.FC<{ status: number }> = ({ status }) => (
   </Badge>
 );
 
-export const CouponList: React.FC = () => {
+interface CouponListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const CouponList: React.FC<CouponListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const addToast = useToastStore((s) => s.addToast);
 
   // 1. 数据获取逻辑 (useAntdTable)
@@ -83,13 +91,23 @@ export const CouponList: React.FC = () => {
     defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
-      { keyword: '', status: 'ALL', couponType: 'ALL' },
+      {
+        keyword: (initialFormParams?.keyword as string) || '',
+        status: (initialFormParams?.status as string) || 'ALL',
+        couponType: (initialFormParams?.couponType as string) || 'ALL',
+      },
     ],
   });
 
   // 搜索处理
   const handleSearch = (values: CouponSearchForm) => {
     run({ current: 1, pageSize: 10 }, values);
+    onParamsChange?.(values);
+  };
+  
+  const handleReset = () => {
+    reset();
+    onParamsChange?.({ keyword: '', status: 'ALL', couponType: 'ALL' });
   };
 
   const dataSource = useMemo(
@@ -145,9 +163,13 @@ export const CouponList: React.FC = () => {
   useEffect(() => {
     run(
       { current: 1, pageSize: 10 },
-      { keyword: '', status: 'ALL', couponType: 'ALL' },
+      {
+        keyword: (initialFormParams?.keyword as string) || '',
+        status: (initialFormParams?.status as string) || 'ALL',
+        couponType: (initialFormParams?.couponType as string) || 'ALL',
+      },
     );
-  }, [run]);
+  }, [run, initialFormParams]);
 
   const columns = useMemo(() => {
     const columnHelper = createColumnHelper<Coupon>();
@@ -335,8 +357,13 @@ export const CouponList: React.FC = () => {
                 ),
               },
             ]}
+            initialValues={{
+              keyword: (initialFormParams?.keyword as string) || '',
+              status: (initialFormParams?.status as string) || 'ALL',
+              couponType: (initialFormParams?.couponType as string) || 'ALL',
+            }}
             onSearch={handleSearch}
-            onReset={reset}
+            onReset={handleReset}
           />
         </div>
 

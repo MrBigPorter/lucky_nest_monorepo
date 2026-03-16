@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TransactionList } from './finance/TransactionList';
 import { WithdrawalList } from './finance/WithdrawalList';
 import { DepositList } from './finance/DepositList';
@@ -16,10 +16,24 @@ import {
 import { NumHelper } from '@lucky/shared';
 import { useRequest } from 'ahooks';
 import { financeApi } from '@/api';
-export const FinancePage: React.FC = () => {
+
+interface FinancePageProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const FinancePage: React.FC<FinancePageProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const [activeTab, setActiveTab] = useState<
     'deposits' | 'transactions' | 'withdrawals'
-  >('transactions');
+  >((initialFormParams?.tab as any) || 'transactions');
+
+  // 当 Tab 切换时同步更新 URL
+  useEffect(() => {
+    onParamsChange?.({ tab: activeTab });
+  }, [activeTab, onParamsChange]);
 
   const {
     data: statistics,
@@ -122,9 +136,23 @@ export const FinancePage: React.FC = () => {
 
         {/* 3. 内容区域容器 */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 min-h-[600px] transition-all">
-          {activeTab === 'deposits' && <DepositList />}
+          {activeTab === 'deposits' && (
+            <DepositList
+              initialFormParams={initialFormParams}
+              onParamsChange={(params) =>
+                onParamsChange?.({ ...params, tab: 'deposits' })
+              }
+            />
+          )}
           {activeTab === 'transactions' && <TransactionList />}
-          {activeTab === 'withdrawals' && <WithdrawalList />}
+          {activeTab === 'withdrawals' && (
+            <WithdrawalList
+              initialFormParams={initialFormParams}
+              onParamsChange={(params) =>
+                onParamsChange?.({ ...params, tab: 'withdrawals' })
+              }
+            />
+          )}
         </div>
       </div>
     </div>

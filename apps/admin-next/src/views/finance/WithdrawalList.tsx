@@ -34,7 +34,15 @@ const ChannelIcon = ({ code, name }: { code?: string; name?: string }) => {
   );
 };
 
-export const WithdrawalList: React.FC = () => {
+interface WithdrawalListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const WithdrawalList: React.FC<WithdrawalListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
 
   const handleAudit = useCallback((record: WithdrawOrder) => {
@@ -246,6 +254,8 @@ export const WithdrawalList: React.FC = () => {
         ref={actionRef}
         columns={columns}
         searchSchema={searchSchema}
+        initialFormParams={initialFormParams}
+        onParamsChange={onParamsChange}
         request={requestWithdrawals}
       />
     </div>

@@ -166,7 +166,18 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({
 };
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export const GroupManagement: React.FC = () => {
+interface GroupManagementProps {
+  // Phase 3: URL searchParams 驱动 filter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialFormParams?: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onParamsChange?: (params: Record<string, any>) => void;
+}
+
+export const GroupManagement: React.FC<GroupManagementProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
 
   const handleViewDetail = useCallback((record: AdminGroupItem) => {
@@ -391,6 +402,8 @@ export const GroupManagement: React.FC = () => {
           request={requestGroups}
           searchSchema={searchSchema}
           defaultPageSize={20}
+          initialFormParams={initialFormParams}
+          onParamsChange={onParamsChange}
         />
       </Card>
     </div>

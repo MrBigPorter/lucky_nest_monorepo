@@ -543,6 +543,14 @@ export const authApi = {
   // 登出
   logout: () => http.post('/v1/auth/admin/logout'),
 
+  // 设置 HTTP-only Cookie（登录成功后调用，由后端写 httpOnly cookie）
+  setCookie: (token: string) =>
+    http.post<{ ok: boolean }>('/v1/auth/admin/set-cookie', { token }),
+
+  // 清除 HTTP-only Cookie（登出时调用）
+  clearCookie: () =>
+    http.post<{ ok: boolean }>('/v1/auth/admin/clear-cookie'),
+
   // 刷新 token
   refreshToken: () => http.post<{ token: string }>('/auth/refresh-token'),
 
@@ -586,6 +594,18 @@ export const statsApi = {
   getSalesTrend: (params: { startDate: string; endDate: string }) =>
     http.get<Array<{ date: string; revenue: number; orders: number }>>(
       '/stats/sales-trend',
+      params,
+    ),
+};
+
+/**
+ * 操作日志审计 API
+ */
+export const adminOperationLogApi = {
+  // 获取操作日志列表
+  getList: (params: import('@/type/types').AdminOperationLogListParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminOperationLog>>(
+      '/v1/admin/operation-logs/list',
       params,
     ),
 };

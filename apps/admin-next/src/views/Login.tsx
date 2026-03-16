@@ -42,11 +42,11 @@ export const Login: React.FC = () => {
 
   const { loading, runAsync } = useRequest(signIn, {
     manual: true,
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       if (result.tokens.accessToken) {
-        loginAction(result.tokens.accessToken);
+        await loginAction(result.tokens.accessToken);
         addToast('success', 'Welcome back, Admin!');
-        router.push('/'); // ← router.push instead of router.push('/')
+        router.push('/');
       } else {
         addToast('error', 'Login failed: No access token received.');
       }

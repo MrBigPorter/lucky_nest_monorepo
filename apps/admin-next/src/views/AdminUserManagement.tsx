@@ -68,7 +68,15 @@ const getAdminUserTableData = async (
   };
 };
 
-export const AdminUserManagement: React.FC = () => {
+interface AdminUserManagementProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const addToast = useToastStore((state) => state.addToast);
 
   // Modal states
@@ -89,10 +97,10 @@ export const AdminUserManagement: React.FC = () => {
     defaultParams: [
       { current: 1, pageSize: 10 },
       {
-        username: '',
-        realName: '',
-        role: 'ALL',
-        status: 'ALL',
+        username: (initialFormParams?.username as string) || '',
+        realName: (initialFormParams?.realName as string) || '',
+        role: (initialFormParams?.role as string) || 'ALL',
+        status: (initialFormParams?.status as string) || 'ALL',
       },
     ],
   });
@@ -145,6 +153,12 @@ export const AdminUserManagement: React.FC = () => {
   const handleSearch = (values: AdminUserSearchForm) => {
     // 自动重置到第一页，并带上所有条件
     run({ current: 1, pageSize: 10 }, values);
+    onParamsChange?.(values);
+  };
+  
+  const handleReset = () => {
+    reset();
+    onParamsChange?.({ username: '', realName: '', role: 'ALL', status: 'ALL' });
   };
 
   const columns = useMemo(() => {
@@ -314,8 +328,14 @@ export const AdminUserManagement: React.FC = () => {
                 ],
               },
             ]}
+            initialValues={{
+              username: (initialFormParams?.username as string) || '',
+              realName: (initialFormParams?.realName as string) || '',
+              role: (initialFormParams?.role as string) || 'ALL',
+              status: (initialFormParams?.status as string) || 'ALL',
+            }}
             onSearch={handleSearch}
-            onReset={reset}
+            onReset={handleReset}
           />
         </div>
         <BaseTable

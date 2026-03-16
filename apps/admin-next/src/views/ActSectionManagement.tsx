@@ -31,8 +31,16 @@ type ActSectionSearchForm = {
   status: string;
 };
 
+interface ActSectionManagementProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
 // --- 主页面组件 ---
-export const ActSectionManagement: React.FC = () => {
+export const ActSectionManagement: React.FC<ActSectionManagementProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const addToast = useToastStore((state) => state.addToast);
 
   // 获取数据 (useAntdTable 模式)
@@ -73,7 +81,10 @@ export const ActSectionManagement: React.FC = () => {
     defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
-      { title: '', status: 'ALL' },
+      { 
+        title: (initialFormParams?.title as string) || '', 
+        status: (initialFormParams?.status as string) || 'ALL' 
+      },
     ],
   });
 
@@ -81,6 +92,12 @@ export const ActSectionManagement: React.FC = () => {
   const handleSearch = (values: ActSectionSearchForm) => {
     // 自动重置到第一页，并带上所有条件
     run({ current: 1, pageSize: 10 }, values);
+    onParamsChange?.(values);
+  };
+  
+  const handleReset = () => {
+    reset();
+    onParamsChange?.({ title: '', status: 'ALL' });
   };
 
   const dataSource = useMemo(
@@ -338,8 +355,12 @@ export const ActSectionManagement: React.FC = () => {
                 ],
               },
             ]}
+            initialValues={{
+              title: (initialFormParams?.title as string) || '',
+              status: (initialFormParams?.status as string) || 'ALL',
+            }}
             onSearch={handleSearch}
-            onReset={reset}
+            onReset={handleReset}
           />
         </div>
 

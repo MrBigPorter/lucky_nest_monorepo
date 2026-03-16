@@ -1,6 +1,5 @@
 import type { NextConfig } from 'next';
 import path from 'path';
-import webpack from 'webpack';
 
 const nextConfig: NextConfig = {
   // standalone 模式 — 生产用 Node.js 服务器运行 (支持 SSR / Middleware / Server Components)
@@ -57,7 +56,7 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // Polyfill Node.js built-ins for browser bundles
     if (!isServer) {
       config.resolve.fallback = {

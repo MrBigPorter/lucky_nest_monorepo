@@ -29,7 +29,15 @@ type BannerSearchForm = {
   bannerCate: string;
 };
 
-export const BannerManagement: React.FC = () => {
+interface BannerManagementProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const BannerManagement: React.FC<BannerManagementProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const addToast = useToastStore((s) => s.addToast);
 
   const getTableData = async (
@@ -67,8 +75,8 @@ export const BannerManagement: React.FC = () => {
     defaultParams: [
       { current: 1, pageSize: 10 },
       {
-        title: '',
-        bannerCate: 'ALL',
+        title: (initialFormParams?.title as string) || '',
+        bannerCate: (initialFormParams?.bannerCate as string) || 'ALL',
       },
     ],
   });
@@ -77,6 +85,12 @@ export const BannerManagement: React.FC = () => {
   const handleSearch = (values: BannerSearchForm) => {
     // 自动重置到第一页，并带上所有条件
     run({ current: 1, pageSize: 10 }, values);
+    onParamsChange?.(values);
+  };
+
+  const handleReset = () => {
+    reset();
+    onParamsChange?.({ title: '', bannerCate: 'ALL' });
   };
 
   const dataSource = useMemo(
@@ -296,8 +310,12 @@ export const BannerManagement: React.FC = () => {
                 ],
               },
             ]}
+            initialValues={{
+              title: (initialFormParams?.title as string) || '',
+              bannerCate: (initialFormParams?.bannerCate as string) || 'ALL',
+            }}
             onSearch={handleSearch}
-            onReset={reset}
+            onReset={handleReset}
           />
         </div>
         <BaseTable
