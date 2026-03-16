@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import React, { useState, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/store/useAppStore';
-import { useAuthStore } from '@/store/useAuthStore';
 import { TRANSLATIONS } from '@/constants';
 import { routes } from '@/routes';
 import { Header } from './Header';
@@ -11,8 +10,9 @@ import { Sidebar } from './Sidebar';
 import { MainContent } from './MainContent';
 
 /**
- * DashboardLayout — 代替原 React 版的 Layout.tsx
- * 包含客户端 Auth Guard（静态导出模式下 middleware 不生效）
+ * DashboardLayout — 客户端 Layout Shell
+ * 认证保护由 middleware.ts 负责（server-side，无闪烁）
+ * 此组件只负责渲染 Sidebar / Header / MainContent 骨架
  */
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -21,22 +21,6 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
   const t = TRANSLATIONS[lang];
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-
-  // ── 客户端 Auth Guard ────────────────────────────────────────
-  const { isAuthenticated, checkAuth } = useAuthStore();
-  const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    checkAuth();
-    setAuthChecked(true);
-  }, [checkAuth]);
-
-  useEffect(() => {
-    if (authChecked && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [authChecked, isAuthenticated, router]);
 
   // ── 页面信息 ─────────────────────────────────────────────────
   const pageInfo = useMemo(() => {
@@ -55,14 +39,6 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
     return { title: 'LuxeAdmin', path: [] };
   }, [pathname, t]);
 
-  // 等待 auth 检查完毕，避免闪屏
-  if (!authChecked || !isAuthenticated) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-dark-950 text-slate-900 dark:text-slate-100 font-sans">

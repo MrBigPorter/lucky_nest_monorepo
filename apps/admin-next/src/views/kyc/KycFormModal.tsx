@@ -22,7 +22,7 @@ const KycFormSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   realName: z.string().min(1, 'Real name is required'),
   idNumber: z.string().min(1, 'ID number is required'),
-  idType: z.coerce.number().default(1), // 默认 1 (身份证)
+  idType: z.coerce.number(), // 默认 1 (身份证)
   remark: z.string().optional(),
 });
 
