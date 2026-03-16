@@ -609,3 +609,18 @@ export const adminOperationLogApi = {
       params,
     ),
 };
+
+/**
+ * RBAC 角色权限 API
+ */
+export const rolesApi = {
+  /**
+   * GET /v1/admin/user/roles-summary
+   * 返回所有角色的描述、权限列表、活跃用户人数
+   */
+  getSummary: () =>
+    http.get<import('@/type/types').RoleSummaryItem[]>(
+      '/v1/admin/user/roles-summary',
+    ),
+};
+

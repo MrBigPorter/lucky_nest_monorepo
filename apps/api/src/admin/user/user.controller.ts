@@ -77,4 +77,14 @@ export class UserController {
   async remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }
+
+  /**
+   * Get roles summary — role descriptions, permission list, active user counts
+   * Guarded by SYSTEM:UPDATE_ROLE (SUPER_ADMIN only)
+   */
+  @Get('roles-summary')
+  @RequirePermission(OpModule.SYSTEM, OpAction.SYSTEM.UPDATE_ROLE)
+  async getRolesSummary() {
+    return this.userService.getRolesSummary();
+  }
 }

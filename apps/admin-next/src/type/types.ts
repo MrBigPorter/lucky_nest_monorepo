@@ -1173,3 +1173,20 @@ export interface StatsTrend {
     count: number;
   }>;
 }
+
+/**
+ * GET /v1/admin/user/roles-summary — 单个角色汇总
+ */
+export interface RoleSummaryItem {
+  role: string;
+  nameEn: string;
+  nameZh: string;
+  description: string;
+  /** 活跃用户人数 */
+  userCount: number;
+  /** 权限字符串列表，e.g. ["user_management:view_user", ...] */
+  permissions: string[];
+  /** 权限按模块分组 { "用户管理": ["view_user", "ban_user"], ... } */
+  permissionsByModule: Record<string, string[]>;
+}
+
