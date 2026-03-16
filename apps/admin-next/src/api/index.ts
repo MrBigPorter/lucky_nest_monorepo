@@ -578,24 +578,24 @@ export const uploadApi = {
 };
 
 /**
- * 统计相关 API
+ * 数据分析统计 API
  */
 export const statsApi = {
-  // 获取仪表盘统计数据
-  getDashboardStats: () =>
-    http.get<{
-      totalUsers: number;
-      activeProducts: number;
-      totalRevenue: number;
-      totalOrders: number;
-    }>('/stats/dashboard'),
+  /**
+   * GET /v1/admin/stats/overview
+   * 返回用户、订单、收入、财务汇总数据
+   */
+  getOverview: () =>
+    http.get<import('@/type/types').StatsOverview>('/v1/admin/stats/overview'),
 
-  // 获取销售趋势
-  getSalesTrend: (params: { startDate: string; endDate: string }) =>
-    http.get<Array<{ date: string; revenue: number; orders: number }>>(
-      '/stats/sales-trend',
-      params,
-    ),
+  /**
+   * GET /v1/admin/stats/trend?days=30
+   * 返回最近 N 天的订单量 + 用户注册趋势
+   */
+  getTrend: (days = 30) =>
+    http.get<import('@/type/types').StatsTrend>('/v1/admin/stats/trend', {
+      days,
+    }),
 };
 
 /**

@@ -14,6 +14,7 @@ import { AdminRegionModule } from '@api/admin/region/admin-region.module';
 import { ClientUserModule } from '@api/admin/client-user/client-user.module';
 import { AdminPaymentChannelModule } from '@api/admin/payment-channel/payment-channel.module';
 import { GroupAdminModule } from '@api/admin/group/groups.module';
+import { StatsModule } from '@api/admin/stats/stats.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { GroupAdminModule } from '@api/admin/group/groups.module';
     ClientUserModule,
     AdminPaymentChannelModule,
     GroupAdminModule,
+    StatsModule,
   ],
   providers: [],
   controllers: [],
