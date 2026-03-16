@@ -1126,3 +1126,50 @@ export interface WorkOrder {
   createdAt: string;
   replies: { sender: 'user' | 'support'; message: string; time: string }[];
 }
+
+// --- STATS / ANALYTICS TYPES ---
+
+/**
+ * GET /v1/admin/stats/overview 返回结构
+ */
+export interface StatsOverview {
+  users: {
+    total: number;
+    today: number;
+    thisMonth: number;
+  };
+  orders: {
+    total: number;
+    today: number;
+    paid: number;
+  };
+  revenue: {
+    /** 累计订单收入（Decimal 字符串） */
+    total: string;
+    /** 今日订单收入 */
+    today: string;
+  };
+  finance: {
+    /** 累计充值成功金额 */
+    totalDeposit: string;
+    /** 待审核提现笔数 */
+    pendingWithdrawCount: number;
+    /** 待审核提现总金额 */
+    pendingWithdrawAmount: string;
+  };
+}
+
+/**
+ * GET /v1/admin/stats/trend 返回结构
+ */
+export interface StatsTrend {
+  orders: Array<{
+    date: string;    // "YYYY-MM-DD"
+    count: number;
+    revenue: string; // Decimal 字符串
+  }>;
+  users: Array<{
+    date: string;
+    count: number;
+  }>;
+}
