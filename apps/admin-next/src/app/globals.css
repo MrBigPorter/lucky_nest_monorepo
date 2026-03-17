@@ -92,11 +92,26 @@ body {
 ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
 
+/* ── Autofill: 覆盖浏览器强制注入的背景色和文字色 ─────────────────── */
+/* border 已移至 wrapper div，:-webkit-autofill 只能影响 <input> 本身 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px transparent inset;
-  box-shadow: 0 0 0 1000px transparent inset;
-  -webkit-text-fill-color: #f9fafb;
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #f9fafb inset !important;
+  box-shadow:         0 0 0 1000px #f9fafb inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827;
 }
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0d0d16 inset !important;
+  box-shadow:         0 0 0 1000px #0d0d16 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+}
+
 

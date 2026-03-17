@@ -11,6 +11,8 @@ import { useToastStore } from '@/store/useToastStore';
 class HttpClient {
   private readonly instance: AxiosInstance;
   private requestQueue = new Set<string>();
+  /** 防止多个并发 401 重复触发 toast + redirect */
+  private _unauthorizedHandling = false;
 
   constructor() {
     this.instance = axios.create({
@@ -118,9 +120,14 @@ class HttpClient {
   // ================= 错误处理 =================
 
   private handleBizError(data: ApiResponse) {
+    // 401 单独处理，不再额外弹 toast
+    if (data.code === 401) {
+      this.handleUnauthorized();
+      return;
+    }
+
     const fallbackMap: Record<number, string> = {
       400: '请求参数错误',
-      401: '未授权，请重新登录',
       403: '没有权限访问该资源',
       404: '请求资源不存在',
       500: '服务器内部错误',
@@ -129,10 +136,6 @@ class HttpClient {
     const msg =
       data.message || fallbackMap[data.code] || `业务错误（${data.code}）`;
 
-    // 401 单独处理
-    if (data.code === 401) {
-      this.handleUnauthorized();
-    }
 
     this.toastError(msg);
   }
@@ -143,32 +146,37 @@ class HttpClient {
       return;
     }
 
-    let msg = '网络请求失败，请稍后重试';
-
     if (error.response) {
       const { status, data } = error.response;
-      msg = data?.message || `服务器错误（${status}）`;
 
       if (status === 401) {
         this.handleUnauthorized();
+        return;
       }
+
+      const msg = data?.message || `服务器错误（${status}）`;
+      this.toastError(msg);
     } else if (error.request) {
-      msg = 'unknown network error, please check your connection';
+      this.toastError('网络请求失败，请检查网络连接');
     } else {
-      msg = error.message || msg;
+      this.toastError(error.message || '网络请求失败，请稍后重试');
     }
 
     console.error('[HTTP Error]', error);
-    this.toastError(msg);
   }
 
   private handleUnauthorized() {
-    // 清 token
+    // 多个并发请求同时 401 时，只处理一次
+    if (this._unauthorizedHandling) return;
+    this._unauthorizedHandling = true;
+
     localStorage.removeItem('auth_token');
 
-    // 跳登录
     if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
+      this.toastError('登录已过期，请重新登录');
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1200);
     }
   }
 
