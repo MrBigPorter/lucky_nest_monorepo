@@ -8,6 +8,7 @@ import { CreateBannerDto } from '@api/admin/banner/dto/create-banner.dto';
 import { BANNER_STATE, BANNER_VALID_STATE, JUMP_CATE } from '@lucky/shared';
 import { QueryBannerDto } from '@api/admin/banner/dto/query-banner.dto';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { UpdateBannerDto } from '@api/admin/banner/dto/update-banner.dto';
 
 @Injectable()
@@ -104,12 +105,11 @@ export class BannerService {
           ...dto,
         },
       });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new NotFoundException(`Banner with id ${id} not found`);
+    } catch (error: unknown) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`Banner with id ${id} not found`);
+        }
       }
       throw error;
     }
