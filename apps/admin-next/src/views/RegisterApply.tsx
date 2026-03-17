@@ -93,6 +93,7 @@ export function RegisterApply() {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     defaultValues: {
       username: '',
       password: '',
@@ -178,7 +179,11 @@ export function RegisterApply() {
           {submitted ? (
             <SuccessScreen />
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-4"
+              noValidate
+            >
               {/* Username */}
               <div className="relative group">
                 <User

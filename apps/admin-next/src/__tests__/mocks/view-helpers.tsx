@@ -104,6 +104,95 @@ export const repoUiMock = {
   DropdownMenuTrigger: ({ children }: React.PropsWithChildren) => (
     <div>{children}</div>
   ),
+  // ─── Form components (used by SchemaSearchForm) ───────────────
+  Form: ({ children }: React.PropsWithChildren) => <>{children}</>,
+  FormField: ({
+    render: renderProp,
+  }: {
+    render: (p: { field: object }) => React.ReactNode;
+  }) => <>{renderProp({ field: {} })}</>,
+  FormItem: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  FormLabel: ({ children }: React.PropsWithChildren) => (
+    <label>{children}</label>
+  ),
+  FormControl: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
+  FormMessage: ({ children }: React.PropsWithChildren) => (
+    <span>{children}</span>
+  ),
+  FormTextField: ({
+    name,
+    label,
+    placeholder,
+  }: {
+    name?: string;
+    label?: string;
+    placeholder?: string;
+  }) => (
+    <div>
+      {label && <label htmlFor={name}>{label}</label>}
+      <input id={name} name={name} placeholder={placeholder} />
+    </div>
+  ),
+  FormSelectField: ({
+    name,
+    label,
+    options = [],
+    placeholder,
+  }: {
+    name?: string;
+    label?: string;
+    options?: { label: string; value: string }[];
+    placeholder?: string;
+  }) => (
+    <div>
+      {label && <label htmlFor={name}>{label}</label>}
+      <select id={name} name={name} aria-label={placeholder}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+  FormDateField: ({ name, label }: { name?: string; label?: string }) => (
+    <div>
+      {label && <label htmlFor={name}>{label}</label>}
+      <input type="date" id={name} name={name} />
+    </div>
+  ),
+  FormTextareaField: ({ name, label }: { name?: string; label?: string }) => (
+    <div>
+      {label && <label htmlFor={name}>{label}</label>}
+      <textarea id={name} name={name} />
+    </div>
+  ),
+  FormPasswordField: ({
+    name,
+    label,
+    placeholder,
+  }: {
+    name?: string;
+    label?: string;
+    placeholder?: string;
+  }) => (
+    <div>
+      {label && <label htmlFor={name}>{label}</label>}
+      <input type="password" id={name} name={name} placeholder={placeholder} />
+    </div>
+  ),
+  FormCheckboxField: ({ name, label }: { name?: string; label?: string }) => (
+    <div>
+      <input type="checkbox" id={name} name={name} />
+      {label && <label htmlFor={name}>{label}</label>}
+    </div>
+  ),
+  FormSwitchField: ({ name, label }: { name?: string; label?: string }) => (
+    <div>
+      <input type="checkbox" role="switch" id={name} name={name} />
+      {label && <label htmlFor={name}>{label}</label>}
+    </div>
+  ),
 };
 
 // ─── @repo/ui/components/ui/badge stub ──────────────────────────

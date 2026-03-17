@@ -174,10 +174,11 @@ class HttpClient {
 
     if (window.location.pathname !== '/login') {
       this.toastError('登录已过期，请重新登录');
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 1200);
+      window.location.href = '/login';
     }
+
+    // Reset flag so the guard works correctly after navigation / in tests
+    this._unauthorizedHandling = false;
   }
 
   // ================= Toast 封装 =================
