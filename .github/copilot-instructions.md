@@ -1,15 +1,14 @@
 # Lucky Nest Monorepo — Copilot 工作指令
 
-> **重要**: 每次对话先看 `## 🎯 当前任务`，按 Phase 推进，不做计划外的事。  
-> 完成一个 checkbox 后立即将 `[ ]` 改为 `[x]` 并更新本文件。
+> **重要**: 每次对话先看 `## 🎯 当前任务`，按 Phase 推进，不做计划外的事。
 
 ---
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 5 — 遗漏功能补全  
-**上次停留**: Phase 4 全部完成（2026-03-16）  
-**立即执行**: 按下方 Phase 5 清单逐项推进
+**阶段**: Phase 6 — 待规划  
+**上次停留**: Phase 5 全部完成（2026-03-17）  
+**立即执行**: 从下方 Phase 6 候选表中选定方向，展开为 checkbox 后开始
 
 ---
 
@@ -76,119 +75,54 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 
 ---
 
-## 三、SSR 升级路线图
+## 三、迭代历史
 
-### ✅ Phase 0 — 基础设施准备（完成 2026-03-16）
-> 详细记录见 `read/REFACTOR_PHASE0_CN.md`
+| Phase | 内容摘要 | 完成日期 |
+|-------|---------|---------|
+| Phase 0 | standalone 部署 · FOUC 防闪烁 · Dockerfile · Nginx · CI/CD 迁 VPS · SSR 修复 · TS 类型修复 | 2026-03-16 |
+| Phase 1 | HTTP-only Cookie 认证 · 服务端路由守卫 · XSS 风险消除 | 2026-03-16 |
+| Phase 2 | Dashboard SSR 数据预取 · react-query · HydrationBoundary · 内网直连 | 2026-03-16 |
+| Phase 3 | 列表页 Hybrid 模式 · URL searchParams 驱动 filter | 2026-03-16 |
+| Phase 5 | 广告/秒杀/系统配置/IM客服/登录日志 — 后端+前端全部补齐，Socket 实时升级 | 2026-03-17 |
 
-`standalone` 部署 · FOUC 防闪烁 · Dockerfile 重写 · Nginx 反向代理 · CI/CD 迁到 VPS · `dynamic(ssr:false)` 移除 · `FormRichTextField` SSR 修复 · TS 类型修复（hookform/resolvers v5）— **全部完成**
-
-**Phase 0 遗留（已全部收尾 2026-03-16）**:
-- [x] `PaymentChannelModal.tsx`: 移除 schema 中 `sortOrder/isCustom/feeFixed/feeRate` 的 `.default()`
-- [x] `middleware.ts`: 更新顶部注释（已更正为 standalone 下生效）
-
----
-
-### ✅ Phase 1 — 认证系统迁移（完成 2026-03-16）
-> 详情: HTTP-only Cookie 认证，消除 XSS 风险，服务端路由守卫
-
-- [x] **后端** 新增 `POST /v1/auth/admin/set-cookie` + `POST /v1/auth/admin/clear-cookie`
-- [x] **前端** `useAuthStore.login()` 改为 async 双写（localStorage + HTTP-only Cookie）
-- [x] **前端** `useAuthStore.logout()` 同步清除 HTTP-only Cookie
-- [x] **前端** `DashboardLayout` → Server Component，服务端读 Cookie，未登录 `redirect('/login')`
-- [x] **前端** `middleware.ts` 注释更新，说明 standalone 下已生效
+> 详细改造记录见 `read/` 目录下各 Phase 文档。
 
 ---
 
-### ✅ Phase 2 — Dashboard SSR 数据预取（完成 2026-03-16）
-> 目标: LCP 从 ~1.3s → ~200ms | 文档: `read/REFACTOR_PHASE2_CN.md`
+## 四、业务功能状态（22 项全部完成）
 
-- [x] `app/(dashboard)/page.tsx` → Server Component + `<Suspense>` streaming
-- [x] `DashboardStats` → Server Component（服务端 fetch 统计数据）
-- [x] `DashboardOrdersClient` → Client Component（`useQuery` + HydrationBoundary）
-- [x] `DashboardHeader` → Client Component（刷新按钮，`router.refresh()` + `invalidateQueries`）
-- [x] `src/lib/serverFetch.ts` → 服务端专用 fetch 工具（读 Cookie，支持 `INTERNAL_API_URL` 内网直连）
-- [x] `Providers.tsx` → 接入 `QueryClientProvider`（遵循 react-query SSR 最佳实践）
-- [x] `INTERNAL_API_URL` → 注入 `compose.yml` / `compose.prod.yml` / `.env.development`（Server Component 内网直连后端，绕过公网）
-- [x] `next.config.ts` → 修复 TS2307（webpack 改为从 callback 解构）
-- [ ] Lighthouse 验证 LCP < 500ms
+登录登出 · 后台用户管理 · Banner · 分类 · 产品 · 订单 · 用户+KYC · 财务（充值/提现/审核）· 支付渠道 · 优惠券 · Act Section · 地址 · 拼团 · 操作日志审计 · RBAC 权限角色管理 · 数据分析仪表板 · 通知/推送管理 · 广告管理 · 秒杀活动 · 系统配置 · IM 客服接待台 · 登录日志
 
 ---
 
-### ✅ Phase 3 — 列表页 Hybrid 模式（完成 2026-03-16）
-> 目标: URL searchParams 驱动服务端 filter，支持分享带条件链接
+## 五、Phase 6 — 待规划
 
-- [x] 列表页 `page.tsx` → Server Component，接收 `searchParams` prop
-- [x] View 组件重命名 `XxxClient.tsx`，接收 `initialData` prop
-- [x] URL searchParams 驱动 filter（替代客户端 `useState` filter）
-- [x] 受影响页面: `/users`
-- [x] 受影响页面: `/orders` 
-- [x] 受影响页面: `/products`
-- [x] 受影响页面: `/banners` `/kyc` `/finance` `/groups`
+> 从下表选定方向后，在 `🎯 当前任务` 区块展开为具体 checkbox 再开始执行。
 
----
-
-### 🚧 Phase 5 — 遗漏功能补全
-
-> **依据**: 对比 Prisma schema 与已有 admin 模块，发现以下模型有数据无管控界面。
-
-#### 5-A. 广告管理（Advertisement）
-> `advertisements` 表已有，`/client/ads/` 已有客户端接口，admin 侧完全缺失
-
-- [ ] **后端** 新建 `apps/api/src/admin/ads/` — CRUD + 状态切换接口
-- [ ] **前端** 新建 `app/(dashboard)/ads/page.tsx` + `views/AdsManagement.tsx`
-
-#### 5-B. 秒杀活动管理（Flash Sale）
-> `flash_sale_sessions` / `flash_sale_products` 表已有，前后端均无 admin 实现
-
-- [ ] **后端** 新建 `apps/api/src/admin/flash-sale/` — 场次 CRUD + 商品绑定接口
-- [ ] **前端** 新建 `app/(dashboard)/flash-sale/page.tsx` + `views/FlashSaleManagement.tsx`
-
-#### 5-C. 系统配置管理（System Config）
-> `system_configs` KV 表已有，seed 脚本已初始化汇率，无 admin UI
-
-- [ ] **后端** 新建 `apps/api/src/admin/system-config/` — 列表查询 + 单项更新接口
-- [ ] **前端** 新建 `app/(dashboard)/settings/page.tsx` + `views/SystemConfig.tsx`
-
-#### 5-D. IM / 聊天管理（Chat Moderation）
-> `conversations` / `chat_messages` / `chat_members` 表完整，客户端 Socket 已运行，admin 无任何管控
-
-- [x] **后端** 新建 `apps/api/src/admin/chat/` — 会话列表 + 消息查询 + 撤回接口
-- [x] **前端** 新建 `app/(dashboard)/im/page.tsx` + `views/CustomerServiceDesk.tsx`（客服接待台：左侧会话列表 + 右侧聊天窗口 + 10s 轮询）
-
-#### 5-E. 用户登录日志（User Login Log）
-> `user_login_logs` 表数据丰富，无 admin 查询页（安全审计用）
-
-- [ ] **后端** 新建 `apps/api/src/admin/login-log/` — 分页查询（按用户/IP/时间筛选）
-- [ ] **前端** 新建 `app/(dashboard)/login-logs/page.tsx` + `views/LoginLogList.tsx`
+| 候选项 | 说明 | 优先级 |
+|--------|------|--------|
+| Lighthouse 性能验收 | 验证 LCP < 500ms（Phase 2 遗留） | 🔴 高 |
+| 移动端响应式适配 | Admin 页面在平板/手机上的布局优化 | 🟡 中 |
+| 批量操作 | 订单/用户批量状态变更、批量导出 CSV | 🟡 中 |
+| 国际化完善 | 所有新增页面补充 `zh` 翻译 key | 🟡 中 |
+| E2E 覆盖率提升 | 为 CRUD 新建流程补充完整表单填写 + 提交测试 | 🟢 低 |
+| 单元测试补全 | Phase 5 新 view 组件（AdsManagement 等）补 Vitest 测试 | 🟢 低 |
 
 ---
 
-## 四、业务功能状态
-
-**已完成（13 项）**: 登录登出 · 后台用户管理 · Banner · 分类 · 产品 · 订单 · 用户+KYC · 财务（充值/提现/审核）· 支付渠道 · 优惠券 · Act Section · 地址 · 拼团
-
-**待完成**:
-- [x] 操作日志审计页面（2026-03-16 完成：后端字段对齐、双重请求 bug 修复、Jest→Vitest 测试重写）
-- [x] RBAC 权限角色管理界面（后端 `RolesGuard` 已有，缺前端页面，2026-03-16 完成：rbac.config 补 FINANCE 角色权限 + RoleDescriptions，后端新增 GET /admin/user/roles-summary，前端 RolesManagement 卡片视图 + 内联用户面板）
-- [x] 数据分析仪表板（接入真实统计接口，替换当前 mock 图表，2026-03-16 完成：后端 StatsModule 新增 overview + trend 接口，前端 AnalyticsOverview SSR + AnalyticsTrendSection Client Component）
-- [x] 通知/推送管理（Firebase Admin SDK 已集成，2026-03-16 完成：schema 新增 AdminPushLog 模型 + prisma migrate dev + notification.service.ts 去 `as any` + admin controller 4 接口全通）
-
----
-
-## 五、已知风险
+## 六、已知风险
 
 | 问题 | 级别 | 状态 |
 |------|------|------|
 | `auth_token` Cookie 非 HTTP-only，XSS 可窃取 token | 🔴 高 | ✅ Phase 1 已修复 |
 | VPS 1GB RAM，Docker 镜像过多可能 OOM | 🔴 高 | 已用 Alpine + standalone 优化，持续监控 |
-| Firebase SDK JSON 格式错误（韩文字符在环境变量中） | 🟡 中 | ✅ 已修复，`.env.dev` / `.env.prod` 均为标准英文 JSON，无非法字符 |
-| `middleware.ts` 注释过时（写着"生产不生效"） | 🟡 中 | ✅ Phase 0 已修复 |
+| Firebase SDK JSON 格式错误（韩文字符在环境变量中） | 🟡 中 | ✅ 已修复 |
+| `middleware.ts` 注释过时 | 🟡 中 | ✅ Phase 0 已修复 |
 | CI 缓存已禁用（GHA 存储不足），每次全量安装慢 | 🟢 低 | 待迁移 Docker Hub 后重启缓存 |
 
 ---
 
-## 六、工作原则（每次对话必须遵守）
+## 七、工作原则（每次对话必须遵守）
 
 1. **先看 `🎯 当前任务` → 确认 Phase → 再动手**，不做 Phase 之外的事
 2. **每完成一个 checkbox 立即更新本文件**（`[ ]` → `[x]`），保持进度同步

@@ -65,6 +65,13 @@
 | [Phase 0 — 基础设施 (REFACTOR_PHASE0_CN.md)](./REFACTOR_PHASE0_CN.md) | standalone 模式、Dockerfile、Nginx、CI/CD 迁移 |
 | [Phase 2 — Dashboard SSR (REFACTOR_PHASE2_CN.md)](./REFACTOR_PHASE2_CN.md) | Server Component、HydrationBoundary、serverFetch、内网直连 |
 
+### 测试与 Bug 修复
+
+| 文档 | 内容 |
+|------|------|
+| [自动化测试指南 (TESTING_CN.md)](./TESTING_CN.md) | Vitest 单元测试 + Playwright E2E 全指南 |
+| [Phase 5 E2E 补全 & Bug 修复 (PHASE5_E2E_AND_BUGFIX_CN.md)](./PHASE5_E2E_AND_BUGFIX_CN.md) | 2026-03-17：9 个新 E2E spec、auth warmup 扩展、SmartTable render 参数误用导致的 `RangeError` 根因与修复 |
+
 ---
 
 ## 3. 开发规范

@@ -81,7 +81,7 @@ services:
       - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-https://api.joyminis.com}
       # Server Components 直连后端（内网，不走公网）
-      - INTERNAL_API_URL=http://lucky-backend-prod:3000
+      - INTERNAL_API_URL=http://lucky-backend-prod:3000/api
       - NEXT_PUBLIC_APP_ENV=production
     deploy:
       resources:

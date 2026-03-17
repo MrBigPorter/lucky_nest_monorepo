@@ -13,7 +13,14 @@ import { AdminOperationLog, AdminOperationLogListParams } from '@/type/types';
 import { Card } from '@/components/UIComponents';
 import { adminOperationLogApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
+
+/** Safe date formatter — returns '—' for null, undefined, or invalid dates */
+function safeFormat(val: string | null | undefined, fmt: string): string {
+  if (!val) return '—';
+  const d = parseISO(val);
+  return isValid(d) ? format(d, fmt) : '—';
+}
 
 interface OperationLogListProps {
   initialFormParams?: Record<string, unknown>;
@@ -92,8 +99,7 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
             AUDIT: 'bg-purple-100 text-purple-800',
             EXPORT: 'bg-orange-100 text-orange-800',
           };
-          const cls =
-            colorMap[action as string] || 'bg-gray-100 text-gray-700';
+          const cls = colorMap[action as string] || 'bg-gray-100 text-gray-700';
           return (
             <span
               className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}
@@ -125,11 +131,9 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
         title: 'Time',
         dataIndex: 'createdAt',
         valueType: 'dateTime',
-        render: (date) => (
+        render: (_dom, row) => (
           <div className="text-xs text-gray-500 whitespace-nowrap">
-            {date
-              ? format(new Date(date as string), 'yyyy-MM-dd HH:mm:ss')
-              : '—'}
+            {safeFormat(row.createdAt, 'yyyy-MM-dd HH:mm:ss')}
           </div>
         ),
       },
@@ -170,12 +174,7 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
                     </div>
                     <div>
                       <span className="font-semibold">Time: </span>
-                      {row.createdAt
-                        ? format(
-                            new Date(row.createdAt),
-                            'yyyy-MM-dd HH:mm:ss',
-                          )
-                        : '—'}
+                      {safeFormat(row.createdAt, 'yyyy-MM-dd HH:mm:ss')}
                     </div>
                     <div className="flex justify-end pt-2">
                       <Button onClick={close}>Close</Button>

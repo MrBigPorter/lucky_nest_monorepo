@@ -20,7 +20,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@lucky/shared';
 
-@Controller('v1/admin/flash-sale')
+@Controller('admin/flash-sale')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class FlashSaleController {
   constructor(private readonly service: FlashSaleService) {}

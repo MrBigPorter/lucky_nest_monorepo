@@ -5,7 +5,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@lucky/shared';
 
-@Controller('v1/admin/stats')
+@Controller('admin/stats')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class StatsController {
   constructor(private readonly statsService: StatsService) {}
