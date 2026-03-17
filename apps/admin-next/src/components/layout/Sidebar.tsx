@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={`flex items-center gap-3 px-4 py-6 mb-4 transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-500/20 flex-shrink-0">
-              L
+              J
             </div>
             <motion.h1
               animate={{
@@ -122,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
               className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 overflow-hidden whitespace-nowrap"
             >
-              LuxeAdmin
+              JoyMini Admin
             </motion.h1>
           </div>
 

@@ -47,7 +47,6 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
         <Header
           onMenuButtonClick={() => setMobileMenuOpen(true)}
           breadcrumbs={pageInfo.breadcrumbs}
-          pageTitle={''}
         />
         <MainContent>{children}</MainContent>
       </div>
