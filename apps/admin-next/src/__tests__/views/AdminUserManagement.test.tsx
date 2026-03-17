@@ -34,6 +34,9 @@ vi.mock('@/api', () => ({
     updateUser: vi.fn().mockResolvedValue({}),
     deleteUser: vi.fn().mockResolvedValue({}),
   },
+  applicationApi: {
+    pendingCount: vi.fn().mockResolvedValue({ count: 0 }),
+  },
 }));
 vi.mock('@/views/admin/CreateAdminUserModal', () => ({
   CreateAdminUserModal: () => <div data-testid="create-admin-modal" />,
@@ -65,7 +68,7 @@ describe('AdminUserManagement', () => {
 
   it('renders "Admin Users" page header', () => {
     render(<AdminUserManagement />);
-    expect(screen.getByText(/admin users/i)).toBeInTheDocument();
+    expect(screen.getByTestId('page-header')).toHaveTextContent(/admin users/i);
   });
 
   it('renders the admin users table', () => {

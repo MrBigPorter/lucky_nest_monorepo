@@ -15,6 +15,17 @@ vi.mock('framer-motion', () => framerMotionMock);
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
 }));
+vi.mock('next/link', () => ({
+  default: ({
+    href,
+    children,
+    ...rest
+  }: React.PropsWithChildren<{ href: string; className?: string }>) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 vi.mock('@/store/useAuthStore', () => ({
   useAuthStore: (sel: (s: { login: typeof mockLogin }) => unknown) =>
     sel({ login: mockLogin }),
@@ -26,6 +37,18 @@ vi.mock('@/store/useToastStore', () => ({
 vi.mock('@/api', () => ({
   authApi: { login: mockAuthLogin },
 }));
+
+// ── shared test fixtures ──────────────────────────────────────────
+const MOCK_USER_INFO = {
+  id: 'admin-1',
+  username: 'admin',
+  realName: 'Test Admin',
+  role: 'SUPER_ADMIN',
+  status: 1,
+  roleId: '',
+  roleName: 'Super Admin',
+  lastLoginAt: 0,
+};
 
 // ── subject ──────────────────────────────────────────────────────
 import { Login } from '@/views/Login';
@@ -44,6 +67,13 @@ describe('Login page', () => {
     expect(
       screen.getByRole('button', { name: /sign in/i }),
     ).toBeInTheDocument();
+  });
+
+  it('renders "Apply for access" link pointing to /register-apply', () => {
+    render(<Login />);
+    const link = screen.getByRole('link', { name: /apply for access/i });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '/register-apply');
   });
 
   it('shows validation errors when submitting empty form', async () => {
@@ -66,7 +96,10 @@ describe('Login page', () => {
   });
 
   it('calls authApi.login with correct credentials on valid submit', async () => {
-    mockAuthLogin.mockResolvedValue({ tokens: { accessToken: 'test-token' } });
+    mockAuthLogin.mockResolvedValue({
+      tokens: { accessToken: 'test-token' },
+      userInfo: MOCK_USER_INFO,
+    });
     const user = userEvent.setup();
     render(<Login />);
     await user.type(screen.getByPlaceholderText('Username'), 'admin');
@@ -81,14 +114,21 @@ describe('Login page', () => {
   });
 
   it('stores token and redirects to / on success', async () => {
-    mockAuthLogin.mockResolvedValue({ tokens: { accessToken: 'jwt-abc' } });
+    mockAuthLogin.mockResolvedValue({
+      tokens: { accessToken: 'jwt-abc' },
+      userInfo: MOCK_USER_INFO,
+    });
     const user = userEvent.setup();
     render(<Login />);
     await user.type(screen.getByPlaceholderText('Username'), 'admin');
     await user.type(screen.getByPlaceholderText('Password'), 'secret99');
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith('jwt-abc');
+      expect(mockLogin).toHaveBeenCalledWith(
+        'jwt-abc',
+        'SUPER_ADMIN',
+        expect.objectContaining({ id: 'admin-1', role: 'SUPER_ADMIN' }),
+      );
       expect(mockAddToast).toHaveBeenCalledWith(
         'success',
         expect.stringContaining('Welcome'),
@@ -98,7 +138,10 @@ describe('Login page', () => {
   });
 
   it('shows error toast on login failure (no access token)', async () => {
-    mockAuthLogin.mockResolvedValue({ tokens: { accessToken: '' } });
+    mockAuthLogin.mockResolvedValue({
+      tokens: { accessToken: '' },
+      userInfo: MOCK_USER_INFO,
+    });
     const user = userEvent.setup();
     render(<Login />);
     await user.type(screen.getByPlaceholderText('Username'), 'admin');

@@ -18,7 +18,14 @@ export const useAppStore = create<AppState>()(
       lang: 'en',
       isSidebarCollapsed: false,
       toggleTheme: () =>
-        set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+        set((state) => {
+          const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+          if (typeof document !== 'undefined') {
+            document.documentElement.classList.remove('dark', 'light');
+            document.documentElement.classList.add(newTheme);
+          }
+          return { theme: newTheme };
+        }),
       toggleLang: () =>
         set((state) => ({ lang: state.lang === 'en' ? 'zh' : 'en' })),
       toggleSidebar: () =>

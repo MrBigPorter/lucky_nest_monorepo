@@ -3,14 +3,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   repoUiMock,
-  SmartTableMock,
+  BaseTableMock,
+  SchemaSearchFormMock,
   PageHeaderMock,
+  makeUseAntdTable,
 } from '../mocks/view-helpers';
+
+const mockUseAntdTable = vi.hoisted(() => vi.fn());
 
 // ── mocks ────────────────────────────────────────────────────────
 vi.mock('@repo/ui', () => repoUiMock);
-vi.mock('@/components/scaffold/SmartTable', () => ({
-  SmartTable: SmartTableMock,
+vi.mock('ahooks', () => ({
+  useAntdTable: (...args: unknown[]) => mockUseAntdTable(...args),
+}));
+vi.mock('@/components/scaffold/BaseTable', () => ({
+  BaseTable: BaseTableMock,
+}));
+vi.mock('@/components/scaffold/SchemaSearchForm', () => ({
+  SchemaSearchForm: SchemaSearchFormMock,
 }));
 vi.mock('@/components/scaffold/PageHeader', () => ({
   PageHeader: PageHeaderMock,
@@ -36,15 +46,18 @@ vi.mock('@/views/payment-channel/PaymentChannelModal', () => ({
 import { PaymentChannelList } from '@/views/PaymentChannelList';
 
 describe('PaymentChannelList', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAntdTable.mockReturnValue(makeUseAntdTable([], 0));
+  });
 
   it('renders without crashing', () => {
     expect(render(<PaymentChannelList />).container.firstChild).not.toBeNull();
   });
 
-  it('renders SmartTable', () => {
+  it('renders BaseTable', () => {
     render(<PaymentChannelList />);
-    expect(screen.getByTestId('smart-table')).toBeInTheDocument();
+    expect(screen.getByTestId('base-table')).toBeInTheDocument();
   });
 
   it('renders page header', () => {
