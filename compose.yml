@@ -41,6 +41,8 @@ services:
                echo '>>> yarn.lock unchanged - skipping install';
              fi &&
              export PATH=/app/node_modules/.bin:$$PATH &&
+             echo '>>> Applying pending DB migrations...' &&
+             yarn workspace @lucky/api pr:deploy &&
              yarn workspace @lucky/api start:dev"
     expose:
       - "3000"

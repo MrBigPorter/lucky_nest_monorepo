@@ -7,10 +7,12 @@ if [ $# -gt 0 ]; then
   exec "$@"
 fi
 
-# 仅在 RUN_MIGRATIONS=true 时执行迁移 (首次部署或手动触发)
-if [ "$RUN_MIGRATIONS" = "true" ]; then
+# 默认总是执行迁移（prisma migrate deploy 幂等，只应用尚未执行的迁移）
+# 若需跳过（极少情况），显式设置 SKIP_MIGRATIONS=true
+if [ "$SKIP_MIGRATIONS" != "true" ]; then
   echo "→ Prisma migrate deploy"
   ./apps/api/node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma
+  echo "→ Migrations done"
 fi
 
 echo "→ Start Nest"
