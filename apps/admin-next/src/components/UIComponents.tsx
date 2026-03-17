@@ -200,11 +200,16 @@ export const Input: React.FC<
         {label}
       </label>
     )}
-    <input
-      className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-black/20 border ${error ? 'border-red-500' : 'border-gray-200 dark:border-white/10'} rounded-lg focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-white placeholder-gray-400 dark:placeholder-gray-600 ${className}`}
-      {...props}
-    />
-    {error && <span className="text-xs text-red-500 mt-1">{error}</span>}
+    {/* border/ring 放在 wrapper，:-webkit-autofill 只作用于 <input>，永远影响不到这里的边框 */}
+    <div
+      className={`flex items-center bg-gray-50 dark:bg-black/20 border ${error ? 'border-red-500' : 'border-gray-200 dark:border-white/10'} rounded-lg focus-within:ring-2 focus-within:ring-primary-500/50 focus-within:border-primary-500 transition-all`}
+    >
+      <input
+        className={`w-full px-4 py-2.5 bg-transparent border-0 outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 ${className}`}
+        {...props}
+      />
+    </div>
+    {error && <span className="block text-xs text-red-500 mt-1">{error}</span>}
   </div>
 );
 

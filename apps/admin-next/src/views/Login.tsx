@@ -93,7 +93,7 @@ export const Login: React.FC = () => {
               transition={{ delay: 0.2, type: 'spring' }}
               className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/30 mb-4"
             >
-              L
+              J
             </motion.div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Welcome Back
@@ -154,7 +154,7 @@ export const Login: React.FC = () => {
           transition={{ delay: 0.5 }}
           className="mt-8 text-center text-gray-400 text-xs"
         >
-          &copy; 2024 LuxeAdmin Pro. All rights reserved.
+          &copy; {new Date().getFullYear()} JoyMini Admin. All rights reserved.
         </motion.div>
       </div>
     </div>
