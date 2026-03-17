@@ -11,6 +11,7 @@ import { TRANSLATIONS, ROLE_DISPLAY_NAMES } from '@/constants';
 import { routes, RouteConfig } from '@/routes';
 import { useRequest } from 'ahooks';
 import { motion, AnimatePresence } from 'framer-motion';
+import { applicationApi } from '@/api';
 
 // ── SidebarItem ───────────────────────────────────────────────────────────────
 const SidebarItem: React.FC<{
@@ -18,8 +19,9 @@ const SidebarItem: React.FC<{
   icon: React.ReactNode;
   label: string;
   isCollapsed: boolean;
+  badge?: number;
   onClick?: () => void;
-}> = ({ to, icon, label, isCollapsed, onClick }) => {
+}> = ({ to, icon, label, isCollapsed, badge, onClick }) => {
   const pathname = usePathname();
   const isActive =
     to === '/' ? pathname === '/' || pathname === '' : pathname.startsWith(to);
@@ -30,7 +32,7 @@ const SidebarItem: React.FC<{
       onClick={onClick}
       title={isCollapsed ? label : undefined}
       className={`
-        flex items-center gap-3 rounded-xl transition-all duration-200 font-medium
+        relative flex items-center gap-3 rounded-xl transition-all duration-200 font-medium
         ${
           isActive
             ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
@@ -48,10 +50,18 @@ const SidebarItem: React.FC<{
           display: isCollapsed ? 'none' : 'block',
         }}
         transition={{ duration: 0.2 }}
-        className="overflow-hidden whitespace-nowrap"
+        className="overflow-hidden whitespace-nowrap flex-1"
       >
         {label}
       </motion.span>
+      {/* Badge — pending count */}
+      {badge != null && badge > 0 && (
+        <span
+          className={`min-w-[18px] h-[18px] text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center px-1 flex-shrink-0 ${isCollapsed ? 'absolute top-1 right-1' : ''}`}
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </Link>
   );
 };
@@ -78,6 +88,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       manual: true,
       onSuccess: () => addToast('info', 'Logged out successfully'),
       onError: (error) => addToast('error', `Logout failed: ${error.message}`),
+    },
+  );
+
+  // Pending application count for badge on /users menu item
+  const { data: pendingData } = useRequest(
+    () => applicationApi.pendingCount(),
+    {
+      pollingInterval: 60_000, // refresh every 60s
     },
   );
 
@@ -152,6 +170,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       })}
                       label={t[route.name as keyof typeof t] || route.name}
                       isCollapsed={isSidebarCollapsed}
+                      badge={
+                        route.path === '/users'
+                          ? (pendingData?.count ?? 0)
+                          : undefined
+                      }
                       onClick={onMobileClose}
                     />
                   ))}

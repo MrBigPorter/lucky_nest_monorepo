@@ -97,6 +97,8 @@ services:
       INTERNAL_API_URL: http://lucky-backend-dev:3000/api
       NEXT_PUBLIC_APP_ENV: development
       HOSTNAME: "0.0.0.0"
+      # Google reCAPTCHA v3 Site Key (前端用，可公开)
+      NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${NEXT_PUBLIC_RECAPTCHA_SITE_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:4001/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
       interval: 10s

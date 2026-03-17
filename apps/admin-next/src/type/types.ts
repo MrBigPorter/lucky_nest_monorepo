@@ -1443,3 +1443,37 @@ export interface QueryLoginLogParams {
   startDate?: string;
   endDate?: string;
 }
+
+// ─── Admin Register Application ───────────────────────────────────────────────
+
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AdminApplication {
+  id: string;
+  username: string;
+  realName: string;
+  email: string;
+  applyReason?: string;
+  applyIp?: string;
+  status: ApplicationStatus;
+  reviewedBy?: string;
+  reviewNote?: string;
+  reviewedAt?: number | null;
+  createdAt: number;
+}
+
+export interface CreateApplicationPayload {
+  username: string;
+  password: string;
+  realName: string;
+  email: string;
+  applyReason?: string;
+  recaptchaToken: string;
+}
+
+export interface ApplicationListParams {
+  page?: number;
+  pageSize?: number;
+  status?: ApplicationStatus | 'all';
+  username?: string;
+}

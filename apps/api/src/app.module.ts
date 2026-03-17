@@ -21,6 +21,8 @@ import { ChatModule } from '@api/common/chat/chat.module';
 import { MediaModule } from '@api/common/media/media.module';
 import { CallModule } from '@api/common/events/call/call.module';
 import { EventsModule } from '@api/common/events/events.module';
+import { EmailModule } from '@api/common/email/email.module';
+import { RecaptchaModule } from '@api/common/recaptcha/recaptcha.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -107,6 +109,8 @@ import { EventsModule } from '@api/common/events/events.module';
     MediaModule,
     CallModule,
     EventsModule,
+    EmailModule,
+    RecaptchaModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],

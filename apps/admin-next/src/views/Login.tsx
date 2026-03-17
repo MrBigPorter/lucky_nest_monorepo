@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation'; // ← next/navigation
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
 import { z } from 'zod';
 import { useRequest } from 'ahooks';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -145,6 +147,16 @@ export const Login: React.FC = () => {
                 Sign In <ArrowRight size={18} />
               </span>
             </Button>
+
+            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+              Don&apos;t have an account?{' '}
+              <Link
+                href="/register-apply"
+                className="text-primary-500 hover:underline font-medium"
+              >
+                Apply for access
+              </Link>
+            </div>
           </form>
         </motion.div>
 
