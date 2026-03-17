@@ -1,14 +1,28 @@
 import React from 'react';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { Providers } from '@/components/Providers';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { routes } from '@/routes';
+import { TRANSLATIONS } from '@/constants';
 
 /**
- * Server Component Layout — 认证守卫
- * 服务端读取 HTTP-only Cookie 中的 auth_token，未登录直接跳转 /login。
- * 无客户端 JS 参与 → 彻底消除"加载中"闪烁。
+ * generateMetadata — 集中管理所有 dashboard 子页面的 <title>
+ * 通过 middleware 写入的 x-pathname header 获取当前路径，
+ * 查 routes + TRANSLATIONS 得到对应英文标题，无需在每个 page 单独写 metadata。
  */
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const pathname = (h.get('x-pathname') || '/').replace(/\/$/, '') || '/';
+  const route = routes.find((r) => r.path === pathname);
+  const title = route
+    ? (TRANSLATIONS.en[route.name as keyof typeof TRANSLATIONS.en] ?? route.name)
+    : undefined;
+  return { title };
+}
+
+// ...existing code...
 export default async function AuthenticatedLayout({
   children,
 }: {

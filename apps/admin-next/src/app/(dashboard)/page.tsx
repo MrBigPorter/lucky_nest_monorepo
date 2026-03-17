@@ -6,7 +6,11 @@
  *   - DashboardHeader → Client Component，提供 Refresh 按钮
  */
 import React, { Suspense } from 'react';
-import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from '@tanstack/react-query';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { DashboardStatsSkeleton } from '@/components/dashboard/DashboardStatsSkeleton';
 import { DashboardOrdersClient } from '@/components/dashboard/DashboardOrdersClient';

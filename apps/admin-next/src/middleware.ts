@@ -38,7 +38,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  // 把当前 pathname 写入 response header，供 (dashboard)/layout.tsx 的
+  // generateMetadata 读取，避免在每个 page 单独写 metadata
+  response.headers.set('x-pathname', pathname);
+  return response;
 }
 
 export const config = {
