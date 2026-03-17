@@ -1,307 +1,289 @@
 // apps/api/scripts/seed/seed-treasures.ts
-import { PrismaClient, Prisma } from '@prisma/client';
+/**
+ * 抽奖产品 (Treasure) × 8  +  产品-分类关联 (TreasureCategory)
+ *
+ * 编号  产品名称                              价格     总份数  分类
+ * JM-001  Apple iPhone 16 Pro 256GB         ₱250/份  300份  Electronics
+ * JM-002  Samsung Galaxy S25 Ultra 512GB    ₱200/份  300份  Electronics
+ * JM-003  Sony PS5 Slim + 3 Games Bundle    ₱150/份  200份  Electronics
+ * JM-004  Dyson V15 Detect Vacuum           ₱100/份  150份  Home Appliances
+ * JM-005  Nike Air Jordan 4 Retro (US10)    ₱ 50/份  100份  Fashion & Lifestyle
+ * JM-006  Dyson Supersonic HD15 Hair Dryer  ₱ 80/份  125份  Beauty & Health
+ * JM-007  Cash Prize ₱5,000  (virtual)      ₱100/份   60份  Cash Prizes
+ * JM-008  Cash Prize ₱10,000 (virtual)      ₱200/份   60份  Cash Prizes
+ *
+ * 字段说明:
+ *   unitAmount         每份价格（PHP）
+ *   seqShelvesQuantity 总份数（总票数）
+ *   minBuyQuantity     触发开奖所需最低售出份数（售罄模式下 = seqShelvesQuantity）
+ *   maxPerBuyQuantity  单人最大购买份数
+ *   lotteryMode        1=售罄即开奖  2=定时开奖
+ *   virtual            1=虚拟(现金)  2=实物
+ *   shippingType       1=需发货      2=无需发货
+ *   fakeSalesCount     虚拟已售数（热度展示用）
+ *   marketAmount       市场参考价（前端展示）
+ *   cashAmount         现金奖励金额（virtual=1 时有效）
+ *   groupSize          成团所需人数
+ *   groupTimeLimit     成团时效（秒）超时未满则解散/机器人补齐
+ *   enableRobot        是否允许机器人自动补齐拼团
+ *   robotDelay         机器人介入前等待秒数
+ */
+
+import { PrismaClient } from '@prisma/client';
 
 const db = new PrismaClient();
-const D = (n: number | string) => new Prisma.Decimal(n);
 
-// 用你现有 S3 里的一组图片当成“图片库”
-const COVER_POOL: string[] = [
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/202508191540333d2e6ad1-1fdf-4c96-b224-8342bc6a4688.jpg',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/202508191520533465a06b-2d8d-4bec-b261-fb86bd0880a1.jpg',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/202510011447103b881e77-d1c6-435b-b780-7bfe4ea5472c.png',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/2025081915120497e04c94-1603-4fbd-936d-fa0d77ab32aa.jpg',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250923142219a86201c1-85ea-4614-bae4-919221cf64a6.jpg',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250923142457926af44b-bca6-4e8f-a08b-a57934fc6399.png',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250819154218e96b22f3-8424-4bb7-ab74-7a30c130835e.jpg',
-  'https://prod-pesolucky.s3.ap-east-1.amazonaws.com/avatar/20250829183122eaa903c8-15a0-45d0-91ac-06c4a6687ed1.jpg',
+const daysLater = (d: number) => new Date(Date.now() + d * 86_400_000);
+
+// 拼团配置快捷常量
+const G5 = { groupSize: 5, groupTimeLimit: 86_400 }; // 5人团，24h
+const G3 = { groupSize: 3, groupTimeLimit: 86_400 }; // 3人团，24h
+
+const TREASURES = [
+  // ─────────────────────────────────────────
+  // Electronics
+  // ─────────────────────────────────────────
+  {
+    treasureSeq:        'JM-001',
+    treasureName:       'Apple iPhone 16 Pro 256GB',
+    productName:        'iPhone 16 Pro 256GB Natural Titanium',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/iphone16pro-cover.jpg',
+    mainImageList:      [
+      'https://cdn.joyminis.com/products/iphone16pro-1.jpg',
+      'https://cdn.joyminis.com/products/iphone16pro-2.jpg',
+    ],
+    unitAmount:         250,
+    marketAmount:       75000,
+    costAmount:         70000,
+    seqShelvesQuantity: 300,
+    minBuyQuantity:     300,
+    maxPerBuyQuantity:  30,
+    lotteryMode:        1,
+    virtual:            2,
+    shippingType:       1,
+    fakeSalesCount:     120,
+    ...G5,
+    desc: '<p>Latest Apple iPhone 16 Pro with A18 Pro chip, 48MP Fusion camera system, 5× telephoto. Brand new sealed.</p>',
+    category: 'Electronics',
+  },
+  {
+    treasureSeq:        'JM-002',
+    treasureName:       'Samsung Galaxy S25 Ultra 512GB',
+    productName:        'Samsung Galaxy S25 Ultra Titanium Gray 512GB',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/s25ultra-cover.jpg',
+    mainImageList:      [
+      'https://cdn.joyminis.com/products/s25ultra-1.jpg',
+      'https://cdn.joyminis.com/products/s25ultra-2.jpg',
+    ],
+    unitAmount:         200,
+    marketAmount:       60000,
+    costAmount:         55000,
+    seqShelvesQuantity: 300,
+    minBuyQuantity:     300,
+    maxPerBuyQuantity:  30,
+    lotteryMode:        1,
+    virtual:            2,
+    shippingType:       1,
+    fakeSalesCount:     85,
+    ...G5,
+    desc: '<p>Samsung Galaxy S25 Ultra with 200MP camera, built-in S Pen, Snapdragon 8 Elite. 512GB storage.</p>',
+    category: 'Electronics',
+  },
+  {
+    treasureSeq:        'JM-003',
+    treasureName:       'Sony PlayStation 5 Slim + 3 Games Bundle',
+    productName:        'PS5 Slim + EA FC25 + Spider-Man 2 + God of War Ragnarök',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/ps5slim-cover.jpg',
+    mainImageList:      [
+      'https://cdn.joyminis.com/products/ps5slim-1.jpg',
+      'https://cdn.joyminis.com/products/ps5slim-2.jpg',
+    ],
+    unitAmount:         150,
+    marketAmount:       30000,
+    costAmount:         27000,
+    seqShelvesQuantity: 200,
+    minBuyQuantity:     200,
+    maxPerBuyQuantity:  20,
+    lotteryMode:        1,
+    virtual:            2,
+    shippingType:       1,
+    fakeSalesCount:     64,
+    ...G3,
+    desc: '<p>Sony PlayStation 5 Slim console bundle includes 3 top-rated games. Brand new sealed.</p>',
+    category: 'Electronics',
+  },
+  // ─────────────────────────────────────────
+  // Home Appliances
+  // ─────────────────────────────────────────
+  {
+    treasureSeq:        'JM-004',
+    treasureName:       'Dyson V15 Detect Absolute Vacuum',
+    productName:        'Dyson V15 Detect Absolute Cordless Vacuum Cleaner',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/dysonv15-cover.jpg',
+    mainImageList:      ['https://cdn.joyminis.com/products/dysonv15-1.jpg'],
+    unitAmount:         100,
+    marketAmount:       15000,
+    costAmount:         13500,
+    seqShelvesQuantity: 150,
+    minBuyQuantity:     150,
+    maxPerBuyQuantity:  15,
+    lotteryMode:        1,
+    virtual:            2,
+    shippingType:       1,
+    fakeSalesCount:     52,
+    ...G3,
+    desc: '<p>Dyson V15 Detect with laser dust detection, HEPA filtration, and up to 60-min run time.</p>',
+    category: 'Home Appliances',
+  },
+  // ─────────────────────────────────────────
+  // Fashion & Lifestyle
+  // ─────────────────────────────────────────
+  {
+    treasureSeq:        'JM-005',
+    treasureName:       'Nike Air Jordan 4 Retro "Military Blue" (US10)',
+    productName:        'Air Jordan 4 Retro Military Blue US Size 10',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/aj4-cover.jpg',
+    mainImageList:      [
+      'https://cdn.joyminis.com/products/aj4-1.jpg',
+      'https://cdn.joyminis.com/products/aj4-2.jpg',
+    ],
+    unitAmount:         50,
+    marketAmount:       5000,
+    costAmount:         4500,
+    seqShelvesQuantity: 100,
+    minBuyQuantity:     100,
+    maxPerBuyQuantity:  10,
+    lotteryMode:        1,
+    virtual:            2,
+    shippingType:       1,
+    fakeSalesCount:     37,
+    ...G5,
+    desc: '<p>Nike Air Jordan 4 Retro Military Blue — iconic colorway. Authentic, brand new in original box.</p>',
+    category: 'Fashion & Lifestyle',
+  },
+  // ─────────────────────────────────────────
+  // Beauty & Health
+  // ─────────────────────────────────────────
+  {
+    treasureSeq:        'JM-006',
+    treasureName:       'Dyson Supersonic HD15 Hair Dryer',
+    productName:        'Dyson Supersonic HD15 Nickel/Copper',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/dysonsupersonic-cover.jpg',
+    mainImageList:      ['https://cdn.joyminis.com/products/dysonsupersonic-1.jpg'],
+    unitAmount:         80,
+    marketAmount:       10000,
+    costAmount:         9000,
+    seqShelvesQuantity: 125,
+    minBuyQuantity:     125,
+    maxPerBuyQuantity:  10,
+    lotteryMode:        1,
+    virtual:            2,
+    shippingType:       1,
+    fakeSalesCount:     43,
+    ...G3,
+    desc: '<p>Dyson Supersonic HD15 with intelligent heat control measuring temperature 40× per second.</p>',
+    category: 'Beauty & Health',
+  },
+  // ─────────────────────────────────────────
+  // Cash Prizes (virtual, no shipping)
+  // ─────────────────────────────────────────
+  {
+    treasureSeq:        'JM-007',
+    treasureName:       '₱5,000 Cash Prize 💰',
+    productName:        'Cash Prize ₱5,000 via GCash / Bank Transfer',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/cash5k-cover.jpg',
+    mainImageList:      ['https://cdn.joyminis.com/products/cash5k-1.jpg'],
+    unitAmount:         100,   // ₱100/份 × 60份 = ₱6,000 (platform margin ₱1,000)
+    marketAmount:       5000,
+    cashAmount:         5000,
+    seqShelvesQuantity: 60,
+    minBuyQuantity:     60,
+    maxPerBuyQuantity:  10,
+    lotteryMode:        1,
+    virtual:            1,     // 虚拟
+    shippingType:       2,     // 无需发货
+    fakeSalesCount:     21,
+    ...G5,
+    desc: '<p>Win ₱5,000 cash! Transferred to your GCash or bank account within 24 hours of winning.</p>',
+    category: 'Cash Prizes',
+  },
+  {
+    treasureSeq:        'JM-008',
+    treasureName:       '₱10,000 Cash Prize 💎',
+    productName:        'Cash Prize ₱10,000 via GCash / Bank Transfer',
+    treasureCoverImg:   'https://cdn.joyminis.com/products/cash10k-cover.jpg',
+    mainImageList:      ['https://cdn.joyminis.com/products/cash10k-1.jpg'],
+    unitAmount:         200,   // ₱200/份 × 60份 = ₱12,000
+    marketAmount:       10000,
+    cashAmount:         10000,
+    seqShelvesQuantity: 60,
+    minBuyQuantity:     60,
+    maxPerBuyQuantity:  10,
+    lotteryMode:        1,
+    virtual:            1,
+    shippingType:       2,
+    fakeSalesCount:     18,
+    ...G5,
+    desc: '<p>Win ₱10,000 cash! Transferred to your GCash or bank account within 24 hours of winning.</p>',
+    category: 'Cash Prizes',
+  },
 ];
 
-/**
- * 种子宝箱/抽奖产品
- * - 包含：现金奖、手机、家电、数码、时尚、游戏点券、代金券
- * - 并关联到 ProductCategory（通过短名字：Cash / Phone / Gadget / Home / Fashion / Game / Voucher）
- */
-export async function seedTreasures() {
-  // 先清关联，再清主表，保证数据干净
-  await db.actSectionItem.deleteMany({});
-  await db.treasureCategory.deleteMany({});
-  await db.order.deleteMany({});
-  await db.treasureGroupMember.deleteMany({});
-  await db.treasureGroup.deleteMany({});
-  await db.treasure.deleteMany({});
+export async function seedTreasures(): Promise<Record<string, string>> {
+  const now   = new Date();
+  const endAt = daysLater(90);
 
-  // 先查分类，方便按 name/nameEn 分配
-  const categories = await db.productCategory.findMany();
-  const catMap = new Map<string, number>();
-  for (const c of categories) {
-    catMap.set(c.nameEn ?? c.name, c.id);
-  }
+  let tCreated = 0;
+  let cCreated = 0;
+  const seqToId: Record<string, string> = {};
 
-  type SeedTreasure = {
-    treasureName: string;
-    productName: string;
-    costAmount: Prisma.Decimal;
-    unitAmount: Prisma.Decimal;
-    cashAmount: Prisma.Decimal | null;
-    totalSlots: number;
-    boughtSlots: number;
-    minBuyQuantity: number;
-    maxPerBuyQuantity: number;
-    category:
-      | 'Cash'
-      | 'Phone'
-      | 'Gadget'
-      | 'Home'
-      | 'Fashion'
-      | 'Game'
-      | 'Voucher';
-    imgStyleType: number;
-    virtual: 1 | 2;
-  };
+  // 先取出所有分类，构建 name→id 映射
+  const cats = await db.productCategory.findMany({ select: { id: true, name: true } });
+  const catMap: Record<string, number> = Object.fromEntries(
+    cats.map((c: { id: number; name: string }) => [c.name, c.id]),
+  );
 
-  const treasures: SeedTreasure[] = [
-    // 1) 现金类 Cash
-    {
-      treasureName: '₱3,000 Cash Prize',
-      productName: 'Cash Reward ₱3,000',
-      costAmount: D(2500),
-      unitAmount: D(10),
-      cashAmount: D(3000),
-      totalSlots: 800,
-      boughtSlots: 320,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 100,
-      category: 'Cash',
-      imgStyleType: 0,
-      virtual: 1,
-    },
-    {
-      treasureName: '₱10,000 Mega Cash',
-      productName: 'Mega Cash Reward ₱10,000',
-      costAmount: D(8000),
-      unitAmount: D(25),
-      cashAmount: D(10000),
-      totalSlots: 1000,
-      boughtSlots: 740,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 80,
-      category: 'Cash',
-      imgStyleType: 0,
-      virtual: 1,
-    },
-    {
-      treasureName: '₱50,000 Grand Cash',
-      productName: 'Grand Cash Reward ₱50,000',
-      costAmount: D(42000),
-      unitAmount: D(59),
-      cashAmount: D(50000),
-      totalSlots: 2000,
-      boughtSlots: 280,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 100,
-      category: 'Cash',
-      imgStyleType: 0,
-      virtual: 1,
-    },
+  for (const { category, mainImageList, ...rest } of TREASURES) {
+    // ── 幂等：按 treasureSeq ────────────────────────────────
+    const existing = await db.treasure.findUnique({ where: { treasureSeq: rest.treasureSeq } });
+    let treasureId: string;
 
-    // 2) 手机 Phone
-    {
-      treasureName: 'iPhone 16 (128GB)',
-      productName: 'Apple iPhone 16 128GB',
-      costAmount: D(55000),
-      unitAmount: D(49),
-      cashAmount: null,
-      totalSlots: 2000,
-      boughtSlots: 960,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 50,
-      category: 'Phone',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-    {
-      treasureName: 'Samsung Galaxy S25',
-      productName: 'Samsung Galaxy S25 256GB',
-      costAmount: D(42000),
-      unitAmount: D(39),
-      cashAmount: null,
-      totalSlots: 2000,
-      boughtSlots: 300,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 50,
-      category: 'Phone',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-    {
-      treasureName: 'Xiaomi Redmi Note 14',
-      productName: 'Redmi Note 14 256GB',
-      costAmount: D(16000),
-      unitAmount: D(19),
-      cashAmount: null,
-      totalSlots: 1500,
-      boughtSlots: 720,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 80,
-      category: 'Phone',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-
-    // 3) Gadgets
-    {
-      treasureName: 'AirPods Pro (3rd Gen)',
-      productName: 'Apple AirPods Pro 3',
-      costAmount: D(14000),
-      unitAmount: D(19),
-      cashAmount: null,
-      totalSlots: 1000,
-      boughtSlots: 510,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 60,
-      category: 'Gadget',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-    {
-      treasureName: 'iPad mini (Wifi 128GB)',
-      productName: 'Apple iPad mini Wifi 128GB',
-      costAmount: D(28000),
-      unitAmount: D(29),
-      cashAmount: null,
-      totalSlots: 1500,
-      boughtSlots: 220,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 50,
-      category: 'Gadget',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-
-    // 4) 家居 Home
-    {
-      treasureName: 'Dyson Supersonic Hair Dryer',
-      productName: 'Dyson Supersonic',
-      costAmount: D(25000),
-      unitAmount: D(29),
-      cashAmount: null,
-      totalSlots: 1500,
-      boughtSlots: 880,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 50,
-      category: 'Home',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-    {
-      treasureName: 'Smart Rice Cooker',
-      productName: 'Philips Smart Rice Cooker',
-      costAmount: D(6000),
-      unitAmount: D(9),
-      cashAmount: null,
-      totalSlots: 800,
-      boughtSlots: 260,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 80,
-      category: 'Home',
-      imgStyleType: 1,
-      virtual: 2,
-    },
-
-    // 5) 游戏点券 Game
-    {
-      treasureName: '₱1,000 Game Credits',
-      productName: 'Game Top-up ₱1,000',
-      costAmount: D(800),
-      unitAmount: D(10),
-      cashAmount: null,
-      totalSlots: 800,
-      boughtSlots: 300,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 80,
-      category: 'Game',
-      imgStyleType: 0,
-      virtual: 1,
-    },
-    {
-      treasureName: '₱500 Steam Wallet Code',
-      productName: 'Steam Wallet ₱500',
-      costAmount: D(400),
-      unitAmount: D(5),
-      cashAmount: null,
-      totalSlots: 600,
-      boughtSlots: 150,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 80,
-      category: 'Game',
-      imgStyleType: 0,
-      virtual: 1,
-    },
-
-    // 6) 代金券 Voucher
-    {
-      treasureName: '₱1,000 Shopping Voucher',
-      productName: 'Mall Shopping Voucher ₱1,000',
-      costAmount: D(800),
-      unitAmount: D(10),
-      cashAmount: null,
-      totalSlots: 900,
-      boughtSlots: 420,
-      minBuyQuantity: 1,
-      maxPerBuyQuantity: 90,
-      category: 'Voucher',
-      imgStyleType: 0,
-      virtual: 1,
-    },
-  ];
-
-  for (let i = 0; i < treasures.length; i++) {
-    const t = treasures[i];
-    const categoryId = catMap.get(t.category);
-    if (!categoryId) {
-      console.warn(
-        `⚠️ Category not found for treasure: ${t.treasureName} (category=${t.category})`,
-      );
-      continue;
+    if (existing) {
+      treasureId = existing.treasureId;
+    } else {
+      const t = await db.treasure.create({
+        data: {
+          ...rest,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          mainImageList: mainImageList as unknown as any,
+          salesStartAt:  now,
+          salesEndAt:    endAt,
+          state:         1,         // 上架
+          status:        'ACTIVE',
+          enableRobot:   true,
+          robotDelay:    600,       // 10 min 后机器人自动补齐
+        },
+      });
+      treasureId = t.treasureId;
+      tCreated++;
     }
 
-    const cover = COVER_POOL[i % COVER_POOL.length];
-    const cover2 = COVER_POOL[(i + 3) % COVER_POOL.length];
+    seqToId[rest.treasureSeq] = treasureId;
 
-    const treasure = await db.treasure.create({
-      data: {
-        treasureName: t.treasureName,
-        productName: t.productName,
-        treasureCoverImg: cover,
-        mainImageList: [cover, cover2],
-        costAmount: t.costAmount,
-        unitAmount: t.unitAmount,
-        cashAmount: t.cashAmount ?? undefined,
-        seqShelvesQuantity: t.totalSlots,
-        seqBuyQuantity: t.boughtSlots,
-        minBuyQuantity: t.minBuyQuantity,
-        maxPerBuyQuantity: t.maxPerBuyQuantity,
-        lotteryMode: 1, // 先用售罄模式
-        lotteryDelayState: 0,
-        imgStyleType: t.imgStyleType,
-        virtual: t.virtual,
-        groupMaxNum: 9999,
-        maxUnitCoins: D(100), // 每份最多用多少 coins，先写一个合理值
-        maxUnitAmount: D(20), // 每份最多折多少 PHP
-        charityAmount: D(0),
-        ruleContent: '<p>Standard lucky draw rules apply.</p>',
-        desc: '<p>Join the treasure draw and win amazing rewards!</p>',
-        state: 1,
-      },
-    });
-
-    await db.treasureCategory.create({
-      data: {
-        treasureId: treasure.treasureId,
-        categoryId,
-      },
-    });
+    // ── 产品-分类关联 TreasureCategory ──────────────────────
+    const categoryId = catMap[category];
+    if (categoryId) {
+      const linkExists = await db.treasureCategory.findFirst({
+        where: { treasureId, categoryId },
+      });
+      if (!linkExists) {
+        await db.treasureCategory.create({ data: { treasureId, categoryId } });
+        cCreated++;
+      }
+    }
   }
 
-  console.log('✅ Treasures seeded');
+  console.log(`  ✅ Treasure         +${tCreated} new`);
+  console.log(`  ✅ TreasureCategory +${cCreated} new`);
+  return seqToId;
 }
