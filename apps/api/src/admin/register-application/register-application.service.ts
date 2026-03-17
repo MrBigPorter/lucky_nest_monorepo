@@ -206,7 +206,7 @@ export class RegisterApplicationService {
 
   // ─── LAYER 3: Admin — approve ─────────────────────────────────────────────
 
-  async approve(id: string, reviewerId: string, reviewerName: string) {
+  async approve(id: string, reviewerId: string) {
     const app = await this.findPendingOrThrow(id);
 
     // Check username is still available (someone may have been created with same username)
@@ -249,7 +249,7 @@ export class RegisterApplicationService {
       .catch((e) => this.logger.error(`Email failed: ${e}`));
 
     this.logger.log(
-      `Application ${id} approved by ${reviewerName} → AdminUser(${app.username}, VIEWER)`,
+      `Application ${id} approved by ${reviewerId} → AdminUser(${app.username}, VIEWER)`,
     );
 
     return {
