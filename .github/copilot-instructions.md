@@ -84,14 +84,15 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 | Phase 2 | Dashboard SSR 数据预取 · react-query · HydrationBoundary · 内网直连 | 2026-03-16 |
 | Phase 3 | 列表页 Hybrid 模式 · URL searchParams 驱动 filter | 2026-03-16 |
 | Phase 5 | 广告/秒杀/系统配置/IM客服/登录日志 — 后端+前端全部补齐，Socket 实时升级 | 2026-03-17 |
+| Phase 5.5 | 注册申请功能 — 6层防御(reCAPTCHA/IP限流/域名黑名单/冲突检查) + Resend邮件通知 + 前端申请表单 + 超管审批页 + Sidebar红点 | 2026-03-17 |
 
 > 详细改造记录见 `read/` 目录下各 Phase 文档。
 
 ---
 
-## 四、业务功能状态（22 项全部完成）
+## 四、业务功能状态（23 项全部完成）
 
-登录登出 · 后台用户管理 · Banner · 分类 · 产品 · 订单 · 用户+KYC · 财务（充值/提现/审核）· 支付渠道 · 优惠券 · Act Section · 地址 · 拼团 · 操作日志审计 · RBAC 权限角色管理 · 数据分析仪表板 · 通知/推送管理 · 广告管理 · 秒杀活动 · 系统配置 · IM 客服接待台 · 登录日志
+登录登出 · 后台用户管理 · Banner · 分类 · 产品 · 订单 · 用户+KYC · 财务（充值/提现/审核）· 支付渠道 · 优惠券 · Act Section · 地址 · 拼团 · 操作日志审计 · RBAC 权限角色管理 · 数据分析仪表板 · 通知/推送管理 · 广告管理 · 秒杀活动 · 系统配置 · IM 客服接待台 · 登录日志 · **注册申请（含超管审批 + 邮件通知 + reCAPTCHA）**
 
 ---
 

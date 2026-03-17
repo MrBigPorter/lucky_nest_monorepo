@@ -335,10 +335,23 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
             <div className="space-y-3 mb-6">
               <SchemaSearchForm<AdminUserSearchForm>
                 schema={[
-                  { type: 'input', key: 'username', label: 'Username', placeholder: 'Search username...' },
-                  { type: 'input', key: 'realName', label: 'Real Name', placeholder: 'Search real name...' },
                   {
-                    type: 'select', key: 'role', label: 'Role', defaultValue: 'ALL',
+                    type: 'input',
+                    key: 'username',
+                    label: 'Username',
+                    placeholder: 'Search username...',
+                  },
+                  {
+                    type: 'input',
+                    key: 'realName',
+                    label: 'Real Name',
+                    placeholder: 'Search real name...',
+                  },
+                  {
+                    type: 'select',
+                    key: 'role',
+                    label: 'Role',
+                    defaultValue: 'ALL',
                     options: [
                       { label: 'All Roles', value: 'ALL' },
                       { label: 'Viewer', value: 'VIEWER' },
@@ -348,7 +361,10 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
                     ],
                   },
                   {
-                    type: 'select', key: 'status', label: 'Status', defaultValue: 'ALL',
+                    type: 'select',
+                    key: 'status',
+                    label: 'Status',
+                    defaultValue: 'ALL',
                     options: [
                       { label: 'All Status', value: 'ALL' },
                       { label: 'Active', value: '1' },

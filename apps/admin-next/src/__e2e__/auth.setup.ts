@@ -38,7 +38,12 @@ const WARMUP_ROUTES = [
   '/notifications/',
   '/roles/',
   '/operation-logs/',
+  // Public pages — warm up to catch compilation/RSC errors early
+  '/register-apply/',
 ];
+
+// Routes that don't show the sidebar (public / login pages)
+const PUBLIC_WARMUP_ROUTES = ['/register-apply/'];
 
 setup('authenticate and warmup all routes', async ({ page }) => {
   // ── Step 1: Login ──────────────────────────────────────────────────────────
@@ -53,22 +58,31 @@ setup('authenticate and warmup all routes', async ({ page }) => {
   // ── Step 2: Warmup ─────────────────────────────────────────────────────────
   // Visit each route so Turbopack compiles it now rather than during a spec.
   // If a route is already compiled (persistent cache hit), this is near-instant.
-  console.log(`\n🔥 Warming up ${WARMUP_ROUTES.length} routes…`);
-  for (const route of WARMUP_ROUTES) {
+  const allRoutes = [
+    ...WARMUP_ROUTES.map((r) => ({ path: r, isPublic: false })),
+    ...PUBLIC_WARMUP_ROUTES.map((r) => ({ path: r, isPublic: true })),
+  ];
+  console.log(`\n🔥 Warming up ${allRoutes.length} routes…`);
+  for (const { path, isPublic } of allRoutes) {
     try {
-      console.log(`  → ${route}`);
-      await page.goto(route, {
+      console.log(`  → ${path}`);
+      await page.goto(path, {
         waitUntil: 'domcontentloaded',
         timeout: 300_000,
       });
-      // Wait for the sidebar which signals the layout is fully rendered
-      await page
-        .locator('aside')
-        .waitFor({ state: 'visible', timeout: 300_000 });
+      if (isPublic) {
+        // Public pages have no sidebar — just wait for body to load
+        await page.locator('body').waitFor({ state: 'visible', timeout: 30_000 });
+      } else {
+        // Wait for the sidebar which signals the layout is fully rendered
+        await page
+          .locator('aside')
+          .waitFor({ state: 'visible', timeout: 300_000 });
+      }
     } catch {
       // Non-fatal: some routes may redirect or take longer than expected.
       // The spec itself will retry on its own timeout.
-      console.warn(`  ⚠️  Warmup failed for ${route} — continuing`);
+      console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
     }
   }
   console.log('✅ Warmup complete\n');

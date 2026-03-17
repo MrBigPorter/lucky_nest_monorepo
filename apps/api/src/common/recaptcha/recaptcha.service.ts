@@ -74,7 +74,7 @@ export class RecaptchaService {
           `reCAPTCHA score too low (${data.score}). Possible bot activity detected.`,
         );
       }
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof BadRequestException) throw err;
       // Network/timeout errors — fail open in dev, fail closed in prod
       this.logger.error(`reCAPTCHA service error: ${err}`);
