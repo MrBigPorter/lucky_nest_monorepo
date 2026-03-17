@@ -19,7 +19,7 @@ import { useToastStore } from '@/store/useToastStore';
 import { Dropdown, Breadcrumbs } from '@/components/UIComponents';
 import { useRequest } from 'ahooks';
 import { routes } from '@/routes';
-import { TRANSLATIONS } from '@/constants';
+import { TRANSLATIONS, ROLE_DISPLAY_NAMES } from '@/constants';
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -221,9 +221,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-sm font-medium text-gray-800 dark:text-white">
                   {displayName}
                 </span>
-                {userInfo?.roleName && (
+                {userInfo?.role && (
                   <span className="text-xs text-gray-400">
-                    {userInfo.roleName}
+                    {ROLE_DISPLAY_NAMES[userInfo.role] ?? userInfo.role}
                   </span>
                 )}
               </div>
