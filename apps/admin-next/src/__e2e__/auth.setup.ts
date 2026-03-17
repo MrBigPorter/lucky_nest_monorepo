@@ -38,14 +38,12 @@ const WARMUP_ROUTES = [
   '/notifications/',
   '/roles/',
   '/operation-logs/',
-  // Public pages — warm up to catch compilation/RSC errors early
-  '/register-apply/',
 ];
 
 // Routes that don't show the sidebar (public / login pages)
 const PUBLIC_WARMUP_ROUTES = ['/register-apply/'];
 
-setup('authenticate and warmup all routes', async ({ page }) => {
+setup('authenticate and warmup all routes', async ({ page, browser }) => {
   // ── Step 1: Login ──────────────────────────────────────────────────────────
   await loginViaUI(page);
 
@@ -63,26 +61,43 @@ setup('authenticate and warmup all routes', async ({ page }) => {
     ...PUBLIC_WARMUP_ROUTES.map((r) => ({ path: r, isPublic: true })),
   ];
   console.log(`\n🔥 Warming up ${allRoutes.length} routes…`);
+
   for (const { path, isPublic } of allRoutes) {
-    try {
-      console.log(`  → ${path}`);
-      await page.goto(path, {
-        waitUntil: 'domcontentloaded',
-        timeout: 300_000,
-      });
-      if (isPublic) {
-        // Public pages have no sidebar — just wait for body to load
-        await page.locator('body').waitFor({ state: 'visible', timeout: 30_000 });
-      } else {
-        // Wait for the sidebar which signals the layout is fully rendered
+    console.log(`  → ${path}${isPublic ? ' (public)' : ''}`);
+
+    if (isPublic) {
+      // ⚠️  Public routes: middleware redirects authenticated users to /
+      //     Must use a fresh context with NO auth cookies so the real page is compiled.
+      const ctx = await browser.newContext();
+      const publicPage = await ctx.newPage();
+      try {
+        await publicPage.goto(path, {
+          waitUntil: 'domcontentloaded',
+          timeout: 300_000,
+        });
+        // Verify the page didn't 302 away (would mean middleware is blocking it)
+        const finalUrl = publicPage.url();
+        if (!finalUrl.includes(path.replace(/\/$/, ''))) {
+          console.warn(`  ⚠️  ${path} redirected to ${finalUrl} — possible middleware issue`);
+        }
+        await publicPage.locator('body').waitFor({ state: 'visible', timeout: 30_000 });
+      } catch {
+        console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
+      } finally {
+        await ctx.close();
+      }
+    } else {
+      try {
+        await page.goto(path, {
+          waitUntil: 'domcontentloaded',
+          timeout: 300_000,
+        });
         await page
           .locator('aside')
           .waitFor({ state: 'visible', timeout: 300_000 });
+      } catch {
+        console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
       }
-    } catch {
-      // Non-fatal: some routes may redirect or take longer than expected.
-      // The spec itself will retry on its own timeout.
-      console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
     }
   }
   console.log('✅ Warmup complete\n');

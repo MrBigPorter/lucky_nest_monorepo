@@ -54,6 +54,18 @@
 - 修改 `packages/ui` → 必须运行 `node packages/ui/scripts/build.js`
 - 修改 `packages/shared` → 必须运行 `node packages/shared/scripts/build.js`
 
+### ⚠️ 测试规范（违反会导致 CI 红灯）
+
+> 详细说明见 `read/TESTING_STANDARDS_CN.md`
+
+- **禁止同一文件存在两个同名 `describe` 块** → 旧版测试必须完整删除，不能并存
+- **API 签名 / store action 参数改变时，立即同步所有 `toHaveBeenCalledWith` 断言和 `mockXxx.mockResolvedValue` 数据**
+- **`React.forwardRef` 在 `vi.mock` 里必须用工厂函数写法并设 `.displayName`**，禁止内联对象（`react/display-name` 会报错）
+- **故意丢弃的解构 prop（如 `variant: _variant`）用 `/* eslint-disable/enable @typescript-eslint/no-unused-vars */` 块包裹**，不要用 `// eslint-disable-next-line`（只作用一行）
+- **文件末尾只允许一个 `\n`**，禁止两个以上空行（`prettier/prettier: Delete ⏎`）
+- **长函数调用超过 80 字符必须拆行 + trailing comma**（`printWidth: 80`, `trailingComma: "all"`）
+- 每个 view 测试文件只有**一个 `describe` 块**，内部按 `rendering / validation / success / error` 分组
+
 ### CI/CD 文件速查
 | 文件 | 触发 | 作用 |
 |------|------|------|
