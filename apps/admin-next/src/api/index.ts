@@ -548,8 +548,7 @@ export const authApi = {
     http.post<{ ok: boolean }>('/v1/auth/admin/set-cookie', { token }),
 
   // 清除 HTTP-only Cookie（登出时调用）
-  clearCookie: () =>
-    http.post<{ ok: boolean }>('/v1/auth/admin/clear-cookie'),
+  clearCookie: () => http.post<{ ok: boolean }>('/v1/auth/admin/clear-cookie'),
 
   // 刷新 token
   refreshToken: () => http.post<{ token: string }>('/auth/refresh-token'),
@@ -745,9 +744,7 @@ export const flashSaleApi = {
     http.get<{ list: import('@/type/types').FlashSaleSession[] }>(
       '/v1/admin/flash-sale/sessions',
     ),
-  createSession: (
-    data: import('@/type/types').CreateFlashSaleSessionPayload,
-  ) =>
+  createSession: (data: import('@/type/types').CreateFlashSaleSessionPayload) =>
     http.post<import('@/type/types').FlashSaleSession>(
       '/v1/admin/flash-sale/sessions',
       data,
@@ -761,9 +758,7 @@ export const flashSaleApi = {
       data,
     ),
   deleteSession: (id: string) =>
-    http.delete<{ success: boolean }>(
-      `/v1/admin/flash-sale/sessions/${id}`,
-    ),
+    http.delete<{ success: boolean }>(`/v1/admin/flash-sale/sessions/${id}`),
   getSessionProducts: (sessionId: string) =>
     http.get<{ list: import('@/type/types').FlashSaleProduct[] }>(
       `/v1/admin/flash-sale/sessions/${sessionId}/products`,
@@ -814,4 +809,34 @@ export const loginLogApi = {
       '/v1/admin/login-logs/list',
       params,
     ),
+};
+
+/**
+ * 管理员注册申请 API
+ */
+export const applicationApi = {
+  /** 公开提交申请（无需 token） */
+  submit: (data: import('@/type/types').CreateApplicationPayload) =>
+    http.post<{ message: string; id: string }>('/v1/auth/admin/apply', data),
+
+  /** 申请列表（SUPER_ADMIN）*/
+  getList: (params: import('@/type/types').ApplicationListParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminApplication>>(
+      '/v1/admin/applications',
+      params,
+    ),
+
+  /** 待审批数量（侧边栏红点）*/
+  pendingCount: () =>
+    http.get<{ count: number }>('/v1/admin/applications/pending-count'),
+
+  /** 审批通过 */
+  approve: (id: string) =>
+    http.patch<{ message: string }>(`/v1/admin/applications/${id}/approve`),
+
+  /** 审批拒绝 */
+  reject: (id: string, reviewNote?: string) =>
+    http.patch<{ message: string }>(`/v1/admin/applications/${id}/reject`, {
+      reviewNote,
+    }),
 };
