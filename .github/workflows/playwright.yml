@@ -1,0 +1,189 @@
+# ============================================================
+# Playwright E2E — 独立工作流
+# ============================================================
+# 触发: push main / PR → main
+# 环境: GitHub Ubuntu runner（不占用生产服务器资源）
+# 产物: 测试失败时上传截图 + trace + HTML report
+#
+# 与 ci.yml 的分工：
+#   ci.yml       → Lint + 类型检查 + 单元测试 + 基础 E2E smoke
+#   本文件        → 完整 Playwright E2E（更重，独立运行）
+#
+# Secrets 配置（在 GitHub 仓库 Settings → Secrets 添加）：
+#   E2E_ADMIN_USERNAME   登录用的管理员账号（默认 admin）
+#   E2E_ADMIN_PASSWORD   登录密码（必须配置，否则跳过）
+# ============================================================
+
+name: Playwright E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同一 ref 新推送时取消旧运行
+concurrency:
+  group: playwright-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+
+    # 没配置密码时跳过（避免 fork PR 因缺少 secret 而失败）
+    if: ${{ secrets.E2E_ADMIN_PASSWORD != '' }}
+
+    steps:
+      # ── 代码检出 ────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node.js 环境 ─────────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install native build tools (bcrypt / sharp)
+        run: sudo apt-get install -y python3 make g++ openssl
+
+      - name: Enable Corepack (Yarn 4)
+        run: corepack enable && corepack prepare yarn@4.9.2 --activate
+
+      # ── 依赖安装 ─────────────────────────────────────────────────
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      # ── 共享包构建（admin-next 依赖） ────────────────────────────
+      - name: Build @lucky/shared
+        run: node packages/shared/scripts/build.js
+
+      - name: Build @repo/ui
+        run: node packages/ui/scripts/build.js
+
+      # ── Playwright 浏览器 ────────────────────────────────────────
+      - name: Install Playwright Chromium + deps
+        run: yarn workspace @lucky/admin-next playwright install chromium --with-deps
+
+      # ── 构建 admin-next ──────────────────────────────────────────
+      - name: Build admin-next (standalone)
+        run: yarn workspace @lucky/admin-next build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
+          NEXT_PUBLIC_APP_ENV: production
+
+      # ── Mock API Server（模拟后端，不依赖真实数据库） ────────────
+      - name: Start mock API server (port 3001)
+        run: |
+          cat > /tmp/mock-api.js << 'MOCKEOF'
+          const http = require('http');
+          const server = http.createServer((req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+            if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+              if (req.url.includes('/auth/login')) {
+                res.end(JSON.stringify({
+                  code: 10000,
+                  data: { accessToken: 'e2e-mock-token' }
+                }));
+              } else if (req.url.includes('/auth/logout')) {
+                res.end(JSON.stringify({ code: 10000, data: null }));
+              } else if (req.url.includes('/auth/profile')) {
+                // 返回 401 让 middleware 正常走登录流程
+                res.writeHead(401);
+                res.end(JSON.stringify({ code: 40100, message: 'Unauthorized' }));
+              } else {
+                res.end(JSON.stringify({
+                  code: 10000,
+                  data: { list: [], total: 0, page: 1, pageSize: 20 }
+                }));
+              }
+            });
+          });
+          server.listen(3001, '127.0.0.1', () => {
+            console.log('[mock-api] listening on http://127.0.0.1:3001');
+          });
+          MOCKEOF
+          node /tmp/mock-api.js &
+
+      # ── 启动 Next.js standalone 服务 ─────────────────────────────
+      - name: Start Next.js server (port 4001)
+        run: |
+          PORT=4001 node apps/admin-next/.next/standalone/apps/admin-next/server.js &
+          npx --yes wait-on http://localhost:4001 --timeout 60000
+        env:
+          PORT: 4001
+          HOSTNAME: 0.0.0.0
+
+      # ── 运行 Playwright 测试 ─────────────────────────────────────
+      - name: Run Playwright E2E
+        id: e2e
+        run: yarn workspace @lucky/admin-next e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4001
+          E2E_ADMIN_USERNAME: ${{ secrets.E2E_ADMIN_USERNAME || 'admin' }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          CI: true
+
+      # ── 产物上传（仅测试失败时）─────────────────────────────────
+      # 截图 + trace 是定位失败的核心工具，失败时必须上传
+      - name: Upload screenshots (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-screenshots-${{ github.run_id }}
+          path: apps/admin-next/test-results/**/*.png
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload traces (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-${{ github.run_id }}
+          path: apps/admin-next/test-results/**/*.zip
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # HTML report 无论成功失败都上传（方便看通过率趋势）
+      - name: Upload HTML report (always)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-html-report-${{ github.run_id }}
+          path: apps/admin-next/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # ── GitHub Step Summary ──────────────────────────────────────
+      - name: Write E2E summary
+        if: always()
+        run: |
+          STATUS="${{ steps.e2e.outcome }}"
+          if [ "$STATUS" = "success" ]; then
+            ICON="✅"
+          else
+            ICON="❌"
+          fi
+          echo "## $ICON Playwright E2E — $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 浏览器 | Chromium |" >> $GITHUB_STEP_SUMMARY
+          echo "| 触发 | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ref | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 产物 | playwright-html-report-${{ github.run_id }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "$STATUS" != "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> 📎 失败截图和 trace 见 Artifacts: \`playwright-screenshots-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+

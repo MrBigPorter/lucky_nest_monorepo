@@ -56,15 +56,15 @@
 
 ### ⚠️ 测试规范（违反会导致 CI 红灯）
 
-> 详细说明见 `read/TESTING_STANDARDS_CN.md`
+> 完整规范见 `read/TESTING_STANDARDS_CN.md`（含调试流程、错误速查表、模板）
 
-- **禁止同一文件存在两个同名 `describe` 块** → 旧版测试必须完整删除，不能并存
-- **API 签名 / store action 参数改变时，立即同步所有 `toHaveBeenCalledWith` 断言和 `mockXxx.mockResolvedValue` 数据**
-- **`React.forwardRef` 在 `vi.mock` 里必须用工厂函数写法并设 `.displayName`**，禁止内联对象（`react/display-name` 会报错）
-- **故意丢弃的解构 prop（如 `variant: _variant`）用 `/* eslint-disable/enable @typescript-eslint/no-unused-vars */` 块包裹**，不要用 `// eslint-disable-next-line`（只作用一行）
-- **文件末尾只允许一个 `\n`**，禁止两个以上空行（`prettier/prettier: Delete ⏎`）
-- **长函数调用超过 80 字符必须拆行 + trailing comma**（`printWidth: 80`, `trailingComma: "all"`）
-- 每个 view 测试文件只有**一个 `describe` 块**，内部按 `rendering / validation / success / error` 分组
+**高频禁令（快速记忆）：**
+- **禁止同一文件存在两个同名 `describe` 块** → 旧版必须完整删除
+- **`React.forwardRef` 在 `vi.mock` 里必须用工厂函数写法并设 `.displayName`**
+- **所有 E2E 文件必须从 `'./fixtures'` 导入 `test`**，不能从 `'@playwright/test'`
+- **API 签名 / store action 参数改变时，立即同步所有 `toHaveBeenCalledWith` 和 `mockResolvedValue`**
+- **文件末尾只允许一个 `\n`**，禁止两个以上空行
+- **长函数调用超过 80 字符必须拆行 + trailing comma**
 
 ### ⚠️ Prisma v6 规范（违反会导致容器崩溃或大量 TS 报错）
 

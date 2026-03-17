@@ -27,7 +27,8 @@ export default defineConfig({
   timeout: 120_000,
 
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'https://admin-dev.joyminis.com',
+    baseURL:
+      process.env.PLAYWRIGHT_BASE_URL ?? 'https://admin-dev.joyminis.com',
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -64,7 +65,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: { cookies: [], origins: [] },
       },
-      testMatch: /register-apply\.spec\.ts/,
+      testMatch: /register-apply\.spec\.ts|home\.spec\.ts/,
     },
   ],
 });
