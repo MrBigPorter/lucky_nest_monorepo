@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsArray } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 // 2. searchUsers DTO
 export class UserInfoResponseDto {
@@ -9,7 +9,7 @@ export class UserInfoResponseDto {
 }
 
 // 3. addFriend DTO
-export class AddFriendDto {
+export class ClientAddFriendDto {
   @IsNotEmpty()
   @IsString()
   friendId!: string;

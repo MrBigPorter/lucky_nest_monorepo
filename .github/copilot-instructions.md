@@ -66,6 +66,34 @@
 - **长函数调用超过 80 字符必须拆行 + trailing comma**（`printWidth: 80`, `trailingComma: "all"`）
 - 每个 view 测试文件只有**一个 `describe` 块**，内部按 `rendering / validation / success / error` 分组
 
+### ⚠️ Prisma v6 规范（违反会导致容器崩溃或大量 TS 报错）
+
+> 事故记录：2026-03-17，Apple Silicon Docker 容器启动崩溃 + 187 个 TS 错误  
+> 详细复盘见 `read/PRISMA_V6_MIGRATION_CN.md`
+
+**引擎 binary（必须保持，否则容器启动崩溃）**
+- `binaryTargets` 必须包含 `"linux-arm64-openssl-1.1.x"`（base image = `node:20-bullseye-slim`，OpenSSL 1.1.x）
+- 当前正确值：`["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x", "linux-arm64-openssl-1.1.x"]`
+- **禁止** 为 `apps/api/node_modules` 单独添加 Docker 卷 → 会导致 Prisma generated client 为空，所有模型类型消失
+
+**Prisma v6 API 变更（用 v5 写法会报 TS 错误）**
+
+| v5 写法 ❌ | v6 正确写法 ✅ |
+|-----------|--------------|
+| `Prisma.LogDefinition` | 本地定义等价类型（见 `prisma.service.ts`）|
+| `$queryRawUnsafe<T>(...)` | `await $queryRawUnsafe(...)` 后再 `as T` |
+| `Prisma.PrismaClientKnownRequestError` | `import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'` |
+| `catch (e: any)` + `e.message` | `catch (e: unknown)` + `e instanceof Error ? e.message : String(e)` |
+| JSON 字段写 `null` | `Prisma.JsonNull`（nullable JSON 字段不接受 JS 原生 null）|
+
+**修改 `schema.prisma` 后的必要操作**
+```bash
+# 1. 宿主机重新 generate（IDE 和 ESLint 才能看到新类型，否则大量假报错）
+node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma
+# 2. 重启容器（让 prestart:dev 在容器内也重新 generate）
+docker compose --env-file deploy/.env.dev up -d backend
+```
+
 ### CI/CD 文件速查
 | 文件 | 触发 | 作用 |
 |------|------|------|
@@ -133,6 +161,9 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 | `middleware.ts` 注释过时 | 🟡 中 | ✅ Phase 0 已修复 |
 | Prisma 模型加了但没跑 generate → 运行时 `prisma.xxx` 为 undefined | 🔴 高 | ✅ Phase 5.5 已修复：entrypoint.sh 默认跑 migrate deploy；compose.yml dev 也加了 migrate deploy |
 | CI 缓存已禁用（GHA 存储不足），每次全量安装慢 | 🟢 低 | 待迁移 Docker Hub 后重启缓存 |
+| 引擎 binary 配置缺失导致容器崩溃 | 🔴 高 | ✅ Phase 6 已修复：`schema.prisma` 添加 `"linux-arm64-openssl-1.1.x"`；禁止单独挂载 `apps/api/node_modules` 卷 |
+| Prisma v6 breaking changes 导致 TS 错误 | 🔴 高 | ✅ Phase 6 已修复：见二、关键技术约定 Prisma v6 规范 |
+| 引擎 binary 配置缺失导致容器崩溃 | 🔴 高 | ✅ Phase 6 已修复：`schema.prisma` 添加 `"linux-arm64-openssl-1.1.x"` |
 
 ---
 
@@ -147,3 +178,4 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 7. 数据库变更必须通过 `prisma migrate dev` 生成迁移文件
 8. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
 9. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理
+10. 修改 `schema.prisma` 后，**必须在宿主机跑一次** `node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`（让 IDE / ESLint 看到最新类型，否则会出现大量假报错）
