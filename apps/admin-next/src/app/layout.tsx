@@ -1,11 +1,33 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 // Quill rich-text editor styles (used in product create/edit forms)
 import 'react-quill-new/dist/quill.snow.css';
 
 export const metadata: Metadata = {
-  title: 'Lucky Admin',
-  description: 'Lucky Nest Admin Dashboard',
+  title: {
+    template: '%s | JoyMini Admin',
+    default: 'JoyMini Admin',
+  },
+  description: 'JoyMini internal admin dashboard — manage products, orders, users and more.',
+  robots: { index: false, follow: false },
+  openGraph: {
+    title: 'JoyMini Admin',
+    description: 'JoyMini Admin Dashboard',
+    siteName: 'JoyMini Admin',
+    locale: 'en_US',
+    type: 'website',
+  },
+};
+
+// Next.js 15: viewport 必须单独导出，不能放在 metadata 里
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // 移动端浏览器顶栏颜色：亮色用白，暗色用 dark-900
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#11111b' },
+  ],
 };
 
 export default function RootLayout({
