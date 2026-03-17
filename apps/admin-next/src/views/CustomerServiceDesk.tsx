@@ -1,11 +1,6 @@
 'use client';
 
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-} from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRequest } from 'ahooks';
 import {
   MessageSquare,
@@ -27,6 +22,8 @@ import {
   Undo2,
   Zap,
   FileText,
+  WifiOff,
+  Wifi,
 } from 'lucide-react';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { chatApi } from '@/api';
@@ -36,6 +33,7 @@ import type {
   QueryConversationsParams,
 } from '@/type/types';
 import { format } from 'date-fns';
+import { useChatSocket, type SocketStatus } from '@/hooks/useChatSocket';
 
 // ─── CDN 媒体 URL 工具 ────────────────────────────────────────────────────────
 
@@ -123,6 +121,33 @@ function getInitials(name: string | null) {
   return name.charAt(0).toUpperCase();
 }
 
+// ─── Socket 连接状态指示 ────────────────────────────────────────────────────
+
+function SocketIndicator({ status }: { status: SocketStatus }) {
+  if (status === 'connected') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2.5 py-1 rounded-full">
+        <Wifi size={11} />
+        Live
+      </span>
+    );
+  }
+  if (status === 'connecting') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/10 px-2.5 py-1 rounded-full">
+        <RefreshCw size={11} className="animate-spin" />
+        Connecting…
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 px-2.5 py-1 rounded-full">
+      <WifiOff size={11} />
+      Polling
+    </span>
+  );
+}
+
 // ─── 状态徽章 ─────────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: number }) {
@@ -156,9 +181,7 @@ function ImageMessage({
   const thumbUrl = resolveImageUrl(content, 240);
   const fullUrl = resolveImageUrl(content, 1200);
   const aspect =
-    meta?.w && meta?.h
-      ? Math.min(2, Math.max(0.5, meta.w / meta.h))
-      : 1;
+    meta?.w && meta?.h ? Math.min(2, Math.max(0.5, meta.w / meta.h)) : 1;
 
   return (
     <>
@@ -291,9 +314,7 @@ function VideoMessage({
   const thumbResolved = thumbUrl ? resolveImageUrl(thumbUrl, 240) : undefined;
   const videoUrl = resolveMediaUrl(content);
   const aspect =
-    meta?.w && meta?.h
-      ? Math.min(2, Math.max(0.5, meta.w / meta.h))
-      : 16 / 9;
+    meta?.w && meta?.h ? Math.min(2, Math.max(0.5, meta.w / meta.h)) : 16 / 9;
 
   const handlePlay = () => {
     setPlaying(true);
@@ -378,7 +399,9 @@ function FileMessage({
     >
       <div
         className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-          isSupport ? 'bg-white/20' : 'bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400'
+          isSupport
+            ? 'bg-white/20'
+            : 'bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400'
         }`}
       >
         {fileExt || <FileText size={16} />}
@@ -386,12 +409,17 @@ function FileMessage({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{fileName}</p>
         {fileSize && (
-          <p className={`text-xs ${isSupport ? 'text-white/70' : 'text-gray-400'}`}>
+          <p
+            className={`text-xs ${isSupport ? 'text-white/70' : 'text-gray-400'}`}
+          >
             {formatFileSize(fileSize)}
           </p>
         )}
       </div>
-      <Download size={14} className="flex-shrink-0 opacity-60 group-hover:opacity-100" />
+      <Download
+        size={14}
+        className="flex-shrink-0 opacity-60 group-hover:opacity-100"
+      />
     </a>
   );
 }
@@ -405,9 +433,7 @@ function LocationMessage({ meta }: { meta: Record<string, any> | null }) {
   const lat = meta?.latitude as number | undefined;
   const lng = meta?.longitude as number | undefined;
   const mapsUrl =
-    lat && lng
-      ? `https://www.google.com/maps?q=${lat},${lng}`
-      : undefined;
+    lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : undefined;
 
   return (
     <a
@@ -429,10 +455,10 @@ function LocationMessage({ meta }: { meta: Record<string, any> | null }) {
         </div>
       )}
       <div className="px-2 py-1.5 bg-white dark:bg-gray-800">
-        <p className="text-xs font-medium text-gray-800 dark:text-white truncate">{title}</p>
-        {address && (
-          <p className="text-xs text-gray-400 truncate">{address}</p>
-        )}
+        <p className="text-xs font-medium text-gray-800 dark:text-white truncate">
+          {title}
+        </p>
+        {address && <p className="text-xs text-gray-400 truncate">{address}</p>}
       </div>
     </a>
   );
@@ -544,7 +570,9 @@ function MessageBubble({
         >
           {renderContent()}
         </div>
-        <div className={`flex items-center gap-1.5 px-1 ${isSupport ? 'flex-row-reverse' : ''}`}>
+        <div
+          className={`flex items-center gap-1.5 px-1 ${isSupport ? 'flex-row-reverse' : ''}`}
+        >
           <span className="text-xs text-gray-400">
             {formatMsgTime(msg.createdAt)}
           </span>
@@ -611,9 +639,15 @@ function QuickRepliesPanel({
 function ChatWindow({
   conversation,
   onMessageSent,
+  registerOnNewMessage,
+  registerOnRecalled,
 }: {
   conversation: ChatConversation;
   onMessageSent: () => void;
+  registerOnNewMessage?: (fn: (msg: ChatMessage) => void) => void;
+  registerOnRecalled?: (
+    fn: (d: { conversationId: string; messageId: string }) => void,
+  ) => void;
 }) {
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
@@ -632,7 +666,28 @@ function ChatWindow({
     conversation.members[0];
   const displayName = user?.nickname ?? conversation.name ?? 'Unknown';
 
-  // 拉取最新消息（初始 + 轮询）
+  // ── 实时消息回调注册 ──────────────────────────────────────────
+  useEffect(() => {
+    // 收到新消息时追加到末尾（去重 by id）
+    registerOnNewMessage?.((msg) => {
+      setAllMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    });
+    // 收到撤回事件时本地标记为已撤回
+    registerOnRecalled?.((data) => {
+      if (data.conversationId !== conversation.id) return;
+      setAllMessages((prev) =>
+        prev.map((m) =>
+          m.id === data.messageId
+            ? { ...m, isRecalled: true, content: '[Message recalled]' }
+            : m,
+        ),
+      );
+    });
+  }, [conversation.id, registerOnNewMessage, registerOnRecalled]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { loading: loadingMsgs, run: fetchMessages } = useRequest(
     () => chatApi.getMessages(conversation.id, { pageSize: 30 }),
     {
@@ -921,7 +976,9 @@ function ChatWindow({
               />
               <button
                 onClick={() => void handleSend()}
-                disabled={(!replyText.trim() && !uploading) || sending || uploading}
+                disabled={
+                  (!replyText.trim() && !uploading) || sending || uploading
+                }
                 className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-teal-500 text-white hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {sending ? (
@@ -943,10 +1000,12 @@ function ChatWindow({
 function ConversationItem({
   conv,
   isActive,
+  unreadCount = 0,
   onClick,
 }: {
   conv: ChatConversation;
   isActive: boolean;
+  unreadCount?: number;
   onClick: () => void;
 }) {
   const user = conv.members.find((m) => m.role !== 'OWNER') ?? conv.members[0];
@@ -962,30 +1021,41 @@ function ConversationItem({
       }`}
     >
       <div className="flex items-start gap-3">
-        {/* 头像 */}
-        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-sm font-semibold">
-          {user?.avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatar}
-              alt={displayName}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            getInitials(displayName)
+        {/* 头像 + 未读角标 */}
+        <div className="relative flex-shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-sm font-semibold">
+            {user?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatar}
+                alt={displayName}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              getInitials(displayName)
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
           )}
         </div>
         {/* 内容 */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-1 mb-0.5">
-            <span className="text-sm font-medium truncate text-gray-900 dark:text-white">
+            <span
+              className={`text-sm font-medium truncate ${unreadCount > 0 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-900 dark:text-white'}`}
+            >
               {displayName}
             </span>
             <span className="text-xs text-gray-400 flex-shrink-0">
               {formatTime(conv.lastMsgTime)}
             </span>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <p
+            className={`text-xs truncate ${unreadCount > 0 ? 'text-gray-700 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}
+          >
             {conv.lastMsgContent ?? 'No messages yet'}
           </p>
           <div className="mt-1">
@@ -1008,6 +1078,10 @@ export function CustomerServiceDesk() {
     undefined,
   );
   const [page, setPage] = useState(1);
+  // 本地记录每个会话的「最后已读 seqId」，用于计算未读数角标
+  const [lastSeenSeqId, setLastSeenSeqId] = useState<Record<string, number>>(
+    {},
+  );
 
   const queryParams: QueryConversationsParams = {
     page,
@@ -1023,13 +1097,45 @@ export function CustomerServiceDesk() {
     run: refreshList,
   } = useRequest(() => chatApi.getConversations(queryParams), {
     refreshDeps: [page, keyword, statusFilter],
-    pollingInterval: 15000,
+    pollingInterval: 30000, // 30s fallback 轮询（Socket 实时为主）
   });
 
   const conversations = data?.list ?? [];
   const total = data?.total ?? 0;
 
-  // 选中某会话后同步更新
+  // ── Socket.IO 实时连接 ──
+  const { status: socketStatus } = useChatSocket({
+    conversationId: selectedConv?.id ?? null,
+    onMessage: useCallback(
+      (msg: ChatMessage) => {
+        // 通知 ChatWindow 有新消息（通过 ref 回调）
+        onNewMessageRef.current?.(msg);
+        // 刷新会话列表（更新 lastMsgContent/lastMsgTime）
+        refreshList();
+      },
+      [refreshList],
+    ),
+    onRecalled: useCallback((data) => {
+      onRecalledRef.current?.(data);
+    }, []),
+    onConversationUpdated: useCallback(() => {
+      refreshList();
+    }, [refreshList]),
+  });
+
+  // 这两个 ref 由 ChatWindow 注册，用于把 socket 事件路由到正确的窗口
+  const onNewMessageRef = useRef<((msg: ChatMessage) => void) | null>(null);
+  const onRecalledRef = useRef<
+    ((d: { conversationId: string; messageId: string }) => void) | null
+  >(null);
+
+  // 选中某会话后：更新「已读 seqId」
+  const handleSelectConv = (conv: ChatConversation) => {
+    setSelectedConv(conv);
+    setLastSeenSeqId((prev) => ({ ...prev, [conv.id]: conv.lastMsgSeqId }));
+  };
+
+  // 同步更新 selectedConv（列表刷新后）
   useEffect(() => {
     if (selectedConv && conversations.length > 0) {
       const updated = conversations.find((c) => c.id === selectedConv.id);
@@ -1042,6 +1148,7 @@ export function CustomerServiceDesk() {
       <PageHeader
         title="Customer Service Desk"
         description="Handle support conversations from users"
+        action={<SocketIndicator status={socketStatus} />}
       />
 
       <div className="flex flex-1 min-h-0 gap-4 mt-4">
@@ -1113,14 +1220,22 @@ export function CustomerServiceDesk() {
                 <p className="text-sm">No conversations</p>
               </div>
             )}
-            {conversations.map((conv) => (
-              <ConversationItem
-                key={conv.id}
-                conv={conv}
-                isActive={selectedConv?.id === conv.id}
-                onClick={() => setSelectedConv(conv)}
-              />
-            ))}
+            {conversations.map((conv) => {
+              const unread = Math.max(
+                0,
+                conv.lastMsgSeqId -
+                  (lastSeenSeqId[conv.id] ?? conv.lastMsgSeqId),
+              );
+              return (
+                <ConversationItem
+                  key={conv.id}
+                  conv={conv}
+                  isActive={selectedConv?.id === conv.id}
+                  unreadCount={unread}
+                  onClick={() => handleSelectConv(conv)}
+                />
+              );
+            })}
           </div>
 
           {/* 分页 */}
@@ -1154,6 +1269,12 @@ export function CustomerServiceDesk() {
               key={selectedConv.id}
               conversation={selectedConv}
               onMessageSent={refreshList}
+              registerOnNewMessage={(fn) => {
+                onNewMessageRef.current = fn;
+              }}
+              registerOnRecalled={(fn) => {
+                onRecalledRef.current = fn;
+              }}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 select-none">

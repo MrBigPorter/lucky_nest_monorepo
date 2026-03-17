@@ -1,0 +1,220 @@
+'use client';
+
+/**
+ * useChatSocket — Admin 客服端 Socket.IO 实时连接
+ *
+ * 功能:
+ *  - 连接到 /events namespace（复用 nginx /socket.io/ 代理）
+ *  - join_chat / leave_chat 随会话切换
+ *  - 监听 dispatch 事件: chat_message / message_recalled / conversation_updated
+ *  - 暴露连接状态供 UI 显示
+ */
+
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import type { ChatMessage } from '@/type/types';
+
+export type SocketStatus =
+  | 'connecting'
+  | 'connected'
+  | 'disconnected'
+  | 'error';
+
+interface UseChatSocketOptions {
+  /** 当前打开的会话 ID（null = 未选中） */
+  conversationId: string | null;
+  /** 收到新消息时回调 */
+  onMessage: (msg: ChatMessage) => void;
+  /** 消息被撤回时回调 */
+  onRecalled: (data: {
+    conversationId: string;
+    messageId: string;
+    seqId?: number;
+  }) => void;
+  /** 会话信息更新时回调（用于刷新会话列表） */
+  onConversationUpdated?: (conversationId?: string) => void;
+}
+
+/** 将 socket dispatch 推送的 raw data 映射为 ChatMessage */
+function mapRawMessage(raw: Record<string, any>): ChatMessage {
+  return {
+    id: raw.id ?? '',
+    seqId: raw.seqId ?? 0,
+    content: raw.content ?? '',
+    type: raw.type ?? 0,
+    isRecalled: raw.isRecalled ?? false,
+    createdAt: typeof raw.createdAt === 'number' ? raw.createdAt : Date.now(),
+    meta: raw.meta ?? null,
+    senderId: raw.senderId ?? null,
+    sender: raw.sender ?? null,
+    isSystem: raw.isSystem ?? raw.senderId === null,
+  };
+}
+
+export function useChatSocket({
+  conversationId,
+  onMessage,
+  onRecalled,
+  onConversationUpdated,
+}: UseChatSocketOptions) {
+  const socketRef = useRef<Socket | null>(null);
+  const currentRoomRef = useRef<string | null>(null);
+  const [status, setStatus] = useState<SocketStatus>('disconnected');
+
+  // ── stable callback refs so effect deps stay minimal ──
+  const onMessageRef = useRef(onMessage);
+  const onRecalledRef = useRef(onRecalled);
+  const onConversationUpdatedRef = useRef(onConversationUpdated);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+  useEffect(() => {
+    onRecalledRef.current = onRecalled;
+  }, [onRecalled]);
+  useEffect(() => {
+    onConversationUpdatedRef.current = onConversationUpdated;
+  }, [onConversationUpdated]);
+
+  // ── 建立 Socket 连接（只执行一次） ──
+  useEffect(() => {
+    const token =
+      typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
+    if (!token) return;
+
+    setStatus('connecting');
+
+    /**
+     * socket.io-client: io('/events') 使用当前浏览器 origin
+     * nginx 代理: /socket.io/ → backend:3000
+     * NestJS gateway namespace: /events
+     */
+    const socket = io('/events', {
+      transports: ['websocket'],
+      auth: { token },
+      query: { token },
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setStatus('connected');
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('disconnected');
+    });
+
+    socket.on('connect_error', () => {
+      setStatus('error');
+    });
+
+    socket.on('reconnect', () => {
+      setStatus('connected');
+      // Re-join current room after reconnect
+      if (currentRoomRef.current) {
+        socket.emit('join_chat', { conversationId: currentRoomRef.current });
+      }
+    });
+
+    // 统一分发事件监听
+    socket.on(
+      'dispatch',
+      (payload: { type: string; data: Record<string, any> }) => {
+        switch (payload.type) {
+          case 'chat_message':
+            onMessageRef.current(mapRawMessage(payload.data));
+            onConversationUpdatedRef.current?.(payload.data.conversationId);
+            break;
+
+          case 'message_recalled':
+            onRecalledRef.current({
+              conversationId: payload.data.conversationId,
+              messageId: payload.data.messageId,
+              seqId: payload.data.seqId,
+            });
+            break;
+
+          case 'conversation_updated':
+            onConversationUpdatedRef.current?.(payload.data.conversationId);
+            break;
+        }
+      },
+    );
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+      currentRoomRef.current = null;
+      setStatus('disconnected');
+    };
+  }, []); // connect once on mount
+
+  // ── 切换会话时 join/leave room ──
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !socket.connected) return;
+
+    // 离开旧房间
+    if (currentRoomRef.current && currentRoomRef.current !== conversationId) {
+      socket.emit('leave_chat', { conversationId: currentRoomRef.current });
+    }
+
+    // 进入新房间
+    if (conversationId) {
+      socket.emit('join_chat', { conversationId });
+      currentRoomRef.current = conversationId;
+    } else {
+      currentRoomRef.current = null;
+    }
+  }, [conversationId]);
+
+  /** 手动进入会话房间（例如 socket 重连后） */
+  const joinRoom = useCallback((convId: string) => {
+    socketRef.current?.emit('join_chat', { conversationId: convId });
+  }, []);
+
+  /** 发送消息 via Socket（带 ACK，10s 超时） */
+  const sendViaSocket = useCallback(
+    (
+      convId: string,
+      content: string,
+      type = 0,
+      tempId?: string,
+    ): Promise<{ id: string; seqId: number }> => {
+      return new Promise((resolve, reject) => {
+        const socket = socketRef.current;
+        if (!socket || !socket.connected) {
+          reject(new Error('Socket not connected'));
+          return;
+        }
+        const tid = tempId ?? `admin_${Date.now()}`;
+        const timer = setTimeout(
+          () => reject(new Error('Send timeout')),
+          10_000,
+        );
+        socket.emit(
+          'send_message',
+          { conversationId: convId, content, type, tempId: tid },
+          (ack: {
+            status: string;
+            data?: { id: string; seqId: number };
+            message?: string;
+          }) => {
+            clearTimeout(timer);
+            if (ack.status === 'ok' && ack.data) {
+              resolve(ack.data);
+            } else {
+              reject(new Error(ack.message ?? 'Send failed'));
+            }
+          },
+        );
+      });
+    },
+    [],
+  );
+
+  return { status, joinRoom, sendViaSocket };
+}

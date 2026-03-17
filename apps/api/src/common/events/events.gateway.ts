@@ -50,12 +50,21 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       let userId: string | null = null;
       if (token) {
-        try {
-          const payload = this.jwtService.verify(token);
-          userId = payload.sub;
-          this.logger.debug(` User verified via JWT: ${userId}`);
-        } catch (jwtError: any) {
-          this.logger.warn(` JWT Verification Error: ${jwtError.message}`);
+        // Try client JWT secret first, then admin JWT secret
+        const secrets = [
+          process.env.JWT_SECRET || 'please_change_me_very_secret',
+          process.env.ADMIN_JWT_SECRET,
+        ].filter(Boolean) as string[];
+
+        for (const secret of secrets) {
+          try {
+            const payload = this.jwtService.verify(token, { secret });
+            userId = payload.sub;
+            this.logger.debug(` User verified via JWT: ${userId}`);
+            break;
+          } catch {
+            // try next secret
+          }
         }
 
         if (userId) {

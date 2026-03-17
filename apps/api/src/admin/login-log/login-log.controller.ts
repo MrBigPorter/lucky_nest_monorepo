@@ -6,7 +6,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@lucky/shared';
 
-@Controller('v1/admin/login-logs')
+@Controller('admin/login-logs')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class LoginLogController {
   constructor(private readonly loginLogService: LoginLogService) {}

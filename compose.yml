@@ -94,7 +94,7 @@ services:
     environment:
       NEXT_PUBLIC_API_BASE_URL: /api
       # Server Components 直连后端（跳过 nginx 公网往返，降低 SSR 延迟）
-      INTERNAL_API_URL: http://lucky-backend-dev:3000
+      INTERNAL_API_URL: http://lucky-backend-dev:3000/api
       NEXT_PUBLIC_APP_ENV: development
       HOSTNAME: "0.0.0.0"
     healthcheck:

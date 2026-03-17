@@ -37,8 +37,12 @@ export const useAppStore = create<AppState>()(
         }
         return localStorage;
       }),
-      // 只持久化 theme 和 lang，sidebar 状态不持久化
-      partialize: (state) => ({ theme: state.theme, lang: state.lang }),
+      // 持久化 theme、lang 和 isSidebarCollapsed
+      partialize: (state) => ({
+        theme: state.theme,
+        lang: state.lang,
+        isSidebarCollapsed: state.isSidebarCollapsed,
+      }),
     },
   ),
 );

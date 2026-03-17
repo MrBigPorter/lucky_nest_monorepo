@@ -123,7 +123,7 @@ export class StatsService {
           COUNT(*)::text AS count
         FROM users
         WHERE created_at >= ${cutoff}
-          AND deleted_at IS NULL
+          AND status = 1
         GROUP BY date
         ORDER BY date ASC
       `,

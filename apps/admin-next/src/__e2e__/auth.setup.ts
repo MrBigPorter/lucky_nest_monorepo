@@ -28,6 +28,16 @@ const WARMUP_ROUTES = [
   '/address/',
   '/act/section/',
   '/payment/channels/',
+  // Phase 5 — new feature pages
+  '/ads/',
+  '/flash-sale/',
+  '/settings/',
+  '/im/',
+  '/login-logs/',
+  '/analytics/',
+  '/notifications/',
+  '/roles/',
+  '/operation-logs/',
 ];
 
 setup('authenticate and warmup all routes', async ({ page }) => {
@@ -47,9 +57,14 @@ setup('authenticate and warmup all routes', async ({ page }) => {
   for (const route of WARMUP_ROUTES) {
     try {
       console.log(`  → ${route}`);
-      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 300_000 });
+      await page.goto(route, {
+        waitUntil: 'domcontentloaded',
+        timeout: 300_000,
+      });
       // Wait for the sidebar which signals the layout is fully rendered
-      await page.locator('aside').waitFor({ state: 'visible', timeout: 300_000 });
+      await page
+        .locator('aside')
+        .waitFor({ state: 'visible', timeout: 300_000 });
     } catch {
       // Non-fatal: some routes may redirect or take longer than expected.
       // The spec itself will retry on its own timeout.
@@ -58,4 +73,3 @@ setup('authenticate and warmup all routes', async ({ page }) => {
   }
   console.log('✅ Warmup complete\n');
 });
-

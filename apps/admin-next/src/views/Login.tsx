@@ -12,7 +12,7 @@ import { Button, Input } from '@/components/UIComponents';
 import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authApi } from '@/api';
-import { LoginResponse } from '@/type/types';
+import { LoginResponse, UserRole } from '@/type/types';
 
 const loginSchema = z.object({
   username: z.string().min(1, { message: 'Username is required.' }),
@@ -44,7 +44,11 @@ export const Login: React.FC = () => {
     manual: true,
     onSuccess: async (result) => {
       if (result.tokens.accessToken) {
-        await loginAction(result.tokens.accessToken);
+        await loginAction(
+          result.tokens.accessToken,
+          result.userInfo.role as UserRole,
+          result.userInfo,
+        );
         addToast('success', 'Welcome back, Admin!');
         router.push('/');
       } else {

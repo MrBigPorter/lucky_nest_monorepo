@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, ConversationType } from '@prisma/client';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { UploadService } from '@api/common/upload/upload.service';
+import { EventsGateway } from '@api/common/events/events.gateway';
 import { v4 as uuidv4 } from 'uuid';
 import { QueryConversationsDto } from './dto/query-conversations.dto';
 import {
@@ -19,6 +20,26 @@ const MSG_TYPE_TEXT = 0;
 /** 系统消息类型（前端可以根据 senderId===null 判断样式） */
 const MSG_TYPE_SYSTEM = 99;
 
+/** 生成消息预览文本 */
+function getMsgPreview(type: number, content: string): string {
+  switch (type) {
+    case 1:
+      return '[Image]';
+    case 2:
+      return '[Voice]';
+    case 3:
+      return '[Video]';
+    case 5:
+      return '[File]';
+    case 6:
+      return '[Location]';
+    case 99:
+      return content;
+    default:
+      return content.slice(0, 120);
+  }
+}
+
 @Injectable()
 export class AdminChatService {
   private readonly logger = new Logger(AdminChatService.name);
@@ -26,6 +47,7 @@ export class AdminChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadService: UploadService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   // ─────────────────────────────────────────────
@@ -203,6 +225,22 @@ export class AdminChatService {
       `Admin [${adminName}] replied to conversation ${conversationId} (type=${msgType})`,
     );
 
+    // 🔔 实时推送到 Flutter 客户端 & 管理员 Socket 监听者
+    this.eventsGateway.dispatch(conversationId, 'chat_message', {
+      id: message.id,
+      conversationId,
+      senderId: null,
+      content: message.content,
+      type: message.type,
+      createdAt: message.createdAt.getTime(),
+      seqId: message.seqId,
+      isSystem: true,
+      isSelf: false,
+      isRecalled: false,
+      meta: message.meta,
+      sender: null,
+    });
+
     return {
       id: message.id,
       seqId: message.seqId,
@@ -232,6 +270,17 @@ export class AdminChatService {
     });
 
     this.logger.warn(`Admin force-recalled message ${messageId}`);
+
+    // 🔔 推送撤回事件到会话房间
+    this.eventsGateway.dispatch(message.conversationId, 'message_recalled', {
+      conversationId: message.conversationId,
+      messageId: message.id,
+      tip: 'Message recalled by support',
+      isSelf: false,
+      operatorId: null,
+      seqId: message.seqId,
+    });
+
     return { success: true, messageId };
   }
 
@@ -251,6 +300,7 @@ export class AdminChatService {
     const reason = dto.reason ?? 'Closed by support agent';
     const messageId = uuidv4();
 
+    let closedSeqId = 0;
     await this.prisma.$transaction(async (tx) => {
       const updated = await tx.conversation.update({
         where: { id: conversationId },
@@ -263,6 +313,7 @@ export class AdminChatService {
         },
         select: { lastMsgSeqId: true },
       });
+      closedSeqId = updated.lastMsgSeqId;
 
       await tx.chatMessage.create({
         data: {
@@ -280,6 +331,23 @@ export class AdminChatService {
     this.logger.log(
       `Admin [${adminName}] closed conversation ${conversationId}`,
     );
+
+    // 🔔 推送关闭系统消息到会话房间
+    this.eventsGateway.dispatch(conversationId, 'chat_message', {
+      id: messageId,
+      conversationId,
+      senderId: null,
+      content: reason,
+      type: MSG_TYPE_SYSTEM,
+      createdAt: Date.now(),
+      seqId: closedSeqId,
+      isSystem: true,
+      isSelf: false,
+      isRecalled: false,
+      meta: { closedBy: adminName, isClose: true },
+      sender: null,
+    });
+
     return { success: true, conversationId };
   }
 

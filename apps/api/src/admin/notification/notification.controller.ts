@@ -16,7 +16,7 @@ import { Roles } from '../auth/roles.decorator';
 import { Role } from '@lucky/shared';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 
-@Controller('v1/admin/notifications')
+@Controller('admin/notifications')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class AdminNotificationController {
   constructor(private readonly service: AdminNotificationService) {}

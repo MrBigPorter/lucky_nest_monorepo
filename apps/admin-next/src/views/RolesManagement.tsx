@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRequest } from 'ahooks';
 import {
   Shield,
@@ -279,12 +279,14 @@ function RoleUsersPanel({
 // ── Main component ──────────────────────────────────────────────────
 export function RolesManagement() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const {
     data: roles,
     loading,
     error,
-  } = useRequest(rolesApi.getSummary, { cacheKey: 'roles-summary' });
+  } = useRequest(rolesApi.getSummary, { cacheKey: 'roles-summary', ready: mounted });
 
   const selectedItem = roles?.find((r) => r.role === selectedRole);
 
