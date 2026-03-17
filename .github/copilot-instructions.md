@@ -131,6 +131,7 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 | VPS 1GB RAM，Docker 镜像过多可能 OOM | 🔴 高 | 已用 Alpine + standalone 优化，持续监控 |
 | Firebase SDK JSON 格式错误（韩文字符在环境变量中） | 🟡 中 | ✅ 已修复 |
 | `middleware.ts` 注释过时 | 🟡 中 | ✅ Phase 0 已修复 |
+| Prisma 模型加了但没跑 generate → 运行时 `prisma.xxx` 为 undefined | 🔴 高 | ✅ Phase 5.5 已修复：entrypoint.sh 默认跑 migrate deploy；compose.yml dev 也加了 migrate deploy |
 | CI 缓存已禁用（GHA 存储不足），每次全量安装慢 | 🟢 低 | 待迁移 Docker Hub 后重启缓存 |
 
 ---
@@ -145,3 +146,4 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 6. 生产部署前检查 `deploy/.env.prod` 包含所有必需变量
 7. 数据库变更必须通过 `prisma migrate dev` 生成迁移文件
 8. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
+9. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理

@@ -39,6 +39,7 @@ services:
     environment:
       # 限制 Node.js 堆内存 (防 OOM)
       - NODE_OPTIONS=--max-old-space-size=256
+      # 迁移默认自动执行（entrypoint.sh）；若需跳过设 SKIP_MIGRATIONS=true
     deploy:
       resources:
         limits:
