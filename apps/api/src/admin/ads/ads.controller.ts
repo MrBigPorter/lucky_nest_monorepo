@@ -17,7 +17,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@lucky/shared';
 
-@Controller('v1/admin/ads')
+@Controller('admin/ads')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class AdsController {
   constructor(private readonly service: AdsService) {}

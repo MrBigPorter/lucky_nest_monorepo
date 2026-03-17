@@ -10,11 +10,9 @@ import { useToastStore } from '@/store/useToastStore';
 import { TRANSLATIONS } from '@/constants';
 import { routes, RouteConfig } from '@/routes';
 import { useRequest } from 'ahooks';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
-/**
- * SidebarItem — NavLink(react-router) → Link(next/link) + usePathname()
- */
+// ── SidebarItem ───────────────────────────────────────────────────────────────
 const SidebarItem: React.FC<{
   to: string;
   icon: React.ReactNode;
@@ -30,6 +28,7 @@ const SidebarItem: React.FC<{
     <Link
       href={to}
       onClick={onClick}
+      title={isCollapsed ? label : undefined}
       className={`
         flex items-center gap-3 rounded-xl transition-all duration-200 font-medium
         ${
@@ -57,6 +56,7 @@ const SidebarItem: React.FC<{
   );
 };
 
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 interface SidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
@@ -68,6 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { lang, isSidebarCollapsed, toggleSidebar } = useAppStore();
   const logoutAction = useAuthStore((state) => state.logout);
+  const userInfo = useAuthStore((state) => state.userInfo);
   const addToast = useToastStore((state) => state.addToast);
   const t = TRANSLATIONS[lang];
 
@@ -75,12 +76,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     logoutAction,
     {
       manual: true,
-      onSuccess: () => {
-        addToast('info', 'Logged out successfully');
-      },
-      onError: (error) => {
-        addToast('error', `Logout failed: ${error.message}`);
-      },
+      onSuccess: () => addToast('info', 'Logged out successfully'),
+      onError: (error) => addToast('error', `Logout failed: ${error.message}`),
     },
   );
 
@@ -96,17 +93,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {} as Record<string, RouteConfig[]>,
     );
 
+  const displayName = userInfo?.realName || userInfo?.username || 'Admin';
+
   return (
     <>
       <aside
         className={`
-          fixed inset-y-0 left-0 z-40 bg-white dark:bg-dark-900 border-r border-gray-100 dark:border-white/5 transform transition-all duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-40 bg-white dark:bg-dark-900 border-r border-gray-100 dark:border-white/5
+          transform transition-all duration-300 ease-in-out
           lg:relative lg:translate-x-0
           ${isSidebarCollapsed ? 'w-20' : 'w-64'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="h-full flex flex-col p-4">
+          {/* Logo */}
           <div
             className={`flex items-center gap-3 px-4 py-6 mb-4 transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}
           >
@@ -125,39 +126,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </motion.h1>
           </div>
 
+          {/* Nav */}
           <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar pr-2">
-            {Object.entries(groupedRoutes).map(([group, routesInGroup]) => (
-              <div key={group}>
-                <motion.div
-                  animate={{
-                    opacity: isSidebarCollapsed ? 0 : 1,
-                    height: isSidebarCollapsed ? 0 : 'auto',
-                    display: isSidebarCollapsed ? 'none' : 'block',
-                  }}
-                  className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6 overflow-hidden whitespace-nowrap"
-                >
-                  {group}
-                </motion.div>
-                {routesInGroup.map((route) => (
-                  <SidebarItem
-                    key={route.path}
-                    to={route.path}
-                    icon={React.createElement(route.icon, {
-                      size: isSidebarCollapsed ? 24 : 18,
-                    })}
-                    label={t[route.name as keyof typeof t] || route.name}
-                    isCollapsed={isSidebarCollapsed}
-                    onClick={onMobileClose}
-                  />
-                ))}
-              </div>
-            ))}
+            {Object.entries(groupedRoutes).map(
+              ([group, routesInGroup], groupIndex) => (
+                <div key={group}>
+                  {/* Group label (expanded) or dot separator (collapsed) */}
+                  {isSidebarCollapsed ? (
+                    groupIndex > 0 && (
+                      <div className="flex justify-center my-3">
+                        <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/20" />
+                      </div>
+                    )
+                  ) : (
+                    <div className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-6 whitespace-nowrap">
+                      {group}
+                    </div>
+                  )}
+                  {routesInGroup.map((route) => (
+                    <SidebarItem
+                      key={route.path}
+                      to={route.path}
+                      icon={React.createElement(route.icon, {
+                        size: isSidebarCollapsed ? 22 : 18,
+                      })}
+                      label={t[route.name as keyof typeof t] || route.name}
+                      isCollapsed={isSidebarCollapsed}
+                      onClick={onMobileClose}
+                    />
+                  ))}
+                </div>
+              ),
+            )}
           </nav>
 
+          {/* Footer */}
           <div className="pt-4 mt-4 border-t border-gray-100 dark:border-white/5 space-y-1">
+            {/* Collapse toggle — desktop only */}
             <button
               onClick={toggleSidebar}
-              className="hidden lg:flex w-full items-center gap-3 px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl"
+              title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="hidden lg:flex w-full items-center gap-3 px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"
             >
               {isSidebarCollapsed ? (
                 <ChevronsRight size={18} />
@@ -171,31 +180,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   display: isSidebarCollapsed ? 'none' : 'block',
                 }}
                 transition={{ duration: 0.2 }}
-                className="overflow-hidden whitespace-nowrap"
+                className="overflow-hidden whitespace-nowrap text-sm"
               >
-                {isSidebarCollapsed ? 'Expand' : 'Collapse'}
+                Collapse
               </motion.span>
             </button>
+
+            {/* Logout — always visible */}
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="lg:hidden w-full flex items-center gap-3 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+              title={isSidebarCollapsed ? 'Logout' : undefined}
+              className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50 ${isSidebarCollapsed ? 'justify-center' : ''}`}
             >
-              <LogOut size={18} />
-              <span className="text-sm font-medium">{t.logout}</span>
+              <LogOut size={18} className="flex-shrink-0" />
+              <motion.span
+                animate={{
+                  opacity: isSidebarCollapsed ? 0 : 1,
+                  width: isSidebarCollapsed ? 0 : 'auto',
+                  display: isSidebarCollapsed ? 'none' : 'block',
+                }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden whitespace-nowrap text-sm font-medium"
+              >
+                {isLoggingOut ? 'Logging out…' : t.logout}
+              </motion.span>
             </button>
+
+            {/* User info strip (expanded only) */}
+            {!isSidebarCollapsed && userInfo && (
+              <div className="px-4 py-2 mt-1 rounded-xl bg-gray-50 dark:bg-white/5">
+                <p className="text-sm font-medium text-gray-800 dark:text-white truncate">
+                  {displayName}
+                </p>
+                <p className="text-xs text-gray-400 truncate">
+                  {userInfo.roleName || userInfo.role}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </aside>
-      {mobileOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={onMobileClose}
-        />
-      )}
+
+      {/* Mobile overlay with AnimatePresence for exit animation */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            key="sidebar-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={onMobileClose}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

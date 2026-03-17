@@ -42,7 +42,7 @@ const CurrentAdminId = createParamDecorator(
   },
 );
 
-@Controller('v1/admin/chat')
+@Controller('admin/chat')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class AdminChatController {
   constructor(private readonly service: AdminChatService) {}

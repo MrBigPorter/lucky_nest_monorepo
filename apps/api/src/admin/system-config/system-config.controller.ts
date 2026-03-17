@@ -13,7 +13,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@lucky/shared';
 
-@Controller('v1/admin/system-config')
+@Controller('admin/system-config')
 @UseGuards(AdminJwtAuthGuard, RolesGuard)
 export class SystemConfigController {
   constructor(private readonly service: SystemConfigService) {}
