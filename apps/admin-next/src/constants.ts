@@ -96,3 +96,13 @@ export const TRANSLATIONS = {
     settings: '系统配置',
   },
 };
+
+/** role 枚举值 → 英文显示名，用于 Header / Sidebar，避免显示后端返回的中文 roleName */
+export const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  SUPER_ADMIN: 'Super Admin',
+  ADMIN: 'Admin',
+  EDITOR: 'Editor',
+  VIEWER: 'Viewer',
+  FINANCE: 'Finance',
+};
+

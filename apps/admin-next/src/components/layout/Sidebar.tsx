@@ -7,7 +7,7 @@ import { LogOut, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
-import { TRANSLATIONS } from '@/constants';
+import { TRANSLATIONS, ROLE_DISPLAY_NAMES } from '@/constants';
 import { routes, RouteConfig } from '@/routes';
 import { useRequest } from 'ahooks';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -214,7 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {displayName}
                 </p>
                 <p className="text-xs text-gray-400 truncate">
-                  {userInfo.roleName || userInfo.role}
+                  {ROLE_DISPLAY_NAMES[userInfo.role] ?? userInfo.role}
                 </p>
               </div>
             )}
