@@ -5,12 +5,13 @@ import { Ban, CheckCircle, Edit3, User as UserIcon, Key } from 'lucide-react';
 import { Card, Badge } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { AdminUser } from '@/type/types';
-import { userApi } from '@/api';
+import { userApi, applicationApi } from '@/api';
 import { useAntdTable, useRequest } from 'ahooks';
 import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { CreateAdminUserModal } from '@/views/admin/CreateAdminUserModal';
 import { EditAdminUserModal } from '@/views/admin/EditAdminUserModal';
 import { EditAdminPasswordModal } from '@/views/admin/EditAdminPassowordModal';
+import { ApplicationsManagement } from '@/views/admin/ApplicationsManagement';
 import { Button } from '@repo/ui';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
@@ -78,6 +79,16 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   onParamsChange,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
+  const [activeTab, setActiveTab] = useState<'users' | 'applications'>('users');
+
+  // Pending applications count for badge
+  const { data: pendingData } = useRequest(
+    () => applicationApi.pendingCount(),
+    {
+      refreshDeps: [activeTab],
+    },
+  );
+  const pendingCount = pendingData?.count ?? 0;
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -155,10 +166,15 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
     run({ current: 1, pageSize: 10 }, values);
     onParamsChange?.(values);
   };
-  
+
   const handleReset = () => {
     reset();
-    onParamsChange?.({ username: '', realName: '', role: 'ALL', status: 'ALL' });
+    onParamsChange?.({
+      username: '',
+      realName: '',
+      role: 'ALL',
+      status: 'ALL',
+    });
   };
 
   const columns: ColumnDef<AdminUser>[] = useMemo(() => {
@@ -283,95 +299,109 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
       <PageHeader
         title="Admin Users"
         description="Manage system administrators and their roles"
-        buttonText="Add New Admin"
-        buttonOnClick={handleCreate}
+        buttonText={activeTab === 'users' ? 'Add New Admin' : undefined}
+        buttonOnClick={activeTab === 'users' ? handleCreate : undefined}
       />
 
-      <Card>
-        <div className="space-y-3 mb-6">
-          <SchemaSearchForm<AdminUserSearchForm>
-            schema={[
-              {
-                type: 'input',
-                key: 'username',
-                label: 'Username',
-                placeholder: 'Search username...',
-              },
-              {
-                type: 'input',
-                key: 'realName',
-                label: 'Real Name',
-                placeholder: 'Search real name...',
-              },
-              {
-                type: 'select',
-                key: 'role',
-                label: 'Role',
-                defaultValue: 'ALL', // 支持默认值
-                options: [
-                  { label: 'All Roles', value: 'ALL' },
-                  { label: 'Viewer', value: 'VIEWER' },
-                  { label: 'Editor', value: 'EDITOR' },
-                  { label: 'Admin', value: 'ADMIN' },
-                  { label: 'Super Admin', value: 'SUPER_ADMIN' },
-                ],
-              },
-              {
-                type: 'select',
-                key: 'status',
-                label: 'Status',
-                defaultValue: 'ALL', // 支持默认值
-                options: [
-                  { label: 'All Status', value: 'ALL' },
-                  { label: 'Active', value: '1' },
-                  { label: 'Disabled', value: '0' },
-                ],
-              },
-            ]}
-            initialValues={{
-              username: (initialFormParams?.username as string) || '',
-              realName: (initialFormParams?.realName as string) || '',
-              role: (initialFormParams?.role as string) || 'ALL',
-              status: (initialFormParams?.status as string) || 'ALL',
-            }}
-            onSearch={handleSearch}
-            onReset={handleReset}
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-dark-800 rounded-xl w-fit">
+        {(['users', 'applications'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+              activeTab === tab
+                ? 'bg-white dark:bg-dark-900 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            {tab === 'users' ? 'Admin Users' : 'Applications'}
+            {tab === 'applications' && pendingCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center px-1">
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Applications tab */}
+      {activeTab === 'applications' && <ApplicationsManagement />}
+
+      {/* Users tab */}
+      {activeTab === 'users' && (
+        <>
+          <Card>
+            <div className="space-y-3 mb-6">
+              <SchemaSearchForm<AdminUserSearchForm>
+                schema={[
+                  { type: 'input', key: 'username', label: 'Username', placeholder: 'Search username...' },
+                  { type: 'input', key: 'realName', label: 'Real Name', placeholder: 'Search real name...' },
+                  {
+                    type: 'select', key: 'role', label: 'Role', defaultValue: 'ALL',
+                    options: [
+                      { label: 'All Roles', value: 'ALL' },
+                      { label: 'Viewer', value: 'VIEWER' },
+                      { label: 'Editor', value: 'EDITOR' },
+                      { label: 'Admin', value: 'ADMIN' },
+                      { label: 'Super Admin', value: 'SUPER_ADMIN' },
+                    ],
+                  },
+                  {
+                    type: 'select', key: 'status', label: 'Status', defaultValue: 'ALL',
+                    options: [
+                      { label: 'All Status', value: 'ALL' },
+                      { label: 'Active', value: '1' },
+                      { label: 'Disabled', value: '0' },
+                    ],
+                  },
+                ]}
+                initialValues={{
+                  username: (initialFormParams?.username as string) || '',
+                  realName: (initialFormParams?.realName as string) || '',
+                  role: (initialFormParams?.role as string) || 'ALL',
+                  status: (initialFormParams?.status as string) || 'ALL',
+                }}
+                onSearch={handleSearch}
+                onReset={handleReset}
+              />
+            </div>
+            <BaseTable
+              data={dataSource}
+              rowKey="id"
+              columns={columns}
+              pagination={{
+                ...tableProps.pagination,
+                onChange: (page, pageSize) => {
+                  tableProps.onChange?.({
+                    current: page,
+                    pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+                  });
+                },
+              }}
+            />
+          </Card>
+
+          <CreateAdminUserModal
+            isOpen={isCreateModalOpen}
+            onClose={() => setIsCreateModalOpen(false)}
+            onSuccess={refresh}
           />
-        </div>
-        <BaseTable
-          data={dataSource}
-          rowKey="id"
-          columns={columns}
-          pagination={{
-            ...tableProps.pagination,
-            onChange: (page, pageSize) => {
-              tableProps.onChange?.({
-                current: page,
-                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
-              });
-            },
-          }}
-        />
-      </Card>
+          <EditAdminUserModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            editingUser={editingAdmin}
+            onSuccess={refresh}
+          />
 
-      <CreateAdminUserModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={refresh}
-      />
-      <EditAdminUserModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        editingUser={editingAdmin}
-        onSuccess={refresh}
-      />
-
-      <EditAdminPasswordModal
-        isOpen={isResetPwdModalOpen}
-        onClose={() => setIsResetPwdModalOpen(false)}
-        onSuccess={refresh}
-        editingUser={resetPwdAdmin}
-      />
+          <EditAdminPasswordModal
+            isOpen={isResetPwdModalOpen}
+            onClose={() => setIsResetPwdModalOpen(false)}
+            onSuccess={refresh}
+            editingUser={resetPwdAdmin}
+          />
+        </>
+      )}
     </div>
   );
 };

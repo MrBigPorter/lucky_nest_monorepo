@@ -22,6 +22,7 @@ import { LoginLogModule } from '@api/admin/login-log/login-log.module';
 import { SystemConfigModule } from '@api/admin/system-config/system-config.module';
 import { AdsModule } from '@api/admin/ads/ads.module';
 import { FlashSaleModule } from '@api/admin/flash-sale/flash-sale.module';
+import { RegisterApplicationModule } from '@api/admin/register-application/register-application.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { FlashSaleModule } from '@api/admin/flash-sale/flash-sale.module';
     SystemConfigModule,
     AdsModule,
     FlashSaleModule,
+    RegisterApplicationModule,
   ],
   providers: [],
   controllers: [],

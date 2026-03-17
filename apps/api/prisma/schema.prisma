@@ -142,6 +142,36 @@ model AdminUser {
   @@map("admin_users")
 }
 
+/// 管理员注册申请表（提交申请 → 超管审批 → 创建账号）
+model AdminRegisterApplication {
+  id            String    @id @default(cuid()) @map("app_id") @db.VarChar(32)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  /// 申请人填写
+  username      String    @map("username") @db.VarChar(50)
+  password      String    @map("password") @db.VarChar(255)
+  realName      String    @map("real_name") @db.VarChar(100)
+  email         String    @map("email") @db.VarChar(100)
+  applyReason   String?   @map("apply_reason")
+  /// 申请时 IP（用于安全审计）
+  applyIp       String?   @map("apply_ip") @db.VarChar(50)
+
+  /// 审批状态: pending | approved | rejected
+  status        String    @default("pending") @map("status") @db.VarChar(20)
+
+  /// 审批信息
+  reviewedBy    String?   @map("reviewed_by") @db.VarChar(32)
+  reviewNote    String?   @map("review_note")
+  reviewedAt    DateTime? @map("reviewed_at")
+
+  @@index([status], map: "idx_app_status")
+  @@index([email], map: "idx_app_email")
+  @@index([username], map: "idx_app_username")
+  @@index([createdAt], map: "idx_app_created_at")
+  @@map("admin_register_applications")
+}
+
 model AdminOperationLog {
   id        String     @id @default(cuid()) @map("log_id") @db.VarChar(32)
   createdAt DateTime   @default(now()) @map("created_at")
