@@ -177,7 +177,10 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
     });
   };
 
-  const columns: ColumnDef<AdminUser>[] = useMemo(() => {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  // ColumnDef<AdminUser, any>: 混합多个 accessor 列时，各列值类型不同（string/number 等），
+  // 若写 ColumnDef<AdminUser> 则默认展开为 unknown，在逆变位置与具体类型不兼容（TS2322）
+  const columns: ColumnDef<AdminUser, any>[] = useMemo(() => {
     const columnHelper = createColumnHelper<AdminUser>();
 
     return [
@@ -293,6 +296,7 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
       }),
     ];
   }, [handleToggleStatus, isUpdating]);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   return (
     <div className="space-y-6">
