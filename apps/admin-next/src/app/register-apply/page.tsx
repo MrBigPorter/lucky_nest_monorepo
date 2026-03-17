@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { RecaptchaClientProvider } from '@/components/RecaptchaClientProvider';
 import { RegisterApply } from '@/views/RegisterApply';
 
 export const metadata: Metadata = {
@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 export default function RegisterApplyPage() {
   const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? '';
   return (
-    <GoogleReCaptchaProvider reCaptchaKey={siteKey}>
+    <RecaptchaClientProvider siteKey={siteKey}>
       <RegisterApply />
-    </GoogleReCaptchaProvider>
+    </RecaptchaClientProvider>
   );
 }
