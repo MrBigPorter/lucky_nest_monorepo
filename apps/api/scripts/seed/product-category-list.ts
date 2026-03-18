@@ -9,13 +9,69 @@ const db = new PrismaClient();
  * 返回 name → id 映射，供其他 seed 模块使用
  */
 export async function seedProductCategories(): Promise<Record<string, number>> {
+  const legacyNameMap: Record<string, string> = {
+    'Home Appliances': 'Home',
+    'Fashion & Lifestyle': 'Fashion',
+    'Sports & Outdoor': 'Sports',
+    'Beauty & Health': 'Beauty',
+    'Cash Prizes': 'Cash',
+  };
+
+  for (const [legacyName, newName] of Object.entries(legacyNameMap)) {
+    const legacy = await db.productCategory.findFirst({
+      where: { name: legacyName },
+      select: { id: true },
+    });
+    const target = await db.productCategory.findFirst({
+      where: { name: newName },
+      select: { id: true },
+    });
+
+    if (legacy && !target) {
+      await db.productCategory.update({
+        where: { id: legacy.id },
+        data: { name: newName, nameEn: newName },
+      });
+    }
+  }
+
   const rows = [
-    { name: 'Electronics',         nameEn: 'Electronics',         icon: 'https://cdn.joyminis.com/icons/cat-electronics.png',  sortOrder: 1 },
-    { name: 'Home Appliances',     nameEn: 'Home Appliances',     icon: 'https://cdn.joyminis.com/icons/cat-appliances.png',   sortOrder: 2 },
-    { name: 'Fashion & Lifestyle', nameEn: 'Fashion & Lifestyle', icon: 'https://cdn.joyminis.com/icons/cat-fashion.png',      sortOrder: 3 },
-    { name: 'Sports & Outdoor',    nameEn: 'Sports & Outdoor',    icon: 'https://cdn.joyminis.com/icons/cat-sports.png',       sortOrder: 4 },
-    { name: 'Beauty & Health',     nameEn: 'Beauty & Health',     icon: 'https://cdn.joyminis.com/icons/cat-beauty.png',       sortOrder: 5 },
-    { name: 'Cash Prizes',         nameEn: 'Cash Prizes',         icon: 'https://cdn.joyminis.com/icons/cat-cash.png',         sortOrder: 6 },
+    {
+      name: 'Electronics',
+      nameEn: 'Electronics',
+      icon: 'https://cdn.joyminis.com/icons/cat-electronics.png',
+      sortOrder: 1,
+    },
+    {
+      name: 'Home',
+      nameEn: 'Home',
+      icon: 'https://cdn.joyminis.com/icons/cat-appliances.png',
+      sortOrder: 2,
+    },
+    {
+      name: 'Fashion',
+      nameEn: 'Fashion',
+      icon: 'https://cdn.joyminis.com/icons/cat-fashion.png',
+      sortOrder: 3,
+    },
+    {
+      name: 'Sports',
+      nameEn: 'Sports',
+      icon: 'https://cdn.joyminis.com/icons/cat-sports.png',
+      sortOrder: 4,
+    },
+    {
+      name: 'Beauty',
+      nameEn: 'Beauty',
+      icon: 'https://cdn.joyminis.com/icons/cat-beauty.png',
+      sortOrder: 5,
+    },
+    {
+      name: 'Cash',
+      nameEn: 'Cash',
+      icon: 'https://cdn.joyminis.com/icons/cat-cash.png',
+      sortOrder: 6,
+    },
   ];
 
   let created = 0;

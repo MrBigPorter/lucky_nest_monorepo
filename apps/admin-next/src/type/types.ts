@@ -1509,7 +1509,9 @@ export interface LuckyDrawActivity {
   status: number;
   startAt: number | null;
   endAt: number | null;
-  prizes: LuckyDrawPrize[];
+  prizes?: LuckyDrawPrize[];
+  prizesCount?: number;
+  ticketsCount?: number;
 }
 
 export interface LuckyDrawResult {
@@ -1524,6 +1526,8 @@ export interface LuckyDrawResult {
   activityId: string;
   activityTitle: string | null;
   orderId: string;
+  couponName?: string | null;
+  treasureName?: string | null;
   prizeSnapshot: unknown;
 }
 
@@ -1572,5 +1576,3 @@ export interface QueryLuckyDrawResultsParams {
   activityId?: string;
   userId?: string;
 }
-
-

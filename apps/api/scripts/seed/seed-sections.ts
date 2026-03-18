@@ -14,22 +14,22 @@ const db = new PrismaClient();
 
 const SECTIONS = [
   {
-    key:          'HOT_PICKS',
-    title:        '🔥 Hot Picks',
+    key: 'HOT_PICKS',
+    title: '🔥 Hot Picks',
     imgStyleType: 0,
-    status:       1,
-    sortOrder:    1,
-    limit:        8,
-    items:        ['JM-001', 'JM-002', 'JM-007', 'JM-008'],
+    status: 1,
+    sortOrder: 1,
+    limit: 8,
+    items: ['JM-001', 'JM-002', 'JM-007', 'JM-008'],
   },
   {
-    key:          'NEW_ARRIVALS',
-    title:        '✨ New Arrivals',
+    key: 'NEW_ARRIVALS',
+    title: '✨ New Arrivals',
     imgStyleType: 0,
-    status:       1,
-    sortOrder:    2,
-    limit:        8,
-    items:        ['JM-005', 'JM-006', 'JM-003', 'JM-004'],
+    status: 1,
+    sortOrder: 2,
+    limit: 8,
+    items: ['JM-005', 'JM-006', 'JM-003', 'JM-004'],
   },
 ];
 
@@ -39,7 +39,9 @@ export async function seedActSections() {
 
   for (const { items, ...sData } of SECTIONS) {
     // upsert section（key 是 @unique）
-    const existing = await db.actSection.findUnique({ where: { key: sData.key } });
+    const existing = await db.actSection.findUnique({
+      where: { key: sData.key },
+    });
     let sectionId: string;
     if (existing) {
       sectionId = existing.id;
@@ -51,7 +53,9 @@ export async function seedActSections() {
 
     // 按 treasureSeq 查找 treasureId，并建立关联
     for (let i = 0; i < items.length; i++) {
-      const t = await db.treasure.findUnique({ where: { treasureSeq: items[i] } });
+      const t = await db.treasure.findUnique({
+        where: { treasureSeq: items[i] },
+      });
       if (!t) continue;
       const exists = await db.actSectionItem.findFirst({
         where: { sectionId, treasureId: t.treasureId },

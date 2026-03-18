@@ -1,8 +1,9 @@
 # 抽奖功能设计文档
 
-> 状态：待实现（Phase 6）  
+> 状态：已实现（核心链路已落地，本文档保留为设计与复盘）  
 > 作者：Copilot 设计审计  
 > 日期：2026-03-18
+> 最后对齐时间：2026-03-18（当前执行状态以 `.github/copilot-instructions.md` 为准）
 
 ---
 
@@ -1320,29 +1321,32 @@ LuckyDrawNotifier / LuckyDrawCubit
 
 ## 十一、完整实现 Checklist（按执行顺序）
 
-### Phase A — 数据库（必须最先做）
-- [ ] `schema.prisma` 添加四张新表（`LuckyDrawActivity / Prize / Ticket / Result`）
-- [ ] `schema.prisma` 在 `Treasure / Coupon / User` 现有模型追加反向关联字段（见 7.2）
-- [ ] 宿主机执行：`node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`
-- [ ] 容器内执行：`prisma migrate dev --name add_lucky_draw`
-- [ ] 重启 backend 容器：`docker compose --env-file deploy/.env.dev up -d backend`
+> 状态说明：A-H 为仓库内历史实施清单（主链路已落地并归档）；Phase I 为 Flutter 团队外部待办。
+> 本节用于复盘与追溯，不作为当前开发待办入口。
 
-### Phase B — 后端 Common（核心服务）
-- [ ] `common/lucky-draw/lucky-draw.service.ts`
+### Phase A — 数据库（历史已完成）
+- [x] `schema.prisma` 添加四张新表（`LuckyDrawActivity / Prize / Ticket / Result`）
+- [x] `schema.prisma` 在 `Treasure / Coupon / User` 现有模型追加反向关联字段（见 7.2）
+- [x] 宿主机执行：`node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`
+- [x] 容器内执行：`prisma migrate dev --name add_lucky_draw`
+- [x] 重启 backend 容器：`docker compose --env-file deploy/.env.dev up -d backend`
+
+### Phase B — 后端 Common（核心服务，历史已完成）
+- [x] `common/lucky-draw/lucky-draw.service.ts`
   - `issueTicketsForGroup(groupId)` — 团成功时给所有真人成员发券
   - `issueTicketForOrder(userId, treasureId, orderId)` — 单买时发券
   - `draw(userId, ticketId)` — 抽奖核心逻辑（验证→抽签→下发→记录，全在 `$transaction`）
   - 所有 catch 用 `(e: unknown)` + `e instanceof Error ? e.message : String(e)`（Prisma v6）
-- [ ] `common/lucky-draw/lucky-draw.module.ts` — exports `LuckyDrawService`
+- [x] `common/lucky-draw/lucky-draw.module.ts` — exports `LuckyDrawService`
 
-### Phase C — 后端 GroupModule 接入（触发点 A）
+### Phase C — 后端 GroupModule 接入（触发点 A，历史已完成）
 
 > ⚠️ **执行顺序约束**：`issueTicketsForGroup` 必须在 `LotteryService.drawWinner` **之后**（事务外）触发。  
 > 即：先开奖决定商品归属，再 fire-and-forget 给所有真人发福利券。  
 > 完整合并流程见 `LOTTERY_AND_FLASHSALE_IMPL_CN.md §2.6`。
 
-- [ ] `common/group/group.module.ts` — imports `LuckyDrawModule`（common）
-- [ ] `common/group/group.service.ts` — 在 `GroupProcessor.handleOrderActivation` 调用 `drawWinner` 完成后（事务外）追加：
+- [x] `common/group/group.module.ts` — imports `LuckyDrawModule`（common）
+- [x] `common/group/group.service.ts` — 在 `GroupProcessor.handleOrderActivation` 调用 `drawWinner` 完成后（事务外）追加：
   ```typescript
   // 在 LotteryService.drawWinner(groupId, tx) 调用完成后（事务外）
   setImmediate(() => {
@@ -1352,46 +1356,46 @@ LuckyDrawNotifier / LuckyDrawCubit
   });
   ```
 
-### Phase D — 后端 OrderService 接入（触发点 B）
-- [ ] `client/orders/order.service.ts` — checkOut 成功后（事务外）追加 fire-and-forget 发券：
+### Phase D — 后端 OrderService 接入（触发点 B，历史已完成）
+- [x] `client/orders/order.service.ts` — checkOut 成功后（事务外）追加 fire-and-forget 发券：
   ```typescript
   if (!isSoloBuy) return result; // 团购由团成功时触发，这里跳过
   this.luckyDrawService.issueTicketForOrder(userId, treasureId, order.orderId)
     .catch(e => this.logger.warn(`LuckyDraw issue skipped: ${String(e)}`));
   ```
 
-### Phase E — 后端 Admin 模块
-- [ ] `admin/lucky-draw/dto/create-activity.dto.ts` — class-validator 装饰器（见 8.3）
-- [ ] `admin/lucky-draw/dto/create-prize.dto.ts` — class-validator 装饰器（见 8.3）
-- [ ] `admin/lucky-draw/lucky-draw.service.ts` — 活动/奖品 CRUD + 结果分页查询
-- [ ] `admin/lucky-draw/lucky-draw.controller.ts` — 加 `@UseGuards(AdminJwtAuthGuard, RolesGuard)`
-- [ ] `admin/lucky-draw/lucky-draw.module.ts`
-- [ ] `admin/admin.module.ts` — imports `AdminLuckyDrawModule`
+### Phase E — 后端 Admin 模块（历史已完成）
+- [x] `admin/lucky-draw/dto/create-activity.dto.ts` — class-validator 装饰器（见 8.3）
+- [x] `admin/lucky-draw/dto/create-prize.dto.ts` — class-validator 装饰器（见 8.3）
+- [x] `admin/lucky-draw/lucky-draw.service.ts` — 活动/奖品 CRUD + 结果分页查询
+- [x] `admin/lucky-draw/lucky-draw.controller.ts` — 加 `@UseGuards(AdminJwtAuthGuard, RolesGuard)`
+- [x] `admin/lucky-draw/lucky-draw.module.ts`
+- [x] `admin/admin.module.ts` — imports `AdminLuckyDrawModule`
 
-### Phase F — 后端 Client 模块
-- [ ] `client/lucky-draw/dto/query-tickets.dto.ts`
-- [ ] `client/lucky-draw/lucky-draw.controller.ts` — `my-tickets / draw / my-results`（加 `JwtAuthGuard`）
-- [ ] `client/lucky-draw/lucky-draw.module.ts` — imports `LuckyDrawModule(common)` + `WalletModule` + `CouponModule`
-- [ ] `client/client.module.ts` — imports `ClientLuckyDrawModule`
+### Phase F — 后端 Client 模块（历史已完成）
+- [x] `client/lucky-draw/dto/query-tickets.dto.ts`
+- [x] `client/lucky-draw/lucky-draw.controller.ts` — `my-tickets / draw / my-results`（加 `JwtAuthGuard`）
+- [x] `client/lucky-draw/lucky-draw.module.ts` — imports `LuckyDrawModule(common)` + `WalletModule` + `CouponModule`
+- [x] `client/client.module.ts` — imports `ClientLuckyDrawModule`
 
-### Phase G — Seed（本地演示，可选）
-- [ ] `scripts/seed/seed-lucky-draw.ts` — 1 个全平台活动 + 4 个奖品（优惠券 20% / 金币 30% / 余额 10% / 谢谢参与 40%）
-- [ ] `scripts/seed/index.ts` — 引入并在 `[8] seedCoupons` 后调用
+### Phase G — Seed（本地演示，可选，历史已完成）
+- [x] `scripts/seed/seed-lucky-draw.ts` — 1 个全平台活动 + 4 个奖品（优惠券 20% / 金币 30% / 余额 10% / 谢谢参与 40%）
+- [x] `scripts/seed/index.ts` — 引入并在 `[8] seedCoupons` 后调用
 
-### Phase H — Admin Next.js 前端
-- [ ] `routes/index.ts` — `flashSale` 后追加 `luckyDraw`（`Gift` 图标，`Operations` 分组）
-- [ ] `constants.ts` — en `luckyDraw: 'Lucky Draw'`、zh `luckyDraw: '抽奖活动'`
-- [ ] `type/types.ts` — 追加 Lucky Draw 相关类型（见 10.1.5）
-- [ ] `api/index.ts` — 追加 `luckyDrawApi`（见 10.1.6）
-- [ ] `app/(dashboard)/lucky-draw/page.tsx` — render `<LuckyDrawManagement />`
-- [ ] `views/LuckyDrawManagement.tsx` — 实现双栏视图：
+### Phase H — Admin Next.js 前端（历史已完成）
+- [x] `routes/index.ts` — `flashSale` 后追加 `luckyDraw`（`Sparkles` 图标，`Operations` 分组）
+- [x] `constants.ts` — en `luckyDraw: 'Lucky Draw'`、zh `luckyDraw: '抽奖活动'`
+- [x] `type/types.ts` — 追加 Lucky Draw 相关类型（见 10.1.5）
+- [x] `api/index.ts` — 追加 `luckyDrawApi`（见 10.1.6）
+- [x] `app/(dashboard)/lucky-draw/page.tsx` — render `<LuckyDrawManagement />`
+- [x] `views/LuckyDrawManagement.tsx` — 实现双栏视图：
   - `ActivityModal`：`resolver: zodResolver(activitySchema)` + `defaultValues` + submit 手动转换
   - `PrizeModal`：`resolver: zodResolver(prizeSchema)` + `watch('prizeType')` 动态字段
   - `PrizesPanel`：`useRequest` + 概率合计实时校验 + 结果分页表格
   - 主组件：`useRequest` + `PageHeader`（from `@/components/scaffold/PageHeader`）
   - 路由注册：`icon: Sparkles`（`import { Sparkles } from 'lucide-react'`，**不用 `Gift`**）
 
-### Phase I — Flutter 客户端（交由 Flutter 团队实现）
+### Phase I — Flutter 客户端（交由 Flutter 团队实现，外部待办）
 - [ ] `LuckyDrawTicketListPage` — 券列表 + badge
 - [ ] `LuckyDrawPage` — 状态机（idle → animating → revealed）+ `Future.wait` 并发
 - [ ] `LuckyDrawHistoryPage` — 历史记录分页
