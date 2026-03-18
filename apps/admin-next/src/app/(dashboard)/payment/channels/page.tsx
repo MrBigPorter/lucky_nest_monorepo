@@ -2,6 +2,10 @@
  * Payment Channels Page — Server Component
  * Phase 3: URL searchParams 驱动 filter
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Payment Channels' };
+
 import React, { Suspense } from 'react';
 import { PaymentChannelsClient } from '@/components/payment/PaymentChannelsClient';
 

@@ -2,6 +2,10 @@
  * Marketing Page — Server Component
  * Phase 3: URL searchParams 驱动 filter
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Marketing' };
+
 import React, { Suspense } from 'react';
 import { MarketingClient } from '@/components/marketing/MarketingClient';
 

@@ -87,7 +87,6 @@ export async function seedGroups() {
         groupStatus: 1,
         expireAt,
         status: 1,
-        enableRobot: true,
         isSystemFilled: false,
       } as Parameters<typeof db.treasureGroup.create>[0]['data'],
     });

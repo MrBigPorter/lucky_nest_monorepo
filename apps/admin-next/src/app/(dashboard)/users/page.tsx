@@ -5,6 +5,10 @@
  * UsersClient 使用 useSearchParams() 读取 URL 参数，必须包在 <Suspense> 里。
  * 这样 Next.js 才能在 streaming 时正确处理 searchParams 的异步读取。
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Users' };
+
 import React, { Suspense } from 'react';
 import { UsersClient } from '@/components/users/UsersClient';
 

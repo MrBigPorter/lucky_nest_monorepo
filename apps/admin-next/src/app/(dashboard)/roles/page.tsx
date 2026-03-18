@@ -2,6 +2,10 @@
  * Roles Page — Server Component
  * RBAC 角色权限管理界面
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Roles & Permissions' };
+
 import React, { Suspense } from 'react';
 import { RolesClient } from '@/components/roles/RolesClient';
 

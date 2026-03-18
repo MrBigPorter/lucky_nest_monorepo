@@ -5,6 +5,10 @@
  *   - DashboardOrdersClient → Client Component，HydrationBoundary 注入预取数据
  *   - DashboardHeader → Client Component，提供 Refresh 按钮
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Dashboard' };
+
 import React, { Suspense } from 'react';
 import {
   HydrationBoundary,

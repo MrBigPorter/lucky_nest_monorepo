@@ -2,6 +2,10 @@
  * Act Section Page — Server Component
  * Phase 3: URL searchParams 驱动 filter
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Act Sections' };
+
 import React, { Suspense } from 'react';
 import { ActSectionClient } from '@/components/act/ActSectionClient';
 

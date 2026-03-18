@@ -2,6 +2,10 @@
  * Address Page — Server Component
  * Phase 3: URL searchParams 驱动 filter
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Addresses' };
+
 import React, { Suspense } from 'react';
 import { AddressClient } from '@/components/address/AddressClient';
 

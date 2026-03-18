@@ -234,7 +234,7 @@ PR → CI(Lint/TypeCheck/Test/Build) → Preview/Artifacts
 
 ## 10. 运行手册（要点汇总）
 
-- 开发启动：见 PROCESS_CN.md → 各子项目快速开始
+- 开发与发布操作：见 `RUNBOOK.md`
 - 数据库迁移：开发用 `migrate dev`，部署用 `migrate deploy`
 - Swagger：`/docs`，仅在开发/受限环境开放
 - 故障排查：

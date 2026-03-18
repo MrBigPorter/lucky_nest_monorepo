@@ -4,18 +4,45 @@ import './globals.css';
 import 'react-quill-new/dist/quill.snow.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://admin.joyminis.com'),
   title: {
     template: '%s | JoyMini Admin',
     default: 'JoyMini Admin',
   },
-  description: 'JoyMini internal admin dashboard — manage products, orders, users and more.',
+  description:
+    'JoyMini internal admin dashboard — manage products, orders, users and more.',
+  keywords: ['JoyMini', 'admin', 'dashboard', 'e-commerce', 'management'],
+  authors: [{ name: 'JoyMini', url: 'https://admin.joyminis.com' }],
+  creator: 'JoyMini',
   robots: { index: false, follow: false },
   openGraph: {
     title: 'JoyMini Admin',
-    description: 'JoyMini Admin Dashboard',
+    description:
+      'JoyMini Admin Dashboard — manage products, orders, users and more.',
+    url: 'https://admin.joyminis.com',
     siteName: 'JoyMini Admin',
     locale: 'en_US',
     type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'JoyMini Admin Dashboard',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'JoyMini Admin',
+    description:
+      'JoyMini Admin Dashboard — manage products, orders, users and more.',
+    images: ['/og-image.png'],
+  },
+  icons: {
+    icon: '/icon',
+    apple: '/apple-icon',
+    shortcut: '/icon',
   },
 };
 
