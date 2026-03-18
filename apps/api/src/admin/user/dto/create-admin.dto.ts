@@ -29,5 +29,5 @@ export class CreateAdminDto {
   @ApiProperty({ description: 'role', example: 'ADMIN', type: 'string' })
   @IsNotEmpty()
   @IsEnum(Role)
-  role!: Role;
+  role!: string;
 }

@@ -60,9 +60,9 @@ async function main() {
       );
 
       const newBarangays = cityData.barangays
-        .filter((bName) => !existingNames.has(bName)) // 过滤掉已经存在的
-        .map((bName) => ({
-          cityId: city!.cityId,
+        .filter((bName: string) => !existingNames.has(bName)) // 过滤掉已经存在的
+        .map((bName: string) => ({
+          cityId: city.cityId,
           barangayName: bName,
           status: 1,
         }));

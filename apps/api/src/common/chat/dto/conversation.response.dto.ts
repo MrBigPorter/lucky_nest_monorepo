@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ConversationType } from '@prisma/client';
-import { ChatMemberRole } from '@lucky/shared';
+import { ChatMemberRole, CHAT_MEMBER_ROLE_VALUES } from './chat-shared-enums';
 
 // 1. Simple ID Response (for creation)
 export class ConversationIdResponseDto {
@@ -13,7 +13,10 @@ export class ConversationListResponseDto {
   @ApiProperty({ description: 'Conversation ID' })
   id!: string;
 
-  @ApiProperty({ enum: ConversationType, description: 'Type of conversation' })
+  @ApiProperty({
+    enum: Object.values(ConversationType),
+    description: 'Type of conversation',
+  })
   type!: ConversationType;
 
   @ApiProperty({ description: 'Display name (Group name or partner nickname)' })
@@ -56,8 +59,8 @@ export class ConversationMemberDto {
   @ApiProperty()
   avatar!: string;
 
-  @ApiProperty({ enum: ChatMemberRole })
-  role!: ChatMemberRole;
+  @ApiProperty({ enum: CHAT_MEMBER_ROLE_VALUES, enumName: 'ChatMemberRole' })
+  role!: string;
 
   //  [NEW] Individual mute status
   @ApiProperty({
@@ -78,7 +81,7 @@ export class ConversationDetailResponseDto {
   @ApiProperty({ required: false })
   avatar?: string;
 
-  @ApiProperty({ enum: ConversationType })
+  @ApiProperty({ enum: Object.values(ConversationType) })
   type!: ConversationType;
 
   @ApiProperty()
