@@ -18,6 +18,7 @@ import { GroupClientModule } from '@api/client/group/groups.module';
 import { UsersModule } from '@api/client/users/users.module';
 import { NotificationModule } from '@api/client/notification/notification.module';
 import { ClientCouponModule } from '@api/client/coupon/coupon.module';
+import { ClientLuckyDrawModule } from '@api/client/lucky-draw/lucky-draw.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ClientCouponModule } from '@api/client/coupon/coupon.module';
     UsersModule,
     NotificationModule,
     ClientCouponModule,
+    ClientLuckyDrawModule,
   ],
   providers: [],
   controllers: [HealthController],

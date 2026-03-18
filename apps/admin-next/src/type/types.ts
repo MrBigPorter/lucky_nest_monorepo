@@ -933,6 +933,7 @@ export interface ReferralUser {
 
 // --- OPERATIONS TYPES ---
 
+/** @deprecated Use LuckyDrawActivity instead */
 export interface LotteryDraw {
   id: string;
   product: { id: string; name: string; image: string };
@@ -984,6 +985,7 @@ export interface ActivityRule {
   minVipLevel: number;
 }
 
+/** @deprecated Use LuckyDrawActivity instead */
 export interface LotteryActivity {
   id: string;
   name: string;
@@ -1477,3 +1479,98 @@ export interface ApplicationListParams {
   status?: ApplicationStatus | 'all';
   username?: string;
 }
+
+// ─── Lucky Draw ───────────────────────────────────────────────────────────────
+
+/** 奖品类型：1=优惠券 2=金币 3=余额 4=谢谢参与 */
+export type LuckyDrawPrizeType = 1 | 2 | 3 | 4;
+
+export interface LuckyDrawPrize {
+  id: string;
+  activityId: string;
+  prizeType: LuckyDrawPrizeType;
+  prizeName: string;
+  couponId: string | null;
+  couponName: string | null;
+  prizeValue: number | null;
+  probability: number;
+  stock: number;
+  sortOrder: number;
+}
+
+export interface LuckyDrawActivity {
+  id: string;
+  createdAt: number;
+  title: string;
+  description: string | null;
+  treasureId: string | null;
+  treasureName: string | null;
+  /** 0=禁用 1=启用 */
+  status: number;
+  startAt: number | null;
+  endAt: number | null;
+  prizes: LuckyDrawPrize[];
+}
+
+export interface LuckyDrawResult {
+  id: string;
+  createdAt: number;
+  userId: string;
+  userNickname: string | null;
+  userAvatar: string | null;
+  prizeId: string;
+  prizeName: string;
+  prizeType: LuckyDrawPrizeType;
+  activityId: string;
+  activityTitle: string | null;
+  orderId: string;
+  prizeSnapshot: unknown;
+}
+
+export interface CreateLuckyDrawActivityPayload {
+  title: string;
+  description?: string;
+  treasureId?: string;
+  status?: number;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface UpdateLuckyDrawActivityPayload {
+  title?: string;
+  description?: string;
+  treasureId?: string;
+  status?: number;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface CreateLuckyDrawPrizePayload {
+  activityId: string;
+  prizeType: LuckyDrawPrizeType;
+  prizeName: string;
+  couponId?: string;
+  prizeValue?: number;
+  probability: number;
+  stock?: number;
+  sortOrder?: number;
+}
+
+export interface UpdateLuckyDrawPrizePayload {
+  prizeType?: LuckyDrawPrizeType;
+  prizeName?: string;
+  couponId?: string;
+  prizeValue?: number;
+  probability?: number;
+  stock?: number;
+  sortOrder?: number;
+}
+
+export interface QueryLuckyDrawResultsParams {
+  page?: number;
+  pageSize?: number;
+  activityId?: string;
+  userId?: string;
+}
+
+

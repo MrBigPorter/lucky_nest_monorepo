@@ -45,6 +45,7 @@ export const TRANSLATIONS = {
     ads: 'Advertisements',
     flashSale: 'Flash Sale',
     loginLogs: 'Login Logs',
+    luckyDraw: 'Lucky Draw',
     settings: 'System Config',
   },
   zh: {
@@ -93,6 +94,7 @@ export const TRANSLATIONS = {
     ads: '广告管理',
     flashSale: '秒杀活动',
     loginLogs: '登录日志',
+    luckyDraw: '福利抽奖',
     settings: '系统配置',
   },
 };
