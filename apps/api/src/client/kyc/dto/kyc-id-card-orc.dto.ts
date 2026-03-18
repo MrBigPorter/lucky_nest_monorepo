@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { KycIdCardType } from '@lucky/shared';
+import { KYC_ID_CARD_TYPE_VALUES } from './kyc-shared-enums';
 import { DateToTimestamp } from '@api/common/dto/transforms';
 
 export class KycIdCardOcrDto {
@@ -19,10 +19,11 @@ export class KycOcrResponseDto {
 
   @ApiProperty({
     description: 'Detected ID card type enum value (for DB mapping)',
-    enum: KycIdCardType,
-    example: KycIdCardType.PASSPORT,
+    enum: KYC_ID_CARD_TYPE_VALUES,
+    enumName: 'KycIdCardType',
+    example: 'PASSPORT',
   })
-  type!: KycIdCardType;
+  type!: string;
 
   @ApiProperty({
     description: 'Country code (e.g., PH, CN, VN, Global)',

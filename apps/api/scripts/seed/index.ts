@@ -7,6 +7,7 @@ import { seedActSections } from './seed-sections';
 import { seedFlashSale } from './seed-flash-sale';
 import { seedCoupons } from './seed-coupons';
 import { seedTestUserWallet } from './seed-wallet';
+import { seedGroups } from './seed-groups';
 
 async function main() {
   console.log('\n🌱  JoyMinis Demo Seed ─────────────────────────');
@@ -38,6 +39,9 @@ async function main() {
 
   // [9] 测试用户 + 钱包（本地开发用）
   await seedTestUserWallet();
+
+  // [10] 拼团演示数据（依赖产品 + 测试用户）
+  await seedGroups();
 
   console.log('\n✨  Seed 完成！\n');
 }
