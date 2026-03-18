@@ -34,6 +34,14 @@ export const FormInput = React.forwardRef<
 >(({ inputMode, autoComplete, className, testId, ...props }, ref) => {
   const { id } = useFormItemContext();
   const errorId = `${id}-message`;
+  const { value, defaultValue, ...restProps } = props;
+
+  const valueProps =
+    value !== undefined
+      ? { value }
+      : defaultValue !== undefined
+        ? { defaultValue }
+        : {};
 
   return (
     <input
@@ -48,8 +56,8 @@ export const FormInput = React.forwardRef<
       ref={ref}
       autoComplete={autoComplete}
       inputMode={inputMode}
-      value={props.value ?? ""}
-      {...props}
+      {...restProps}
+      {...valueProps}
     />
   );
 });

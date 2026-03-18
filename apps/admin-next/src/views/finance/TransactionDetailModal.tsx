@@ -69,13 +69,13 @@ export const TransactionDetailModal: React.FC<Props> = ({ data, close }) => {
       </div>
 
       {/* 2. 核心信息网格 */}
-      <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4">
         {/* User Info */}
         <div className="col-span-2 pb-4 border-b border-gray-100 dark:border-white/10">
           <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <User size={16} className="text-primary-500" /> User Information
           </h4>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <InfoRow label="User Nickname" value={data.user?.nickname} />
             <InfoRow label="User Phone" value={data.user?.phone} />
             <InfoRow label="User ID" value={data.userId} />
@@ -94,8 +94,10 @@ export const TransactionDetailModal: React.FC<Props> = ({ data, close }) => {
           <InfoRow
             label="Transaction No."
             value={
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs">{data.transactionNo}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-mono text-xs break-all [overflow-wrap:anywhere] min-w-0">
+                  {data.transactionNo}
+                </span>
                 <Copy
                   size={12}
                   className="cursor-pointer text-gray-400 hover:text-primary-500"
@@ -131,7 +133,11 @@ export const TransactionDetailModal: React.FC<Props> = ({ data, close }) => {
           <div className="col-span-2 p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-dashed border-gray-300 dark:border-white/10">
             <InfoRow
               label={`Related Ref (${data.relatedType || 'Unknown'})`}
-              value={<span className="font-mono">{data.relatedId}</span>}
+              value={
+                <span className="font-mono break-all [overflow-wrap:anywhere]">
+                  {data.relatedId}
+                </span>
+              }
             />
           </div>
         )}
