@@ -10,9 +10,11 @@ import {
   IsEnum,
   Length,
 } from 'class-validator';
-import { ChatMemberRole, GroupJoinRequestStatus } from '@lucky/shared';
 import { DateToTimestamp, ToBool, ToNumber } from '@api/common/dto/transforms';
 import { Exclude, Expose } from 'class-transformer';
+
+const CHAT_MEMBER_ROLE_VALUES = ['OWNER', 'ADMIN', 'MEMBER'] as const;
+const GROUP_JOIN_REQUEST_STATUS_VALUES = [0, 1, 2] as const; // PENDING=0, ACCEPTED=1, REJECTED=2
 
 // ==========================================
 //  REQUEST DTOs (Requests from Client)
@@ -165,9 +167,10 @@ export class SetAdminResDto {
 
   @ApiProperty({
     description: 'The new role of the target user',
-    enum: ChatMemberRole,
+    enum: CHAT_MEMBER_ROLE_VALUES,
+    enumName: 'ChatMemberRole',
   })
-  role!: ChatMemberRole;
+  role!: string;
 }
 
 // 5. Transfer Owner Response [NEW]
@@ -237,7 +240,10 @@ export class GroupJoinRequestItemDto {
   @Expose()
   reason!: string;
 
-  @ApiProperty({ enum: GroupJoinRequestStatus })
+  @ApiProperty({
+    enum: GROUP_JOIN_REQUEST_STATUS_VALUES,
+    enumName: 'GroupJoinRequestStatus',
+  })
   @ToNumber()
   @Expose()
   status!: number;

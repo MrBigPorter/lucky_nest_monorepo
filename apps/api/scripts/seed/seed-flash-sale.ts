@@ -27,22 +27,24 @@ const FLASH_PRODUCTS: Array<{
   flashStock: number;
   sortOrder: number;
 }> = [
-  { seq: 'JM-001', flashPrice: 150, flashStock: 60,  sortOrder: 1 },
-  { seq: 'JM-003', flashPrice: 80,  flashStock: 100, sortOrder: 2 },
-  { seq: 'JM-007', flashPrice: 60,  flashStock: 30,  sortOrder: 3 },
+  { seq: 'JM-001', flashPrice: 150, flashStock: 60, sortOrder: 1 },
+  { seq: 'JM-003', flashPrice: 80, flashStock: 100, sortOrder: 2 },
+  { seq: 'JM-007', flashPrice: 60, flashStock: 30, sortOrder: 3 },
 ];
 
 export async function seedFlashSale() {
   // ── FlashSaleSession ──────────────────────────────────────
-  let session = await db.flashSaleSession.findFirst({ where: { title: SESSION_TITLE } });
+  let session = await db.flashSaleSession.findFirst({
+    where: { title: SESSION_TITLE },
+  });
   let sCreated = 0;
   if (!session) {
     session = await db.flashSaleSession.create({
       data: {
-        title:     SESSION_TITLE,
-        startTime: hoursLater(2),  // 2h 后开始
-        endTime:   hoursLater(6),  // 4h 持续
-        status:    1,
+        title: SESSION_TITLE,
+        startTime: hoursLater(2), // 2h 后开始
+        endTime: hoursLater(6), // 4h 持续
+        status: 1,
       },
     });
     sCreated++;
@@ -58,7 +60,13 @@ export async function seedFlashSale() {
     });
     if (!exists) {
       await db.flashSaleProduct.create({
-        data: { sessionId: session.id, treasureId: t.treasureId, flashPrice, flashStock, sortOrder },
+        data: {
+          sessionId: session.id,
+          treasureId: t.treasureId,
+          flashPrice,
+          flashStock,
+          sortOrder,
+        },
       });
       pCreated++;
     }
@@ -67,4 +75,3 @@ export async function seedFlashSale() {
   console.log(`  ✅ FlashSaleSession +${sCreated} new`);
   console.log(`  ✅ FlashSaleProduct +${pCreated} new`);
 }
-
