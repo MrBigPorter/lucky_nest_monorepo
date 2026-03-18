@@ -2,6 +2,10 @@
  * Orders Page — Server Component
  * Phase 3: URL searchParams 驱动 filter
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Orders' };
+
 import React, { Suspense } from 'react';
 import { OrdersClient } from '@/components/orders/OrdersClient';
 

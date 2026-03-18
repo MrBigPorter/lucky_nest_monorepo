@@ -23,7 +23,7 @@ const CHANNELS: PaymentChannelSeed[] = [
   {
     code: 'PH_GCASH',
     name: 'GCash',
-    icon: 'https://cdn.joyminis.com/payments/gcash.png',
+    icon: 'https://img.joyminis.com/images/payment/PH_GCASH.png',
     type: 1,
     currency: 'PHP',
     minAmount: 50,
@@ -38,7 +38,7 @@ const CHANNELS: PaymentChannelSeed[] = [
   {
     code: 'PH_PAYMAYA',
     name: 'PayMaya',
-    icon: 'https://cdn.joyminis.com/payments/paymaya.png',
+    icon: 'https://img.joyminis.com/images/payment/PH_PAYMAYA.png',
 
     type: 1,
     currency: 'PHP',
@@ -54,7 +54,7 @@ const CHANNELS: PaymentChannelSeed[] = [
   {
     code: 'PH_BDO',
     name: 'BDO Online',
-    icon: 'https://cdn.joyminis.com/payments/bdo.png',
+    icon: 'https://img.joyminis.com/images/payment/bdo.png',
     type: 1,
     currency: 'PHP',
     minAmount: 100,
@@ -69,7 +69,7 @@ const CHANNELS: PaymentChannelSeed[] = [
   {
     code: 'PH_BANK_WITHDRAW',
     name: 'Bank Transfer',
-    icon: 'https://cdn.joyminis.com/payments/bank-transfer.png',
+    icon: 'https://img.joyminis.com/images/payment/PH_BANK_WITHDRAW.jpg',
     type: 2,
     currency: 'PHP',
     minAmount: 200,
@@ -83,7 +83,7 @@ const CHANNELS: PaymentChannelSeed[] = [
   {
     code: 'PH_GCASH_WITHDRAW',
     name: 'GCash Withdraw',
-    icon: 'https://cdn.joyminis.com/payments/gcash.png',
+    icon: 'https://img.joyminis.com/images/payment/PH_GCASH.png',
     type: 2,
     currency: 'PHP',
     minAmount: 100,

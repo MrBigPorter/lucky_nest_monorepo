@@ -18,8 +18,12 @@
 - [x] Phase 6 当前测试补全批次收口（LuckyDraw / Ads / SystemConfig / LoginLogList）
 - [x] Seed 自动化补全（PaymentChannel / Address / KYC / Robots / LoginLog / LuckyDraw）
 - [x] 商品与奖励素材上传清单整理（含单词英文分类规范）
+- [x] 秒杀实时刷新方案评审并落文档（`read/FLASH_SALE_REALTIME_STRATEGY_CN.md`）
+- [x] 秒杀客户端只读接口补齐（`/flash-sale/sessions/active` / `:id/products` / `products/:id`）
+- [x] 秒杀客户端接口单测补齐（场次过滤 / 售罄映射 / 详情图片列表归一化）
+- [x] 秒杀客户端接口定向校验（Jest 通过 + TSC 通过）
 
-> 最后对齐时间：2026-03-18。以上批次已完成，下一步从「五、Phase 6 — 待规划」中选择新方向并展开 checkbox。
+> 最后对齐时间：2026-03-18。当前已完成秒杀客户端接口 MVP，下一步可继续接前端轮询接入或二期 WebSocket 事件通知。
 
 ---
 

@@ -2,6 +2,10 @@
  * Analytics Page — Server Component
  * SSR 预取 overview 统计 + 客户端 trend 图表
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Analytics' };
+
 import React, { Suspense } from 'react';
 import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
 import { AnalyticsOverviewSkeleton } from '@/components/analytics/AnalyticsOverviewSkeleton';

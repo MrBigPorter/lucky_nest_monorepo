@@ -66,7 +66,9 @@ function PushLogRow({ log }: { log: AdminPushLog }) {
   const isBroadcast = log.type === 'broadcast';
   return (
     <div className="flex items-start gap-3 p-4 border-b border-gray-100 dark:border-white/5 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-      <div className={`mt-0.5 p-1.5 rounded-full ${isBroadcast ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'bg-sky-100 dark:bg-sky-500/20'}`}>
+      <div
+        className={`mt-0.5 p-1.5 rounded-full ${isBroadcast ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'bg-sky-100 dark:bg-sky-500/20'}`}
+      >
         {isBroadcast ? (
           <Radio size={14} className="text-indigo-600 dark:text-indigo-400" />
         ) : (
@@ -78,18 +80,30 @@ function PushLogRow({ log }: { log: AdminPushLog }) {
           <span className="font-medium text-sm truncate">{log.title}</span>
           <Badge variant={log.status === 'sent' ? 'success' : 'error'}>
             {log.status === 'sent' ? (
-              <><CheckCircle size={10} className="mr-1" />Sent</>
+              <>
+                <CheckCircle size={10} className="mr-1" />
+                Sent
+              </>
             ) : (
-              <><XCircle size={10} className="mr-1" />Failed</>
+              <>
+                <XCircle size={10} className="mr-1" />
+                Failed
+              </>
             )}
           </Badge>
-          <Badge variant="default">{isBroadcast ? 'Broadcast' : 'Targeted'}</Badge>
+          <Badge variant="default">
+            {isBroadcast ? 'Broadcast' : 'Targeted'}
+          </Badge>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{log.body}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+          {log.body}
+        </p>
         <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
           <span>By {log.adminName}</span>
           {log.targetUserId && <span>→ {log.targetUserId}</span>}
-          <span>✓{log.successCount} ✗{log.failureCount}</span>
+          <span>
+            ✓{log.successCount} ✗{log.failureCount}
+          </span>
           <span>{format(new Date(log.createdAt), 'MM/dd HH:mm')}</span>
         </div>
       </div>
@@ -99,8 +113,13 @@ function PushLogRow({ log }: { log: AdminPushLog }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function NotificationManagement() {
-  const [activeTab, setActiveTab] = useState<'broadcast' | 'targeted' | 'logs'>('broadcast');
-  const [logFilter, setLogFilter] = useState<QueryPushLogParams>({ page: 1, pageSize: 20 });
+  const [activeTab, setActiveTab] = useState<'broadcast' | 'targeted' | 'logs'>(
+    'broadcast',
+  );
+  const [logFilter, setLogFilter] = useState<QueryPushLogParams>({
+    page: 1,
+    pageSize: 20,
+  });
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
 
@@ -115,10 +134,9 @@ export function NotificationManagement() {
     data: logsData,
     loading: logsLoading,
     refresh: refreshLogs,
-  } = useRequest(
-    () => notificationApi.getLogs(logFilter),
-    { refreshDeps: [logFilter] },
-  );
+  } = useRequest(() => notificationApi.getLogs(logFilter), {
+    refreshDeps: [logFilter],
+  });
 
   // ── Broadcast form ─────────────────────────────────────────────────────────
   const {
@@ -179,7 +197,11 @@ export function NotificationManagement() {
   );
 
   const handleLogFilterChange = useCallback((type: string) => {
-    setLogFilter((prev) => ({ ...prev, type: type === 'ALL' ? undefined : type, page: 1 }));
+    setLogFilter((prev) => ({
+      ...prev,
+      type: type === 'ALL' ? undefined : type,
+      page: 1,
+    }));
   }, []);
 
   return (
@@ -253,7 +275,11 @@ export function NotificationManagement() {
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            {tab === 'broadcast' ? '📢 Broadcast' : tab === 'targeted' ? '🎯 Targeted' : '📋 Logs'}
+            {tab === 'broadcast'
+              ? '📢 Broadcast'
+              : tab === 'targeted'
+                ? '🎯 Targeted'
+                : '📋 Logs'}
           </button>
         ))}
       </div>
@@ -264,9 +290,14 @@ export function NotificationManagement() {
           <div className="flex items-center gap-2 mb-5">
             <Radio size={18} className="text-indigo-500" />
             <h3 className="font-semibold text-lg">全员广播</h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">— 通过 Firebase Topic 发给所有订阅设备</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              — 通过 Firebase Topic 发给所有订阅设备
+            </span>
           </div>
-          <form onSubmit={bcHandleSubmit((data) => sendBroadcast(data))} className="space-y-4">
+          <form
+            onSubmit={bcHandleSubmit((data) => sendBroadcast(data))}
+            className="space-y-4"
+          >
             <div>
               <label className="block text-sm font-medium mb-1">
                 推送标题 <span className="text-red-500">*</span>
@@ -276,7 +307,11 @@ export function NotificationManagement() {
                 placeholder="e.g. 新活动上线了！"
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
-              {bcErrors.title && <p className="text-red-500 text-xs mt-1">{bcErrors.title.message}</p>}
+              {bcErrors.title && (
+                <p className="text-red-500 text-xs mt-1">
+                  {bcErrors.title.message}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -288,7 +323,11 @@ export function NotificationManagement() {
                 placeholder="通知正文内容..."
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none"
               />
-              {bcErrors.body && <p className="text-red-500 text-xs mt-1">{bcErrors.body.message}</p>}
+              {bcErrors.body && (
+                <p className="text-red-500 text-xs mt-1">
+                  {bcErrors.body.message}
+                </p>
+              )}
             </div>
             <button
               type="submit"
@@ -308,9 +347,14 @@ export function NotificationManagement() {
           <div className="flex items-center gap-2 mb-5">
             <User size={18} className="text-sky-500" />
             <h3 className="font-semibold text-lg">定向推送</h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">— 向指定用户的所有绑定设备发送</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              — 向指定用户的所有绑定设备发送
+            </span>
           </div>
-          <form onSubmit={tgHandleSubmit((data) => sendTargeted(data))} className="space-y-4">
+          <form
+            onSubmit={tgHandleSubmit((data) => sendTargeted(data))}
+            className="space-y-4"
+          >
             <div>
               <label className="block text-sm font-medium mb-1">
                 目标用户 ID <span className="text-red-500">*</span>
@@ -320,7 +364,11 @@ export function NotificationManagement() {
                 placeholder="输入用户 ID"
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sky-500/30"
               />
-              {tgErrors.targetUserId && <p className="text-red-500 text-xs mt-1">{tgErrors.targetUserId.message}</p>}
+              {tgErrors.targetUserId && (
+                <p className="text-red-500 text-xs mt-1">
+                  {tgErrors.targetUserId.message}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -331,7 +379,11 @@ export function NotificationManagement() {
                 placeholder="e.g. 您的订单已发货"
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30"
               />
-              {tgErrors.title && <p className="text-red-500 text-xs mt-1">{tgErrors.title.message}</p>}
+              {tgErrors.title && (
+                <p className="text-red-500 text-xs mt-1">
+                  {tgErrors.title.message}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -343,7 +395,11 @@ export function NotificationManagement() {
                 placeholder="通知正文内容..."
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 resize-none"
               />
-              {tgErrors.body && <p className="text-red-500 text-xs mt-1">{tgErrors.body.message}</p>}
+              {tgErrors.body && (
+                <p className="text-red-500 text-xs mt-1">
+                  {tgErrors.body.message}
+                </p>
+              )}
             </div>
             <button
               type="submit"
@@ -389,7 +445,9 @@ export function NotificationManagement() {
 
           {/* Log list */}
           {logsLoading ? (
-            <div className="p-8 text-center text-gray-400 text-sm">Loading...</div>
+            <div className="p-8 text-center text-gray-400 text-sm">
+              Loading...
+            </div>
           ) : logsData?.list?.length ? (
             <>
               {logsData.list.map((log) => (
@@ -400,11 +458,12 @@ export function NotificationManagement() {
               </div>
             </>
           ) : (
-            <div className="p-8 text-center text-gray-400 text-sm">No push logs yet.</div>
+            <div className="p-8 text-center text-gray-400 text-sm">
+              No push logs yet.
+            </div>
           )}
         </Card>
       )}
     </div>
   );
 }
-

@@ -2,6 +2,7 @@ import { seedSystemConfigExchangeRate } from './system-config-exchange-rate';
 import { seedProductCategories } from './product-category-list';
 import { seedAddressLite } from './seed-address-lite';
 import { seedKycIdTypes } from './seed-kyc-id-types';
+import { cleanupSeedData } from './cleanup-seed-data';
 import { seedTreasures } from './seed-treasures';
 import { seedBanners } from './seed-banners';
 import { seedAdvertisements } from './seed-ads';
@@ -15,10 +16,17 @@ import { seedRobotsLite } from './seed-robots-lite';
 import { seedGroups } from './seed-groups';
 import { seedLoginLogs } from './seed-login-logs';
 
-
 async function main() {
   console.log('\n🌱  JoyMinis Demo Seed ─────────────────────────');
   console.log(`    ${new Date().toISOString()}\n`);
+
+  const resetTreasures = process.env.SEED_TREASURES_RESET !== '0';
+  const cleanupBeforeSeed = process.env.SEED_CLEANUP_BEFORE_INSERT !== '0';
+
+  if (cleanupBeforeSeed) {
+    await cleanupSeedData();
+    console.log('');
+  }
 
   // [1] 基础配置
   await seedSystemConfigExchangeRate();
@@ -33,7 +41,7 @@ async function main() {
   await seedKycIdTypes();
 
   // [5] 抽奖产品 + 产品-分类关联（依赖分类）
-  await seedTreasures();
+  await seedTreasures({ resetBeforeSeed: resetTreasures });
 
   // [6] 活动专区 + 关联商品（依赖产品）
   await seedActSections();

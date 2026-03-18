@@ -2,6 +2,10 @@
  * Products Page — Server Component
  * Phase 3: URL searchParams 驱动 filter
  */
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Products' };
+
 import React, { Suspense } from 'react';
 import { ProductsClient } from '@/components/products/ProductsClient';
 
