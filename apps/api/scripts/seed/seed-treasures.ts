@@ -6,9 +6,9 @@
  * JM-001  Apple iPhone 16 Pro 256GB         ₱250/份  300份  Electronics
  * JM-002  Samsung Galaxy S25 Ultra 512GB    ₱200/份  300份  Electronics
  * JM-003  Sony PS5 Slim + 3 Games Bundle    ₱150/份  200份  Electronics
- * JM-004  Dyson V15 Detect Vacuum           ₱100/份  150份  Home Appliances
- * JM-005  Nike Air Jordan 4 Retro (US10)    ₱ 50/份  100份  Fashion & Lifestyle
- * JM-006  Dyson Supersonic HD15 Hair Dryer  ₱ 80/份  125份  Beauty & Health
+ * JM-004  Dyson V15 Detect Vacuum           ₱100/份  150份  Home
+ * JM-005  Nike Air Jordan 4 Retro (US10)    ₱ 50/份  100份  Fashion
+ * JM-006  Dyson Supersonic HD15 Hair Dryer  ₱ 80/份  125份  Beauty
  * JM-007  Cash Prize ₱5,000  (virtual)      ₱100/份   60份  Cash Prizes
  * JM-008  Cash Prize ₱10,000 (virtual)      ₱200/份   60份  Cash Prizes
  *
@@ -44,70 +44,70 @@ const TREASURES = [
   // Electronics
   // ─────────────────────────────────────────
   {
-    treasureSeq:        'JM-001',
-    treasureName:       'Apple iPhone 16 Pro 256GB',
-    productName:        'iPhone 16 Pro 256GB Natural Titanium',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/iphone16pro-cover.jpg',
-    mainImageList:      [
+    treasureSeq: 'JM-001',
+    treasureName: 'Apple iPhone 16 Pro 256GB',
+    productName: 'iPhone 16 Pro 256GB Natural Titanium',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/iphone16pro-cover.jpg',
+    mainImageList: [
       'https://cdn.joyminis.com/products/iphone16pro-1.jpg',
       'https://cdn.joyminis.com/products/iphone16pro-2.jpg',
     ],
-    unitAmount:         250,
-    marketAmount:       75000,
-    costAmount:         70000,
+    unitAmount: 250,
+    marketAmount: 75000,
+    costAmount: 70000,
     seqShelvesQuantity: 300,
-    minBuyQuantity:     300,
-    maxPerBuyQuantity:  30,
-    lotteryMode:        1,
-    virtual:            2,
-    shippingType:       1,
-    fakeSalesCount:     120,
+    minBuyQuantity: 300,
+    maxPerBuyQuantity: 30,
+    lotteryMode: 1,
+    virtual: 2,
+    shippingType: 1,
+    fakeSalesCount: 120,
     ...G5,
     desc: '<p>Latest Apple iPhone 16 Pro with A18 Pro chip, 48MP Fusion camera system, 5× telephoto. Brand new sealed.</p>',
     category: 'Electronics',
   },
   {
-    treasureSeq:        'JM-002',
-    treasureName:       'Samsung Galaxy S25 Ultra 512GB',
-    productName:        'Samsung Galaxy S25 Ultra Titanium Gray 512GB',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/s25ultra-cover.jpg',
-    mainImageList:      [
+    treasureSeq: 'JM-002',
+    treasureName: 'Samsung Galaxy S25 Ultra 512GB',
+    productName: 'Samsung Galaxy S25 Ultra Titanium Gray 512GB',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/s25ultra-cover.jpg',
+    mainImageList: [
       'https://cdn.joyminis.com/products/s25ultra-1.jpg',
       'https://cdn.joyminis.com/products/s25ultra-2.jpg',
     ],
-    unitAmount:         200,
-    marketAmount:       60000,
-    costAmount:         55000,
+    unitAmount: 200,
+    marketAmount: 60000,
+    costAmount: 55000,
     seqShelvesQuantity: 300,
-    minBuyQuantity:     300,
-    maxPerBuyQuantity:  30,
-    lotteryMode:        1,
-    virtual:            2,
-    shippingType:       1,
-    fakeSalesCount:     85,
+    minBuyQuantity: 300,
+    maxPerBuyQuantity: 30,
+    lotteryMode: 1,
+    virtual: 2,
+    shippingType: 1,
+    fakeSalesCount: 85,
     ...G5,
     desc: '<p>Samsung Galaxy S25 Ultra with 200MP camera, built-in S Pen, Snapdragon 8 Elite. 512GB storage.</p>',
     category: 'Electronics',
   },
   {
-    treasureSeq:        'JM-003',
-    treasureName:       'Sony PlayStation 5 Slim + 3 Games Bundle',
-    productName:        'PS5 Slim + EA FC25 + Spider-Man 2 + God of War Ragnarök',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/ps5slim-cover.jpg',
-    mainImageList:      [
+    treasureSeq: 'JM-003',
+    treasureName: 'Sony PlayStation 5 Slim + 3 Games Bundle',
+    productName: 'PS5 Slim + EA FC25 + Spider-Man 2 + God of War Ragnarök',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/ps5slim-cover.jpg',
+    mainImageList: [
       'https://cdn.joyminis.com/products/ps5slim-1.jpg',
       'https://cdn.joyminis.com/products/ps5slim-2.jpg',
     ],
-    unitAmount:         150,
-    marketAmount:       30000,
-    costAmount:         27000,
+    unitAmount: 150,
+    marketAmount: 30000,
+    costAmount: 27000,
     seqShelvesQuantity: 200,
-    minBuyQuantity:     200,
-    maxPerBuyQuantity:  20,
-    lotteryMode:        1,
-    virtual:            2,
-    shippingType:       1,
-    fakeSalesCount:     64,
+    minBuyQuantity: 200,
+    maxPerBuyQuantity: 20,
+    lotteryMode: 1,
+    virtual: 2,
+    shippingType: 1,
+    fakeSalesCount: 64,
     ...G3,
     desc: '<p>Sony PlayStation 5 Slim console bundle includes 3 top-rated games. Brand new sealed.</p>',
     category: 'Electronics',
@@ -116,121 +116,122 @@ const TREASURES = [
   // Home Appliances
   // ─────────────────────────────────────────
   {
-    treasureSeq:        'JM-004',
-    treasureName:       'Dyson V15 Detect Absolute Vacuum',
-    productName:        'Dyson V15 Detect Absolute Cordless Vacuum Cleaner',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/dysonv15-cover.jpg',
-    mainImageList:      ['https://cdn.joyminis.com/products/dysonv15-1.jpg'],
-    unitAmount:         100,
-    marketAmount:       15000,
-    costAmount:         13500,
+    treasureSeq: 'JM-004',
+    treasureName: 'Dyson V15 Detect Absolute Vacuum',
+    productName: 'Dyson V15 Detect Absolute Cordless Vacuum Cleaner',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/dysonv15-cover.jpg',
+    mainImageList: ['https://cdn.joyminis.com/products/dysonv15-1.jpg'],
+    unitAmount: 100,
+    marketAmount: 15000,
+    costAmount: 13500,
     seqShelvesQuantity: 150,
-    minBuyQuantity:     150,
-    maxPerBuyQuantity:  15,
-    lotteryMode:        1,
-    virtual:            2,
-    shippingType:       1,
-    fakeSalesCount:     52,
+    minBuyQuantity: 150,
+    maxPerBuyQuantity: 15,
+    lotteryMode: 1,
+    virtual: 2,
+    shippingType: 1,
+    fakeSalesCount: 52,
     ...G3,
     desc: '<p>Dyson V15 Detect with laser dust detection, HEPA filtration, and up to 60-min run time.</p>',
-    category: 'Home Appliances',
+    category: 'Home',
   },
   // ─────────────────────────────────────────
   // Fashion & Lifestyle
   // ─────────────────────────────────────────
   {
-    treasureSeq:        'JM-005',
-    treasureName:       'Nike Air Jordan 4 Retro "Military Blue" (US10)',
-    productName:        'Air Jordan 4 Retro Military Blue US Size 10',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/aj4-cover.jpg',
-    mainImageList:      [
+    treasureSeq: 'JM-005',
+    treasureName: 'Nike Air Jordan 4 Retro "Military Blue" (US10)',
+    productName: 'Air Jordan 4 Retro Military Blue US Size 10',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/aj4-cover.jpg',
+    mainImageList: [
       'https://cdn.joyminis.com/products/aj4-1.jpg',
       'https://cdn.joyminis.com/products/aj4-2.jpg',
     ],
-    unitAmount:         50,
-    marketAmount:       5000,
-    costAmount:         4500,
+    unitAmount: 50,
+    marketAmount: 5000,
+    costAmount: 4500,
     seqShelvesQuantity: 100,
-    minBuyQuantity:     100,
-    maxPerBuyQuantity:  10,
-    lotteryMode:        1,
-    virtual:            2,
-    shippingType:       1,
-    fakeSalesCount:     37,
+    minBuyQuantity: 100,
+    maxPerBuyQuantity: 10,
+    lotteryMode: 1,
+    virtual: 2,
+    shippingType: 1,
+    fakeSalesCount: 37,
     ...G5,
     desc: '<p>Nike Air Jordan 4 Retro Military Blue — iconic colorway. Authentic, brand new in original box.</p>',
-    category: 'Fashion & Lifestyle',
+    category: 'Fashion',
   },
   // ─────────────────────────────────────────
   // Beauty & Health
   // ─────────────────────────────────────────
   {
-    treasureSeq:        'JM-006',
-    treasureName:       'Dyson Supersonic HD15 Hair Dryer',
-    productName:        'Dyson Supersonic HD15 Nickel/Copper',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/dysonsupersonic-cover.jpg',
-    mainImageList:      ['https://cdn.joyminis.com/products/dysonsupersonic-1.jpg'],
-    unitAmount:         80,
-    marketAmount:       10000,
-    costAmount:         9000,
+    treasureSeq: 'JM-006',
+    treasureName: 'Dyson Supersonic HD15 Hair Dryer',
+    productName: 'Dyson Supersonic HD15 Nickel/Copper',
+    treasureCoverImg:
+      'https://cdn.joyminis.com/products/dysonsupersonic-cover.jpg',
+    mainImageList: ['https://cdn.joyminis.com/products/dysonsupersonic-1.jpg'],
+    unitAmount: 80,
+    marketAmount: 10000,
+    costAmount: 9000,
     seqShelvesQuantity: 125,
-    minBuyQuantity:     125,
-    maxPerBuyQuantity:  10,
-    lotteryMode:        1,
-    virtual:            2,
-    shippingType:       1,
-    fakeSalesCount:     43,
+    minBuyQuantity: 125,
+    maxPerBuyQuantity: 10,
+    lotteryMode: 1,
+    virtual: 2,
+    shippingType: 1,
+    fakeSalesCount: 43,
     ...G3,
     desc: '<p>Dyson Supersonic HD15 with intelligent heat control measuring temperature 40× per second.</p>',
-    category: 'Beauty & Health',
+    category: 'Beauty',
   },
   // ─────────────────────────────────────────
   // Cash Prizes (virtual, no shipping)
   // ─────────────────────────────────────────
   {
-    treasureSeq:        'JM-007',
-    treasureName:       '₱5,000 Cash Prize 💰',
-    productName:        'Cash Prize ₱5,000 via GCash / Bank Transfer',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/cash5k-cover.jpg',
-    mainImageList:      ['https://cdn.joyminis.com/products/cash5k-1.jpg'],
-    unitAmount:         100,   // ₱100/份 × 60份 = ₱6,000 (platform margin ₱1,000)
-    marketAmount:       5000,
-    cashAmount:         5000,
+    treasureSeq: 'JM-007',
+    treasureName: '₱5,000 Cash Prize 💰',
+    productName: 'Cash Prize ₱5,000 via GCash / Bank Transfer',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/cash5k-cover.jpg',
+    mainImageList: ['https://cdn.joyminis.com/products/cash5k-1.jpg'],
+    unitAmount: 100, // ₱100/份 × 60份 = ₱6,000 (platform margin ₱1,000)
+    marketAmount: 5000,
+    cashAmount: 5000,
     seqShelvesQuantity: 60,
-    minBuyQuantity:     60,
-    maxPerBuyQuantity:  10,
-    lotteryMode:        1,
-    virtual:            1,     // 虚拟
-    shippingType:       2,     // 无需发货
-    fakeSalesCount:     21,
+    minBuyQuantity: 60,
+    maxPerBuyQuantity: 10,
+    lotteryMode: 1,
+    virtual: 1, // 虚拟
+    shippingType: 2, // 无需发货
+    fakeSalesCount: 21,
     ...G5,
     desc: '<p>Win ₱5,000 cash! Transferred to your GCash or bank account within 24 hours of winning.</p>',
-    category: 'Cash Prizes',
+    category: 'Cash',
   },
   {
-    treasureSeq:        'JM-008',
-    treasureName:       '₱10,000 Cash Prize 💎',
-    productName:        'Cash Prize ₱10,000 via GCash / Bank Transfer',
-    treasureCoverImg:   'https://cdn.joyminis.com/products/cash10k-cover.jpg',
-    mainImageList:      ['https://cdn.joyminis.com/products/cash10k-1.jpg'],
-    unitAmount:         200,   // ₱200/份 × 60份 = ₱12,000
-    marketAmount:       10000,
-    cashAmount:         10000,
+    treasureSeq: 'JM-008',
+    treasureName: '₱10,000 Cash Prize 💎',
+    productName: 'Cash Prize ₱10,000 via GCash / Bank Transfer',
+    treasureCoverImg: 'https://cdn.joyminis.com/products/cash10k-cover.jpg',
+    mainImageList: ['https://cdn.joyminis.com/products/cash10k-1.jpg'],
+    unitAmount: 200, // ₱200/份 × 60份 = ₱12,000
+    marketAmount: 10000,
+    cashAmount: 10000,
     seqShelvesQuantity: 60,
-    minBuyQuantity:     60,
-    maxPerBuyQuantity:  10,
-    lotteryMode:        1,
-    virtual:            1,
-    shippingType:       2,
-    fakeSalesCount:     18,
+    minBuyQuantity: 60,
+    maxPerBuyQuantity: 10,
+    lotteryMode: 1,
+    virtual: 1,
+    shippingType: 2,
+    fakeSalesCount: 18,
     ...G5,
     desc: '<p>Win ₱10,000 cash! Transferred to your GCash or bank account within 24 hours of winning.</p>',
-    category: 'Cash Prizes',
+    category: 'Cash',
   },
 ];
 
 export async function seedTreasures(): Promise<Record<string, string>> {
-  const now   = new Date();
+  const now = new Date();
   const endAt = daysLater(90);
 
   let tCreated = 0;
@@ -238,14 +239,18 @@ export async function seedTreasures(): Promise<Record<string, string>> {
   const seqToId: Record<string, string> = {};
 
   // 先取出所有分类，构建 name→id 映射
-  const cats = await db.productCategory.findMany({ select: { id: true, name: true } });
+  const cats = await db.productCategory.findMany({
+    select: { id: true, name: true },
+  });
   const catMap: Record<string, number> = Object.fromEntries(
     cats.map((c: { id: number; name: string }) => [c.name, c.id]),
   );
 
   for (const { category, mainImageList, ...rest } of TREASURES) {
     // ── 幂等：按 treasureSeq ────────────────────────────────
-    const existing = await db.treasure.findUnique({ where: { treasureSeq: rest.treasureSeq } });
+    const existing = await db.treasure.findUnique({
+      where: { treasureSeq: rest.treasureSeq },
+    });
     let treasureId: string;
 
     if (existing) {
@@ -256,12 +261,12 @@ export async function seedTreasures(): Promise<Record<string, string>> {
           ...rest,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           mainImageList: mainImageList as unknown as any,
-          salesStartAt:  now,
-          salesEndAt:    endAt,
-          state:         1,         // 上架
-          status:        'ACTIVE',
-          enableRobot:   true,
-          robotDelay:    600,       // 10 min 后机器人自动补齐
+          salesStartAt: now,
+          salesEndAt: endAt,
+          state: 1, // 上架
+          status: 'ACTIVE',
+          enableRobot: true,
+          robotDelay: 600, // 10 min 后机器人自动补齐
         },
       });
       treasureId = t.treasureId;

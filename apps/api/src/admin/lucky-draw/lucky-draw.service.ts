@@ -9,233 +9,256 @@ import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { CreatePrizeDto } from './dto/create-prize.dto';
 import { UpdatePrizeDto } from './dto/update-prize.dto';
-import { QueryResultsDto } from './dto/query-results.dto';
+import { PaginateDto } from '@api/common/dto/paginate.dto';
+
+const LUCKY_DRAW_PRIZE_TYPE = {
+  COUPON: 1,
+  COIN: 2,
+  BALANCE: 3,
+  THANKS: 4,
+} as const;
 
 @Injectable()
 export class AdminLuckyDrawService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ================================================================
-  // 活动 CRUD
+  // Activity CRUD
   // ================================================================
 
-  async listActivities() {
-    const list = await this.prisma.luckyDrawActivity.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        prizes: { orderBy: { sortOrder: 'asc' } },
-        treasure: { select: { treasureName: true } },
-      },
-    });
-    return {
-      list: list.map((a) => ({
-        id: a.id,
-        createdAt: a.createdAt.getTime(),
-        title: a.title,
-        description: a.description,
-        treasureId: a.treasureId,
-        treasureName: a.treasure?.treasureName ?? null,
-        status: a.status,
-        startAt: a.startAt?.getTime() ?? null,
-        endAt: a.endAt?.getTime() ?? null,
-        prizes: a.prizes.map((p) => ({
-          id: p.id,
-          activityId: p.activityId,
-          prizeType: p.prizeType,
-          prizeName: p.prizeName,
-          couponId: p.couponId,
-          couponName: null as string | null,
-          prizeValue: p.prizeValue?.toNumber() ?? null,
-          probability: p.probability.toNumber(),
-          stock: p.stock,
-          sortOrder: p.sortOrder,
-        })),
-      })),
-      total: list.length,
-    };
-  }
-
-  async getActivity(id: string) {
-    const a = await this.prisma.luckyDrawActivity.findUnique({
-      where: { id },
-      include: {
-        prizes: {
-          orderBy: { sortOrder: 'asc' },
-          include: { coupon: { select: { couponName: true } } },
-        },
-        treasure: { select: { treasureName: true } },
-      },
-    });
-    if (!a) throw new NotFoundException('Activity not found');
-    return {
-      id: a.id,
-      createdAt: a.createdAt.getTime(),
-      title: a.title,
-      description: a.description,
-      treasureId: a.treasureId,
-      treasureName: a.treasure?.treasureName ?? null,
-      status: a.status,
-      startAt: a.startAt?.getTime() ?? null,
-      endAt: a.endAt?.getTime() ?? null,
-      prizes: a.prizes.map((p) => ({
-        id: p.id,
-        activityId: p.activityId,
-        prizeType: p.prizeType,
-        prizeName: p.prizeName,
-        couponId: p.couponId,
-        couponName: p.coupon?.couponName ?? null,
-        prizeValue: p.prizeValue?.toNumber() ?? null,
-        probability: p.probability.toNumber(),
-        stock: p.stock,
-        sortOrder: p.sortOrder,
-      })),
-    };
-  }
-
   async createActivity(dto: CreateActivityDto) {
-    const a = await this.prisma.luckyDrawActivity.create({
+    this.validateTimeRange(dto.startAt, dto.endAt);
+    if (dto.treasureId) {
+      await this.validateTreasure(dto.treasureId);
+    }
+
+    return this.prisma.luckyDrawActivity.create({
       data: {
         title: dto.title,
-        description: dto.description,
+        description: dto.description ?? null,
         treasureId: dto.treasureId ?? null,
         status: dto.status ?? 1,
         startAt: dto.startAt ? new Date(dto.startAt) : null,
         endAt: dto.endAt ? new Date(dto.endAt) : null,
       },
     });
-    return { id: a.id };
+  }
+
+  async listActivities(paginate: PaginateDto) {
+    const { page = 1, pageSize = 20 } = paginate;
+    const [total, list] = await this.prisma.$transaction([
+      this.prisma.luckyDrawActivity.count(),
+      this.prisma.luckyDrawActivity.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          treasure: { select: { treasureName: true } },
+          _count: { select: { prizes: true, tickets: true } },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      list: list.map((item) => ({
+        ...item,
+        treasureName: item.treasure?.treasureName,
+        prizesCount: item._count.prizes,
+        ticketsCount: item._count.tickets,
+      })),
+      page,
+      pageSize,
+    };
+  }
+
+  async getActivity(id: string) {
+    const activity = await this.prisma.luckyDrawActivity.findUnique({
+      where: { id },
+      include: {
+        treasure: { select: { treasureName: true } },
+        prizes: {
+          orderBy: { probability: 'desc' },
+          include: { coupon: { select: { couponName: true } } },
+        },
+      },
+    });
+    if (!activity) {
+      throw new NotFoundException('Activity not found.');
+    }
+    return {
+      ...activity,
+      treasureName: activity.treasure?.treasureName,
+      prizes: activity.prizes.map((p) => ({
+        ...p,
+        couponName: p.coupon?.couponName,
+      })),
+    };
   }
 
   async updateActivity(id: string, dto: UpdateActivityDto) {
-    await this.requireActivity(id);
-    await this.prisma.luckyDrawActivity.update({
+    const activity = await this.requireActivity(id);
+    const raw = dto as Record<string, unknown>;
+
+    const title = this.asOptionalString(raw.title);
+    const description = this.asOptionalNullableString(raw.description);
+    const treasureId = this.asOptionalNullableString(raw.treasureId);
+    const status = this.asOptionalNumber(raw.status);
+    const startAt = this.asOptionalNullableString(raw.startAt);
+    const endAt = this.asOptionalNullableString(raw.endAt);
+
+    const nextStartAt =
+      startAt === undefined
+        ? activity.startAt
+        : startAt === null
+          ? null
+          : new Date(startAt);
+    const nextEndAt =
+      endAt === undefined
+        ? activity.endAt
+        : endAt === null
+          ? null
+          : new Date(endAt);
+
+    if (nextStartAt && nextEndAt && nextStartAt >= nextEndAt) {
+      throw new BadRequestException('startAt must be earlier than endAt.');
+    }
+    if (typeof treasureId === 'string' && treasureId.length > 0) {
+      await this.validateTreasure(treasureId);
+    }
+
+    const data: Prisma.LuckyDrawActivityUncheckedUpdateInput = {};
+    if (title !== undefined) data.title = title;
+    if (description !== undefined) data.description = description;
+    if (treasureId !== undefined) data.treasureId = treasureId;
+    if (status !== undefined) data.status = status;
+    if (startAt !== undefined) data.startAt = nextStartAt;
+    if (endAt !== undefined) data.endAt = nextEndAt;
+
+    return this.prisma.luckyDrawActivity.update({
       where: { id },
-      data: {
-        ...(dto.title !== undefined && { title: dto.title }),
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.treasureId !== undefined && { treasureId: dto.treasureId }),
-        ...(dto.status !== undefined && { status: dto.status }),
-        ...(dto.startAt !== undefined && {
-          startAt: dto.startAt ? new Date(dto.startAt) : null,
-        }),
-        ...(dto.endAt !== undefined && {
-          endAt: dto.endAt ? new Date(dto.endAt) : null,
-        }),
-      },
+      data,
     });
-    return { success: true };
   }
 
   async deleteActivity(id: string) {
     await this.requireActivity(id);
-    await this.prisma.luckyDrawActivity.delete({ where: { id } });
-    return { success: true };
+    // Note: Deleting an activity will cascade delete prizes, tickets, and results due to schema relations.
+    return this.prisma.luckyDrawActivity.delete({ where: { id } });
   }
 
   // ================================================================
-  // 奖品 CRUD
+  // Prize CRUD
   // ================================================================
-
-  async listPrizes(activityId: string) {
-    const list = await this.prisma.luckyDrawPrize.findMany({
-      where: { activityId },
-      orderBy: { sortOrder: 'asc' },
-      include: { coupon: { select: { couponName: true } } },
-    });
-    return {
-      list: list.map((p) => ({
-        id: p.id,
-        activityId: p.activityId,
-        prizeType: p.prizeType,
-        prizeName: p.prizeName,
-        couponId: p.couponId,
-        couponName: p.coupon?.couponName ?? null,
-        prizeValue: p.prizeValue?.toNumber() ?? null,
-        probability: p.probability.toNumber(),
-        stock: p.stock,
-        sortOrder: p.sortOrder,
-      })),
-      total: list.length,
-    };
-  }
 
   async createPrize(dto: CreatePrizeDto) {
-    await this.requireActivity(dto.activityId);
-    await this.validateProbabilitySum(dto.activityId, null, dto.probability);
+    const { activityId, probability, prizeType, couponId, prizeValue } = dto;
 
-    const p = await this.prisma.luckyDrawPrize.create({
+    await this.requireActivity(activityId);
+    await this.validateProbabilitySum(activityId, null, probability);
+    this.validatePrizePayload(prizeType, couponId, prizeValue);
+    if (prizeType === LUCKY_DRAW_PRIZE_TYPE.COUPON && couponId) {
+      await this.validateCoupon(couponId);
+    }
+
+    return this.prisma.luckyDrawPrize.create({
       data: {
-        activityId: dto.activityId,
-        prizeType: dto.prizeType,
+        activityId,
+        prizeType,
         prizeName: dto.prizeName,
-        couponId: dto.couponId ?? null,
+        couponId:
+          prizeType === LUCKY_DRAW_PRIZE_TYPE.COUPON
+            ? (couponId ?? null)
+            : null,
         prizeValue:
-          dto.prizeValue != null ? new Prisma.Decimal(dto.prizeValue) : null,
-        probability: new Prisma.Decimal(dto.probability),
+          prizeType === LUCKY_DRAW_PRIZE_TYPE.COIN ||
+          prizeType === LUCKY_DRAW_PRIZE_TYPE.BALANCE
+            ? new Prisma.Decimal(prizeValue as number)
+            : null,
         stock: dto.stock ?? -1,
         sortOrder: dto.sortOrder ?? 0,
+        probability: new Prisma.Decimal(probability),
       },
     });
-    return { id: p.id };
   }
 
-  async updatePrize(prizeId: string, dto: UpdatePrizeDto) {
-    const prize = await this.prisma.luckyDrawPrize.findUnique({
-      where: { id: prizeId },
+  async listPrizes(activityId: string) {
+    await this.requireActivity(activityId);
+    const list = await this.prisma.luckyDrawPrize.findMany({
+      where: { activityId },
+      orderBy: { probability: 'desc' },
+      include: { coupon: { select: { couponName: true } } },
     });
-    if (!prize) throw new NotFoundException('Prize not found');
 
-    if (dto.probability !== undefined) {
-      await this.validateProbabilitySum(
-        prize.activityId,
-        prizeId,
-        dto.probability,
-      );
+    return list.map((item) => ({
+      ...item,
+      couponName: item.coupon?.couponName,
+    }));
+  }
+
+  async updatePrize(id: string, dto: UpdatePrizeDto) {
+    const prize = await this.requirePrize(id);
+    const { probability } = dto;
+
+    if (probability !== undefined) {
+      await this.validateProbabilitySum(prize.activityId, id, probability);
     }
 
-    await this.prisma.luckyDrawPrize.update({
-      where: { id: prizeId },
-      data: {
-        ...(dto.prizeType !== undefined && { prizeType: dto.prizeType }),
-        ...(dto.prizeName !== undefined && { prizeName: dto.prizeName }),
-        ...(dto.couponId !== undefined && { couponId: dto.couponId }),
-        ...(dto.prizeValue !== undefined && {
-          prizeValue:
-            dto.prizeValue != null ? new Prisma.Decimal(dto.prizeValue) : null,
-        }),
-        ...(dto.probability !== undefined && {
-          probability: new Prisma.Decimal(dto.probability),
-        }),
-        ...(dto.stock !== undefined && { stock: dto.stock }),
-        ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
-      },
+    const finalType = dto.prizeType ?? prize.prizeType;
+    const finalCouponId =
+      dto.couponId === undefined ? prize.couponId : dto.couponId;
+    const finalPrizeValue =
+      dto.prizeValue === undefined
+        ? (prize.prizeValue?.toNumber() ?? null)
+        : dto.prizeValue;
+
+    this.validatePrizePayload(finalType, finalCouponId, finalPrizeValue);
+    if (finalType === LUCKY_DRAW_PRIZE_TYPE.COUPON && finalCouponId) {
+      await this.validateCoupon(finalCouponId);
+    }
+
+    const data: Prisma.LuckyDrawPrizeUncheckedUpdateInput = {};
+    if (dto.prizeType !== undefined) data.prizeType = dto.prizeType;
+    if (dto.prizeName !== undefined) data.prizeName = dto.prizeName;
+    if (dto.stock !== undefined) data.stock = dto.stock;
+    if (dto.sortOrder !== undefined) data.sortOrder = dto.sortOrder;
+    if (probability !== undefined) {
+      data.probability = new Prisma.Decimal(probability);
+    }
+    data.couponId =
+      finalType === LUCKY_DRAW_PRIZE_TYPE.COUPON
+        ? (finalCouponId ?? null)
+        : null;
+    data.prizeValue =
+      finalType === LUCKY_DRAW_PRIZE_TYPE.COIN ||
+      finalType === LUCKY_DRAW_PRIZE_TYPE.BALANCE
+        ? new Prisma.Decimal(finalPrizeValue as number)
+        : null;
+
+    return this.prisma.luckyDrawPrize.update({
+      where: { id },
+      data,
     });
-    return { success: true };
   }
 
-  async deletePrize(prizeId: string) {
-    const prize = await this.prisma.luckyDrawPrize.findUnique({
-      where: { id: prizeId },
-    });
-    if (!prize) throw new NotFoundException('Prize not found');
-    await this.prisma.luckyDrawPrize.delete({ where: { id: prizeId } });
-    return { success: true };
+  async deletePrize(id: string) {
+    await this.requirePrize(id);
+    return this.prisma.luckyDrawPrize.delete({ where: { id } });
   }
 
   // ================================================================
-  // 抽奖结果列表
+  // Results Listing
   // ================================================================
 
-  async listResults(dto: QueryResultsDto) {
-    const { page = 1, pageSize = 20, activityId, userId } = dto;
+  async listResults(activityId: string, paginate: PaginateDto) {
+    await this.requireActivity(activityId);
 
-    const where: Prisma.LuckyDrawResultWhereInput = {};
-    if (userId) where.userId = userId;
-    if (activityId) {
-      where.ticket = { activityId };
-    }
+    const { page = 1, pageSize = 20 } = paginate;
+    const where: Prisma.LuckyDrawResultWhereInput = {
+      ticket: { activityId },
+    };
 
-    const [total, list] = await Promise.all([
+    const [total, list] = await this.prisma.$transaction([
       this.prisma.luckyDrawResult.count({ where }),
       this.prisma.luckyDrawResult.findMany({
         where,
@@ -243,14 +266,22 @@ export class AdminLuckyDrawService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          user: { select: { nickname: true, avatar: true } },
-          prize: {
-            select: { prizeName: true, prizeType: true, activityId: true },
-          },
           ticket: {
             select: {
-              activity: { select: { title: true } },
+              activityId: true,
               orderId: true,
+            },
+          },
+          user: { select: { nickname: true, avatar: true } },
+          prize: {
+            include: {
+              coupon: { select: { couponName: true } },
+              activity: {
+                select: {
+                  title: true,
+                  treasure: { select: { treasureName: true } },
+                },
+              },
             },
           },
         },
@@ -258,39 +289,77 @@ export class AdminLuckyDrawService {
     ]);
 
     return {
+      total,
       list: list.map((r) => ({
-        id: r.id,
-        createdAt: r.createdAt.getTime(),
-        userId: r.userId,
+        ...r,
+        activityId: r.ticket.activityId,
+        orderId: r.ticket.orderId,
         userNickname: r.user.nickname,
         userAvatar: r.user.avatar,
-        prizeId: r.prizeId,
         prizeName: r.prize.prizeName,
         prizeType: r.prize.prizeType,
-        activityId: r.prize.activityId,
-        activityTitle: r.ticket.activity?.title ?? null,
-        orderId: r.ticket.orderId,
-        prizeSnapshot: r.prizeSnapshot,
+        couponName: r.prize.coupon?.couponName ?? null,
+        activityTitle: r.prize.activity.title,
+        treasureName: r.prize.activity.treasure?.treasureName ?? null,
       })),
-      total,
       page,
       pageSize,
     };
   }
 
   // ================================================================
-  // 私有辅助
+  // Private Helpers
   // ================================================================
 
   private async requireActivity(id: string) {
-    const a = await this.prisma.luckyDrawActivity.findUnique({
+    const activity = await this.prisma.luckyDrawActivity.findUnique({
       where: { id },
-      select: { id: true },
     });
-    if (!a) throw new NotFoundException('Activity not found');
+    if (!activity) {
+      throw new NotFoundException(`Activity with ID "${id}" not found.`);
+    }
+    return activity;
   }
 
-  /** 验证同一活动的概率总和不超过 100 */
+  private async requirePrize(id: string) {
+    const prize = await this.prisma.luckyDrawPrize.findUnique({
+      where: { id },
+    });
+    if (!prize) {
+      throw new NotFoundException(`Prize with ID "${id}" not found.`);
+    }
+    return prize;
+  }
+
+  private async validateTreasure(treasureId: string) {
+    const treasure = await this.prisma.treasure.findUnique({
+      where: { treasureId },
+    });
+    if (!treasure) {
+      throw new BadRequestException(
+        `Treasure with ID "${treasureId}" not found.`,
+      );
+    }
+  }
+
+  private async validateCoupon(couponId: string) {
+    const coupon = await this.prisma.coupon.findUnique({
+      where: { id: couponId },
+    });
+    if (!coupon) {
+      throw new BadRequestException(`Coupon with ID "${couponId}" not found.`);
+    }
+  }
+
+  private validateTimeRange(startAt?: string, endAt?: string) {
+    if (!startAt || !endAt) {
+      return;
+    }
+    if (new Date(startAt) >= new Date(endAt)) {
+      throw new BadRequestException('startAt must be earlier than endAt.');
+    }
+  }
+
   private async validateProbabilitySum(
     activityId: string,
     excludePrizeId: string | null,
@@ -300,14 +369,50 @@ export class AdminLuckyDrawService {
       _sum: { probability: true },
       where: {
         activityId,
-        ...(excludePrizeId ? { id: { not: excludePrizeId } } : {}),
+        ...(excludePrizeId && { id: { not: excludePrizeId } }),
       },
     });
     const existing = agg._sum.probability?.toNumber() ?? 0;
     if (existing + newProbability > 100) {
       throw new BadRequestException(
-        `Probability sum would exceed 100 (current: ${existing}, adding: ${newProbability})`,
+        `Probability sum would exceed 100 (current: ${existing}, adding: ${newProbability}).`,
       );
     }
+  }
+
+  private validatePrizePayload(
+    prizeType: number,
+    couponId?: string | null,
+    prizeValue?: number | null,
+  ) {
+    if (prizeType < 1 || prizeType > 4) {
+      throw new BadRequestException('prizeType must be between 1 and 4.');
+    }
+    if (prizeType === LUCKY_DRAW_PRIZE_TYPE.COUPON && !couponId) {
+      throw new BadRequestException('Coupon ID is required for coupon prizes.');
+    }
+    if (
+      (prizeType === LUCKY_DRAW_PRIZE_TYPE.COIN ||
+        prizeType === LUCKY_DRAW_PRIZE_TYPE.BALANCE) &&
+      (!prizeValue || prizeValue <= 0)
+    ) {
+      throw new BadRequestException(
+        'A positive prizeValue is required for coin/balance prizes.',
+      );
+    }
+  }
+
+  private asOptionalString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  private asOptionalNullableString(value: unknown): string | null | undefined {
+    if (value === null) return null;
+    if (typeof value === 'string') return value;
+    return undefined;
+  }
+
+  private asOptionalNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
   }
 }

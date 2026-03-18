@@ -1,56 +1,68 @@
 import {
-  IsInt,
-  IsNumber,
-  IsOptional,
   IsString,
-  Max,
+  IsNotEmpty,
+  IsInt,
   Min,
+  Max,
+  IsOptional,
+  IsNumber,
+  MaxLength,
 } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class CreatePrizeDto {
-  /** 所属活动 */
   @IsString()
+  @IsNotEmpty()
+  @ApiProperty({ description: '所属抽奖活动的ID' })
   activityId!: string;
 
-  /** 1=优惠券 2=金币 3=余额 4=谢谢参与 */
   @IsInt()
   @Min(1)
   @Max(4)
   @Type(() => Number)
+  @ApiProperty({
+    description: '奖品类型 (1=优惠券, 2=金币, 3=余额, 4=谢谢参与)',
+  })
   prizeType!: number;
 
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @ApiProperty({ description: '奖品名称', maxLength: 100 })
   prizeName!: string;
 
-  /** 关联优惠券模板（type=1 时必填）*/
-  @IsOptional()
-  @IsString()
-  couponId?: string;
-
-  /** 奖励数量/金额（type=2/3 时必填）*/
-  @IsOptional()
-  @IsNumber()
-  @Type(() => Number)
-  prizeValue?: number;
-
-  /** 权重 0-100，同一活动所有奖品之和必须 = 100 */
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  @Type(() => Number)
-  probability!: number;
-
-  /** 库存（-1 = 不限）*/
-  @IsOptional()
   @IsInt()
-  @Min(-1)
   @Type(() => Number)
+  @IsOptional()
+  @Min(-1)
+  @ApiPropertyOptional({ description: '库存（-1=不限）', default: -1 })
   stock?: number;
 
-  @IsOptional()
   @IsInt()
-  @Min(0)
   @Type(() => Number)
+  @IsOptional()
+  @Min(0)
+  @ApiPropertyOptional({ description: '排序（越小越靠前）', default: 0 })
   sortOrder?: number;
+
+  @IsNumber()
+  @Type(() => Number)
+  @Min(0)
+  @Max(100)
+  @ApiProperty({ description: '中奖概率 (0-100)' })
+  probability!: number;
+
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional({
+    description: '关联的优惠券ID (当类型为优惠券时)',
+  })
+  couponId?: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  @IsOptional()
+  @ApiPropertyOptional({ description: '奖品数值 (金币/余额类型必填)' })
+  prizeValue?: number;
 }

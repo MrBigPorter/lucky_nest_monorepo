@@ -55,6 +55,14 @@ import {
   CreatePaymentChannelPayload,
   AdminCreateKycParams,
   AdminUpdateKycParams,
+  LuckyDrawActivity,
+  LuckyDrawPrize,
+  LuckyDrawResult,
+  CreateLuckyDrawActivityPayload,
+  UpdateLuckyDrawActivityPayload,
+  CreateLuckyDrawPrizePayload,
+  UpdateLuckyDrawPrizePayload,
+  QueryLuckyDrawResultsParams,
 } from '@/type/types';
 
 /**
@@ -844,27 +852,131 @@ export const applicationApi = {
 /**
  * 福利抽奖管理 API
  */
+
+type LuckyDrawPrizeResponse = Omit<
+  LuckyDrawPrize,
+  'probability' | 'prizeValue'
+> & {
+  probability: number | string;
+  prizeValue: number | string | null;
+};
+
+type LuckyDrawActivityResponse = {
+  id: string;
+  createdAt: number | string;
+  title: string;
+  description: string | null;
+  treasureId: string | null;
+  treasureName?: string | null;
+  status: number;
+  startAt: number | string | null;
+  endAt: number | string | null;
+  prizes?: LuckyDrawPrizeResponse[];
+  prizesCount?: number;
+  ticketsCount?: number;
+};
+
+type LuckyDrawResultResponse = {
+  id: string;
+  createdAt: number | string;
+  userId: string;
+  userNickname: string | null;
+  userAvatar: string | null;
+  prizeId: string;
+  prizeName: string;
+  prizeType: number;
+  activityId: string;
+  activityTitle: string | null;
+  orderId: string;
+  couponName?: string | null;
+  treasureName?: string | null;
+  prizeSnapshot: unknown;
+};
+
+const toTimestamp = (
+  value: number | string | null | undefined,
+): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.getTime();
+};
+
+const toLuckyDrawNumber = (
+  value: number | string | null | undefined,
+): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const normalizeLuckyDrawPrize = (
+  prize: LuckyDrawPrizeResponse,
+): LuckyDrawPrize => ({
+  ...prize,
+  probability: toLuckyDrawNumber(prize.probability) ?? 0,
+  prizeValue: toLuckyDrawNumber(prize.prizeValue),
+});
+
+const normalizeLuckyDrawActivity = (
+  activity: LuckyDrawActivityResponse,
+): LuckyDrawActivity => ({
+  id: activity.id,
+  createdAt: toTimestamp(activity.createdAt) ?? Date.now(),
+  title: activity.title,
+  description: activity.description,
+  treasureId: activity.treasureId,
+  treasureName: activity.treasureName ?? null,
+  status: activity.status,
+  startAt: toTimestamp(activity.startAt),
+  endAt: toTimestamp(activity.endAt),
+  prizes: activity.prizes?.map(normalizeLuckyDrawPrize),
+  prizesCount: activity.prizesCount ?? activity.prizes?.length ?? 0,
+  ticketsCount: activity.ticketsCount ?? 0,
+});
+
+const normalizeLuckyDrawResult = (
+  result: LuckyDrawResultResponse,
+): LuckyDrawResult => ({
+  ...result,
+  createdAt: toTimestamp(result.createdAt) ?? Date.now(),
+  prizeType: result.prizeType as LuckyDrawResult['prizeType'],
+});
+
 export const luckyDrawApi = {
   // ── 活动 ──────────────────────────────────────────────────────
-  listActivities: () =>
-    http.get<{
-      list: import('@/type/types').LuckyDrawActivity[];
+  listActivities: async (params?: PaginationParams) => {
+    const data = await http.get<{
+      list: LuckyDrawActivityResponse[];
       total: number;
-    }>('/v1/admin/lucky-draw/activities'),
+      page?: number;
+      pageSize?: number;
+    }>('/v1/admin/lucky-draw/activities', params);
 
-  getActivity: (id: string) =>
-    http.get<import('@/type/types').LuckyDrawActivity>(
+    const page = params?.page ?? data.page ?? 1;
+    const pageSize =
+      (params?.pageSize ?? data.pageSize ?? data.list.length) || 20;
+
+    return {
+      list: data.list.map(normalizeLuckyDrawActivity),
+      total: data.total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(data.total / Math.max(pageSize, 1))),
+    };
+  },
+
+  getActivity: async (id: string) => {
+    const data = await http.get<LuckyDrawActivityResponse>(
       `/v1/admin/lucky-draw/activities/${id}`,
-    ),
+    );
 
-  createActivity: (
-    data: import('@/type/types').CreateLuckyDrawActivityPayload,
-  ) => http.post<{ id: string }>('/v1/admin/lucky-draw/activities', data),
+    return normalizeLuckyDrawActivity(data);
+  },
 
-  updateActivity: (
-    id: string,
-    data: import('@/type/types').UpdateLuckyDrawActivityPayload,
-  ) =>
+  createActivity: (data: CreateLuckyDrawActivityPayload) =>
+    http.post<{ id: string }>('/v1/admin/lucky-draw/activities', data),
+
+  updateActivity: (id: string, data: UpdateLuckyDrawActivityPayload) =>
     http.patch<{ success: boolean }>(
       `/v1/admin/lucky-draw/activities/${id}`,
       data,
@@ -874,28 +986,63 @@ export const luckyDrawApi = {
     http.delete<{ success: boolean }>(`/v1/admin/lucky-draw/activities/${id}`),
 
   // ── 奖品 ──────────────────────────────────────────────────────
-  listPrizes: (activityId: string) =>
-    http.get<{
-      list: import('@/type/types').LuckyDrawPrize[];
-      total: number;
-    }>(`/v1/admin/lucky-draw/activities/${activityId}/prizes`),
+  listPrizes: async (activityId: string) => {
+    const data = await http.get<LuckyDrawPrizeResponse[]>(
+      `/v1/admin/lucky-draw/activities/${activityId}/prizes`,
+    );
 
-  createPrize: (data: import('@/type/types').CreateLuckyDrawPrizePayload) =>
+    const list = data.map(normalizeLuckyDrawPrize);
+
+    return {
+      list,
+      total: list.length,
+      page: 1,
+      pageSize: list.length || 1,
+      totalPages: 1,
+    };
+  },
+
+  createPrize: (data: CreateLuckyDrawPrizePayload) =>
     http.post<{ id: string }>('/v1/admin/lucky-draw/prizes', data),
 
-  updatePrize: (
-    id: string,
-    data: import('@/type/types').UpdateLuckyDrawPrizePayload,
-  ) =>
+  updatePrize: (id: string, data: UpdateLuckyDrawPrizePayload) =>
     http.patch<{ success: boolean }>(`/v1/admin/lucky-draw/prizes/${id}`, data),
 
   deletePrize: (id: string) =>
     http.delete<{ success: boolean }>(`/v1/admin/lucky-draw/prizes/${id}`),
 
   // ── 抽奖结果 ──────────────────────────────────────────────────
-  listResults: (params: import('@/type/types').QueryLuckyDrawResultsParams) =>
-    http.get<PaginatedResponse<import('@/type/types').LuckyDrawResult>>(
-      '/v1/admin/lucky-draw/results',
-      params,
-    ),
+  listResults: async (params: QueryLuckyDrawResultsParams) => {
+    if (!params.activityId) {
+      return {
+        list: [],
+        total: 0,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 20,
+        totalPages: 1,
+      } as PaginatedResponse<LuckyDrawResult>;
+    }
+
+    const data = await http.get<{
+      list: LuckyDrawResultResponse[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>(`/v1/admin/lucky-draw/activities/${params.activityId}/results`, {
+      page: params.page,
+      pageSize: params.pageSize,
+    },
+    );
+
+    return {
+      list: data.list.map(normalizeLuckyDrawResult),
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(
+        1,
+        Math.ceil(data.total / Math.max(data.pageSize, 1)),
+      ),
+    };
+  },
 };

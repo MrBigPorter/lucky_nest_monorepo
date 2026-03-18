@@ -3,12 +3,14 @@
 > 作者：Copilot 代码审计  
 > 日期：2026-03-18  
 > 基于：Phase 5 代码现状（`apps/api`）
+> 状态：历史审计快照（用于复盘，不代表当前代码状态）
+> 最后对齐时间：2026-03-18（当前实施进度以 `.github/copilot-instructions.md` 与 `read/IMPL_PROGRESS_CN.md` 为准）
 
 ---
 
 ## 一、现状速览
 
-经过全代码链路审计，两个功能均处于 **"数据库骨架存在，业务逻辑为空壳"** 状态：
+以下结论是 **Phase 5 当时审计快照**，当前仓库已完成后续改造：
 
 | 功能 | Schema 字段 | 服务层逻辑 | 结果 |
 |------|------------|-----------|------|
@@ -354,6 +356,8 @@ flashSaleProduct   FlashSaleProduct? @relation(fields: [flashSaleProductId], ref
 ---
 
 ## 五、建议执行顺序
+
+> 以下为历史执行计划。对应改造已在后续阶段落地，保留仅供复盘。
 
 ```
 Phase A（约 1 天）：秒杀逻辑

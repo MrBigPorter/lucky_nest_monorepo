@@ -1,9 +1,12 @@
 import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { LuckyDrawService } from '@api/common/lucky-draw/lucky-draw.service';
 import { QueryTicketsDto } from './dto/query-tickets.dto';
 
+@ApiTags('Client Lucky Draw')
+@ApiBearerAuth()
 @Controller('lucky-draw')
 @UseGuards(JwtAuthGuard)
 export class ClientLuckyDrawController {
