@@ -47,15 +47,10 @@ export const SmartImageImpl: React.FC<SmartImageProps> = ({
   useEffect(() => {
     setStatus('loading');
 
-    // 检查 ref 是否存在，以及图片是否已经“完成”了 (cached)
     if (imgRef.current && imgRef.current.complete) {
-      // 如果浏览器说“我早就加载完了”，那我们手动触发 loaded
-      // 这里的 .complete 是原生 DOM 属性，非常可靠
       if (imgRef.current.naturalWidth === 0) {
-        // 加载完了但宽度是0，说明是张烂图 (Error)
         setStatus('error');
       } else {
-        // 宽度正常，说明加载成功 (Loaded)
         setStatus('loaded');
       }
     }

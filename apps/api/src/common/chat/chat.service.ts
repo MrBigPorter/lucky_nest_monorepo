@@ -36,10 +36,8 @@ import {
   MessageCreatedEvent,
   MessageRecalledEvent,
 } from '@api/common/chat/events/chat.events';
-import {
-  CHAT_GROUP_EVENTS,
-  GroupMemberJoinedEvent,
-} from '@api/common/chat/events/chat-group.events';
+
+import { CHAT_GROUP_EVENTS } from '@api/common/chat/events/chat-group.events';
 import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
 import { ConfigService } from '@nestjs/config';
 
