@@ -23,6 +23,7 @@ import { SystemConfigModule } from '@api/admin/system-config/system-config.modul
 import { AdsModule } from '@api/admin/ads/ads.module';
 import { FlashSaleModule } from '@api/admin/flash-sale/flash-sale.module';
 import { RegisterApplicationModule } from '@api/admin/register-application/register-application.module';
+import { AdminLuckyDrawModule } from '@api/admin/lucky-draw/lucky-draw.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { RegisterApplicationModule } from '@api/admin/register-application/regis
     AdsModule,
     FlashSaleModule,
     RegisterApplicationModule,
+    AdminLuckyDrawModule,
   ],
   providers: [],
   controllers: [],

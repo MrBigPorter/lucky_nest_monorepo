@@ -27,6 +27,7 @@ import {
   Megaphone,
   LogIn,
   SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 
 export type RouteGroup = 'Overview' | 'Management' | 'Operations' | 'System';
@@ -181,6 +182,12 @@ export const routes: RouteConfig[] = [
     path: '/flash-sale',
     name: 'flashSale',
     icon: Zap,
+    group: 'Operations',
+  },
+  {
+    path: '/lucky-draw',
+    name: 'luckyDraw',
+    icon: Sparkles,
     group: 'Operations',
   },
   {

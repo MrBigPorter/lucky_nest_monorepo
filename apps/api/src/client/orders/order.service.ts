@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
@@ -21,15 +22,19 @@ import { ERROR_KEYS } from '@api/common/error-codes.gen';
 import { throwBiz } from '@api/common/exceptions/biz.exception';
 import { RefundApplyDto } from '@api/client/orders/dto/refund-apply.dto';
 import { BizPrefix, COUPON_TYPE, OrderNoHelper } from '@lucky/shared';
+import { LuckyDrawService } from '@api/common/lucky-draw/lucky-draw.service';
 
 const D = (n: number | string) => new Prisma.Decimal(n);
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     private prisma: PrismaService,
     private wallet: WalletService,
     private group: GroupService,
+    private luckyDraw: LuckyDrawService,
   ) {}
 
   private async getExchangeRateTx(
@@ -63,7 +68,7 @@ export class OrderService {
       throw new BadRequestException('invalid payment method');
 
     try {
-      return this.prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx) => {
         const rate = await this.getExchangeRateTx(tx);
 
         // Get treasure details, validate availability
@@ -153,6 +158,40 @@ export class OrderService {
             );
           }
           finalUnitPrice = soloPrice;
+        }
+
+        // ==========================================
+        // 秒杀价格注入（Flash Sale Price Injection）
+        // ==========================================
+        const { flashSaleProductId } = dto;
+        if (flashSaleProductId) {
+          const fsp = await tx.flashSaleProduct.findUnique({
+            where: { id: flashSaleProductId },
+            include: { session: true },
+          });
+          const now = new Date();
+
+          if (!fsp)
+            throw new BadRequestException('Flash sale product not found');
+          if (fsp.treasureId !== treasureId)
+            throw new BadRequestException('Flash sale product mismatch');
+          if (fsp.session.status !== 1)
+            throw new BadRequestException('Flash sale session is not active');
+          if (now < fsp.session.startTime || now > fsp.session.endTime)
+            throw new BadRequestException('Flash sale is not in progress');
+
+          // 原子扣减秒杀库存（防超卖）
+          const deducted = await tx.$executeRaw`
+            UPDATE flash_sale_products
+               SET flash_stock = flash_stock - ${entries}
+             WHERE id = ${flashSaleProductId}
+               AND flash_stock >= ${entries}
+          `;
+          if (deducted !== 1)
+            throw new BadRequestException('Flash sale stock insufficient');
+
+          // 用秒杀价替换
+          finalUnitPrice = fsp.flashPrice as unknown as Prisma.Decimal;
         }
 
         // Calculate original total amount
@@ -316,7 +355,8 @@ export class OrderService {
             coinUsed,
             groupId: null,
             isGroupOwner: 0,
-            userCouponId: couponId || null, //  FIX 5: Save the used coupon ID to the order
+            userCouponId: couponId || null,
+            flashSaleProductId: flashSaleProductId || null,
           },
           select: {
             orderId: true,
@@ -371,6 +411,21 @@ export class OrderService {
           alreadyInGroup,
         };
       });
+      // Step 6: fire-and-forget 发放福利抽奖券（仅单独购买时）
+      if (dto.isGroup === false) {
+        setImmediate(() => {
+          this.luckyDraw
+            .issueTicketForOrder(userId, dto.treasureId, result.orderId)
+            .catch((e: unknown) => {
+              this.logger.warn(
+                `LuckyDraw solo ticket failed for order ${result.orderId}: ${
+                  e instanceof Error ? e.message : String(e)
+                }`,
+              );
+            });
+        });
+      }
+      return result;
     } catch (e) {
       console.log('checkout error:', e);
       throw e;
