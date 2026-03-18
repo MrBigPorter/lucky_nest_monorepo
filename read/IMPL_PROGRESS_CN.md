@@ -1,14 +1,15 @@
 # 实现进度追踪 — 开奖 / 秒杀集成 / 福利抽奖
 
-> **断点续作说明**：每次对话从本文件的 `## 🔴 当前断点` 区块开始，确认最后完成的文件后继续。  
-> 打勾规则：文件写完且无 TS 错误 → `[ ]` 改 `[x]`，同时在行尾加 ✅
+> **状态**：已归档（实现主线已完成）。  
+> 本文档保留为 Phase 5/6 改造留痕，不再作为当前任务入口（当前以 `.github/copilot-instructions.md` 为准）。
+> 最后对齐时间：2026-03-18。
 
 ---
 
 ## 🔴 当前断点
 
-**最后完成**：Step 4 — LuckyDrawService + LotteryService 均已创建，无真实 TS 错误  
-**下一步**：Step 5 — GroupModule 接入（接入 LotteryService.drawWinner + LuckyDrawService.issueTicketsForGroup）
+**最后完成**：Step 9 — Admin Next.js 前端完成（类型/API/路由/页面全部接通）  
+**下一步**：该实施链路已完成；后续迭代请按 Phase 6 新目标单独建清单
 
 ---
 
@@ -91,7 +92,7 @@ src/
 - [x] 新增 `LuckyDrawResult` 模型（抽奖结果表）✅
 - [x] 宿主机执行 `prisma generate` ✅
 - [x] 容器内执行 `prisma migrate dev --name add_lottery_and_lucky_draw` ✅（迁移文件：`20260318032805_add_lottery_and_lucky_draw`）
-- [ ] 重启 backend 容器（Step 5 接入 GroupModule 后统一重启）
+- [x] 重启 backend 容器（Step 5 接入 GroupModule 后统一重启）✅
 
 ---
 
@@ -122,51 +123,51 @@ src/
 
 ## 六、Step 5 — GroupModule 接入
 
-- [ ] `common/group/group.module.ts`（或 client/group）— imports `LotteryModule` + `LuckyDrawModule`
-- [ ] `GroupProcessor`（或 group.service.ts）— 替换批量 WAIT_DELIVERY → `drawWinner` + `issueTicketsForGroup`
+- [x] `common/group/group.module.ts`（或 client/group）— imports `LotteryModule` + `LuckyDrawModule` ✅
+- [x] `GroupProcessor`（或 group.service.ts）— 替换批量 WAIT_DELIVERY → `drawWinner` + `issueTicketsForGroup` ✅
 
 ---
 
 ## 七、Step 6 — OrderService 接入（单买发券）
 
-- [ ] `client/orders/order.service.ts` — `checkOut` 事务外 fire-and-forget `issueTicketForOrder`
+- [x] `client/orders/order.service.ts` — `checkOut` 事务外 fire-and-forget `issueTicketForOrder` ✅
 
 ---
 
 ## 八、Step 7 — Admin 抽奖模块
 
-- [ ] `admin/lucky-draw/dto/create-activity.dto.ts`
-- [ ] `admin/lucky-draw/dto/update-activity.dto.ts`
-- [ ] `admin/lucky-draw/dto/create-prize.dto.ts`
-- [ ] `admin/lucky-draw/dto/update-prize.dto.ts`
-- [ ] `admin/lucky-draw/lucky-draw.service.ts`（活动/奖品 CRUD + 结果分页，JOIN treasureName/couponName）
-- [ ] `admin/lucky-draw/lucky-draw.controller.ts`（`@UseGuards(AdminJwtAuthGuard, RolesGuard)`）
-- [ ] `admin/lucky-draw/lucky-draw.module.ts`
-- [ ] `admin/admin.module.ts` — imports `AdminLuckyDrawModule`
+- [x] `admin/lucky-draw/dto/create-activity.dto.ts` ✅
+- [x] `admin/lucky-draw/dto/update-activity.dto.ts` ✅
+- [x] `admin/lucky-draw/dto/create-prize.dto.ts` ✅
+- [x] `admin/lucky-draw/dto/update-prize.dto.ts` ✅
+- [x] `admin/lucky-draw/lucky-draw.service.ts`（活动/奖品 CRUD + 结果分页，JOIN treasureName/couponName）✅
+- [x] `admin/lucky-draw/lucky-draw.controller.ts`（`@UseGuards(AdminJwtAuthGuard, RolesGuard)`）✅
+- [x] `admin/lucky-draw/lucky-draw.module.ts` ✅
+- [x] `admin/admin.module.ts` — imports `AdminLuckyDrawModule` ✅
 
 ---
 
 ## 九、Step 8 — Client 抽奖模块
 
-- [ ] `client/lucky-draw/dto/query-tickets.dto.ts`
-- [ ] `client/lucky-draw/lucky-draw.controller.ts`（`my-tickets / draw / my-results`，加 `JwtAuthGuard`）
-- [ ] `client/lucky-draw/lucky-draw.module.ts`（imports `LuckyDrawModule` + `WalletModule` + `CouponModule`）
-- [ ] `client/client.module.ts` — imports `ClientLuckyDrawModule`
+- [x] `client/lucky-draw/dto/query-tickets.dto.ts` ✅
+- [x] `client/lucky-draw/lucky-draw.controller.ts`（`my-tickets / draw / my-results`，加 `JwtAuthGuard`）✅
+- [x] `client/lucky-draw/lucky-draw.module.ts`（imports `LuckyDrawModule` + `WalletModule` + `CouponModule`）✅
+- [x] `client/client.module.ts` — imports `ClientLuckyDrawModule` ✅
 
 ---
 
 ## 十、Step 9 — Admin Next.js 前端
 
-- [ ] `type/types.ts` — 追加 Lucky Draw 类型；旧 `LotteryDraw / LotteryActivity` 加 `@deprecated`
-- [ ] `api/index.ts` — 追加 `luckyDrawApi`
-- [ ] `constants.ts` — 追加 `luckyDraw` 翻译 key（en + zh）
-- [ ] `routes/index.ts` — 追加 `/lucky-draw`（`Sparkles` 图标）
-- [ ] `app/(dashboard)/lucky-draw/page.tsx` — 路由入口
-- [ ] `views/LuckyDrawManagement.tsx`
-  - [ ] `ActivityModal`（react-hook-form + zodResolver + defaultValues）
-  - [ ] `PrizeModal`（watch prizeType 动态字段）
-  - [ ] `PrizesPanel`（useRequest + 概率合计校验 + 结果表格）
-  - [ ] 主组件双栏布局
+- [x] `type/types.ts` — 追加 Lucky Draw 类型；旧 `LotteryDraw / LotteryActivity` 加 `@deprecated` ✅
+- [x] `api/index.ts` — 追加 `luckyDrawApi` ✅
+- [x] `constants.ts` — 追加 `luckyDraw` 翻译 key（en + zh）✅
+- [x] `routes/index.ts` — 追加 `/lucky-draw`（`Sparkles` 图标）✅
+- [x] `app/(dashboard)/lucky-draw/page.tsx` — 路由入口 ✅
+- [x] `views/LuckyDrawManagement.tsx` ✅
+  - [x] `ActivityModal`（react-hook-form + zodResolver + defaultValues）✅
+  - [x] `PrizeModal`（watch prizeType 动态字段）✅
+  - [x] `PrizesPanel`（useRequest + 概率合计校验 + 结果表格）✅
+  - [x] 主组件双栏布局 ✅
 
 ---
 
@@ -174,5 +175,5 @@ src/
 
 - [ ] `node packages/ui/scripts/build.js`（若修改了 packages/ui）
 - [ ] `node packages/shared/scripts/build.js`（若修改了 packages/shared）
-- [ ] `docker compose --env-file deploy/.env.dev up -d backend`（重启 backend）
+- [x] `docker compose --env-file deploy/.env.dev up -d backend`（重启 backend）✅
 
