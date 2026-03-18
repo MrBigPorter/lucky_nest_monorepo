@@ -15,10 +15,34 @@
  * 幂等: 用 createdBy='seed' 作标记，已存在则整组跳过
  */
 import { PrismaClient } from '@prisma/client';
+import {
+  createTreasureResolver,
+  TreasureRefInput,
+} from './treasure-ref';
 
 const db = new PrismaClient();
+const resolveTreasure = createTreasureResolver(db);
 const SEED_MARKER = 'seed';
 const daysLater = (d: number) => new Date(Date.now() + d * 86_400_000);
+
+type SeedBannerRow = {
+  title: string;
+  bannerImgUrl: string;
+  fileType: number;
+  bannerCate: number;
+  position: number;
+  sortOrder: number;
+  showType: number;
+  jumpCate: number;
+  jumpUrl?: string;
+  state: number;
+  validState: number;
+  createdBy: string;
+  bannerArray?: unknown[];
+  activityAtStart?: Date;
+  activityAtEnd?: Date;
+  productRef?: TreasureRefInput;
+};
 
 export async function seedBanners() {
   const already = await db.banner.count({ where: { createdBy: SEED_MARKER } });
@@ -27,48 +51,39 @@ export async function seedBanners() {
     return;
   }
 
-  const rows = [
+  const rows: SeedBannerRow[] = [
     // ── 首页顶部轮播 ────────────────────────────────────────
     {
       title: '⚡ Flash Sale — Up to 60% OFF',
-      bannerImgUrl: 'https://cdn.joyminis.com/banners/home-top-flashsale.jpg',
+      bannerImgUrl:
+        'https://img.joyminis.com/images/c524a9db-9f49-4778-b6fc-fe45c5dd0690.png',
       fileType: 1,
       bannerCate: 1,
       position: 0,
       sortOrder: 1,
       showType: 2, // 轮播
-      jumpCate: 2,
-      jumpUrl: '/pages/flash-sale/index',
+      jumpCate: 3,
+      jumpUrl: '/pages/goods/detail?seq=JM-008',
+      productRef: 'JM-008',
       state: 1,
       validState: 1,
       createdBy: SEED_MARKER,
       // bannerArray: 轮播每帧 {img, url}
-      bannerArray: [
-        {
-          img: 'https://cdn.joyminis.com/banners/slide-iphone16pro.jpg',
-          url: '/pages/product/detail?id=JM-001',
-        },
-        {
-          img: 'https://cdn.joyminis.com/banners/slide-ps5slim.jpg',
-          url: '/pages/product/detail?id=JM-003',
-        },
-        {
-          img: 'https://cdn.joyminis.com/banners/slide-cash10k.jpg',
-          url: '/pages/product/detail?id=JM-008',
-        },
-      ],
+      bannerArray: [],
     },
     // ── 首页中部单图 ────────────────────────────────────────
     {
       title: '👥 Group Buy & Win Together',
-      bannerImgUrl: 'https://cdn.joyminis.com/banners/home-mid-groupbuy.jpg',
+      bannerImgUrl:
+        'https://img.joyminis.com/images/292bd34b-ce86-4769-8743-0b41dfe7703b.png',
       fileType: 1,
       bannerCate: 1,
       position: 1,
       sortOrder: 2,
       showType: 1,
-      jumpCate: 2,
-      jumpUrl: '/pages/group-buy/index',
+      jumpCate: 3,
+      jumpUrl: '/pages/goods/detail?seq=JM-007',
+      productRef: { seq: 'JM-007' },
       state: 1,
       validState: 1,
       createdBy: SEED_MARKER,
@@ -76,7 +91,8 @@ export async function seedBanners() {
     // ── 活动页顶部 ──────────────────────────────────────────
     {
       title: '🎉 JoyMinis Grand Lucky Draw',
-      bannerImgUrl: 'https://cdn.joyminis.com/banners/activity-top-grand.jpg',
+      bannerImgUrl:
+        'https://img.joyminis.com/images/9c28188f-709c-4900-8eb2-98df4c64c588.png',
       fileType: 1,
       bannerCate: 2,
       position: 0,
@@ -92,7 +108,38 @@ export async function seedBanners() {
     },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await db.banner.createMany({ data: rows as any });
+  let linked = 0;
+  let unresolved = 0;
+
+  for (const { productRef, ...row } of rows) {
+    let relatedTitleId: string | undefined;
+    let jumpCate = row.jumpCate;
+
+    if (row.jumpCate === 3 && productRef) {
+      const t = await resolveTreasure.resolve(productRef);
+      if (t) {
+        relatedTitleId = t.treasureId;
+        linked++;
+      } else {
+        unresolved++;
+        jumpCate = 2;
+        console.log(
+          `  ⚠️ Banner unresolved productRef: ${JSON.stringify(productRef)} (${row.title})`,
+        );
+      }
+    }
+
+    await db.banner.create({
+      data: {
+        ...row,
+        jumpCate,
+        ...(relatedTitleId ? { relatedTitleId } : {}),
+      },
+    });
+  }
+
   console.log(`  ✅ Banner           +${rows.length} new`);
+  if (linked > 0 || unresolved > 0) {
+    console.log(`  🔗 Banner product   ${linked} linked, ${unresolved} unresolved`);
+  }
 }

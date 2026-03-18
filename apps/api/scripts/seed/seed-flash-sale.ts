@@ -5,9 +5,9 @@
  * 场次: "Tonight's Flash Sale"  运行 seed 后 2h 开始，持续 4h
  *
  * 秒杀商品 (flashPrice < unitAmount):
- *   JM-001  iPhone 16 Pro    ₱250 → ₱150/份   库存 60份   (40% off)
- *   JM-003  PlayStation 5    ₱150 → ₱ 80/份   库存100份   (47% off)
- *   JM-007  Cash ₱5,000      ₱100 → ₱ 60/份   库存 30份   (40% off)
+ *   JM-007  Xiaomi Air Fryer ₱100 → ₱ 60/份   库存 30份
+ *   JM-008  Switch OLED      ₱200 → ₱120/份   库存 50份
+ *   JM-009  Android Tablet   ₱ 60 → ₱ 45/份   库存 90份
  *
  * flashStock : 秒杀专属库存份数，与主产品 seqShelvesQuantity 相互独立
  * flashPrice : 秒杀价，单位 PHP/份
@@ -27,9 +27,10 @@ const FLASH_PRODUCTS: Array<{
   flashStock: number;
   sortOrder: number;
 }> = [
-  { seq: 'JM-001', flashPrice: 150, flashStock: 60, sortOrder: 1 },
-  { seq: 'JM-003', flashPrice: 80, flashStock: 100, sortOrder: 2 },
-  { seq: 'JM-007', flashPrice: 60, flashStock: 30, sortOrder: 3 },
+  // 优先使用 img.joyminis.com 资源的产品，避免首屏缩略图加载失败
+  { seq: 'JM-007', flashPrice: 60, flashStock: 30, sortOrder: 1 },
+  { seq: 'JM-008', flashPrice: 120, flashStock: 50, sortOrder: 2 },
+  { seq: 'JM-009', flashPrice: 45, flashStock: 90, sortOrder: 3 },
 ];
 
 export async function seedFlashSale() {
@@ -52,13 +53,17 @@ export async function seedFlashSale() {
 
   // ── FlashSaleProduct ──────────────────────────────────────
   let pCreated = 0;
+  let pUpdated = 0;
   for (const { seq, flashPrice, flashStock, sortOrder } of FLASH_PRODUCTS) {
     const t = await db.treasure.findUnique({ where: { treasureSeq: seq } });
     if (!t) continue;
-    const exists = await db.flashSaleProduct.findFirst({
-      where: { sessionId: session.id, treasureId: t.treasureId },
+
+    // 以 sortOrder 作为稳定槽位，保证重复 seed 可修复旧数据
+    const slot = await db.flashSaleProduct.findFirst({
+      where: { sessionId: session.id, sortOrder },
     });
-    if (!exists) {
+
+    if (!slot) {
       await db.flashSaleProduct.create({
         data: {
           sessionId: session.id,
@@ -69,9 +74,29 @@ export async function seedFlashSale() {
         },
       });
       pCreated++;
+      continue;
+    }
+
+    if (
+      slot.treasureId !== t.treasureId ||
+      slot.flashPrice.toString() !== String(flashPrice) ||
+      slot.flashStock !== flashStock
+    ) {
+      await db.flashSaleProduct.update({
+        where: { id: slot.id },
+        data: {
+          treasureId: t.treasureId,
+          flashPrice,
+          flashStock,
+        },
+      });
+      pUpdated++;
     }
   }
 
   console.log(`  ✅ FlashSaleSession +${sCreated} new`);
   console.log(`  ✅ FlashSaleProduct +${pCreated} new`);
+  if (pUpdated > 0) {
+    console.log(`  ♻️ FlashSaleProduct  ${pUpdated} updated`);
+  }
 }

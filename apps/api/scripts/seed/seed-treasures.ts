@@ -37,6 +37,7 @@
  * 字段说明:
  *   unitAmount         每份价格（PHP）
  *   seqShelvesQuantity 总份数（总票数）
+ *   soloAmount         单独购买价（前端显示）
  *   minBuyQuantity     触发开奖所需最低售出份数（售罄模式下 = seqShelvesQuantity）
  *   maxPerBuyQuantity  单人最大购买份数
  *   lotteryMode        1=售罄即开奖  2=定时开奖
@@ -72,6 +73,7 @@ type TreasureSeed = {
   mainImageList: string[];
   unitAmount: number;
   marketAmount: number;
+  soloAmount?: number;
   costAmount?: number;
   cashAmount?: number;
   seqShelvesQuantity: number;
@@ -109,6 +111,8 @@ const LEGACY_TREASURE_NAMES = [
 ] as const;
 
 const PRIZE_GUIDE_BASE_URL = 'https://img.joyminis.com/images/treasure';
+const BONUS_GIFT_IMG_URL = 'https://img.joyminis.com/images/treasure/gift.jpg';
+const BONUS_GIFT_NAME = 'Golden Surprise Gift Pack';
 
 const PRIZE_EXPLAIN_BLOCK = [
   '<hr/>',
@@ -132,6 +136,36 @@ function withPrizeGuide(ruleContent?: string): string {
     return base;
   }
   return `${base}${PRIZE_EXPLAIN_BLOCK}`;
+}
+
+function normalizeRichHtmlForMobile(content?: string): string {
+  const html = content ?? '';
+  if (!html) return html;
+
+  return html.replace(
+    /<img\b([^>]*?)\/?>(?!\s*<\/img>)/gi,
+    (_, attrs: string) => {
+      const styleMatch = attrs.match(/\sstyle=(['"])(.*?)\1/i);
+
+      if (!styleMatch) {
+        return `<img${attrs} style="display:block;max-width:100%;height:auto;margin:0 0 12px 0" />`;
+      }
+
+      const quote = styleMatch[1];
+      let style = styleMatch[2].trim();
+
+      if (!/display\s*:\s*block/i.test(style)) style += ';display:block';
+      if (!/max-width\s*:/i.test(style)) style += ';max-width:100%';
+      if (!/height\s*:/i.test(style)) style += ';height:auto';
+
+      const nextAttrs = attrs.replace(
+        /\sstyle=(['"])(.*?)\1/i,
+        ` style=${quote}${style}${quote}`,
+      );
+
+      return `<img${nextAttrs} />`;
+    },
+  );
 }
 
 async function resetTreasures(
@@ -1887,6 +1921,17 @@ export async function seedTreasures(
   }
 
   for (const { category, mainImageList, ...rest } of TREASURES) {
+    const soloAmount = rest.soloAmount ?? rest.marketAmount;
+    const desc = normalizeRichHtmlForMobile(rest.desc);
+    const ruleContent = normalizeRichHtmlForMobile(
+      withPrizeGuide(rest.ruleContent),
+    );
+    const bonusConfig: Prisma.InputJsonValue = {
+      bonusItemName: BONUS_GIFT_NAME,
+      bonusItemImg: BONUS_GIFT_IMG_URL,
+      winnerCount: 1,
+    };
+
     const existed = await db.treasure.findUnique({
       where: { treasureSeq: rest.treasureSeq },
       select: { treasureId: true },
@@ -1896,7 +1941,10 @@ export async function seedTreasures(
       where: { treasureSeq: rest.treasureSeq },
       create: {
         ...rest,
-        ruleContent: withPrizeGuide(rest.ruleContent),
+        desc,
+        soloAmount,
+        bonusConfig,
+        ruleContent,
         mainImageList: mainImageList as Prisma.InputJsonValue,
         salesStartAt: now,
         salesEndAt: endAt,
@@ -1907,7 +1955,10 @@ export async function seedTreasures(
       },
       update: {
         ...rest,
-        ruleContent: withPrizeGuide(rest.ruleContent),
+        desc,
+        soloAmount,
+        bonusConfig,
+        ruleContent,
         mainImageList: mainImageList as Prisma.InputJsonValue,
         state: 1,
         status: 'ACTIVE',

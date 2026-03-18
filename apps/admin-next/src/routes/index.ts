@@ -196,6 +196,13 @@ export const routes: RouteConfig[] = [
     icon: LogIn,
     group: 'Operations',
   },
+  {
+    path: '/login-log',
+    name: 'loginLogs',
+    icon: LogIn,
+    group: 'Operations',
+    hidden: true,
+  },
 
   // ── System ────────────────────────────────────────────────────
   {
