@@ -840,3 +840,62 @@ export const applicationApi = {
       reviewNote,
     }),
 };
+
+/**
+ * 福利抽奖管理 API
+ */
+export const luckyDrawApi = {
+  // ── 活动 ──────────────────────────────────────────────────────
+  listActivities: () =>
+    http.get<{
+      list: import('@/type/types').LuckyDrawActivity[];
+      total: number;
+    }>('/v1/admin/lucky-draw/activities'),
+
+  getActivity: (id: string) =>
+    http.get<import('@/type/types').LuckyDrawActivity>(
+      `/v1/admin/lucky-draw/activities/${id}`,
+    ),
+
+  createActivity: (
+    data: import('@/type/types').CreateLuckyDrawActivityPayload,
+  ) => http.post<{ id: string }>('/v1/admin/lucky-draw/activities', data),
+
+  updateActivity: (
+    id: string,
+    data: import('@/type/types').UpdateLuckyDrawActivityPayload,
+  ) =>
+    http.patch<{ success: boolean }>(
+      `/v1/admin/lucky-draw/activities/${id}`,
+      data,
+    ),
+
+  deleteActivity: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/lucky-draw/activities/${id}`),
+
+  // ── 奖品 ──────────────────────────────────────────────────────
+  listPrizes: (activityId: string) =>
+    http.get<{
+      list: import('@/type/types').LuckyDrawPrize[];
+      total: number;
+    }>(`/v1/admin/lucky-draw/activities/${activityId}/prizes`),
+
+  createPrize: (data: import('@/type/types').CreateLuckyDrawPrizePayload) =>
+    http.post<{ id: string }>('/v1/admin/lucky-draw/prizes', data),
+
+  updatePrize: (
+    id: string,
+    data: import('@/type/types').UpdateLuckyDrawPrizePayload,
+  ) =>
+    http.patch<{ success: boolean }>(`/v1/admin/lucky-draw/prizes/${id}`, data),
+
+  deletePrize: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/lucky-draw/prizes/${id}`),
+
+  // ── 抽奖结果 ──────────────────────────────────────────────────
+  listResults: (params: import('@/type/types').QueryLuckyDrawResultsParams) =>
+    http.get<PaginatedResponse<import('@/type/types').LuckyDrawResult>>(
+      '/v1/admin/lucky-draw/results',
+      params,
+    ),
+};

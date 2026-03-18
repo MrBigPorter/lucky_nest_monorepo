@@ -60,6 +60,9 @@ model User {
   receivedRequests FriendRequest[] @relation("RequestReceived")
   sentJoinRequests     GroupJoinRequest[] @relation("UserApplications")
   handledJoinRequests  GroupJoinRequest[] @relation("UserHandledRequests")
+  lotteryResults       LotteryResult[]
+  luckyDrawTickets     LuckyDrawTicket[]
+  luckyDrawResults     LuckyDrawResult[]
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -379,6 +382,7 @@ model Treasure {
   robotDelay         Int                @default(300) @map("robot_delay")
   sectionItems       ActSectionItem[]
   flashSaleProducts  FlashSaleProduct[]
+  luckyDrawActivities LuckyDrawActivity[]
   orders             Order[]
   categories         TreasureCategory[]
   groups             TreasureGroup[]
@@ -470,6 +474,7 @@ model TreasureGroup {
   version           Int                   @default(0) @map("version")
   orders            Order[]
   members           TreasureGroupMember[]
+  lotteryResults    LotteryResult[]
   creator           User                  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   treasure          Treasure              @relation(fields: [treasureId], references: [treasureId], onDelete: Cascade)
 
@@ -738,9 +743,12 @@ model Order {
   refundRejectReason String?        @map("refund_reject_reason")
   paymentMethod      Int?           @map("payment_method") @db.SmallInt
   transactionId      String?        @map("transaction_id") @db.VarChar(100)
+  /// 秒杀来源（退款时恢复 flashStock 必需）
+  flashSaleProductId String?        @map("flash_sale_product_id") @db.VarChar(32)
   group              TreasureGroup? @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
   treasure           Treasure       @relation(fields: [treasureId], references: [treasureId])
   userCoupon         UserCoupon?    @relation(fields: [userCouponId], references: [id])
+  flashSaleProduct   FlashSaleProduct? @relation(fields: [flashSaleProductId], references: [id])
   user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "idx_user_id_order")
@@ -795,6 +803,7 @@ model Coupon {
   ruleDesc       String?      @map("rule_desc")
   subTitle       String?      @map("sub_title") @db.VarChar(200)
   userCoupons    UserCoupon[]
+  luckyDrawPrizes LuckyDrawPrize[]
 
   @@index([status])
   @@index([issueType])
@@ -1106,6 +1115,7 @@ model FlashSaleProduct {
   sortOrder  Int              @default(0)
   session    FlashSaleSession @relation(fields: [sessionId], references: [id])
   treasure   Treasure         @relation(fields: [treasureId], references: [treasureId])
+  orders     Order[]
 
   @@map("flash_sale_products")
 }
@@ -1332,3 +1342,112 @@ model FriendRequest {
   @@map("friend_requests")
 }
 
+// ==========================================
+// 开奖模块（Lottery — 商品归属开奖）
+// ==========================================
+
+/// 开奖结果记录（每团一条，记录商品赢家）
+model LotteryResult {
+  id            String        @id @default(cuid())
+  createdAt     DateTime      @default(now()) @map("created_at")
+  groupId       String        @map("group_id") @db.VarChar(32)
+  treasureId    String        @map("treasure_id") @db.VarChar(32)
+  winnerId      String        @map("winner_id") @db.VarChar(32)
+  /// 中奖订单ID（注意：字段名 winnerOrderId，不是 winnerOrder）
+  winnerOrderId String        @map("winner_order_id") @db.VarChar(32)
+  group         TreasureGroup @relation(fields: [groupId], references: [groupId])
+  user          User          @relation(fields: [winnerId], references: [id])
+
+  @@unique([groupId], map: "uk_lottery_group") // 一个团只能开奖一次
+  @@index([winnerId])
+  @@map("lottery_results")
+}
+
+// ==========================================
+// 福利抽奖模块（LuckyDraw — 下单后免费抽奖）
+// ==========================================
+
+/// 抽奖活动配置（admin 创建）
+model LuckyDrawActivity {
+  id          String            @id @default(cuid())
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  title       String            @db.VarChar(100)
+  description String?           @db.VarChar(500)
+  /// 绑定商品（null = 全平台任意订单触发）
+  treasureId  String?           @map("treasure_id") @db.VarChar(32)
+  /// 0=禁用 1=启用
+  status      Int               @default(1) @db.SmallInt
+  startAt     DateTime?         @map("start_at")
+  endAt       DateTime?         @map("end_at")
+  treasure    Treasure?         @relation(fields: [treasureId], references: [treasureId])
+  prizes      LuckyDrawPrize[]
+  tickets     LuckyDrawTicket[]
+
+  @@index([status, startAt, endAt])
+  @@map("lucky_draw_activities")
+}
+
+/// 奖品配置
+model LuckyDrawPrize {
+  id          String            @id @default(cuid())
+  createdAt   DateTime          @default(now()) @map("created_at")
+  activityId  String            @map("activity_id")
+  /// 1=优惠券 2=金币 3=余额 4=谢谢参与
+  prizeType   Int               @map("prize_type") @db.SmallInt
+  prizeName   String            @map("prize_name") @db.VarChar(100)
+  /// 关联优惠券模板（type=1 时必填）
+  couponId    String?           @map("coupon_id") @db.VarChar(32)
+  /// 奖励数量/金额（type=2/3 时必填）
+  prizeValue  Decimal?          @map("prize_value") @db.Decimal(10, 2)
+  /// 权重 0-100，同一活动所有奖品之和必须 = 100
+  probability Decimal           @db.Decimal(5, 2)
+  /// 剩余库存（-1 = 不限）
+  stock       Int               @default(-1)
+  sortOrder   Int               @default(0) @map("sort_order")
+  activity    LuckyDrawActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  coupon      Coupon?           @relation(fields: [couponId], references: [id])
+  results     LuckyDrawResult[]
+
+  @@index([activityId])
+  @@map("lucky_draw_prizes")
+}
+
+/// 用户抽奖券（下单成功时自动发放）
+model LuckyDrawTicket {
+  id         String            @id @default(cuid())
+  createdAt  DateTime          @default(now()) @map("created_at")
+  userId     String            @map("user_id") @db.VarChar(32)
+  activityId String            @map("activity_id")
+  /// 来源订单（幂等键：一个订单对同一活动只能有一张券）
+  orderId    String            @map("order_id") @db.VarChar(32)
+  used       Boolean           @default(false)
+  usedAt     DateTime?         @map("used_at")
+  expireAt   DateTime?         @map("expire_at")
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity   LuckyDrawActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  result     LuckyDrawResult?
+
+  @@unique([orderId, activityId], map: "uk_ticket_order_activity")
+  @@index([userId, used])
+  @@map("lucky_draw_tickets")
+}
+
+/// 抽奖结果记录
+model LuckyDrawResult {
+  id            String          @id @default(cuid())
+  createdAt     DateTime        @default(now()) @map("created_at")
+  /// 1:1 ticket，保证一张券只对应一次结果
+  ticketId      String          @unique @map("ticket_id")
+  userId        String          @map("user_id") @db.VarChar(32)
+  prizeId       String          @map("prize_id")
+  /// 抽奖时的奖品快照（防止奖品被修改后对账出错）
+  prizeSnapshot Json            @map("prize_snapshot")
+  ticket        LuckyDrawTicket @relation(fields: [ticketId], references: [id])
+  prize         LuckyDrawPrize  @relation(fields: [prizeId], references: [id])
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([prizeId])
+  @@map("lucky_draw_results")
+}

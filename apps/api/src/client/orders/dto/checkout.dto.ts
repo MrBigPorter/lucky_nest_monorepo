@@ -79,4 +79,14 @@ export class CheckoutDto {
   @IsString()
   @IsOptional()
   addressId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Flash sale product ID (required when purchasing at flash sale price)',
+    example: 'flashSaleProductId123',
+    type: String,
+  })
+  @IsString()
+  @IsOptional()
+  flashSaleProductId?: string;
 }
