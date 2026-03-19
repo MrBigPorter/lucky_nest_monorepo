@@ -105,6 +105,29 @@ export class EmailService {
     });
   }
 
+  /** 客户端邮箱验证码登录邮件 */
+  async sendClientLoginCode(to: string, code: string, ttlSeconds: number) {
+    const ttlMinutes = Math.max(1, Math.ceil(ttlSeconds / 60));
+    await this.send({
+      to,
+      subject: '[JoyMini] Your Login Verification Code',
+      html: `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px">
+          <h2 style="color:#2563eb">Login Verification Code</h2>
+          <p>Use the following code to sign in:</p>
+          <div style="font-size:28px;letter-spacing:4px;font-weight:700;margin:16px 0;color:#111827">
+            ${code}
+          </div>
+          <p>This code expires in <strong>${ttlMinutes} minute(s)</strong>.</p>
+          <p style="color:#dc2626">Never share this code with anyone.</p>
+          <p style="color:#6b7280;font-size:13px;margin-top:32px">
+            This is an automated message. Please do not reply to this email.
+          </p>
+        </div>
+      `,
+    });
+  }
+
   private async send(opts: { to: string; subject: string; html: string }) {
     if (!this.resend) {
       this.logger.debug(
@@ -124,8 +147,9 @@ export class EmailService {
       } else {
         this.logger.log(`Email sent to ${opts.to} — ${opts.subject}`);
       }
-    } catch (err) {
-      this.logger.error(`Email service error: ${err}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Email service error: ${message}`);
     }
   }
 }

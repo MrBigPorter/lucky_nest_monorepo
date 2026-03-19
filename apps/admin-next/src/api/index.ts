@@ -559,7 +559,11 @@ export const authApi = {
   clearCookie: () => http.post<{ ok: boolean }>('/v1/auth/admin/clear-cookie'),
 
   // 刷新 token
-  refreshToken: () => http.post<{ token: string }>('/auth/refresh-token'),
+  refreshToken: (refreshToken: string) =>
+    http.post<{ tokens: { accessToken: string; refreshToken: string } }>(
+      '/v1/auth/admin/refresh',
+      { refreshToken },
+    ),
 
   // 修改密码
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
@@ -1031,8 +1035,7 @@ export const luckyDrawApi = {
     }>(`/v1/admin/lucky-draw/activities/${params.activityId}/results`, {
       page: params.page,
       pageSize: params.pageSize,
-    },
-    );
+    });
 
     return {
       list: data.list.map(normalizeLuckyDrawResult),

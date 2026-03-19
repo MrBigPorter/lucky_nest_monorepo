@@ -8,6 +8,8 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { WalletService } from '@api/client/wallet/wallet.service';
 import { randomInt } from 'crypto';
+import { EventsGateway } from '@api/common/events/events.gateway';
+import { SocketEvents } from '@lucky/shared';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -26,6 +28,7 @@ export class LuckyDrawService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   // =====================================================================
@@ -49,15 +52,27 @@ export class LuckyDrawService {
 
     for (const m of group.members) {
       if (!m.orderId) continue;
-      await this.issueOneTicket(m.userId, m.orderId, activity.id).catch(
-        (e: unknown) => {
+      await this.issueOneTicket(m.userId, m.orderId, activity.id)
+        .then((ticket) => {
+          this.eventsGateway.dispatchToUser(
+            m.userId,
+            SocketEvents.LUCKY_DRAW_TICKET_ISSUED,
+            {
+              groupId,
+              ticketId: ticket.id,
+              activityId: ticket.activityId,
+              orderId: ticket.orderId,
+              issuedAt: ticket.createdAt.getTime(),
+            },
+          );
+        })
+        .catch((e: unknown) => {
           this.logger.warn(
             `LuckyDraw ticket skip (group ${groupId}, user ${m.userId}): ${
               e instanceof Error ? e.message : String(e)
             }`,
           );
-        },
-      );
+        });
     }
   }
 
@@ -318,9 +333,15 @@ export class LuckyDrawService {
     userId: string,
     orderId: string,
     activityId: string,
-  ): Promise<void> {
-    await this.prisma.luckyDrawTicket.create({
+  ) {
+    return await this.prisma.luckyDrawTicket.create({
       data: { userId, orderId, activityId },
+      select: {
+        id: true,
+        activityId: true,
+        orderId: true,
+        createdAt: true,
+      },
     });
   }
 

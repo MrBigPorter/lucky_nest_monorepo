@@ -66,6 +66,22 @@ import { RecaptchaModule } from '@api/common/recaptcha/recaptcha.module';
           .default('7d'),
         DATABASE_URL: Joi.string().required(),
 
+        // Email service (Resend)
+        RESEND_API_KEY: Joi.string().allow('').optional(),
+        EMAIL_FROM: Joi.string().default(
+          'JoyMini Admin <noreply@joyminis.com>',
+        ),
+        FRONTEND_URL: Joi.string().uri().optional(),
+
+        // Email OTP fallback (no SMS budget)
+        EMAIL_OTP_TTL_SECONDS: Joi.number().integer().positive().default(300),
+        EMAIL_OTP_INTERVAL_SECONDS: Joi.number()
+          .integer()
+          .positive()
+          .default(60),
+        EMAIL_OTP_MAX_ATTEMPTS: Joi.number().integer().positive().default(5),
+        EMAIL_OTP_DEV_CODE: Joi.string().min(4).max(20).optional(),
+
         CACHE_TTL: Joi.number().integer().positive().default(300),
         CACHE_PREFIX: Joi.string().default('lucky:'),
         REDIS_URL: Joi.string().required(),

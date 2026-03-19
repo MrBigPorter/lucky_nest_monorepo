@@ -9,6 +9,7 @@ import {
 
 import { PasswordService } from '@api/common/service/password.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import type { StringValue } from 'ms';
 
 interface JwtPayload {
   sub: string;
@@ -25,21 +26,43 @@ export class AuthService {
   ) {}
 
   // sign access token
-  private async issueToken(user: { id: string; role?: string }) {
-    const payload: JwtPayload = { sub: user.id };
+  private getAdminJwtSecret() {
+    return (
+      process.env.ADMIN_JWT_SECRET ||
+      process.env.JWT_SECRET ||
+      'please_change_me_very_secret'
+    );
+  }
+
+  private async issueTokenPair(user: { id: string; role?: string }) {
+    const payload: JwtPayload = { sub: user.id, type: 'admin' };
 
     if (user.role) {
       payload.role = user.role;
     }
 
-    const expireIn = '12h';
+    const secret = this.getAdminJwtSecret();
+    const accessExpireIn =
+      (process.env.ADMIN_JWT_ACCESS_EXPIRATION as StringValue | undefined) ||
+      '12h';
+    const refreshExpireIn =
+      (process.env.ADMIN_JWT_REFRESH_EXPIRATION as StringValue | undefined) ||
+      '7d';
 
-    const accessToken = await this.jwt.signAsync(payload, {
-      expiresIn: expireIn,
-    });
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwt.signAsync(payload, {
+        expiresIn: accessExpireIn,
+        secret,
+      }),
+      this.jwt.signAsync(payload, {
+        expiresIn: refreshExpireIn,
+        secret,
+      }),
+    ]);
 
     return {
       accessToken,
+      refreshToken,
     };
   }
 
@@ -134,7 +157,7 @@ export class AuthService {
     });
 
     // issue token
-    const tokens = await this.issueToken({
+    const tokens = await this.issueTokenPair({
       id: admin.id,
       role: admin.role,
     });
@@ -182,14 +205,50 @@ export class AuthService {
    */
   async verifyAdminToken(token: string): Promise<boolean> {
     try {
-      const secret =
-        process.env.ADMIN_JWT_SECRET ||
-        process.env.JWT_SECRET ||
-        'please_change_me_very_secret';
+      const secret = this.getAdminJwtSecret();
       await this.jwt.verifyAsync(token, { secret });
       return true;
     } catch {
       throw new UnauthorizedException('Token is invalid or expired');
+    }
+  }
+
+  async refreshAdminToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('refresh token required');
+    }
+
+    try {
+      const secret = this.getAdminJwtSecret();
+      const payload = await this.jwt.verifyAsync<JwtPayload>(refreshToken, {
+        secret,
+      });
+
+      if (payload.type && payload.type !== 'admin') {
+        throw new UnauthorizedException('invalid token type');
+      }
+
+      const admin = await this.prisma.adminUser.findUnique({
+        where: { id: payload.sub },
+        select: {
+          id: true,
+          role: true,
+          status: true,
+        },
+      });
+
+      if (!admin || admin.status !== 1) {
+        throw new UnauthorizedException('admin unavailable');
+      }
+
+      const tokens = await this.issueTokenPair({
+        id: admin.id,
+        role: admin.role,
+      });
+
+      return { tokens };
+    } catch {
+      throw new UnauthorizedException('invalid refresh token');
     }
   }
 
