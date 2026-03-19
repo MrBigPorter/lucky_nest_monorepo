@@ -6,6 +6,10 @@ import { AuthController } from './auth.controller';
 import { PassportModule } from '@nestjs/passport';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { JwtStrategy } from '@api/common/jwt/jwt.strategy';
+import { GoogleProvider } from '@api/client/auth/providers/google.provider';
+import { FacebookProvider } from '@api/client/auth/providers/facebook.provider';
+import { AppleProvider } from '@api/client/auth/providers/apple.provider';
+import type { StringValue } from 'ms';
 @Module({
   imports: [
     PrismaModule,
@@ -13,12 +17,21 @@ import { JwtStrategy } from '@api/common/jwt/jwt.strategy';
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'please_change_me_very_secret',
       signOptions: {
-        expiresIn: (process.env.JWT_ACCESS_EXPIRATION as any) || '15m',
+        expiresIn:
+          (process.env.JWT_ACCESS_EXPIRATION as StringValue | undefined) ||
+          '15m',
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    JwtStrategy,
+    GoogleProvider,
+    FacebookProvider,
+    AppleProvider,
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

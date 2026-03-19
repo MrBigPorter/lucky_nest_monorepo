@@ -6,24 +6,27 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 — 单元测试补全  
-**上次停留**: Phase 5 全部完成（2026-03-17）  
+**阶段**: Phase 6 — OAuth 前端联调 + 无短信预算登录兜底  
+**上次停留**: OAuth 后端接口 MVP 已收口（2026-03-19）  
 **立即执行**:
-- [x] LuckyDraw 活动计数文案修复（`activity/activities`）
-- [x] LuckyDraw 活动计数字段 Vitest 回归测试（单复数）
-- [x] LuckyDraw Results Tab 基础测试（切换渲染 + 空活动提示 + 空结果提示）
-- [x] AdsManagement 基础 Vitest（空态 + 列表渲染 + 启用/删除交互）
-- [x] SystemConfig 基础 Vitest（空态 + 列表渲染 + Enter 保存交互）
-- [x] LoginLogList 基础 Vitest（空态 + 列表渲染 + 筛选/刷新交互）
-- [x] Phase 6 当前测试补全批次收口（LuckyDraw / Ads / SystemConfig / LoginLogList）
-- [x] Seed 自动化补全（PaymentChannel / Address / KYC / Robots / LoginLog / LuckyDraw）
-- [x] 商品与奖励素材上传清单整理（含单词英文分类规范）
-- [x] 秒杀实时刷新方案评审并落文档（`read/FLASH_SALE_REALTIME_STRATEGY_CN.md`）
-- [x] 秒杀客户端只读接口补齐（`/flash-sale/sessions/active` / `:id/products` / `products/:id`）
-- [x] 秒杀客户端接口单测补齐（场次过滤 / 售罄映射 / 详情图片列表归一化）
-- [x] 秒杀客户端接口定向校验（Jest 通过 + TSC 通过）
+- [x] Phase 6 既有测试补全批次收口（LuckyDraw / Ads / SystemConfig / LoginLogList）
+- [x] 秒杀客户端接口 MVP（只读接口 + 单测 + Jest/TSC 定向校验）
+- [x] Phase 6 延续：后端第三方登录 MVP 开工（目标：`POST /auth/oauth/:provider` 最小闭环）
+- [x] 新增 OAuth DTO：`apps/api/src/client/auth/dto/oauth-login.dto.ts`（Google/Facebook/Apple 入参）
+- [x] 新增 OAuth 路由：`apps/api/src/client/auth/auth.controller.ts`（`/auth/oauth/google`、`/facebook`、`/apple`）
+- [x] 新增 Provider 验证服务：`apps/api/src/client/auth/providers/{google,facebook,apple}.provider.ts`
+- [x] 实现 `AuthService.loginWithOauth()`：upsert `OauthAccount` + 登录即注册 + 写 `UserLoginLog` + 签发 tokens
+- [x] 更新模块注册：`apps/api/src/client/auth/auth.module.ts` 注入 OAuth Providers（按需引入 `HttpModule`）
+- [x] 补齐类型定义：后端响应 DTO + 客户端 `apps/mini-shop-admin/src/type/types.ts` / `apps/mini-shop-admin/src/api/index.ts`
+- [x] 补齐单测：`auth.service.spec.ts` + `providers/*.spec.ts`（成功登录 / 无效 token / 已绑定账号）
+- [x] 定向验收：`yarn workspace @lucky/api test -- auth.service.spec.ts` + 类型校验（`yarn tsc --noEmit -p apps/api/tsconfig.json` 已通过；历史 `seed-banners.ts` 类型阻塞已清理）
+- [ ] Phase 6 延续：前端 SDK 联调（Google/Facebook/Apple 按钮 + token 提交闭环）
+- [x] 无短信预算兜底 MVP：邮箱验证码登录（`/auth/email/send-code` + `/auth/email/login`）
+- [ ] 频控与安全：邮箱验证码 TTL/重发限制/IP 限流/禁用万能码
+- [ ] 登录策略落地：OAuth 主入口 + Email Code 次入口（文案和埋点同步）
+- [ ] 定向验收：OAuth 联调自测 + Email OTP 接口单测 + 登录日志校验
 
-> 最后对齐时间：2026-03-18。当前已完成秒杀客户端接口 MVP，下一步可继续接前端轮询接入或二期 WebSocket 事件通知。
+> 最后对齐时间：2026-03-19。邮箱验证码兜底接口 MVP 已落地（`/auth/email/send-code` + `/auth/email/login` + 单测通过），当前继续推进前端联调与频控安全收口。
 
 ---
 

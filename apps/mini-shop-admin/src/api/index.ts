@@ -11,6 +11,10 @@ import {
   User,
   TreasureGroup,
   LoginResponse,
+  OauthLoginResponse,
+  GoogleOauthLoginPayload,
+  FacebookOauthLoginPayload,
+  AppleOauthLoginPayload,
   AdminUser,
   AdminCreateUser,
   AdminUpdateUser,
@@ -549,6 +553,16 @@ export const authApi = {
   // 修改密码
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     http.post('/auth/change-password', data),
+
+  // 客户端 OAuth 登录（给多端联调用）
+  loginWithGoogleOauth: (data: GoogleOauthLoginPayload) =>
+    http.post<OauthLoginResponse>('/auth/oauth/google', data),
+
+  loginWithFacebookOauth: (data: FacebookOauthLoginPayload) =>
+    http.post<OauthLoginResponse>('/auth/oauth/facebook', data),
+
+  loginWithAppleOauth: (data: AppleOauthLoginPayload) =>
+    http.post<OauthLoginResponse>('/auth/oauth/apple', data),
 };
 
 /**

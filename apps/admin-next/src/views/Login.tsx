@@ -50,6 +50,7 @@ export const Login: React.FC = () => {
           result.tokens.accessToken,
           result.userInfo.role as UserRole,
           result.userInfo,
+          result.tokens.refreshToken ?? null,
         );
         addToast('success', 'Welcome back, Admin!');
         router.push('/');

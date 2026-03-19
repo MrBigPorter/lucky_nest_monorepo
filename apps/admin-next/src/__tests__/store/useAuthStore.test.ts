@@ -4,7 +4,9 @@ import { act } from '@testing-library/react';
 // ── 模拟 authApi (防止真实网络调用) ─────────────────────────────
 vi.mock('@/api', () => ({
   authApi: {
+    setCookie: vi.fn().mockResolvedValue({ ok: true }),
     logout: vi.fn().mockResolvedValue(undefined),
+    clearCookie: vi.fn().mockResolvedValue({ ok: true }),
   },
 }));
 
@@ -18,6 +20,7 @@ beforeEach(() => {
     isAuthenticated: false,
     userRole: 'viewer',
     token: null,
+    refreshToken: null,
   });
 });
 
@@ -45,9 +48,9 @@ describe('useAuthStore', () => {
   });
 
   describe('login', () => {
-    it('应正确存储 token 并更新状态', () => {
-      act(() => {
-        useAuthStore.getState().login('my-jwt-token', 'admin');
+    it('应正确存储 token 并更新状态', async () => {
+      await act(async () => {
+        await useAuthStore.getState().login('my-jwt-token', 'admin');
       });
       const { isAuthenticated, token, userRole } = useAuthStore.getState();
       expect(isAuthenticated).toBe(true);
@@ -56,11 +59,23 @@ describe('useAuthStore', () => {
       expect(localStorage.getItem('auth_token')).toBe('my-jwt-token');
     });
 
-    it('不传 role 时默认为 admin', () => {
-      act(() => {
-        useAuthStore.getState().login('token-xyz');
+    it('不传 role 时默认为 admin', async () => {
+      await act(async () => {
+        await useAuthStore.getState().login('token-xyz');
       });
       expect(useAuthStore.getState().userRole).toBe('admin');
+    });
+
+    it('传 refreshToken 时应落本地存储', async () => {
+      await act(async () => {
+        await useAuthStore
+          .getState()
+          .login('access-1', 'admin', undefined, 'refresh-1');
+      });
+
+      expect(localStorage.getItem('auth_token')).toBe('access-1');
+      expect(localStorage.getItem('refresh_token')).toBe('refresh-1');
+      expect(useAuthStore.getState().refreshToken).toBe('refresh-1');
     });
   });
 
@@ -85,6 +100,7 @@ describe('useAuthStore', () => {
       expect(isAuthenticated).toBe(false);
       expect(token).toBeNull();
       expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('refresh_token')).toBeNull();
       expect(window.location.href).toBe('/login');
 
       // 还原

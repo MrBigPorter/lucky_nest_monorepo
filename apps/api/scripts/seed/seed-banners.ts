@@ -14,7 +14,7 @@
  *
  * 幂等: 用 createdBy='seed' 作标记，已存在则整组跳过
  */
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import {
   createTreasureResolver,
   TreasureRefInput,
@@ -38,7 +38,7 @@ type SeedBannerRow = {
   state: number;
   validState: number;
   createdBy: string;
-  bannerArray?: unknown[];
+  bannerArray?: Prisma.InputJsonValue;
   activityAtStart?: Date;
   activityAtEnd?: Date;
   productRef?: TreasureRefInput;

@@ -3,7 +3,7 @@
 > 状态：已实现（核心链路已落地，本文档保留为设计与复盘）  
 > 作者：Copilot 设计审计  
 > 日期：2026-03-18
-> 最后对齐时间：2026-03-18（当前执行状态以 `.github/copilot-instructions.md` 为准）
+> 最后对齐时间：2026-03-19（当前执行状态以 `.github/copilot-instructions.md` 为准）
 
 ---
 
@@ -225,6 +225,27 @@ return fallbackPrize; // 兜底谢谢参与
 | `GET` | `/client/lucky-draw/my-tickets` | 查询我的抽奖券列表（带分页） |
 | `POST` | `/client/lucky-draw/draw/:ticketId` | 执行一次抽奖（消耗券） |
 | `GET` | `/client/lucky-draw/my-results` | 查询我的抽奖历史 |
+
+#### 实时事件（Socket / `dispatch`）
+
+| 事件 type | 说明 | 触发时机 |
+|-----------|------|----------|
+| `lucky_draw_ticket_issued` | 通知用户有新抽奖券可用 | 团成功后发券成功（逐用户推送） |
+
+事件 payload（当前实现）
+
+```json
+{
+  "type": "lucky_draw_ticket_issued",
+  "data": {
+    "groupId": "grp_xxx",
+    "ticketId": "tkt_xxx",
+    "activityId": "act_xxx",
+    "orderId": "ord_xxx",
+    "issuedAt": 1760000000000
+  }
+}
+```
 
 #### `GET /client/lucky-draw/my-tickets` 响应
 
@@ -1194,18 +1215,30 @@ GET /v1/client/lucky-draw/my-results?page=1&pageSize=20
 
 #### 10.2.6 实时触达：Socket / Push 通知
 
-**场景：团成功 → 用户获得抽奖券**
+**场景：团成功并完成发券 → 用户获得抽奖券**
 
 后端在 `GroupService.notifyMembersOfResult(groupId, true)` 中已有：
 - Socket 推送（`PushEventType.GROUP_SUCCESS`）
 - FCM 推送
 
-客户端在收到 `GROUP_SUCCESS` 事件后，需要：
+后端在 `LuckyDrawService.issueTicketsForGroup(groupId)` 中新增：
+- 逐用户 Socket 推送 `SocketEvents.LUCKY_DRAW_TICKET_ISSUED`
+- 推送房间：`user_{userId}`（私有房间，不走大厅广播）
+
+客户端建议优先监听 `lucky_draw_ticket_issued`，并保留 `GROUP_SUCCESS` 兜底刷新：
 
 ```
-收到 GROUP_SUCCESS Socket 事件
+收到 lucky_draw_ticket_issued Socket 事件
   │
-  ├── 1. 刷新"我的抽奖券"列表数据（调用 GET my-tickets 或本地 +1 badge）
+  ├── 1. 直接把 badge +1（或触发一次 my-tickets 增量刷新）
+  │
+  └── 2. 展示提示：
+         "🎉 你获得了新的抽奖券"
+         [立即抽奖] → 跳转 LuckyDrawTicketListPage
+
+收到 GROUP_SUCCESS Socket 事件（兜底）
+  │
+  ├── 1. 刷新"我的抽奖券"列表数据（调用 GET my-tickets）
   │
   └── 2. 展示提示（Toast / SnackBar）：
          "🎉 拼团成功！你有 1 次抽奖机会"
@@ -1334,6 +1367,7 @@ LuckyDrawNotifier / LuckyDrawCubit
 ### Phase B — 后端 Common（核心服务，历史已完成）
 - [x] `common/lucky-draw/lucky-draw.service.ts`
   - `issueTicketsForGroup(groupId)` — 团成功时给所有真人成员发券
+  - 发券成功后 `dispatchToUser(userId, lucky_draw_ticket_issued, payload)` 实时通知
   - `issueTicketForOrder(userId, treasureId, orderId)` — 单买时发券
   - `draw(userId, ticketId)` — 抽奖核心逻辑（验证→抽签→下发→记录，全在 `$transaction`）
   - 所有 catch 用 `(e: unknown)` + `e instanceof Error ? e.message : String(e)`（Prisma v6）
@@ -1401,7 +1435,7 @@ LuckyDrawNotifier / LuckyDrawCubit
 - [ ] `LuckyDrawHistoryPage` — 历史记录分页
 - [ ] `LuckyDrawNotifier/Cubit` — tickets / unreadCount / isDrawing / lastResult
 - [ ] API 层封装三个接口（my-tickets / draw / my-results）
-- [ ] Socket `GROUP_SUCCESS` → badge +1 + SnackBar
+- [ ] Socket `lucky_draw_ticket_issued` → badge +1 + SnackBar（`GROUP_SUCCESS` 保底刷新）
 - [ ] FCM `payload.type == 'lucky_draw'` → 跳转券列表页
 - [ ] 个人中心 / Tab 入口注册 Badge
 - [ ] 订单成功页增加抽奖入口 Banner
