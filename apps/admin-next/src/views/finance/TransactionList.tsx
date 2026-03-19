@@ -65,10 +65,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         width: 150,
         render: (_, row) => (
           <div className="flex flex-col">
-            <span className="font-medium text-gray-900">
+            <span className="font-medium text-gray-900 dark:text-gray-100">
               {row.user?.nickname || '-'}
             </span>
-            <span className="text-xs text-gray-500 font-mono">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
               {row.user?.phone}
             </span>
           </div>
@@ -88,7 +88,8 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         ),
         render: (_, row) => {
           let icon = <Repeat size={14} className="mr-1 inline" />;
-          let color: 'default' | 'success' | 'warning' | 'error' | 'info' = 'default';
+          let color: 'default' | 'success' | 'warning' | 'error' | 'info' =
+            'default';
 
           if (row.transactionType === TRANSACTION_TYPE.RECHARGE) {
             icon = <ArrowDownRight size={14} className="mr-1 inline" />;
@@ -99,8 +100,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           }
 
           const label =
-            TRANSACTION_TYPE_OPTIONS.find((o) => o.value === row.transactionType)?.label ||
-            String(row.transactionType);
+            TRANSACTION_TYPE_OPTIONS.find(
+              (o) => o.value === row.transactionType,
+            )?.label || String(row.transactionType);
 
           return (
             <Badge variant="outline" color={color}>
@@ -125,7 +127,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         width: 120,
         align: 'right',
         render: (dom) => (
-          <span className="font-mono text-gray-600">
+          <span className="font-mono text-gray-600 dark:text-gray-300">
             {NumHelper.formatMoney(dom as string)}
           </span>
         ),
@@ -136,9 +138,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         width: 200,
         render: (_, row) => (
           <div className="flex flex-col">
-            <span className="text-sm text-gray-700">{row.remark || '-'}</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {row.remark || '-'}
+            </span>
             {row.relatedId && (
-              <span className="text-xs text-gray-400 font-mono mt-1">
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-1">
                 Ref: {row.relatedId}
               </span>
             )}

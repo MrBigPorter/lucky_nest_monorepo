@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { ModalManager } from '@repo/ui';
 import { luckyDrawApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import type {
@@ -525,11 +526,16 @@ function PrizesPanel({
     onChanged();
   };
 
-  const handleDelete = async (prizeId: string) => {
-    if (!confirm('Delete this prize?')) return;
-
-    await luckyDrawApi.deletePrize(prizeId);
-    await handleRefresh();
+  const handleDelete = (prizeId: string) => {
+    ModalManager.open({
+      title: 'Delete Prize',
+      content: 'Delete this prize?',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await luckyDrawApi.deletePrize(prizeId);
+        await handleRefresh();
+      },
+    });
   };
 
   return (
@@ -854,11 +860,16 @@ export function LuckyDrawManagement() {
     }
   }, [activities, selectedActivityId]);
 
-  const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Delete this activity and all its prizes?')) return;
-
-    await luckyDrawApi.deleteActivity(activityId);
-    await refresh();
+  const handleDeleteActivity = (activityId: string) => {
+    ModalManager.open({
+      title: 'Delete Activity',
+      content: 'Delete this activity and all its prizes?',
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await luckyDrawApi.deleteActivity(activityId);
+        await refresh();
+      },
+    });
   };
 
   return (

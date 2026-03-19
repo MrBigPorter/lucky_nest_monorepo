@@ -70,13 +70,13 @@ const renderSmartCell = (
       return <span className="font-mono">{NumHelper.formatMoney(text)}</span>;
     case 'date':
       return (
-        <span className="text-gray-500 text-xs">
+        <span className="text-gray-500 dark:text-gray-400 text-xs">
           {TimeHelper.formatDate(text)}
         </span>
       );
     case 'dateTime':
       return (
-        <span className="text-gray-500 text-xs">
+        <span className="text-gray-500 dark:text-gray-400 text-xs">
           {TimeHelper.formatDateTime(text)}
         </span>
       );
@@ -391,7 +391,9 @@ const SmartTableInner = <T extends Record<string, any>>(
       {(headerTitle || toolBarRender || onExport || request) && (
         <div className="flex justify-between items-center px-1">
           {headerTitle ? (
-            <div className="text-lg font-bold">{headerTitle}</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              {headerTitle}
+            </div>
           ) : (
             <div />
           )}
