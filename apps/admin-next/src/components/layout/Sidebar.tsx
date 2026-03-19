@@ -96,6 +96,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     () => applicationApi.pendingCount(),
     {
       pollingInterval: 60_000, // refresh every 60s
+      pollingWhenHidden: false, // 切后台时暂停，减少无效请求
+      onError: () => {
+        // 静默处理（401 已由 http 层统一跳转登录，这里不再弹 toast）
+      },
     },
   );
 
