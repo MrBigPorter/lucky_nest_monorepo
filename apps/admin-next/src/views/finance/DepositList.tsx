@@ -97,7 +97,7 @@ export const DepositList: React.FC<DepositListProps> = ({
           <div className="flex flex-col">
             <span className="font-mono font-medium">{dom}</span>
             {row.thirdPartyOrderNo && (
-              <span className="text-[10px] text-gray-400 font-mono">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
                 Ref: {row.thirdPartyOrderNo}
               </span>
             )}
@@ -109,8 +109,12 @@ export const DepositList: React.FC<DepositListProps> = ({
         dataIndex: 'user',
         render: (_, row) => (
           <div>
-            <div className="font-medium">{row.user?.nickname || 'Unknown'}</div>
-            <div className="text-xs text-gray-500">{row.user?.phone}</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">
+              {row.user?.nickname || 'Unknown'}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {row.user?.phone}
+            </div>
           </div>
         ),
       },
@@ -247,6 +251,7 @@ export const DepositList: React.FC<DepositListProps> = ({
 
   const requestDeposits = useCallback(async (params: RechargeListParams) => {
     const requestData = { ...params };
+    delete (requestData as Record<string, unknown>).tab;
     if (requestData.status === 'ALL') delete requestData.status;
     if (requestData.dateRange) {
       requestData.startDate = requestData.dateRange.from;

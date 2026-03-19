@@ -134,10 +134,14 @@ export const EditProductFormModal = (
         // 价格
         unitAmount: Number(values.unitAmount),
         costAmount: Number(values.costAmount),
-        marketAmount: values.marketAmount
-          ? Number(values.marketAmount)
-          : undefined,
-        soloAmount: values.soloAmount ? Number(values.soloAmount) : undefined,
+        marketAmount:
+          values.marketAmount !== undefined && values.marketAmount !== null
+            ? Number(values.marketAmount)
+            : undefined,
+        soloAmount:
+          values.soloAmount !== undefined && values.soloAmount !== null
+            ? Number(values.soloAmount)
+            : undefined,
 
         // 物流
         shippingType: Number(values.shippingType),

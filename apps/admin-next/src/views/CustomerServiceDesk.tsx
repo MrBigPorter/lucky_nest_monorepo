@@ -34,6 +34,7 @@ import type {
 } from '@/type/types';
 import { format } from 'date-fns';
 import { useChatSocket, type SocketStatus } from '@/hooks/useChatSocket';
+import { ModalManager } from '@repo/ui';
 
 // ─── CDN 媒体 URL 工具 ────────────────────────────────────────────────────────
 
@@ -781,14 +782,20 @@ function ChatWindow({
   };
 
   /** 强制撤回消息 */
-  const handleRecall = async (messageId: string) => {
-    if (!confirm('Force recall this message?')) return;
-    try {
-      await chatApi.forceRecall(messageId);
-      fetchMessages();
-    } catch {
-      alert('Failed to recall message');
-    }
+  const handleRecall = (messageId: string) => {
+    ModalManager.open({
+      title: 'Force Recall Message',
+      content: 'Force recall this message?',
+      confirmText: 'Recall',
+      onConfirm: async () => {
+        try {
+          await chatApi.forceRecall(messageId);
+          fetchMessages();
+        } catch {
+          alert('Failed to recall message');
+        }
+      },
+    });
   };
 
   const handleClose = async () => {
