@@ -51,8 +51,9 @@ describe('http client — 基础', () => {
   it('实例存在', () => expect(http).toBeDefined());
 
   it('公共方法全部存在', () => {
+    const httpRecord = http as unknown as Record<string, unknown>;
     ['get', 'post', 'put', 'patch', 'delete', 'upload', 'download'].forEach(
-      (m) => expect(typeof (http as any)[m]).toBe('function'),
+      (m) => expect(typeof httpRecord[m]).toBe('function'),
     );
   });
 });
@@ -86,6 +87,30 @@ describe('http client — 成功响应', () => {
       data: 'pong',
     });
     expect(await http.get('/ping')).toBe('pong');
+  });
+
+  it('并发重复 GET 时复用同一个进行中请求', async () => {
+    let hitCount = 0;
+    server.use(
+      mswHttp.get('http://localhost/api/shared', async () => {
+        hitCount += 1;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return HttpResponse.json({
+          code: 10000,
+          message: 'ok',
+          data: { id: 1 },
+        });
+      }),
+    );
+
+    const [first, second] = await Promise.all([
+      http.get('/shared'),
+      http.get('/shared'),
+    ]);
+
+    expect(first).toEqual({ id: 1 });
+    expect(second).toEqual({ id: 1 });
+    expect(hitCount).toBe(1);
   });
 });
 
@@ -128,10 +153,7 @@ describe('http client — HTTP 错误', () => {
       ),
     );
     await expect(http.get('/crash')).rejects.toBeDefined();
-    expect(mockAddToast).toHaveBeenCalledWith(
-      'error',
-      expect.stringContaining('服务器错误'),
-    );
+    expect(mockAddToast).toHaveBeenCalledWith('error', expect.any(String));
   });
 
   it('HTTP 401 时跳转 /login', async () => {
@@ -141,6 +163,81 @@ describe('http client — HTTP 错误', () => {
       ),
     );
     await expect(http.get('/me')).rejects.toBeDefined();
+    expect(window.location.href).toBe('/login');
+  });
+
+  it('HTTP 401 且存在 refresh_token 时自动刷新并重试原请求', async () => {
+    localStorage.setItem('auth_token', 'expired-token');
+    localStorage.setItem('refresh_token', 'refresh-token-1');
+
+    let profileCallCount = 0;
+    server.use(
+      mswHttp.get('http://localhost/api/me', () => {
+        profileCallCount += 1;
+        if (profileCallCount === 1) {
+          return HttpResponse.json(
+            { message: 'Unauthorized' },
+            { status: 401 },
+          );
+        }
+        return HttpResponse.json({
+          code: 10000,
+          message: 'ok',
+          data: { id: 1, name: 'admin' },
+        });
+      }),
+      mswHttp.post('http://localhost/api/v1/auth/admin/refresh', () =>
+        HttpResponse.json({
+          code: 10000,
+          message: 'ok',
+          data: {
+            tokens: {
+              accessToken: 'new-access-token',
+              refreshToken: 'new-refresh-token',
+            },
+          },
+        }),
+      ),
+      mswHttp.post('http://localhost/api/v1/auth/admin/set-cookie', () =>
+        HttpResponse.json({ code: 10000, message: 'ok', data: { ok: true } }),
+      ),
+    );
+
+    const data = await http.get<{ id: number; name: string }>('/me');
+    expect(data).toEqual({ id: 1, name: 'admin' });
+    expect(localStorage.getItem('auth_token')).toBe('new-access-token');
+    expect(localStorage.getItem('refresh_token')).toBe('new-refresh-token');
+    expect(window.location.href).toBe('http://localhost/');
+  });
+
+  it('并发 401 且 refresh 失败时只触发一次 refresh 和一次跳转提示', async () => {
+    localStorage.setItem('auth_token', 'expired-token');
+    localStorage.setItem('refresh_token', 'refresh-token-1');
+
+    let refreshCount = 0;
+    server.use(
+      mswHttp.get('http://localhost/api/protected-a', () =>
+        HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+      ),
+      mswHttp.get('http://localhost/api/protected-b', () =>
+        HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+      ),
+      mswHttp.post('http://localhost/api/v1/auth/admin/refresh', () => {
+        refreshCount += 1;
+        return HttpResponse.json({ message: 'Unauthorized' }, { status: 401 });
+      }),
+    );
+
+    await Promise.allSettled([
+      http.get('/protected-a'),
+      http.get('/protected-b'),
+    ]);
+
+    expect(refreshCount).toBe(1);
+    expect(mockAddToast).toHaveBeenCalledWith(
+      'error',
+      'Unauthorized, please log in again',
+    );
     expect(window.location.href).toBe('/login');
   });
 

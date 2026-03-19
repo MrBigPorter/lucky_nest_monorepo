@@ -128,6 +128,7 @@ describe('Login page', () => {
         'jwt-abc',
         'SUPER_ADMIN',
         expect.objectContaining({ id: 'admin-1', role: 'SUPER_ADMIN' }),
+        null,
       );
       expect(mockAddToast).toHaveBeenCalledWith(
         'success',

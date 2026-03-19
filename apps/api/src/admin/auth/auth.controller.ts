@@ -1,4 +1,4 @@
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -15,6 +15,8 @@ import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { RealIp, UserAgent } from '@api/common/decorators/http.decorators';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { SetCookieDto } from './dto/set-cookie.dto';
+import { AdminRefreshTokenDto } from './dto/admin-refresh-token.dto';
+import { AdminTokenResponseDto } from './dto/admin-token-response.dto';
 
 @ApiTags('admin Auth Management')
 @Controller('auth')
@@ -35,6 +37,14 @@ export class AuthController {
     @UserAgent() ua: string,
   ) {
     return this.auth.adminLogin(dto, ip, ua);
+  }
+
+  @Post('admin/refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: AdminTokenResponseDto })
+  async refreshAdminToken(@Body() dto: AdminRefreshTokenDto) {
+    return this.auth.refreshAdminToken(dto.refreshToken);
   }
 
   /**
@@ -67,7 +77,7 @@ export class AuthController {
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('auth_token', dto.token, {
       httpOnly: true,
-      secure: isProd,          // 生产用 HTTPS，本地开发允许 HTTP
+      secure: isProd, // 生产用 HTTPS，本地开发允许 HTTP
       sameSite: isProd ? 'strict' : 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 24 小时（ms）
       path: '/',
@@ -81,7 +91,7 @@ export class AuthController {
    */
   @Post('admin/clear-cookie')
   @HttpCode(HttpStatus.OK)
-  async clearAuthCookie(@Res({ passthrough: true }) res: Response) {
+  clearAuthCookie(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('auth_token', { path: '/' });
     return { ok: true };
   }
