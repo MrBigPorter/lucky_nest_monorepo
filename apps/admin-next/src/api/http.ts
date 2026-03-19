@@ -87,7 +87,7 @@ class HttpClient {
 
     // 响应拦截
     this.instance.interceptors.response.use(
-      (res: AxiosResponse<ApiResponse>) => {
+      async (res: AxiosResponse<ApiResponse>) => {
         const method = (res.config.method || 'get').toLowerCase();
         if (method !== 'get') {
           const key = this.genKey(res.config);
@@ -110,9 +110,15 @@ class HttpClient {
 
         // 业务错误
         if (data.code === 401) {
-          return this.handle401AndRetry(
-            res.config as InternalAxiosRequestConfig & { _retry?: boolean },
-          );
+          const retryConfig = res.config as InternalAxiosRequestConfig & {
+            _retry?: boolean;
+          };
+          // 已重试过则直接登出，防止无限 refresh 循环
+          if (retryConfig._retry) {
+            await this.handleUnauthorized();
+            return Promise.reject(data);
+          }
+          return this.handle401AndRetry(retryConfig);
         }
 
         this.handleBizError(data);
@@ -175,7 +181,7 @@ class HttpClient {
   private handleBizError(data: ApiResponse) {
     // 401 单独处理，不再额外弹 toast
     if (data.code === 401) {
-      this.handleUnauthorized();
+      void this.handleUnauthorized();
       return;
     }
 
@@ -202,7 +208,11 @@ class HttpClient {
       const { status, data } = error.response;
 
       if (status === 401) {
-        this.handleUnauthorized();
+        // x-skip-auth-refresh 的内部请求（refresh / set-cookie / clear-cookie）
+        // 不再重复触发登出——它们的 401 由调用方统一处理
+        if (!error.config?.headers?.['x-skip-auth-refresh']) {
+          void this.handleUnauthorized();
+        }
         return;
       }
 
@@ -217,7 +227,7 @@ class HttpClient {
     console.error('[HTTP Error]', error);
   }
 
-  private handleUnauthorized() {
+  private async handleUnauthorized() {
     // 多个并发请求同时 401 时，只处理一次
     if (this._unauthorizedHandling) return;
     this._unauthorizedHandling = true;
@@ -227,6 +237,15 @@ class HttpClient {
 
     if (window.location.pathname !== '/login') {
       this.toastError('Unauthorized, please log in again');
+      // 必须先清除 HTTP-only Cookie，否则 middleware 看到 Cookie 还在，
+      // 会把 /login 重定向回 /，导致 Sidebar polling 死循环
+      await this.instance
+        .post(
+          '/v1/auth/admin/clear-cookie',
+          {},
+          { headers: { 'x-skip-auth-refresh': '1' } },
+        )
+        .catch(() => {}); // 忽略错误，清不掉也要跳转
       window.location.href = '/login';
     }
 
@@ -240,7 +259,7 @@ class HttpClient {
   ) {
     const accessToken = await this.refreshAccessToken();
     if (!accessToken) {
-      this.handleUnauthorized();
+      await this.handleUnauthorized();
       return Promise.reject(new Error('Unauthorized'));
     }
 

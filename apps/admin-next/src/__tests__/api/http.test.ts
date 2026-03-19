@@ -130,13 +130,55 @@ describe('http client — 业务错误', () => {
 
   it('业务 code=401 时清除 token 并跳转 /login', async () => {
     localStorage.setItem('auth_token', 'old-token');
-    mockGet('http://localhost/api/secret', {
-      code: 401,
-      message: '未授权',
-      data: null,
-    });
+    server.use(
+      mswHttp.get('http://localhost/api/secret', () =>
+        HttpResponse.json({ code: 401, message: '未授权', data: null }),
+      ),
+      // handleUnauthorized 现在 await clear-cookie 后才跳转
+      mswHttp.post('http://localhost/api/v1/auth/admin/clear-cookie', () =>
+        HttpResponse.json({ code: 10000, message: 'ok', data: { ok: true } }),
+      ),
+    );
     await expect(http.get('/secret')).rejects.toBeDefined();
     expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(window.location.href).toBe('/login');
+  });
+
+  it('refresh 成功但重试后仍返回业务 401 — 不应无限循环，只登出一次', async () => {
+    localStorage.setItem('auth_token', 'expired-token');
+    localStorage.setItem('refresh_token', 'refresh-token-x');
+
+    let refreshCount = 0;
+    server.use(
+      // 原始请求与重试请求都返回业务 401
+      mswHttp.get('http://localhost/api/always-401', () =>
+        HttpResponse.json({ code: 401, message: '业务权限不足', data: null }),
+      ),
+      mswHttp.post('http://localhost/api/v1/auth/admin/refresh', () => {
+        refreshCount += 1;
+        return HttpResponse.json({
+          code: 10000,
+          message: 'ok',
+          data: {
+            tokens: {
+              accessToken: 'new-access-token',
+              refreshToken: 'new-refresh-token',
+            },
+          },
+        });
+      }),
+      mswHttp.post('http://localhost/api/v1/auth/admin/set-cookie', () =>
+        HttpResponse.json({ code: 10000, message: 'ok', data: { ok: true } }),
+      ),
+      mswHttp.post('http://localhost/api/v1/auth/admin/clear-cookie', () =>
+        HttpResponse.json({ code: 10000, message: 'ok', data: { ok: true } }),
+      ),
+    );
+
+    await expect(http.get('/always-401')).rejects.toBeDefined();
+    // refresh 只触发一次，不循环
+    expect(refreshCount).toBe(1);
+    // 最终触发登出
     expect(window.location.href).toBe('/login');
   });
 });
@@ -160,6 +202,9 @@ describe('http client — HTTP 错误', () => {
     server.use(
       mswHttp.get('http://localhost/api/me', () =>
         HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+      ),
+      mswHttp.post('http://localhost/api/v1/auth/admin/clear-cookie', () =>
+        HttpResponse.json({ code: 10000, message: 'ok', data: { ok: true } }),
       ),
     );
     await expect(http.get('/me')).rejects.toBeDefined();
@@ -226,6 +271,9 @@ describe('http client — HTTP 错误', () => {
         refreshCount += 1;
         return HttpResponse.json({ message: 'Unauthorized' }, { status: 401 });
       }),
+      mswHttp.post('http://localhost/api/v1/auth/admin/clear-cookie', () =>
+        HttpResponse.json({ code: 10000, message: 'ok', data: { ok: true } }),
+      ),
     );
 
     await Promise.allSettled([
