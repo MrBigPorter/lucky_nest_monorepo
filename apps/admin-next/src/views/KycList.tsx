@@ -111,22 +111,21 @@ export const KycList: React.FC<KycListProps> = ({
 
   // 5. 执行 [删除]
   const handleDelete = useCallback(
-    async (record: KycRecord) => {
-      if (
-        !window.confirm(
-          `⚠️ DANGER: Physically delete record for ${record.userId}?\nThis cannot be undone.`,
-        )
-      ) {
-        return;
-      }
-
-      try {
-        await kycApi.delete(record.userId);
-        addToast('success', 'Record deleted successfully');
-        actionRef.current?.reload();
-      } catch (err: any) {
-        addToast('error', err.message || 'Delete failed');
-      }
+    (record: KycRecord) => {
+      ModalManager.open({
+        title: 'Delete KYC Record',
+        content: `Physically delete record for ${record.userId}? This cannot be undone.`,
+        confirmText: 'Delete',
+        onConfirm: async () => {
+          try {
+            await kycApi.delete(record.userId);
+            addToast('success', 'Record deleted successfully');
+            actionRef.current?.reload();
+          } catch (err: any) {
+            addToast('error', err.message || 'Delete failed');
+          }
+        },
+      });
     },
     [addToast],
   );

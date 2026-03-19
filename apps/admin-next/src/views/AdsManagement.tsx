@@ -26,6 +26,7 @@ import type {
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { ModalManager } from '@repo/ui';
 
 // ─── 位置标签 ─────────────────────────────────────────────────────────────────
 
@@ -273,10 +274,16 @@ export function AdsManagement() {
     refresh();
   };
 
-  const handleDelete = async (ad: Advertisement) => {
-    if (!confirm(`Delete "${ad.title ?? ad.id}"?`)) return;
-    await adsApi.remove(ad.id);
-    refresh();
+  const handleDelete = (ad: Advertisement) => {
+    ModalManager.open({
+      title: 'Delete Advertisement',
+      content: `Delete "${ad.title ?? ad.id}"?`,
+      confirmText: 'Delete',
+      onConfirm: async () => {
+        await adsApi.remove(ad.id);
+        refresh();
+      },
+    });
   };
 
   return (

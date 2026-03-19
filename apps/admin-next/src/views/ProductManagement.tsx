@@ -319,7 +319,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
             </div>
 
             {/* 2. 单独购买价 (如果有) */}
-            {row.soloAmount && (
+            {row.soloAmount !== undefined && row.soloAmount !== null && (
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-gray-400">Solo</span>
                 <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
@@ -329,7 +329,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
             )}
 
             {/* 3. 市场划线价 (如果有) */}
-            {row.marketAmount && (
+            {row.marketAmount !== undefined && row.marketAmount !== null && (
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-gray-400">MSRP</span>
                 <span className="font-mono text-[10px] text-gray-400 line-through">

@@ -17,13 +17,14 @@ import {
 import type {
   FlashSaleSession,
   CreateFlashSaleSessionPayload,
-  BindFlashSaleProductPayload,
 } from '@/type/types';
+import { FlashSaleBindProductModal } from '@/views/flash-sale/FlashSaleBindProductModal';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { flashSaleApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
+import { ModalManager } from '@repo/ui';
 
 // ─── Session Modal ────────────────────────────────────────────────────────────
 
@@ -163,141 +164,16 @@ function SessionModal({
   );
 }
 
-// ─── Bind Product Modal ───────────────────────────────────────────────────────
-
-const bindSchema = z.object({
-  treasureId: z.string().min(1),
-  flashPrice: z.string().min(1),
-  flashStock: z.number(),
-  sortOrder: z.number(),
-});
-type BindForm = z.infer<typeof bindSchema>;
-
-function BindProductModal({
-  sessionId,
-  onClose,
-  onSaved,
-}: {
-  sessionId: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [saving, setSaving] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<BindForm>({
-    defaultValues: {
-      treasureId: '',
-      flashPrice: '',
-      flashStock: 0,
-      sortOrder: 0,
-    },
-  });
-
-  const onSubmit = async (values: BindForm) => {
-    setSaving(true);
-    try {
-      const payload: BindFlashSaleProductPayload = {
-        treasureId: values.treasureId,
-        flashPrice: values.flashPrice,
-        flashStock: values.flashStock,
-        sortOrder: values.sortOrder,
-      };
-      await flashSaleApi.bindProduct(sessionId, payload);
-      onSaved();
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-            Bind Product
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="p-5 space-y-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">
-              Product ID (treasureId) *
-            </label>
-            <input
-              {...register('treasureId')}
-              className="px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-            />
-            {errors.treasureId && (
-              <p className="text-xs text-red-500">Required</p>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">
-                Flash Price (PHP) *
-              </label>
-              <input
-                {...register('flashPrice')}
-                placeholder="e.g. 99.00"
-                className="px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-              />
-              {errors.flashPrice && (
-                <p className="text-xs text-red-500">Required</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">Flash Stock</label>
-              <input
-                type="number"
-                {...register('flashStock', { valueAsNumber: true })}
-                className="px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-teal-500 hover:bg-teal-600 text-white rounded-xl disabled:opacity-50 transition-colors"
-            >
-              {saving ? (
-                <RefreshCw size={13} className="animate-spin" />
-              ) : (
-                <Plus size={13} />
-              )}
-              Bind
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ─── Products Panel ───────────────────────────────────────────────────────────
 
 function SessionProductsPanel({
   session,
   onBack,
+  onProductsChanged,
 }: {
   session: FlashSaleSession;
   onBack: () => void;
+  onProductsChanged: () => void;
 }) {
   const [showBind, setShowBind] = useState(false);
 
@@ -310,10 +186,38 @@ function SessionProductsPanel({
   });
   const products = data?.list ?? [];
 
-  const handleRemove = async (productId: string) => {
-    if (!confirm('Remove this product from the flash sale?')) return;
-    await flashSaleApi.removeProduct(productId);
-    refresh();
+  const handleRemove = (productId: string) => {
+    ModalManager.open({
+      title: 'Remove Product',
+      renderChildren: ({ close }) => (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Remove this product from the flash sale?
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={close}
+              className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await flashSaleApi.removeProduct(productId);
+                refresh();
+                onProductsChanged();
+                close();
+              }}
+              className="px-4 py-2 text-sm rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ),
+    });
   };
 
   return (
@@ -427,11 +331,17 @@ function SessionProductsPanel({
       </div>
 
       {showBind && (
-        <BindProductModal
-          sessionId={session.id}
-          onClose={() => setShowBind(false)}
-          onSaved={refresh}
-        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <FlashSaleBindProductModal
+            sessionId={session.id}
+            onClose={() => setShowBind(false)}
+            onSaved={() => {
+              setShowBind(false);
+              refresh();
+              onProductsChanged();
+            }}
+          />
+        </div>
       )}
     </div>
   );
@@ -450,20 +360,48 @@ export function FlashSaleManagement() {
   } = useRequest(() => flashSaleApi.getSessions());
   const sessions = data?.list ?? [];
 
-  const handleDelete = async (s: FlashSaleSession) => {
-    if (
-      !confirm(`Delete "${s.title}"? This will also remove all bound products.`)
-    )
-      return;
-    await flashSaleApi.deleteSession(s.id);
-    refresh();
+  const handleDelete = (s: FlashSaleSession) => {
+    ModalManager.open({
+      title: 'Delete Flash Sale Session',
+      renderChildren: ({ close }) => (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Delete "{s.title}"? This will also remove all bound products.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={close}
+              className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await flashSaleApi.deleteSession(s.id);
+                refresh();
+                close();
+              }}
+              className="px-4 py-2 text-sm rounded-xl bg-red-500 hover:bg-red-600 text-white transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+    });
   };
 
   if (selected) {
     return (
       <SessionProductsPanel
         session={selected}
-        onBack={() => setSelected(null)}
+        onBack={() => {
+          setSelected(null);
+          refresh();
+        }}
+        onProductsChanged={refresh}
       />
     );
   }
