@@ -65,17 +65,17 @@ export CF_ROLLBACK_TYPE="CNAME" # 或 A
 
 ## 5. GitHub Actions 现在怎么工作
 
-- `main` 分支：Admin Cloudflare 走 `production` 环境。
-- `test` 分支：Admin Cloudflare 走 `preview` 环境。
-- Admin 部署会执行：`lint + check-types + test`，再 build+deploy。
-- 部署后会记录：
-  - Cloudflare deployment id
-  - Cloudflare version id
-  - 回退注记（artifact + summary）
+| 分支   |  Admin Cloudflare  |          后端 VPS          |
+| ------ | :----------------: | :------------------------: |
+| `main` | ✅ production 环境 |        ✅ 自动触发         |
+| `test` |  ✅ preview 环境   | ✅ 自动触发（同 prod VPS） |
 
-> 快速检查与故障定位请直接看 `RUNBOOK.md`：
-> - 上线前检查：`6.1 Admin Cloudflare 自动部署（上线前 1 分钟检查）`
-> - 首次失败排障：`6.2 Admin Cloudflare 首次失败排障（按报错关键字）`
+- Admin 部署会执行：`lint + check-types + test`，再 build+deploy。
+- 后端部署：build Docker 镜像 → 推 GHCR → VPS 拉取重启 → 健康检查 → 失败自动回滚。
+- 部署结果通过 **Step Summary** + **Telegram** 通知（已移除 artifact 上传，避免存储配额问题）。
+
+**⚡ 排队时切本地算力**：`deploy-master.yml` → Run workflow → `Runner` 选 `self-hosted`。  
+详见 `RUNBOOK.md` 第 13 节。
 
 ## 6. 关键配置位置（改动必看）
 
@@ -85,6 +85,18 @@ export CF_ROLLBACK_TYPE="CNAME" # 或 A
 - Next 构建目标开关：`apps/admin-next/next.config.ts`
 - API CORS 白名单：`apps/api/src/main.ts`
 - 生产 Nginx：`nginx/nginx.prod.conf`
+
+## 6.1 main 分支保护（安全必配，新仓库首次必做）
+
+> `main` push = 立即上生产。**必须开启分支保护，防止误操作直接上线。**
+
+GitHub 仓库 → Settings → Branches → Add rule → `main`：
+
+- ☑ Require a pull request before merging
+- ☑ Require status checks → 选 **`check`**（CI job）
+- ☑ Do not allow bypassing the above settings
+
+详细步骤见 `RUNBOOK.md` §6.4。
 
 ## 7. 发布后最小验收
 
@@ -105,4 +117,3 @@ yarn rollback:admin:dns:execute
 1. 本文：`read/DEPLOY_QUICKSTART_CN.md`
 2. 细节手册：`RUNBOOK.md`（重点先看 6.1 / 6.2）
 3. 架构全景：`ARCHITECTURE_CN.md`
-
