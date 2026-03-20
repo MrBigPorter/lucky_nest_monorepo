@@ -11,7 +11,18 @@ on:
   # 主渠道已切换到 Cloudflare Workers (deploy-admin-cloudflare.yml)。
   # 通过 deploy-master.yml 手动触发，或直接 workflow_dispatch。
   workflow_dispatch:
+    inputs:
+      runner:
+        description: "🖥️ Runner (ubuntu-latest = GitHub托管 / self-hosted = 本地Mac算力)"
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+        default: ubuntu-latest
   workflow_call:
+    inputs:
+      runner:
+        description: "Runner to use"
+        type: string
+        default: ubuntu-latest
 
 concurrency:
   group: deploy-admin
@@ -25,7 +36,7 @@ jobs:
   # 阶段一: 构建 + 推送镜像到 GHCR
   # =========================================
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write
@@ -72,7 +83,7 @@ jobs:
   # =========================================
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     environment: production
 
     steps:
@@ -173,4 +184,3 @@ jobs:
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "text=$MESSAGE" \
             -d "parse_mode=Markdown"
-
