@@ -5,7 +5,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import {
   CallAcceptDto,
@@ -31,7 +31,8 @@ export class CallGateway {
    * (该 ID 是由 EventsGateway 在 handleConnection 时挂载的)
    */
   private getUserId(client: Socket): string | null {
-    return (client as any).userId || null;
+    const data = client.data as Record<string, unknown>;
+    return typeof data.userId === 'string' ? data.userId : null;
   }
 
   // ==========================================
