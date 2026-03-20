@@ -32,43 +32,61 @@ jobs:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
 
-    # 没配置密码时跳过（避免 fork PR 因缺少 secret 而失败）
-    if: ${{ secrets.E2E_ADMIN_PASSWORD != '' }}
-
     steps:
+      - name: Check E2E secret availability
+        id: e2e_gate
+        env:
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [ -n "$E2E_ADMIN_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "E2E_ADMIN_PASSWORD is not set, skip Playwright workflow"
+          fi
+
       # ── 代码检出 ────────────────────────────────────────────────
       - name: Checkout
+        if: steps.e2e_gate.outputs.enabled == 'true'
         uses: actions/checkout@v4
 
       # ── Node.js 环境 ─────────────────────────────────────────────
       - name: Setup Node.js 20
+        if: steps.e2e_gate.outputs.enabled == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install native build tools (bcrypt / sharp)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: sudo apt-get install -y python3 make g++ openssl
 
       - name: Enable Corepack (Yarn 4)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
       # ── 依赖安装 ─────────────────────────────────────────────────
       - name: Install dependencies
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn install --immutable
 
       # ── 共享包构建（admin-next 依赖） ────────────────────────────
       - name: Build @lucky/shared
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: node packages/shared/scripts/build.js
 
       - name: Build @repo/ui
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: node packages/ui/scripts/build.js
 
       # ── Playwright 浏览器 ────────────────────────────────────────
       - name: Install Playwright Chromium + deps
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next playwright install chromium --with-deps
 
       # ── 构建 admin-next ──────────────────────────────────────────
       - name: Build admin-next (standalone)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next build
         env:
           NODE_ENV: production
@@ -77,6 +95,7 @@ jobs:
 
       # ── Mock API Server（模拟后端，不依赖真实数据库） ────────────
       - name: Start mock API server (port 3001)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: |
           cat > /tmp/mock-api.js << 'MOCKEOF'
           const http = require('http');
@@ -117,6 +136,7 @@ jobs:
 
       # ── 启动 Next.js standalone 服务 ─────────────────────────────
       - name: Start Next.js server (port 4001)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: |
           PORT=4001 node apps/admin-next/.next/standalone/apps/admin-next/server.js &
           npx --yes wait-on http://localhost:4001 --timeout 60000
@@ -127,6 +147,7 @@ jobs:
       # ── 运行 Playwright 测试 ─────────────────────────────────────
       - name: Run Playwright E2E
         id: e2e
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4001
@@ -138,7 +159,7 @@ jobs:
       # 截图 + trace 是定位失败的核心工具，失败时必须上传
       - name: Upload screenshots (on failure)
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() && steps.e2e_gate.outputs.enabled == 'true'
         with:
           name: playwright-screenshots-${{ github.run_id }}
           path: apps/admin-next/test-results/**/*.png
@@ -147,7 +168,7 @@ jobs:
 
       - name: Upload traces (on failure)
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: failure() && steps.e2e_gate.outputs.enabled == 'true'
         with:
           name: playwright-traces-${{ github.run_id }}
           path: apps/admin-next/test-results/**/*.zip
@@ -157,7 +178,7 @@ jobs:
       # HTML report 无论成功失败都上传（方便看通过率趋势）
       - name: Upload HTML report (always)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.e2e_gate.outputs.enabled == 'true'
         with:
           name: playwright-html-report-${{ github.run_id }}
           path: apps/admin-next/playwright-report/
@@ -168,6 +189,13 @@ jobs:
       - name: Write E2E summary
         if: always()
         run: |
+          if [ "${{ steps.e2e_gate.outputs.enabled }}" != "true" ]; then
+            echo "## ⏭️ Playwright E2E — skipped" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> missing secret: \`E2E_ADMIN_PASSWORD\`" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
           STATUS="${{ steps.e2e.outcome }}"
           if [ "$STATUS" = "success" ]; then
             ICON="✅"
