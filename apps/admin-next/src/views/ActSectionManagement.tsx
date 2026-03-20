@@ -81,9 +81,9 @@ export const ActSectionManagement: React.FC<ActSectionManagementProps> = ({
     defaultPageSize: 10,
     defaultParams: [
       { current: 1, pageSize: 10 },
-      { 
-        title: (initialFormParams?.title as string) || '', 
-        status: (initialFormParams?.status as string) || 'ALL' 
+      {
+        title: (initialFormParams?.title as string) || '',
+        status: (initialFormParams?.status as string) || 'ALL',
       },
     ],
   });
@@ -94,7 +94,7 @@ export const ActSectionManagement: React.FC<ActSectionManagementProps> = ({
     run({ current: 1, pageSize: 10 }, values);
     onParamsChange?.(values);
   };
-  
+
   const handleReset = () => {
     reset();
     onParamsChange?.({ title: '', status: 'ALL' });

@@ -166,7 +166,8 @@ export const FlashSaleBindProductModal: React.FC<Props> = ({
         enableSorting: false,
         cell: (info) => {
           const isBound = boundIds.includes(info.row.original.treasureId);
-          const isSelected = pending?.treasureId === info.row.original.treasureId;
+          const isSelected =
+            pending?.treasureId === info.row.original.treasureId;
           return isBound ? (
             <Button
               isLoading={unbindLoading}
@@ -288,4 +289,3 @@ export const FlashSaleBindProductModal: React.FC<Props> = ({
     </div>
   );
 };
-

@@ -21,10 +21,12 @@ export const BASE_URL =
 export async function loginViaUI(page: Page): Promise<void> {
   await page.goto('/login/');
   // Dismiss Next.js dev overlay if present
-  await page.evaluate(() => {
-    const el = document.querySelector('nextjs-portal');
-    if (el) el.remove();
-  }).catch(() => {});
+  await page
+    .evaluate(() => {
+      const el = document.querySelector('nextjs-portal');
+      if (el) el.remove();
+    })
+    .catch(() => {});
   await page.getByLabel('Username').fill(TEST_ADMIN.username);
   await page.getByLabel('Password').fill(TEST_ADMIN.password);
   await page.getByRole('button', { name: /sign in/i }).click({ force: true });
@@ -49,4 +51,3 @@ export async function injectToken(
     localStorage.setItem('auth_token', t);
   }, token);
 }
-

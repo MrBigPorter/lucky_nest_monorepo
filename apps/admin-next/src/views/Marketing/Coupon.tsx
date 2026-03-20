@@ -104,7 +104,7 @@ export const CouponList: React.FC<CouponListProps> = ({
     run({ current: 1, pageSize: 10 }, values);
     onParamsChange?.(values);
   };
-  
+
   const handleReset = () => {
     reset();
     onParamsChange?.({ keyword: '', status: 'ALL', couponType: 'ALL' });

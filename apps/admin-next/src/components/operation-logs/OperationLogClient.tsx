@@ -37,7 +37,9 @@ export function OperationLogClient() {
           qs.set(key, String(value));
         }
       });
-      const newUrl = qs.toString() ? `/operation-logs?${qs.toString()}` : '/operation-logs';
+      const newUrl = qs.toString()
+        ? `/operation-logs?${qs.toString()}`
+        : '/operation-logs';
       router.replace(newUrl, { scroll: false });
     },
     [router],

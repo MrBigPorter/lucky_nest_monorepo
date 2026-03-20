@@ -36,7 +36,8 @@ export function SupportChannels() {
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [businessIdMode, setBusinessIdMode] = useState<BusinessIdMode>('builtin');
+  const [businessIdMode, setBusinessIdMode] =
+    useState<BusinessIdMode>('builtin');
   const [builtinBusinessId, setBuiltinBusinessId] = useState(
     BUILTIN_BUSINESS_IDS[0],
   );
@@ -129,7 +130,9 @@ export function SupportChannels() {
       await supportChannelApi.toggle(item.id, !item.isActive);
       addToast(
         'success',
-        item.isActive ? 'Channel paused successfully' : 'Channel resumed successfully',
+        item.isActive
+          ? 'Channel paused successfully'
+          : 'Channel resumed successfully',
       );
       refresh();
     } catch (error: any) {
@@ -142,7 +145,10 @@ export function SupportChannels() {
     if (name === null) return;
     const description = window.prompt('Description', item.description ?? '');
     if (description === null) return;
-    const avatar = window.prompt('Avatar URL (optional)', item.botUser.avatar ?? '');
+    const avatar = window.prompt(
+      'Avatar URL (optional)',
+      item.botUser.avatar ?? '',
+    );
     if (avatar === null) return;
 
     const payload: UpdateSupportChannelPayload = {
@@ -203,7 +209,9 @@ export function SupportChannels() {
             <div className="flex gap-2 md:col-span-2">
               <select
                 value={businessIdMode}
-                onChange={(e) => setBusinessIdMode(e.target.value as BusinessIdMode)}
+                onChange={(e) =>
+                  setBusinessIdMode(e.target.value as BusinessIdMode)
+                }
                 className="h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
               >
                 <option value="builtin">Built-in Business ID</option>
@@ -225,7 +233,9 @@ export function SupportChannels() {
               ) : (
                 <input
                   value={form.id}
-                  onChange={(e) => setForm((p) => ({ ...p, id: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, id: e.target.value }))
+                  }
                   placeholder="Custom businessId (e.g. my_support_v1)"
                   className="h-9 flex-1 px-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
                 />
@@ -233,9 +243,7 @@ export function SupportChannels() {
             </div>
             <input
               value={form.name}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, name: e.target.value }))
-              }
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="Display name (English)"
               className="h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
             />
@@ -254,7 +262,9 @@ export function SupportChannels() {
                   alt="avatar preview"
                   className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-white/10"
                 />
-                <span className="text-xs text-gray-500 truncate max-w-[140px]">Avatar uploaded</span>
+                <span className="text-xs text-gray-500 truncate max-w-[140px]">
+                  Avatar uploaded
+                </span>
                 <button
                   type="button"
                   onClick={() => setForm((p) => ({ ...p, avatar: '' }))}
@@ -310,29 +320,42 @@ export function SupportChannels() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     Loading...
                   </td>
                 </tr>
               )}
               {!loading && list.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={5}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     No support channels
                   </td>
                 </tr>
               )}
               {!loading &&
                 list.map((item) => (
-                  <tr key={item.id} className="border-t border-gray-100 dark:border-white/10">
+                  <tr
+                    key={item.id}
+                    className="border-t border-gray-100 dark:border-white/10"
+                  >
                     <td className="px-4 py-3 font-mono">{item.id}</td>
                     <td className="px-4 py-3">
                       <div className="font-medium">{item.name}</div>
                       {item.description && (
-                        <div className="text-xs text-gray-500">{item.description}</div>
+                        <div className="text-xs text-gray-500">
+                          {item.description}
+                        </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">{item.botUserId}</td>
+                    <td className="px-4 py-3 font-mono text-xs">
+                      {item.botUserId}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
@@ -378,7 +401,9 @@ export function SupportChannels() {
             </button>
             <span>Page {page}</span>
             <button
-              disabled={Boolean(data && page * (data.pageSize || 20) >= data.total)}
+              disabled={Boolean(
+                data && page * (data.pageSize || 20) >= data.total,
+              )}
               onClick={() => setPage((p) => p + 1)}
               className="h-8 px-2 rounded-md border border-gray-200 dark:border-white/10 disabled:opacity-50"
             >
@@ -390,4 +415,3 @@ export function SupportChannels() {
     </div>
   );
 }
-

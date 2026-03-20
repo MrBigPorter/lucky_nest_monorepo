@@ -91,7 +91,11 @@ export function OrdersClient() {
 
   // 2. Logic: Handle Status Updates
   const handleUpdateStatus = useCallback(
-    async (orderId: string, status: number, extraData: Record<string, unknown> = {}) => {
+    async (
+      orderId: string,
+      status: number,
+      extraData: Record<string, unknown> = {},
+    ) => {
       try {
         await updateStatusApi(orderId, status);
         addToast(
@@ -383,4 +387,3 @@ export function OrdersClient() {
     </div>
   );
 }
-
