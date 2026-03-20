@@ -33,6 +33,8 @@
 - [x] 影响评估：确认 Flutter 端无需协议改动（保持 `/chat/business` + `/chat/message/send`，Phase 1）
 - [x] 后端收口：`apps/api/src/common/events/events.gateway.ts` + `apps/api/src/common/events/listeners/*` 定向清理完成（error 清零，scoped ESLint 通过）
 - [x] 前端修复：`apps/admin-next/src/views/act-section/ActSectionBindProductModal.tsx` 修复 `ColumnDef` 类型报错 + `Cancel` 关闭行为 + 解绑按钮 loading 状态
+- [x] 前端修复：`apps/admin-next/src/components/ui/SmartImage.tsx` 修复 `ImageProps` 合并导致的 TS2322 类型报错（保持现有渲染行为）
+- [x] 后端收口：`apps/api/src/common/jwt/option-jwt.guard.ts` 清理 `OptionalJwtAuthGuard` lint 阻塞（scoped ESLint 通过）
 
 > 最后对齐时间：2026-03-20（夜间同步）。当前优先级已切换到 Phase 6-IM Phase 2（多客服渠道 + Admin UI），OAuth/Email 未完成项按顺延标记处理。
 
@@ -230,7 +232,6 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 | CI 缓存已禁用（GHA 存储不足），每次全量安装慢                     | 🟢 低 | 待迁移 Docker Hub 后重启缓存                                                                                   |
 | 引擎 binary 配置缺失导致容器崩溃                                  | 🔴 高 | ✅ Phase 6 已修复：`schema.prisma` 添加 `"linux-arm64-openssl-1.1.x"`；禁止单独挂载 `apps/api/node_modules` 卷 |
 | Prisma v6 breaking changes 导致 TS 错误                           | 🔴 高 | ✅ Phase 6 已修复：见二、关键技术约定 Prisma v6 规范                                                           |
-| 引擎 binary 配置缺失导致容器崩溃                                  | 🔴 高 | ✅ Phase 6 已修复：`schema.prisma` 添加 `"linux-arm64-openssl-1.1.x"`                                          |
 
 ---
 
