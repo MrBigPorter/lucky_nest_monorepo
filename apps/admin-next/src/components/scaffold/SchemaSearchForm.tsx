@@ -103,7 +103,7 @@ export const SchemaSearchForm = <T extends Record<string, any>>({
   };
 
   return (
-    <div className="p-4 mb-4 bg-white dark:bg-dark-800 rounded-lg border border-gray-100 dark:border-white/5">
+    <div className="p-4 mb-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-white/10">
       {/* 必须包裹在 Form 组件中，以便 FormTextField 等组件能获取上下文 */}
       <Form {...form}>
         <form
@@ -120,7 +120,12 @@ export const SchemaSearchForm = <T extends Record<string, any>>({
             <Button type="submit" isLoading={loading}>
               <Search size={16} className="mr-2" /> Search
             </Button>
-            <Button variant="outline" type="button" onClick={handleReset} aria-label="Reset">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={handleReset}
+              aria-label="Reset"
+            >
               <RotateCcw size={16} />
             </Button>
           </div>

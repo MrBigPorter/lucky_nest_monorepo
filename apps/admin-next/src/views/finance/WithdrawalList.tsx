@@ -29,12 +29,22 @@ const ChannelIcon = ({ code, name }: { code?: string; name?: string }) => {
       >
         {isBank ? <Landmark size={14} /> : <Wallet size={14} />}
       </div>
-      <span className="font-medium text-sm">{name || 'Unknown'}</span>
+      <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+        {name || 'Unknown'}
+      </span>
     </div>
   );
 };
 
-export const WithdrawalList: React.FC = () => {
+interface WithdrawalListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const WithdrawalList: React.FC<WithdrawalListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
 
   const handleAudit = useCallback((record: WithdrawOrder) => {
@@ -76,7 +86,7 @@ export const WithdrawalList: React.FC = () => {
         render: (dom, row) => (
           <div className="flex flex-col">
             <span>{dom}</span>
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">
               {row.thirdPartyOrderNo}
             </span>
           </div>
@@ -90,10 +100,10 @@ export const WithdrawalList: React.FC = () => {
           <div className="flex items-center gap-2">
             {/* 如果有头像组件最好 */}
             <div>
-              <div className="font-medium text-gray-900">
+              <div className="font-medium text-gray-900 dark:text-gray-100">
                 {row.user?.nickname || '-'}
               </div>
-              <div className="text-xs text-gray-500 font-mono">
+              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                 {row.user?.phone}
               </div>
             </div>
@@ -113,8 +123,10 @@ export const WithdrawalList: React.FC = () => {
         width: 160,
         render: (_, row) => (
           <div className="flex flex-col">
-            <span className="text-sm font-medium">{row.accountName}</span>
-            <span className="text-xs text-gray-500 font-mono">
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              {row.accountName}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
               {row.withdrawAccount}
             </span>
           </div>
@@ -133,7 +145,7 @@ export const WithdrawalList: React.FC = () => {
             </span>
             {/* 实付金额 (高亮显示) */}
             <div className="flex items-center gap-1 text-xs">
-              <span className="text-gray-400">Act:</span>
+              <span className="text-gray-400 dark:text-gray-500">Act:</span>
               <span className="font-medium text-primary-600">
                 {NumHelper.formatMoney(row.actualAmount)}
               </span>
@@ -221,6 +233,7 @@ export const WithdrawalList: React.FC = () => {
     // 处理参数
     const { dateRange, ...rest } = params;
     const requestData = { ...rest };
+    delete (requestData as Record<string, unknown>).tab;
 
     if (requestData.status === 'ALL') delete requestData.status;
 
@@ -246,6 +259,8 @@ export const WithdrawalList: React.FC = () => {
         ref={actionRef}
         columns={columns}
         searchSchema={searchSchema}
+        initialFormParams={initialFormParams}
+        onParamsChange={onParamsChange}
         request={requestWithdrawals}
       />
     </div>

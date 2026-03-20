@@ -35,26 +35,24 @@ export const createProductSchema = z.object({
   treasureCoverImg: imageFileSchema,
 
   // --- 2. 物流与拼团配置 ---
-  shippingType: z.coerce.number().default(1),
+  shippingType: z.coerce.number(),
   weight: z.coerce.number().optional(),
 
   groupSize: z.coerce
     .number()
-    .min(2, 'Group size must be at least 2')
-    .default(5),
+    .min(2, 'Group size must be at least 2'),
 
   groupTimeLimit: z.coerce
     .number()
-    .min(60, 'Time limit must be at least 60 seconds')
-    .default(86400),
+    .min(60, 'Time limit must be at least 60 seconds'),
 
-  enableRobot: z.boolean().optional().default(false),
+  enableRobot: z.boolean().optional(),
 
   // 机器人延迟 (秒)
   robotDelay: z.coerce.number().min(0).optional(),
 
   // 团长奖励类型
-  leaderBonusType: z.coerce.number().optional().default(0),
+  leaderBonusType: z.coerce.number().optional(),
 
   // --- 3. 销售时间 ---
   salesStartAt: z

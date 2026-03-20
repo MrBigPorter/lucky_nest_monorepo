@@ -164,6 +164,7 @@ export const SocketEvents = {
   GROUP_SUCCESS: "group_success",
   GROUP_FAILED: "group_failed",
   GROUP_UPDATE: "group_update", // 通用群组变动（如人员进出）
+  LUCKY_DRAW_TICKET_ISSUED: "lucky_draw_ticket_issued",
   WALLET_CHANGE: "wallet_change", // 余额变动通知
 
   // --- 好友/联系人业务 ---

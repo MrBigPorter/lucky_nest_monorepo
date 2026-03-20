@@ -14,6 +14,17 @@ import { AdminRegionModule } from '@api/admin/region/admin-region.module';
 import { ClientUserModule } from '@api/admin/client-user/client-user.module';
 import { AdminPaymentChannelModule } from '@api/admin/payment-channel/payment-channel.module';
 import { GroupAdminModule } from '@api/admin/group/groups.module';
+import { StatsModule } from '@api/admin/stats/stats.module';
+import { OperationLogModule } from '@api/admin/operation-log/operation-log.module';
+import { AdminNotificationModule } from '@api/admin/notification/notification.module';
+import { AdminChatModule } from '@api/admin/chat/admin-chat.module';
+import { LoginLogModule } from '@api/admin/login-log/login-log.module';
+import { SystemConfigModule } from '@api/admin/system-config/system-config.module';
+import { AdsModule } from '@api/admin/ads/ads.module';
+import { FlashSaleModule } from '@api/admin/flash-sale/flash-sale.module';
+import { RegisterApplicationModule } from '@api/admin/register-application/register-application.module';
+import { AdminLuckyDrawModule } from '@api/admin/lucky-draw/lucky-draw.module';
+import { SupportChannelModule } from '@api/admin/support-channel/support-channel.module';
 
 @Module({
   imports: [
@@ -32,6 +43,17 @@ import { GroupAdminModule } from '@api/admin/group/groups.module';
     ClientUserModule,
     AdminPaymentChannelModule,
     GroupAdminModule,
+    StatsModule,
+    OperationLogModule,
+    AdminNotificationModule,
+    AdminChatModule,
+    LoginLogModule,
+    SystemConfigModule,
+    AdsModule,
+    FlashSaleModule,
+    RegisterApplicationModule,
+    AdminLuckyDrawModule,
+    SupportChannelModule,
   ],
   providers: [],
   controllers: [],

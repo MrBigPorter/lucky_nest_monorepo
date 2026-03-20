@@ -40,6 +40,7 @@ apps/admin-next/test-results/
 .vercel
 
 # Build Outputs
+.open-next/
 .next/
 out/
 build
@@ -56,3 +57,5 @@ yarn-error.log*
 .DS_Store
 *.pem
 .idea/
+*.tsbuildinfo
+

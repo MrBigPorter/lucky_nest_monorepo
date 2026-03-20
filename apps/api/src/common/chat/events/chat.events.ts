@@ -8,6 +8,11 @@ export const CHAT_EVENTS = {
   MESSAGE_RECALLED: 'chat.message.recalled',
   /** 会话已读 [NEW] */
   CONVERSATION_READ: 'chat.conversation.read',
+  /**
+   * 官方客服会话被用户首次创建时触发（official_platform_support_v1）
+   * 用于实时通知在线 admin 有新的客服会话进来
+   */
+  SUPPORT_CONVERSATION_STARTED: 'chat.support.conversation.started',
 };
 
 export class MessageCreatedEvent {
@@ -26,6 +31,8 @@ export class MessageCreatedEvent {
     //  [新增] 必须补齐这些字段，否则前端会报错
     public readonly seqId: number,
     public readonly meta: any,
+    public readonly conversationType?: string,
+    public readonly businessId?: string,
     public readonly pushMemberIds?: string[], //only for push notification, can be omitted in Socket broadcast
   ) {}
 }
@@ -45,5 +52,14 @@ export class ConversationReadEvent {
     public readonly conversationId: string,
     public readonly readerId: string,
     public readonly lastReadSeqId: number,
+  ) {}
+}
+
+/** 官方客服新会话事件：通知在线 admin 有用户开启了客服对话 */
+export class SupportConversationStartedEvent {
+  constructor(
+    public readonly conversationId: string,
+    public readonly businessId: string,
+    public readonly userId: string, // 发起会话的用户 ID
   ) {}
 }

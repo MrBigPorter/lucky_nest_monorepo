@@ -1,8 +1,7 @@
 /**
  * E2E — 侧边栏 & 导航测试  (uses shared auth state)
  */
-import { test, expect } from '@playwright/test';
-import { waitForDashboard } from './fixtures';
+import { test, expect, waitForDashboard } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -10,15 +9,27 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Sidebar — 侧边栏导航', () => {
-  test('侧边栏显示 Overview、Management 分组', async ({ page }) => {
+  test('侧边栏显示 Overview、Users、Catalog、Commerce 分组', async ({
+    page,
+  }) => {
     const sidebar = page.locator('aside').first();
-    await expect(sidebar.getByText('Overview')).toBeVisible({ timeout: 15_000 });
-    await expect(sidebar.getByText('Management').first()).toBeVisible();
+    await expect(sidebar.getByText('Overview')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(sidebar.getByText('Users').first()).toBeVisible();
+    await expect(sidebar.getByText('Catalog').first()).toBeVisible();
+    await expect(sidebar.getByText('Commerce').first()).toBeVisible();
   });
 
-  test('侧边栏显示 Operations、System 分组', async ({ page }) => {
+  test('侧边栏显示 Marketing、Customer Service、Analytics、System 分组', async ({
+    page,
+  }) => {
     const sidebar = page.locator('aside').first();
-    await expect(sidebar.getByText('Operations')).toBeVisible({ timeout: 15_000 });
+    await expect(sidebar.getByText('Marketing')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(sidebar.getByText('Customer Service')).toBeVisible();
+    await expect(sidebar.getByText('Analytics')).toBeVisible();
     await expect(sidebar.getByText('System')).toBeVisible();
   });
 
@@ -31,15 +42,28 @@ test.describe('Sidebar — 侧边栏导航', () => {
     { name: 'Finance', path: '/finance/' },
     { name: 'Categories', path: '/categories/' },
     { name: 'Banners', path: '/banners/' },
+    // Phase 5
+    { name: 'Ads', path: '/ads/' },
+    { name: 'Flash Sale', path: '/flash-sale/' },
+    { name: 'Settings', path: '/settings/' },
+    { name: 'Customer Service', path: '/customer-service/' },
+    { name: 'Login Logs', path: '/login-logs/' },
+    { name: 'Analytics', path: '/analytics/' },
+    { name: 'Notifications', path: '/notifications/' },
+    { name: 'Roles', path: '/roles/' },
+    { name: 'Operation Logs', path: '/operation-logs/' },
   ];
 
   for (const route of routes) {
     test(`导航到 ${route.name} 不崩溃`, async ({ page }) => {
       await page.goto(route.path);
       await waitForDashboard(page, 45_000).catch(() => {});
-      await expect(page.locator('body')).not.toContainText('Application error', {
-        timeout: 10_000,
-      });
+      await expect(page.locator('body')).not.toContainText(
+        'Application error',
+        {
+          timeout: 10_000,
+        },
+      );
     });
   }
 });

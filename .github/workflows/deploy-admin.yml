@@ -1,116 +1,171 @@
 # ============================================================
-# Admin 前端部署到 Cloudflare Pages — admin-next (Next.js)
+# Admin 前端部署 — 构建 Docker 镜像推送 GHCR，SSH 部署到 VPS
 # ============================================================
-name: Deploy Admin to Cloudflare
+# 旧: 静态导出 → Cloudflare Pages
+# 新: standalone Node.js → Docker → VPS (admin-next 容器)
+# ============================================================
+name: Deploy Admin
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/admin-next/**'
-      - 'packages/shared/**'
-      - 'packages/ui/**'
+  # VPS 部署现在只作为回滚渠道，不再自动触发。
+  # 主渠道已切换到 Cloudflare Workers (deploy-admin-cloudflare.yml)。
+  # 通过 deploy-master.yml 手动触发，或直接 workflow_dispatch。
   workflow_dispatch:
   workflow_call:
 
 concurrency:
   group: deploy-admin
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/mrbigporter/lucky-admin-next-prod
 
 jobs:
-  deploy:
+  # =========================================
+  # 阶段一: 构建 + 推送镜像到 GHCR
+  # =========================================
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      deployments: write
+      packages: write
 
     steps:
-      # ================= 阶段 1：准备工作 =================
       - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: 2. Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 2. Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 3. Login to GHCR
+        uses: docker/login-action@v3
         with:
-          node-version: 20
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 3. Enable Corepack (Yarn 4)
-        run: corepack enable && corepack prepare yarn@4.9.2 --activate
-
-      - name: 4. Cache Yarn
-        uses: actions/cache@v4
+      - name: 4. Docker meta (生成标签)
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          path: |
-            .yarn/cache
-            .yarn/install-state.gz
-          key: yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ github.sha }}
+            type=sha,prefix=
+            type=raw,value=latest
 
-      - name: 5. Cache node_modules
-        uses: actions/cache@v4
-        id: nm-cache
+      - name: 5. Build & Push
+        uses: docker/build-push-action@v6
         with:
-          path: |
-            node_modules
-            apps/admin-next/node_modules
-            packages/ui/node_modules
-            packages/config/node_modules
-            packages/typescript-config/node_modules
-            packages/eslint-config/node_modules
-          key: nm-admin-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          context: .
+          file: ./apps/admin-next/Dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_APP_ENV=production
 
-      - name: 6. Install dependencies
-        if: steps.nm-cache.outputs.cache-hit != 'true'
-        run: yarn install --immutable
+  # =========================================
+  # 阶段二: SSH 部署到 VPS
+  # =========================================
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
 
-      # ================= 阶段 2：打包 =================
-      - name: 7. Build @lucky/shared
-        run: node packages/shared/scripts/build.js
+    steps:
+      - name: 0. Checkout Code
+        uses: actions/checkout@v4
 
-      - name: 8. Build @repo/ui (pre-build for fast Next.js compilation)
-        run: node packages/ui/scripts/build.js
+      - name: 0.1 Sync deploy scripts to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/*.sh"
+          target: /opt/lucky/deploy
+          overwrite: true
 
-      - name: 9. Build Admin Next (Next.js static export)
-        run: yarn workspace @lucky/admin-next build
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
         env:
-          NODE_ENV: production
-          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
-          NEXT_PUBLIC_APP_ENV: production
+          GHCR_TOKEN: ${{ secrets.VPS_GHCR_PAT }}
+          GHCR_USER: ${{ github.repository_owner }}
+          IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE
+          script: |
+            set -e
+            cd /opt/lucky
 
-      # ================= 阶段 3：部署到 Cloudflare =================
-      - name: 8. Install Wrangler
-        run: npm install -g wrangler@3
+            # 0. 确保同步后的脚本可执行
+            chmod +x deploy/*.sh || true
 
-      - name: 9. Create Cloudflare Project (首次自动建项目)
-        run: wrangler pages project create admin-next --production-branch=main || echo "项目已存在，跳过"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            # 1. 登录 GHCR
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-      - name: 10. Deploy to Cloudflare Pages
-        run: wrangler pages deploy apps/admin-next/out --project-name=admin-next --commit-dirty=true
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            # 2. 拉取新镜像
+            echo "→ 拉取镜像: $IMAGE"
+            docker pull "$IMAGE"
 
-      # ================= 阶段 4：通知 =================
-      - name: 11. GitHub Summary
-        run: |
-          echo "### ✅ Admin Next 部署完成" >> $GITHUB_STEP_SUMMARY
-          echo "- **项目**: admin-next (Next.js)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: https://admin.joyminis.com" >> $GITHUB_STEP_SUMMARY
+            # 3. 保存当前镜像 (用于回滚)
+            PREV_IMAGE=$(docker inspect lucky-admin-next-prod \
+              --format '{{.Config.Image}}' 2>/dev/null || echo "")
 
-      - name: 12. 📱 Telegram Notification
+            # 4. 用新镜像重启 admin-next
+            echo "→ 重启 admin-next 容器..."
+            ADMIN_IMAGE="$IMAGE" docker compose -f compose.prod.yml \
+              --env-file deploy/.env.prod \
+              up -d --no-build --force-recreate admin-next
+
+            # 5. 健康检查 (最多等 60 秒)
+            echo "→ 等待健康检查..."
+            HEALTHY=false
+            for i in $(seq 1 20); do
+              if docker exec lucky-admin-next-prod wget -qO- http://localhost:3001/ >/dev/null 2>&1; then
+                echo "✅ 健康检查通过 (第 ${i} 次, 约 $((i*3))s)"
+                HEALTHY=true
+                break
+              fi
+              sleep 3
+            done
+
+            # 6. 健康检查失败 → 自动回滚
+            if [ "$HEALTHY" = false ]; then
+              echo "❌ 健康检查超时! 正在回滚..."
+              docker logs --tail=50 lucky-admin-next-prod
+              if [ -n "$PREV_IMAGE" ]; then
+                ADMIN_IMAGE="$PREV_IMAGE" docker compose -f compose.prod.yml \
+                  --env-file deploy/.env.prod \
+                  up -d --no-build --force-recreate admin-next
+                echo "⚠️  已回滚到旧版本！"
+              fi
+              exit 1
+            fi
+
+            # 7. 清理旧镜像
+            docker image prune -f
+
+      # =========================================
+      # 阶段三: Telegram 通知
+      # =========================================
+      - name: 📱 Send Telegram Notification
         if: always()
         run: |
           STATUS_EMOJI="✅ 成功 (Success)"
           if [ "${{ job.status }}" != "success" ]; then
             STATUS_EMOJI="❌ 失败 (Failed)"
           fi
+
           MESSAGE="🌐 *Admin Next 部署报告*
           📌 *状态*: $STATUS_EMOJI
-          🏷️ *环境*: Production (Cloudflare)
+          🏷️ *环境*: Production (VPS)
           🔗 *访问*: [admin.joyminis.com](https://admin.joyminis.com)
           📝 *Commit ID*: \`${{ github.sha }}\`"
 
@@ -118,3 +173,4 @@ jobs:
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "text=$MESSAGE" \
             -d "parse_mode=Markdown"
+

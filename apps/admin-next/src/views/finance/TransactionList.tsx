@@ -1,345 +1,230 @@
 'use client';
 
-import React, { useMemo, useCallback, useEffect } from 'react';
-import { useAntdTable } from 'ahooks';
-import { createColumnHelper } from '@tanstack/react-table';
-import { ArrowRightLeft, Plus, RefreshCw, EyeIcon } from 'lucide-react';
-import { Button, ModalManager } from '@repo/ui';
-import { Badge, Card } from '@/components/UIComponents';
-import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
-import { BaseTable } from '@/components/scaffold/BaseTable';
+import React, { useRef, useMemo, useCallback } from 'react';
+import { Badge } from '@repo/ui';
+import {
+  SmartTable,
+  ProColumns,
+  ActionType,
+} from '@/components/scaffold/SmartTable';
 import { financeApi } from '@/api';
-import { ManualAdjustModal } from './ManualAdjustModal';
-import {
-  TransactionSearchForm,
-  TransactionsListParams,
-  WalletTransaction,
-} from '@/type/types';
-import {
-  NumHelper,
-  TimeHelper,
-  TRANSACTION_TYPE,
-  TRANSACTION_TYPE_LABEL,
-  // 假设你在 shared 中有这些定义，如果没有，请参考代码下方的常量补充
-  BALANCE_TYPE,
-  TRANSACTION_STATUS,
-  BALANCE_TYPE_LABEL,
-} from '@lucky/shared';
-import { TransactionDetailModal } from '@/views/finance/TransactionDetailModal';
+import { TransactionsListParams, WalletTransaction } from '@/type/types';
+import { TRANSACTION_TYPE, NumHelper } from '@lucky/shared';
+import { ArrowDownRight, ArrowUpRight, Repeat } from 'lucide-react';
+import { FormSchema } from '@/type/search';
 
-// --- 补充常量定义 (如果 shared 包里没有，请取消注释使用) ---
-/*
-const BALANCE_TYPE = { CASH: 1, COIN: 2 };
-const TRANSACTION_STATUS = { PENDING: 1, SUCCESS: 2, FAILED: 3 };
-*/
+// Build a local options array from the shared enum (no TRANSACTION_TYPES_OPTIONS in shared)
+const TRANSACTION_TYPE_OPTIONS = Object.entries(TRANSACTION_TYPE).map(
+  ([key, value]) => ({ label: key, value }),
+);
 
-export const TransactionList: React.FC = () => {
-  // 1. 数据获取逻辑
-  const getTableData = async (
-    { current, pageSize }: { current: number; pageSize: number },
-    formData: TransactionSearchForm,
-  ) => {
-    const query = formData || {};
+interface TransactionListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
 
-    const params: TransactionsListParams = {
-      page: current,
-      pageSize,
-    };
+export const TransactionList: React.FC<TransactionListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
+  const actionRef = useRef<ActionType>(null);
 
-    // 组装查询参数
-    if (query.transactionNo) params.transactionNo = query.transactionNo;
-    if (query.userId) params.userId = query.userId;
-    if (query.startDate) params.startDate = query.startDate;
-    if (query.endDate) params.endDate = query.endDate;
-
-    // 类型过滤
-    if (query.type && query.type !== 'ALL') {
-      params.type = query.type;
-    }
-
-    const res = await financeApi.getTransactions(params);
-
-    return {
-      list: res.list || [],
-      total: res.total || 0,
-    };
+  const AmountDisplay = ({
+    amount,
+    type,
+  }: {
+    amount: string | number;
+    type: number;
+  }) => {
+    const isIncome =
+      type === TRANSACTION_TYPE.RECHARGE ||
+      type === TRANSACTION_TYPE.REWARD ||
+      type === TRANSACTION_TYPE.INVITE_REWARD ||
+      type === TRANSACTION_TYPE.REFUND;
+    const color = isIncome ? 'text-emerald-500' : 'text-rose-500';
+    const sign = isIncome ? '+' : '-';
+    return (
+      <div className={`font-mono font-bold ${color}`}>
+        {sign}
+        {NumHelper.formatMoney(amount)}
+      </div>
+    );
   };
 
-  // 2. 使用 ahooks 管理表格状态
-  const {
-    tableProps,
-    run,
-    search: { reset },
-    refresh,
-  } = useAntdTable(getTableData, {
-    manual: true, // 手动触发首次请求，防止参数未初始化
-    defaultPageSize: 10,
-    defaultParams: [
-      { current: 1, pageSize: 10 },
+  const columns: ProColumns<WalletTransaction>[] = useMemo(
+    () => [
       {
-        transactionNo: '',
-        userId: '',
-        type: 'ALL',
-        startDate: '',
-        endDate: '',
+        title: 'Transaction No.',
+        dataIndex: 'transactionNo',
+        copyable: true,
+        width: 180,
       },
-    ],
-  });
-
-  const handleViewDetail = useCallback((record: WalletTransaction) => {
-    ModalManager.open({
-      title: 'Transaction Details',
-      renderChildren: ({ close }) => (
-        <TransactionDetailModal data={record} close={close} />
-      ),
-    });
-  }, []);
-
-  // 搜索处理
-  const handleSearch = (values: TransactionSearchForm) => {
-    run({ current: 1, pageSize: 10 }, values);
-  };
-
-  // 打开人工调账弹窗
-  const handleOpenAdjust = useCallback(() => {
-    ModalManager.open({
-      title: 'Manual Fund Adjustment',
-      renderChildren: ({ close, confirm }) => (
-        <ManualAdjustModal
-          close={close}
-          confirm={() => {
-            confirm();
-            refresh();
-          }}
-        />
-      ),
-    });
-  }, [refresh]);
-
-  // 首次加载触发
-  useEffect(() => {
-    // 确保组件挂载时带默认参数请求一次
-    reset();
-  }, [reset]);
-
-  const dataSource = (tableProps.dataSource || []) as WalletTransaction[];
-
-  // 3. 列定义 (核心业务展示)
-  const columns = useMemo(() => {
-    const helper = createColumnHelper<WalletTransaction>();
-
-    return [
-      // --- Column: Transaction Info ---
-      helper.accessor('transactionNo', {
-        header: 'Trans No. / Ref',
-        cell: (info) => (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-mono text-xs font-medium text-gray-700 dark:text-gray-200">
-              {info.getValue()}
+      {
+        title: 'User Info',
+        dataIndex: 'user',
+        width: 150,
+        render: (_, row) => (
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-900 dark:text-gray-100">
+              {row.user?.nickname || '-'}
             </span>
-            {/* 展示关联单号 (如订单号、提现单号) */}
-            {info.row.original.relatedId && (
-              <span className="font-mono text-[10px] text-gray-400">
-                Ref: {info.row.original.relatedId}
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              {row.user?.phone}
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: 'Type',
+        dataIndex: 'transactionType',
+        width: 120,
+        valueType: 'select',
+        valueEnum: TRANSACTION_TYPE_OPTIONS.reduce(
+          (acc: Record<number, { text: string }>, item) => {
+            acc[item.value] = { text: item.label };
+            return acc;
+          },
+          {},
+        ),
+        render: (_, row) => {
+          let icon = <Repeat size={14} className="mr-1 inline" />;
+          let color: 'default' | 'success' | 'warning' | 'error' | 'info' =
+            'default';
+
+          if (row.transactionType === TRANSACTION_TYPE.RECHARGE) {
+            icon = <ArrowDownRight size={14} className="mr-1 inline" />;
+            color = 'success';
+          } else if (row.transactionType === TRANSACTION_TYPE.WITHDRAWAL) {
+            icon = <ArrowUpRight size={14} className="mr-1 inline" />;
+            color = 'warning';
+          }
+
+          const label =
+            TRANSACTION_TYPE_OPTIONS.find(
+              (o) => o.value === row.transactionType,
+            )?.label || String(row.transactionType);
+
+          return (
+            <Badge variant="outline" color={color}>
+              {icon}
+              {label}
+            </Badge>
+          );
+        },
+      },
+      {
+        title: 'Amount (Cash)',
+        dataIndex: 'amount',
+        width: 140,
+        align: 'right',
+        render: (_, row) => (
+          <AmountDisplay amount={row.amount} type={row.transactionType} />
+        ),
+      },
+      {
+        title: 'Balance After',
+        dataIndex: 'afterBalance',
+        width: 120,
+        align: 'right',
+        render: (dom) => (
+          <span className="font-mono text-gray-600 dark:text-gray-300">
+            {NumHelper.formatMoney(dom as string)}
+          </span>
+        ),
+      },
+      {
+        title: 'Remark / Ref',
+        dataIndex: 'remark',
+        width: 200,
+        render: (_, row) => (
+          <div className="flex flex-col">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {row.remark || '-'}
+            </span>
+            {row.relatedId && (
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-1">
+                Ref: {row.relatedId}
               </span>
             )}
           </div>
         ),
-      }),
+      },
+      {
+        title: 'Time',
+        dataIndex: 'createdAt',
+        valueType: 'dateTime',
+        width: 160,
+        sorter: true,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
-      // --- Column: User ---
-      helper.accessor('user', {
-        header: 'User',
-        cell: (info) => (
-          <div className="flex flex-col">
-            <span className="font-medium text-sm text-gray-900 dark:text-white">
-              {info.getValue()?.nickname || 'Unknown'}
-            </span>
-            <span className="text-xs text-gray-400">
-              {info.getValue()?.phone}
-            </span>
-          </div>
-        ),
-      }),
-
-      // --- Column: Asset Type (Cash vs Coin) ---
-      helper.accessor('balanceType', {
-        header: 'Asset',
-        cell: (info) => {
-          const type = info.getValue();
-          const isCash = type === BALANCE_TYPE?.CASH;
-          return (
-            <Badge color={isCash ? 'green' : 'yellow'}>
-              {BALANCE_TYPE_LABEL[type] || '--'}
-            </Badge>
-          );
+  const searchSchema: FormSchema[] = useMemo(
+    () => [
+      {
+        type: 'input',
+        key: 'keyword',
+        label: 'Search',
+        placeholder: 'Transaction No / Phone / User',
+      },
+      {
+        type: 'select',
+        key: 'transactionType',
+        label: 'Type',
+        defaultValue: 'ALL',
+        options: [
+          { label: 'All Types', value: 'ALL' },
+          ...TRANSACTION_TYPE_OPTIONS.map((opt) => ({
+            label: opt.label,
+            value: String(opt.value),
+          })),
+        ],
+      },
+      {
+        type: 'date',
+        key: 'dateRange',
+        label: 'Time Range',
+        props: {
+          placeholder: ['Start Date', 'End Date'],
         },
-      }),
+      },
+    ],
+    [],
+  );
 
-      // --- Column: Transaction Type ---
-      helper.accessor('transactionType', {
-        header: 'Type',
-        cell: (info) => (
-          <Badge color="blue">
-            {TRANSACTION_TYPE_LABEL[info.getValue()] || 'Unknown'}
-          </Badge>
-        ),
-      }),
+  const requestTransactions = useCallback(
+    async (params: TransactionsListParams) => {
+      const { ...rest } = params;
+      const requestData: Partial<TransactionsListParams> = { ...rest };
 
-      // --- Column: Amount & Status ---
-      helper.accessor('amount', {
-        header: 'Amount',
-        cell: (info) => {
-          const val = Number(info.getValue());
-          const status = info.row.original.status;
-          // 假设 2=SUCCESS (请根据你的 TRANSACTION_STATUS 常量调整)
-          const isSuccess =
-            status === TRANSACTION_STATUS?.SUCCESS || status === 2;
+      if ((requestData as Record<string, unknown>).transactionType === 'ALL') {
+        delete (requestData as Record<string, unknown>).transactionType;
+      }
 
-          return (
-            <div className="flex flex-col">
-              <span
-                className={`font-mono font-bold ${val > 0 ? 'text-emerald-600' : 'text-red-600'}`}
-              >
-                {val > 0 ? '+' : ''}
-                {NumHelper.formatMoney(val)}
-              </span>
-
-              {/* 如果状态不是成功，显示红色警告标签 */}
-              {!isSuccess && (
-                <span className="text-[10px] font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-1 rounded w-fit mt-0.5">
-                  FAILED
-                </span>
-              )}
-            </div>
-          );
-        },
-      }),
-
-      // --- Column: Balance Snapshot ---
-      helper.accessor('afterBalance', {
-        header: 'After Balance',
-        cell: (info) => (
-          <span className="text-gray-500 text-xs font-mono">
-            {NumHelper.formatMoney(info.getValue())}
-          </span>
-        ),
-      }),
-
-      // --- Column: Time ---
-      helper.accessor('createdAt', {
-        header: 'Time',
-        cell: (info) => (
-          <span className="text-gray-400 text-xs whitespace-nowrap">
-            {TimeHelper.formatDateTime(info.getValue())}
-          </span>
-        ),
-      }),
-
-      helper.display({
-        id: 'actions',
-        header: 'Action',
-        cell: (info) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-gray-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20"
-            onClick={() => handleViewDetail(info.row.original)}
-            title="View Details"
-          >
-            <EyeIcon size={16} />
-          </Button>
-        ),
-      }),
-    ];
-  }, [handleViewDetail]);
+      const res = await financeApi.getTransactions(requestData);
+      return {
+        data: res.list,
+        total: res.total,
+        success: true,
+      };
+    },
+    [],
+  );
 
   return (
-    <Card className="border-none shadow-sm bg-white dark:bg-dark-900">
-      {/* Header Area */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-          <h3 className="text-lg font-bold flex items-center gap-2 text-gray-900 dark:text-white">
-            <ArrowRightLeft size={20} className="text-primary-500" />
-            Transactions Log
-          </h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Monitor real-time financial flow and audit adjustments.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={refresh}>
-            <RefreshCw size={16} />
-          </Button>
-          <Button variant="primary" size="sm" onClick={handleOpenAdjust}>
-            <Plus size={16} className="mr-1" /> Manual Adjust
-          </Button>
-        </div>
-      </div>
-
-      {/* Search Form */}
-      <SchemaSearchForm
-        schema={[
-          {
-            type: 'input',
-            key: 'transactionNo',
-            label: 'Trans No. / Ref',
-            placeholder: 'Search ID...',
-          },
-          {
-            type: 'input',
-            key: 'userId',
-            label: 'User ID',
-          },
-          {
-            type: 'select',
-            key: 'type',
-            label: 'Type',
-            defaultValue: 'ALL',
-            options: [
-              { label: 'All Types', value: 'ALL' },
-              ...Object.entries(TRANSACTION_TYPE).map(([k, v]) => ({
-                label: k, // 这里可以使用 map 转换成中文
-                value: String(v),
-              })),
-            ],
-          },
-          {
-            type: 'date',
-            key: 'startDate',
-            label: 'Start Date',
-            mode: 'single', // 使用你刚刚修复好的单选模式
-          },
-          {
-            type: 'date',
-            key: 'endDate',
-            label: 'End Date',
-            mode: 'single',
-          },
-        ]}
-        onSearch={handleSearch}
-        onReset={reset}
+    <div className="p-4">
+      <SmartTable<WalletTransaction>
+        rowKey="id"
+        headerTitle="Wallet Transactions"
+        ref={actionRef}
+        columns={columns}
+        searchSchema={searchSchema}
+        initialFormParams={initialFormParams}
+        onParamsChange={onParamsChange}
+        request={requestTransactions}
       />
-
-      {/* Data Table */}
-      <div className="mt-4">
-        <BaseTable
-          data={dataSource}
-          columns={columns}
-          rowKey="transactionNo"
-          loading={tableProps.loading}
-          pagination={{
-            ...tableProps.pagination,
-            showSizeChanger: true,
-            onChange: (page, pageSize) => {
-              tableProps.onChange?.({
-                current: page,
-                pageSize: pageSize || 10,
-              });
-            },
-          }}
-        />
-      </div>
-    </Card>
+    </div>
   );
 };

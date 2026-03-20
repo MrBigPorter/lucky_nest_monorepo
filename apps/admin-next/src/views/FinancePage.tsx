@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TransactionList } from './finance/TransactionList';
 import { WithdrawalList } from './finance/WithdrawalList';
 import { DepositList } from './finance/DepositList';
@@ -16,10 +16,37 @@ import {
 import { NumHelper } from '@lucky/shared';
 import { useRequest } from 'ahooks';
 import { financeApi } from '@/api';
-export const FinancePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<
-    'deposits' | 'transactions' | 'withdrawals'
-  >('transactions');
+
+interface FinancePageProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+type FinanceTab = 'deposits' | 'transactions' | 'withdrawals';
+
+const isFinanceTab = (value: unknown): value is FinanceTab =>
+  value === 'deposits' || value === 'transactions' || value === 'withdrawals';
+
+export const FinancePage: React.FC<FinancePageProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
+  const initialTab = isFinanceTab(initialFormParams?.tab)
+    ? initialFormParams.tab
+    : 'transactions';
+  const [activeTab, setActiveTab] = useState<FinanceTab>(initialTab);
+
+  // `tab` is page UI state only; do not pass it into list query params.
+  const listInitialParams = useMemo(() => {
+    const rest = { ...(initialFormParams ?? {}) };
+    delete rest.tab;
+    return rest;
+  }, [initialFormParams]);
+
+  // 当 Tab 切换时同步更新 URL
+  useEffect(() => {
+    onParamsChange?.({ tab: activeTab });
+  }, [activeTab, onParamsChange]);
 
   const {
     data: statistics,
@@ -121,10 +148,24 @@ export const FinancePage: React.FC = () => {
         </div>
 
         {/* 3. 内容区域容器 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 min-h-[600px] transition-all">
-          {activeTab === 'deposits' && <DepositList />}
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-white/10 min-h-[600px] transition-all">
+          {activeTab === 'deposits' && (
+            <DepositList
+              initialFormParams={listInitialParams}
+              onParamsChange={(params) =>
+                onParamsChange?.({ ...params, tab: 'deposits' })
+              }
+            />
+          )}
           {activeTab === 'transactions' && <TransactionList />}
-          {activeTab === 'withdrawals' && <WithdrawalList />}
+          {activeTab === 'withdrawals' && (
+            <WithdrawalList
+              initialFormParams={listInitialParams}
+              onParamsChange={(params) =>
+                onParamsChange?.({ ...params, tab: 'withdrawals' })
+              }
+            />
+          )}
         </div>
       </div>
     </div>
@@ -232,13 +273,13 @@ const TabButton = ({
     `}
   >
     <span
-      className={`transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}
+      className={`transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300'}`}
     >
       {icon}
     </span>
     {label}
     {badge && (
-      <span className="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-[10px] font-bold uppercase tracking-wide">
+      <span className="ml-2 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-300 py-0.5 px-2 rounded-full text-[10px] font-bold uppercase tracking-wide">
         {badge}
       </span>
     )}

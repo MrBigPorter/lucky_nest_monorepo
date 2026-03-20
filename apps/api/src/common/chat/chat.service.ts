@@ -1,12 +1,12 @@
 import {
   BadRequestException,
   ForbiddenException,
-  Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import {
   ChatMemberRole,
   CONVERSATION_TYPE,
@@ -36,14 +36,13 @@ import {
   MessageCreatedEvent,
   MessageRecalledEvent,
 } from '@api/common/chat/events/chat.events';
-import {
-  CHAT_GROUP_EVENTS,
-  GroupMemberJoinedEvent,
-} from '@api/common/chat/events/chat-group.events';
+
+import { CHAT_GROUP_EVENTS } from '@api/common/chat/events/chat-group.events';
 import { ForwardMessageDto } from '@api/common/chat/dto/forward-message.dto';
 import { ConfigService } from '@nestjs/config';
 
-@Injectable()
+const SUPPORT_CONVERSATION_STARTED = 'chat.support.conversation.started';
+
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
@@ -100,40 +99,48 @@ export class ChatService {
       if (meta?.thumb) finalMeta.thumb = meta.thumb;
     }
 
-    const message = await this.prisma.$transaction(async (tx) => {
-      const conv = await tx.conversation.update({
-        where: { id: conversationId },
-        data: {
-          lastMsgSeqId: { increment: 1 },
-          lastMsgContent: this._getPreviewText(type, content),
-          lastMsgType: type,
-          lastMsgTime: new Date(),
-        },
-        select: { lastMsgSeqId: true },
-      });
+    const { message, conversationMeta } = await this.prisma.$transaction(
+      async (tx) => {
+        const conv = await tx.conversation.update({
+          where: { id: conversationId },
+          data: {
+            lastMsgSeqId: { increment: 1 },
+            lastMsgContent: this._getPreviewText(type, content),
+            lastMsgType: type,
+            lastMsgTime: new Date(),
+          },
+          select: { lastMsgSeqId: true, type: true, businessId: true },
+        });
 
-      const msg = await tx.chatMessage.create({
-        data: {
-          id,
-          conversationId,
-          senderId: userId,
-          content,
-          type,
-          meta: Object.keys(finalMeta).length > 0 ? finalMeta : undefined,
-          seqId: conv.lastMsgSeqId,
-        },
-        include: {
-          sender: { select: { id: true, nickname: true, avatar: true } },
-        },
-      });
+        const msg = await tx.chatMessage.create({
+          data: {
+            id,
+            conversationId,
+            senderId: userId,
+            content,
+            type,
+            meta: Object.keys(finalMeta).length > 0 ? finalMeta : undefined,
+            seqId: conv.lastMsgSeqId,
+          },
+          include: {
+            sender: { select: { id: true, nickname: true, avatar: true } },
+          },
+        });
 
-      await tx.chatMember.updateMany({
-        where: { conversationId, userId },
-        data: { lastReadSeqId: conv.lastMsgSeqId },
-      });
+        await tx.chatMember.updateMany({
+          where: { conversationId, userId },
+          data: { lastReadSeqId: conv.lastMsgSeqId },
+        });
 
-      return msg;
-    });
+        return {
+          message: msg,
+          conversationMeta: {
+            type: conv.type,
+            businessId: conv.businessId ?? undefined,
+          },
+        };
+      },
+    );
 
     const messageDto = {
       ...message,
@@ -168,6 +175,8 @@ export class ChatService {
         memberIds,
         message.seqId,
         message.meta,
+        conversationMeta.type,
+        conversationMeta.businessId,
         pushMemberIds,
       ),
     );
@@ -203,9 +212,10 @@ export class ChatService {
           meta: originalMsg.meta as Record<string, any>,
         });
         results.push({ conversationId: targetConvId, message: newMessage });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `Failed to forward message to conversation ${targetConvId}: ${error.message}`,
+          `Failed to forward message to conversation ${targetConvId}: ${message}`,
         );
       }
     }
@@ -329,40 +339,35 @@ export class ChatService {
       throw new BadRequestException('Invalid conversationId');
     }
 
-    try {
-      // 1. 数据库逻辑
-      const conversation = await this.prisma.conversation.findUnique({
-        where: { id: conversationId },
-        select: { lastMsgSeqId: true },
-      });
+    // 1. 数据库逻辑
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { lastMsgSeqId: true },
+    });
 
-      if (!conversation) {
-        throw new NotFoundException('Conversation not found');
-      }
-
-      const targetSeqId = maxSeqId
-        ? Math.min(maxSeqId, conversation.lastMsgSeqId)
-        : conversation.lastMsgSeqId;
-
-      const updatedMember = await this.prisma.chatMember.update({
-        where: {
-          conversationId_userId: { conversationId, userId },
-        },
-        data: { lastReadSeqId: targetSeqId },
-        select: { lastReadSeqId: true },
-      });
-
-      //  [Refactor] 触发事件，而不是直接调 Socket
-      this.eventEmitter.emit(
-        CHAT_EVENTS.CONVERSATION_READ,
-        new ConversationReadEvent(conversationId, userId, targetSeqId),
-      );
-
-      return { lastReadSeqId: updatedMember.lastReadSeqId };
-    } catch (error: any) {
-      this.logger.error(`[MarkAsRead Error] ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Failed to mark messages as read');
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
     }
+
+    const targetSeqId = maxSeqId
+      ? Math.min(maxSeqId, conversation.lastMsgSeqId)
+      : conversation.lastMsgSeqId;
+
+    const updatedMember = await this.prisma.chatMember.update({
+      where: {
+        conversationId_userId: { conversationId, userId },
+      },
+      data: { lastReadSeqId: targetSeqId },
+      select: { lastReadSeqId: true },
+    });
+
+    //  [Refactor] 触发事件，而不是直接调 Socket
+    this.eventEmitter.emit(
+      CHAT_EVENTS.CONVERSATION_READ,
+      new ConversationReadEvent(conversationId, userId, targetSeqId),
+    );
+
+    return { lastReadSeqId: updatedMember.lastReadSeqId };
   }
 
   // =================================================================
@@ -383,7 +388,10 @@ export class ChatService {
     const directIds = conversations
       .filter((c) => c.type === CONVERSATION_TYPE.DIRECT)
       .map((c) => c.id);
-    const partnersMap = new Map();
+    const partnersMap = new Map<
+      string,
+      { nickname: string | null; avatar: string | null }
+    >();
     if (directIds.length > 0) {
       const partners = await this.prisma.chatMember.findMany({
         where: { conversationId: { in: directIds }, userId: { not: userId } },
@@ -546,7 +554,7 @@ export class ChatService {
       select: { lastReadSeqId: true },
     });
 
-    const whereCondition: any = {
+    const whereCondition: Prisma.ChatMessageWhereInput = {
       conversationId,
       hiddenByUsers: { none: { userId } },
       seqId: { gt: clearedSeqId }, // find messages with seqId greater than clearedSeqId to implement clear history
@@ -623,46 +631,92 @@ export class ChatService {
 
     return { success: true, isPinned };
   }
-
   // =================================================================
   //  GROUP & MEMBERSHIP (Business, Direct, Group)
   // =================================================================
 
-  async ensureBusinessConversation(businessId: string) {
-    const existing = await this.prisma.conversation.findFirst({
-      where: { businessId },
-    });
-    if (existing) return existing;
-    return this.prisma.conversation.create({
-      data: {
-        type: CONVERSATION_TYPE.BUSINESS,
-        businessId,
-        name: `Business Official`,
-        status: ConversationStatus.NORMAL,
-        lastMsgContent: 'Welcome!',
-        lastMsgTime: new Date(),
-      },
-    });
-  }
-
   /**
-   * 将用户加入到业务群聊中（如果群聊不存在则创建），并设置为普通成员
+   * 客户端统一入口：/chat/business?businessId=xxx
+   * 现阶段用于客服渠道建联：按 SupportChannel 查 botUserId，创建/复用 SUPPORT 1v1 会话。
+   * 返回当前用户在该会话中的 ChatMember。
    * @param businessId
    * @param userId
    */
   async addMemberToBusinessGroup(businessId: string, userId: string) {
-    const conversation = await this.ensureBusinessConversation(businessId);
-    return this.prisma.chatMember.upsert({
-      where: {
-        conversationId_userId: { conversationId: conversation.id, userId },
-      },
-      update: { role: ChatMemberRole.MEMBER },
-      create: {
-        conversationId: conversation.id,
-        userId,
-        role: ChatMemberRole.MEMBER,
+    const channel = await this.prisma.supportChannel.findUnique({
+      where: { id: businessId },
+      include: {
+        botUser: {
+          select: { id: true, nickname: true, avatar: true, isRobot: true },
+        },
       },
     });
+    if (!channel || !channel.isActive) {
+      throw new NotFoundException('Support channel not found or inactive');
+    }
+
+    const existingConversation = await this.prisma.conversation.findFirst({
+      where: {
+        type: CONVERSATION_TYPE.SUPPORT,
+        // 只复用「正常」状态的会话；CLOSED(status=2) 的旧会话不复用，
+        // 让用户在 Admin 关闭对话后可以重新发起一个全新的客服会话。
+        status: ConversationStatus.NORMAL,
+        AND: [
+          { members: { some: { userId } } },
+          { members: { some: { userId: channel.botUserId } } },
+        ],
+      },
+      include: { members: { where: { userId }, take: 1 } },
+    });
+
+    const existingMember = existingConversation?.members.find(
+      (m) => m.userId === userId,
+    );
+    if (existingMember) {
+      return existingMember;
+    }
+
+    const member = await this.prisma.$transaction(async (tx) => {
+      const conversation = await tx.conversation.create({
+        data: {
+          type: CONVERSATION_TYPE.SUPPORT,
+          name: channel.name,
+          avatar: channel.botUser.avatar,
+          status: ConversationStatus.NORMAL,
+          lastMsgContent: 'Welcome!',
+          lastMsgTime: new Date(),
+          members: {
+            create: [
+              { userId, role: ChatMemberRole.MEMBER },
+              { userId: channel.botUserId, role: ChatMemberRole.MEMBER },
+            ],
+          },
+        },
+        include: { members: { where: { userId }, take: 1 } },
+      });
+
+      const createdMember = conversation.members.find(
+        (m) => m.userId === userId,
+      );
+      if (!createdMember) {
+        throw new InternalServerErrorException(
+          'Failed to create support member',
+        );
+      }
+      return createdMember;
+    });
+
+    this.eventEmitter.emit(
+      (CHAT_EVENTS as Record<string, string>).SUPPORT_CONVERSATION_STARTED ??
+        SUPPORT_CONVERSATION_STARTED,
+      {
+        conversationId: member.conversationId,
+        businessId,
+        userId,
+      },
+    );
+
+    return member;
   }
 
   /**
@@ -720,7 +774,7 @@ export class ChatService {
     const newMembers = memberIds.filter((id) => !existingSet.has(id));
     if (newMembers.length > 0) {
       // 1. 数据库操作
-      const createdMembers = await this.prisma.$transaction(async (tx) => {
+      await this.prisma.$transaction(async (tx) => {
         await tx.chatMember.createMany({
           data: newMembers.map((uid) => ({
             conversationId: groupId,
@@ -811,6 +865,7 @@ export class ChatService {
       where: {
         AND: [
           { id: { not: myUserId } },
+          { isRobot: false },
           {
             OR: [
               { nickname: { contains: dto.keyword, mode: 'insensitive' } },
@@ -828,7 +883,7 @@ export class ChatService {
   // =================================================================
   //  WEBRTC: Get Dynamic ICE Servers (Secure)
   // =================================================================
-  async getIceServers(userId: string) {
+  getIceServers(userId: string) {
     // 1. 从 .env 获取配置
     const secret = this.configService.get<string>('TURN_SECRET');
     const turnUrl = this.configService.get<string>('TURN_URL');
@@ -847,11 +902,10 @@ export class ChatService {
     const turnUsername = `${timestamp}:${userId}`;
 
     // 4. 使用 HMAC-SHA1 算法生成密码 (这是 Coturn 的标准算法)
-    const hmac = crypto.createHmac('sha1', secret);
-    hmac.setEncoding('base64');
-    hmac.write(turnUsername);
-    hmac.end();
-    const turnPassword = hmac.read().toString();
+    const turnPassword = crypto
+      .createHmac('sha1', secret)
+      .update(turnUsername)
+      .digest('base64');
     // 5. 返回给前端的格式
     return [
       // 免费的 Google STUN 服务 (用于打洞)
@@ -906,8 +960,9 @@ export class ChatService {
           jobId: `chat_avatar_${conversationId}`,
         },
       )
-      .catch((err) => {
-        console.error(`[Chat Avatar Queue ERROR] ${err.message}`);
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[Chat Avatar Queue ERROR] ${message}`);
       });
   }
 }

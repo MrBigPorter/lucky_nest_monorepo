@@ -1,14 +1,19 @@
 /**
- * E2E — Act Section Management (/act/section)
+ * E2E — Act Section Management (/act-sections)
  *
  * 覆盖: 页面加载  Section 列表  搜索  Create 按钮  弹窗
  */
-import { test, expect } from '@playwright/test';
-import { expectNoError, dismissDevOverlay, waitForDashboard } from './fixtures';
+import {
+  test,
+  expect,
+  expectNoError,
+  dismissDevOverlay,
+  waitForDashboard,
+} from './fixtures';
 
-const PATH = '/act/section/';
+const PATH = '/act-sections/';
 
-test.describe('Act Section Management — /act/section', () => {
+test.describe('Act Section Management — /act-sections', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(PATH);
     await waitForDashboard(page);
@@ -23,7 +28,9 @@ test.describe('Act Section Management — /act/section', () => {
   });
 
   test('显示 Act/Section 相关标题', async ({ page }) => {
-    await expect(page.locator('h1, h2, h3').first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('h1, h2, h3').first()).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test('Section 列表内容渲染', async ({ page }) => {

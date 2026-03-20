@@ -1,5 +1,6 @@
-import { OpModule, OpAction } from "../constants/operation-log.constants";
+import { OpModule, OpAction, OpModuleLabel } from "../constants/operation-log.constants";
 import { Role } from "../types/enums";
+
 /**
  * 核心逻辑：这里决定了 ADMIN 能不能 VIEW
  */
@@ -46,4 +47,61 @@ export const RolePermissions = {
     `${OpModule.ORDER}:${OpAction.ORDER.VIEW}`,
     `${OpModule.MARKETING}:${OpAction.MARKETING.VIEW}`,
   ],
+
+  // ------------------------------------------
+  //  FINANCE (财务专员)
+  // ------------------------------------------
+  [Role.FINANCE]: [
+    // 查看财务数据
+    `${OpModule.FINANCE}:${OpAction.FINANCE.VIEW}`,
+    // 提现审核
+    `${OpModule.FINANCE}:${OpAction.FINANCE.WITHDRAW_AUDIT}`,
+    // 充值审核/补单
+    `${OpModule.FINANCE}:${OpAction.FINANCE.RECHARGE_AUDIT}`,
+    // 导出报表
+    `${OpModule.FINANCE}:${OpAction.FINANCE.EXPORT}`,
+    // 查看支付渠道（只读）
+    `${OpModule.FINANCE}:${OpAction.FINANCE.CHANNEL_VIEW}`,
+    // 查看订单（关联财务）
+    `${OpModule.ORDER}:${OpAction.ORDER.VIEW}`,
+    `${OpModule.ORDER}:${OpAction.ORDER.EXPORT}`,
+  ],
 } satisfies Partial<Record<Role | string, readonly string[]>>;
+
+/**
+ * 角色展示名称（中英文）
+ * 用于前端 RBAC 权限管理界面
+ */
+export const RoleDescriptions: Record<Role, { en: string; zh: string; description: string }> = {
+  [Role.SUPER_ADMIN]: {
+    en: "Super Admin",
+    zh: "超级管理员",
+    description: "Full access to all modules. Cannot be restricted.",
+  },
+  [Role.ADMIN]: {
+    en: "Admin",
+    zh: "管理员",
+    description: "Manages users, orders, and marketing activities.",
+  },
+  [Role.EDITOR]: {
+    en: "Editor",
+    zh: "编辑/运营",
+    description: "Manages marketing content and views user data.",
+  },
+  [Role.VIEWER]: {
+    en: "Viewer",
+    zh: "观察者",
+    description: "Read-only access to users, orders, and marketing.",
+  },
+  [Role.FINANCE]: {
+    en: "Finance",
+    zh: "财务专员",
+    description: "Handles finance audits, withdrawals, and reports.",
+  },
+};
+
+/**
+ * Re-export OpModuleLabel for frontend convenience
+ */
+export { OpModuleLabel };
+

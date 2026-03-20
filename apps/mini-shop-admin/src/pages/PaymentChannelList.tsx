@@ -89,22 +89,22 @@ export const PaymentChannelList: React.FC = () => {
 
   // 删除操作 (使用 ModalManager 而不是原生 confirm 会更好，这里保持逻辑不变但优化体验)
   const handleDelete = useCallback(
-    async (id: number) => {
-      // 建议后期替换为 ModalManager.confirm
-      if (
-        !window.confirm(
+    (id: number) => {
+      ModalManager.open({
+        title: 'Disable Channel',
+        content:
           'Are you sure you want to disable this channel? Users will not be able to see it.',
-        )
-      )
-        return;
-
-      try {
-        await paymentChannelApi.delete(id, 0);
-        addToast('success', 'Channel disabled successfully');
-        actionRef.current?.reload();
-      } catch (e) {
-        addToast('error', 'Failed to disable channel');
-      }
+        confirmText: 'Disable',
+        onConfirm: async () => {
+          try {
+            await paymentChannelApi.delete(id, 0);
+            addToast('success', 'Channel disabled successfully');
+            actionRef.current?.reload();
+          } catch {
+            addToast('error', 'Failed to disable channel');
+          }
+        },
+      });
     },
     [addToast],
   );

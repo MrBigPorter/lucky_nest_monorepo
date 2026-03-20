@@ -933,6 +933,7 @@ export interface ReferralUser {
 
 // --- OPERATIONS TYPES ---
 
+/** @deprecated Use LuckyDrawActivity instead */
 export interface LotteryDraw {
   id: string;
   product: { id: string; name: string; image: string };
@@ -984,6 +985,7 @@ export interface ActivityRule {
   minVipLevel: number;
 }
 
+/** @deprecated Use LuckyDrawActivity instead */
 export interface LotteryActivity {
   id: string;
   name: string;
@@ -1016,6 +1018,7 @@ export interface AdminUser {
   lastLoginIp: string;
 }
 
+/** @deprecated 使用 AdminOperationLog 替代 */
 export interface OperationLog {
   id: string;
   adminName: string;
@@ -1023,6 +1026,49 @@ export interface OperationLog {
   target: string; // e.g., "User: 1001"
   ip: string;
   date: string;
+}
+
+/**
+ * 操作日志审计 — 对应 Prisma AdminOperationLog 模型
+ */
+export interface AdminOperationLog {
+  id: string;
+  createdAt: string;
+  adminId: string | null;
+  /** 操作时记录的管理员用户名（历史快照） */
+  adminName: string;
+  /** 模块名称，e.g. "users", "orders", "products" */
+  module: string;
+  /** 操作类型，e.g. "LOGIN", "CREATE", "UPDATE", "DELETE" */
+  action: string;
+  /** 操作详情 / 备注 */
+  details: string | null;
+  /** 请求 IP */
+  requestIp: string | null;
+  /** 关联的管理员用户（JOIN 查询） */
+  admin?: {
+    id: string;
+    username: string;
+    realName: string | null;
+  };
+}
+
+/**
+ * 操作日志列表查询参数
+ */
+export interface AdminOperationLogListParams {
+  page?: number;
+  pageSize?: number;
+  /** 按管理员 ID 过滤 */
+  adminId?: string;
+  /** 按操作类型过滤，e.g. "CREATE"，传 "ALL" 或不传表示全部 */
+  action?: string;
+  /** 关键词搜索（匹配 adminName / details / module） */
+  keyword?: string;
+  /** 开始日期，ISO 字符串，e.g. "2026-01-01" */
+  startDate?: string;
+  /** 结束日期，ISO 字符串，e.g. "2026-12-31" */
+  endDate?: string;
 }
 
 // --- CONTENT CMS TYPES ---
@@ -1081,4 +1127,497 @@ export interface WorkOrder {
   priority: 'low' | 'medium' | 'high';
   createdAt: string;
   replies: { sender: 'user' | 'support'; message: string; time: string }[];
+}
+
+// --- STATS / ANALYTICS TYPES ---
+
+/**
+ * GET /v1/admin/stats/overview 返回结构
+ */
+export interface StatsOverview {
+  users: {
+    total: number;
+    today: number;
+    thisMonth: number;
+  };
+  orders: {
+    total: number;
+    today: number;
+    paid: number;
+  };
+  revenue: {
+    /** 累计订单收入（Decimal 字符串） */
+    total: string;
+    /** 今日订单收入 */
+    today: string;
+  };
+  finance: {
+    /** 累计充值成功金额 */
+    totalDeposit: string;
+    /** 待审核提现笔数 */
+    pendingWithdrawCount: number;
+    /** 待审核提现总金额 */
+    pendingWithdrawAmount: string;
+  };
+}
+
+/**
+ * GET /v1/admin/stats/trend 返回结构
+ */
+export interface StatsTrend {
+  orders: Array<{
+    date: string; // "YYYY-MM-DD"
+    count: number;
+    revenue: string; // Decimal 字符串
+  }>;
+  users: Array<{
+    date: string;
+    count: number;
+  }>;
+}
+
+/**
+ * GET /v1/admin/user/roles-summary — 单个角色汇总
+ */
+export interface RoleSummaryItem {
+  role: string;
+  nameEn: string;
+  nameZh: string;
+  description: string;
+  /** 活跃用户人数 */
+  userCount: number;
+  /** 权限字符串列表，e.g. ["user_management:view_user", ...] */
+  permissions: string[];
+  /** 权限按模块分组 { "用户管理": ["view_user", "ban_user"], ... } */
+  permissionsByModule: Record<string, string[]>;
+}
+
+// ─── Notification / Push ─────────────────────────────────────────────────────
+
+export interface AdminPushLog {
+  id: string;
+  createdAt: string;
+  adminId: string;
+  adminName: string;
+  /** broadcast | targeted */
+  type: 'broadcast' | 'targeted';
+  targetUserId?: string;
+  title: string;
+  body: string;
+  extraData?: Record<string, any>;
+  /** sent | failed */
+  status: 'sent' | 'failed';
+  successCount: number;
+  failureCount: number;
+}
+
+export interface DeviceStats {
+  total: number;
+  android: number;
+  ios: number;
+  web: number;
+  activeInLast7Days: number;
+}
+
+export interface QueryPushLogParams {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  keyword?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface SendBroadcastPayload {
+  title: string;
+  body: string;
+  extraData?: Record<string, any>;
+}
+
+export interface SendTargetedPayload {
+  targetUserId: string;
+  title: string;
+  body: string;
+  extraData?: Record<string, any>;
+}
+
+// ─── IM / Chat Moderation ─────────────────────────────────────────────────────
+
+export type ConversationType = 'GROUP' | 'DIRECT' | 'SUPPORT' | 'BUSINESS';
+
+export interface ChatConversationMember {
+  userId: string;
+  nickname: string | null;
+  avatar: string | null;
+  role: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  type: ConversationType;
+  name: string | null;
+  status: number; // 1=正常 2=已关闭
+  lastMsgContent: string | null;
+  lastMsgTime: number;
+  lastMsgSeqId: number;
+  memberCount: number;
+  members: ChatConversationMember[];
+}
+
+export interface ChatMessage {
+  id: string;
+  seqId: number;
+  content: string;
+  type: number; // 0=text 1=image 2=audio 3=video 99=system
+  isRecalled: boolean;
+  createdAt: number;
+  meta: Record<string, any> | null;
+  senderId: string | null;
+  sender: { id: string; nickname: string; avatar: string | null } | null;
+  isSystem: boolean;
+}
+
+export interface QueryConversationsParams {
+  page?: number;
+  pageSize?: number;
+  type?: ConversationType;
+  keyword?: string;
+  status?: number;
+}
+
+export interface QueryMessagesParams {
+  cursor?: number;
+  pageSize?: number;
+}
+
+export interface AdminReplyPayload {
+  content: string;
+  /** 0=TEXT, 1=IMAGE, 2=AUDIO, 3=VIDEO, 5=FILE, 6=LOCATION */
+  type?: number;
+  meta?: Record<string, unknown>;
+  agentName?: string;
+}
+
+export interface AdminUploadTokenResult {
+  url: string;
+  key: string;
+  cdnUrl: string | null;
+  isPrivate: boolean;
+}
+
+export interface CloseConversationPayload {
+  reason?: string;
+}
+
+export interface ChatMessagesResult {
+  list: ChatMessage[];
+  nextCursor: number | null;
+  totalSeqId: number;
+}
+
+// ─── Support Channels ───────────────────────────────────────────────────────
+
+export interface SupportChannelItem {
+  id: string;
+  name: string;
+  description: string | null;
+  botUserId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  botUser: {
+    id: string;
+    nickname: string | null;
+    avatar: string | null;
+    isRobot: boolean;
+  };
+}
+
+export interface QuerySupportChannelsParams {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  isActive?: boolean;
+}
+
+export interface SupportChannelsResult {
+  list: SupportChannelItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CreateSupportChannelPayload {
+  id: string;
+  name: string;
+  description?: string;
+  avatar?: string;
+}
+
+export interface UpdateSupportChannelPayload {
+  name?: string;
+  description?: string;
+  avatar?: string;
+}
+
+// ─── Advertisement ────────────────────────────────────────────────────────────
+
+export interface Advertisement {
+  id: string;
+  title: string | null;
+  fileType: number; // 1=image 2=video
+  img: string | null;
+  videoUrl: string | null;
+  adPosition: number; // 1=home-top 2=home-mid 3=category 4=detail
+  sortOrder: number;
+  jumpUrl: string | null;
+  relatedId: string | null;
+  jumpCate: number | null;
+  startTime: number | null;
+  endTime: number | null;
+  status: number; // 0=disabled 1=enabled
+  viewCount: number;
+  clickCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface QueryAdsParams {
+  page?: number;
+  pageSize?: number;
+  status?: number;
+  adPosition?: number;
+}
+
+export interface CreateAdPayload {
+  title?: string;
+  fileType: number;
+  img?: string;
+  videoUrl?: string;
+  adPosition: number;
+  sortOrder?: number;
+  jumpUrl?: string;
+  relatedId?: string;
+  jumpCate?: number;
+  startTime?: string;
+  endTime?: string;
+  status?: number;
+}
+
+export type UpdateAdPayload = Partial<CreateAdPayload>;
+
+// ─── Flash Sale ───────────────────────────────────────────────────────────────
+
+export interface FlashSaleSession {
+  id: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  status: number; // 1=active 0=inactive
+  productCount: number;
+}
+
+export interface FlashSaleProduct {
+  id: string;
+  treasureId: string;
+  flashStock: number;
+  flashPrice: string;
+  sortOrder: number;
+  product: {
+    treasureId: string;
+    treasureName: string;
+    unitAmount: string;
+    treasureCoverImg: string | null;
+  } | null;
+}
+
+export interface CreateFlashSaleSessionPayload {
+  title: string;
+  startTime: string;
+  endTime: string;
+  status?: number;
+}
+
+export type UpdateFlashSaleSessionPayload =
+  Partial<CreateFlashSaleSessionPayload>;
+
+export interface BindFlashSaleProductPayload {
+  treasureId: string;
+  flashPrice: string;
+  flashStock?: number;
+  sortOrder?: number;
+}
+
+export interface UpdateFlashSaleProductPayload {
+  flashPrice?: string;
+  flashStock?: number;
+  sortOrder?: number;
+}
+
+// ─── System Config ────────────────────────────────────────────────────────────
+
+export interface SystemConfigItem {
+  key: string;
+  value: string;
+}
+
+// ─── User Login Log ───────────────────────────────────────────────────────────
+
+export interface UserLoginLog {
+  id: string;
+  userId: string;
+  userNickname: string | null;
+  userAvatar: string | null;
+  loginTime: number;
+  loginType: number; // 1=password 2=sms 3=third-party
+  loginMethod: string | null; // password/google/facebook
+  loginIp: string | null;
+  loginDevice: string | null;
+  countryCode: string | null;
+  city: string | null;
+  loginStatus: number; // 1=success 0=fail
+  failReason: string | null;
+  tokenIssued: number;
+}
+
+export interface QueryLoginLogParams {
+  page?: number;
+  pageSize?: number;
+  userId?: string;
+  loginIp?: string;
+  loginMethod?: string;
+  loginStatus?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+// ─── Admin Register Application ───────────────────────────────────────────────
+
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AdminApplication {
+  id: string;
+  username: string;
+  realName: string;
+  email: string;
+  applyReason?: string;
+  applyIp?: string;
+  status: ApplicationStatus;
+  reviewedBy?: string;
+  reviewNote?: string;
+  reviewedAt?: number | null;
+  createdAt: number;
+}
+
+export interface CreateApplicationPayload {
+  username: string;
+  password: string;
+  realName: string;
+  email: string;
+  applyReason?: string;
+  recaptchaToken: string;
+}
+
+export interface ApplicationListParams {
+  page?: number;
+  pageSize?: number;
+  status?: ApplicationStatus | 'all';
+  username?: string;
+}
+
+// ─── Lucky Draw ───────────────────────────────────────────────────────────────
+
+/** 奖品类型：1=优惠券 2=金币 3=余额 4=谢谢参与 */
+export type LuckyDrawPrizeType = 1 | 2 | 3 | 4;
+
+export interface LuckyDrawPrize {
+  id: string;
+  activityId: string;
+  prizeType: LuckyDrawPrizeType;
+  prizeName: string;
+  couponId: string | null;
+  couponName: string | null;
+  prizeValue: number | null;
+  probability: number;
+  stock: number;
+  sortOrder: number;
+}
+
+export interface LuckyDrawActivity {
+  id: string;
+  createdAt: number;
+  title: string;
+  description: string | null;
+  treasureId: string | null;
+  treasureName: string | null;
+  /** 0=禁用 1=启用 */
+  status: number;
+  startAt: number | null;
+  endAt: number | null;
+  prizes?: LuckyDrawPrize[];
+  prizesCount?: number;
+  ticketsCount?: number;
+}
+
+export interface LuckyDrawResult {
+  id: string;
+  createdAt: number;
+  userId: string;
+  userNickname: string | null;
+  userAvatar: string | null;
+  prizeId: string;
+  prizeName: string;
+  prizeType: LuckyDrawPrizeType;
+  activityId: string;
+  activityTitle: string | null;
+  orderId: string;
+  couponName?: string | null;
+  treasureName?: string | null;
+  prizeSnapshot: unknown;
+}
+
+export interface CreateLuckyDrawActivityPayload {
+  title: string;
+  description?: string;
+  treasureId?: string;
+  status?: number;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface UpdateLuckyDrawActivityPayload {
+  title?: string;
+  description?: string;
+  treasureId?: string;
+  status?: number;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface CreateLuckyDrawPrizePayload {
+  activityId: string;
+  prizeType: LuckyDrawPrizeType;
+  prizeName: string;
+  couponId?: string;
+  prizeValue?: number;
+  probability: number;
+  stock?: number;
+  sortOrder?: number;
+}
+
+export interface UpdateLuckyDrawPrizePayload {
+  prizeType?: LuckyDrawPrizeType;
+  prizeName?: string;
+  couponId?: string;
+  prizeValue?: number;
+  probability?: number;
+  stock?: number;
+  sortOrder?: number;
+}
+
+export interface QueryLuckyDrawResultsParams {
+  page?: number;
+  pageSize?: number;
+  activityId?: string;
+  userId?: string;
 }

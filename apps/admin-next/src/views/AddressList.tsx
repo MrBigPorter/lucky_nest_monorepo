@@ -20,7 +20,15 @@ import {
 } from '@/type/types';
 import { Card } from '@/components/UIComponents';
 
-export const AddressList: React.FC = () => {
+interface AddressListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const AddressList: React.FC<AddressListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -198,6 +206,8 @@ export const AddressList: React.FC = () => {
           columns={columns}
           searchSchema={searchSchema}
           request={requestAddress}
+          initialFormParams={initialFormParams}
+          onParamsChange={onParamsChange}
         />
       </div>
     </Card>

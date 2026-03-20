@@ -7,6 +7,7 @@ import { PrismaService } from '@api/common/prisma/prisma.service';
 import { CreateTreasureDto } from '@api/admin/treasure/dto/create-treasure.dto';
 import { TREASURE_STATE, TreasureFilterType } from '@lucky/shared';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { QueryTreasureDto } from '@api/admin/treasure/dto/query-treasure.dto';
 import { UpdateTreasureDto } from '@api/admin/treasure/dto/update-treasure.dto';
 import { RedisService } from '@api/common/redis/redis.service';
@@ -84,9 +85,9 @@ export class TreasureService {
           },
         },
       });
-    } catch (error) {
-      // 捕获“分类不存在”的错误
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    } catch (error: unknown) {
+      // 捕获"分类不存在"的错误
+      if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
           throw new Error('Category not found');
         }

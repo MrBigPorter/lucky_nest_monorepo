@@ -22,10 +22,23 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);
   const host = config.get<string>('HOST', '0.0.0.0');
+  const corsOrigin = config.get<string>('CORS_ORIGIN');
+  const originList = corsOrigin
+    ? corsOrigin
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
+    : isProd
+      ? []
+      : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+  const expressApp = app
+    .getHttpAdapter()
+    .getInstance() as import('express').Application;
 
   // 前缀 + 版本
   app.setGlobalPrefix('api');
-  (app as any).set('trust proxy', 1);
+  expressApp.set('trust proxy', 1);
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   // 请求 ID
@@ -39,6 +52,21 @@ async function bootstrap() {
     }),
   );
   app.use(cookieParser());
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      // Browser same-origin requests may not include Origin header.
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, originList.includes(origin));
+    },
+    credentials: true,
+  });
 
   // global validation
   app.useGlobalPipes(
@@ -62,9 +90,6 @@ async function bootstrap() {
 
   // 请求/响应日志（非生产） req/res body
   if (!isProd) {
-    const expressApp: import('express').Application = app
-      .getHttpAdapter()
-      .getInstance();
     morganBody(expressApp, { logResponseBody: true, maxBodyLength: 1000 });
   }
 
@@ -87,4 +112,4 @@ async function bootstrap() {
 }
 
 // NOSONAR
-bootstrap();
+void bootstrap();

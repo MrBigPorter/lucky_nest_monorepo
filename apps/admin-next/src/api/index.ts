@@ -55,6 +55,14 @@ import {
   CreatePaymentChannelPayload,
   AdminCreateKycParams,
   AdminUpdateKycParams,
+  LuckyDrawActivity,
+  LuckyDrawPrize,
+  LuckyDrawResult,
+  CreateLuckyDrawActivityPayload,
+  UpdateLuckyDrawActivityPayload,
+  CreateLuckyDrawPrizePayload,
+  UpdateLuckyDrawPrizePayload,
+  QueryLuckyDrawResultsParams,
 } from '@/type/types';
 
 /**
@@ -543,8 +551,19 @@ export const authApi = {
   // 登出
   logout: () => http.post('/v1/auth/admin/logout'),
 
+  // 设置 HTTP-only Cookie（登录成功后调用，由后端写 httpOnly cookie）
+  setCookie: (token: string) =>
+    http.post<{ ok: boolean }>('/v1/auth/admin/set-cookie', { token }),
+
+  // 清除 HTTP-only Cookie（登出时调用）
+  clearCookie: () => http.post<{ ok: boolean }>('/v1/auth/admin/clear-cookie'),
+
   // 刷新 token
-  refreshToken: () => http.post<{ token: string }>('/auth/refresh-token'),
+  refreshToken: (refreshToken: string) =>
+    http.post<{ tokens: { accessToken: string; refreshToken: string } }>(
+      '/v1/auth/admin/refresh',
+      { refreshToken },
+    ),
 
   // 修改密码
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
@@ -570,22 +589,495 @@ export const uploadApi = {
 };
 
 /**
- * 统计相关 API
+ * 数据分析统计 API
  */
 export const statsApi = {
-  // 获取仪表盘统计数据
-  getDashboardStats: () =>
-    http.get<{
-      totalUsers: number;
-      activeProducts: number;
-      totalRevenue: number;
-      totalOrders: number;
-    }>('/stats/dashboard'),
+  /**
+   * GET /v1/admin/stats/overview
+   * 返回用户、订单、收入、财务汇总数据
+   */
+  getOverview: () =>
+    http.get<import('@/type/types').StatsOverview>('/v1/admin/stats/overview'),
 
-  // 获取销售趋势
-  getSalesTrend: (params: { startDate: string; endDate: string }) =>
-    http.get<Array<{ date: string; revenue: number; orders: number }>>(
-      '/stats/sales-trend',
+  /**
+   * GET /v1/admin/stats/trend?days=30
+   * 返回最近 N 天的订单量 + 用户注册趋势
+   */
+  getTrend: (days = 30) =>
+    http.get<import('@/type/types').StatsTrend>('/v1/admin/stats/trend', {
+      days,
+    }),
+};
+
+/**
+ * 操作日志审计 API
+ */
+export const adminOperationLogApi = {
+  // 获取操作日志列表
+  getList: (params: import('@/type/types').AdminOperationLogListParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminOperationLog>>(
+      '/v1/admin/operation-logs/list',
       params,
     ),
+};
+
+/**
+ * RBAC 角色权限 API
+ */
+export const rolesApi = {
+  /**
+   * GET /v1/admin/user/roles-summary
+   * 返回所有角色的描述、权限列表、活跃用户人数
+   */
+  getSummary: () =>
+    http.get<import('@/type/types').RoleSummaryItem[]>(
+      '/v1/admin/user/roles-summary',
+    ),
+};
+
+/**
+ * 通知/推送管理 API
+ */
+export const notificationApi = {
+  /** GET /v1/admin/notifications/logs — 推送历史（分页） */
+  getLogs: (params: import('@/type/types').QueryPushLogParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminPushLog>>(
+      '/v1/admin/notifications/logs',
+      params,
+    ),
+
+  /** GET /v1/admin/notifications/devices/stats — 设备统计 */
+  getDeviceStats: () =>
+    http.get<import('@/type/types').DeviceStats>(
+      '/v1/admin/notifications/devices/stats',
+    ),
+
+  /** POST /v1/admin/notifications/broadcast — 全员广播 */
+  sendBroadcast: (data: import('@/type/types').SendBroadcastPayload) =>
+    http.post<import('@/type/types').AdminPushLog>(
+      '/v1/admin/notifications/broadcast',
+      data,
+    ),
+
+  /** POST /v1/admin/notifications/targeted — 定向推送 */
+  sendTargeted: (data: import('@/type/types').SendTargetedPayload) =>
+    http.post<import('@/type/types').AdminPushLog>(
+      '/v1/admin/notifications/targeted',
+      data,
+    ),
+};
+
+/**
+ * 客服 / IM 聊天管理 API
+ */
+export const chatApi = {
+  /** GET /v1/admin/chat/conversations — 会话列表 */
+  getConversations: (params: import('@/type/types').QueryConversationsParams) =>
+    http.get<PaginatedResponse<import('@/type/types').ChatConversation>>(
+      '/v1/admin/chat/conversations',
+      params,
+    ),
+
+  /** GET /v1/admin/chat/conversations/:id/messages — 消息历史 */
+  getMessages: (
+    conversationId: string,
+    params: import('@/type/types').QueryMessagesParams,
+  ) =>
+    http.get<import('@/type/types').ChatMessagesResult>(
+      `/v1/admin/chat/conversations/${conversationId}/messages`,
+      params,
+    ),
+
+  /** POST /v1/admin/chat/conversations/:id/reply — 客服回复 */
+  reply: (
+    conversationId: string,
+    data: import('@/type/types').AdminReplyPayload,
+  ) =>
+    http.post<import('@/type/types').ChatMessage>(
+      `/v1/admin/chat/conversations/${conversationId}/reply`,
+      data,
+    ),
+
+  /** POST /v1/admin/chat/messages/:id/force-recall — 强制撤回 */
+  forceRecall: (messageId: string) =>
+    http.post<{ success: boolean; messageId: string }>(
+      `/v1/admin/chat/messages/${messageId}/force-recall`,
+      {},
+    ),
+
+  /** PATCH /v1/admin/chat/conversations/:id/close — 关闭会话 */
+  closeConversation: (
+    conversationId: string,
+    data: import('@/type/types').CloseConversationPayload,
+  ) =>
+    http.patch<{ success: boolean; conversationId: string }>(
+      `/v1/admin/chat/conversations/${conversationId}/close`,
+      data,
+    ),
+
+  /** POST /v1/admin/chat/upload-token — 获取媒体上传签名 URL */
+  getUploadToken: (fileName: string, fileType: string) =>
+    http.post<import('@/type/types').AdminUploadTokenResult>(
+      '/v1/admin/chat/upload-token',
+      { fileName, fileType },
+    ),
+};
+
+/**
+ * 客服渠道管理 API
+ */
+export const supportChannelApi = {
+  getList: (params: import('@/type/types').QuerySupportChannelsParams) =>
+    http.get<import('@/type/types').SupportChannelsResult>(
+      '/v1/admin/support-channels',
+      params,
+    ),
+
+  create: (data: import('@/type/types').CreateSupportChannelPayload) =>
+    http.post<import('@/type/types').SupportChannelItem>(
+      '/v1/admin/support-channels',
+      data,
+    ),
+
+  update: (
+    id: string,
+    data: import('@/type/types').UpdateSupportChannelPayload,
+  ) =>
+    http.patch<import('@/type/types').SupportChannelItem>(
+      `/v1/admin/support-channels/${id}`,
+      data,
+    ),
+
+  toggle: (id: string, isActive: boolean) =>
+    http.patch<import('@/type/types').SupportChannelItem>(
+      `/v1/admin/support-channels/${id}/toggle`,
+      { isActive },
+    ),
+};
+
+/**
+ * 广告管理 API
+ */
+export const adsApi = {
+  getList: (params: import('@/type/types').QueryAdsParams) =>
+    http.get<PaginatedResponse<import('@/type/types').Advertisement>>(
+      '/v1/admin/ads',
+      params,
+    ),
+  create: (data: import('@/type/types').CreateAdPayload) =>
+    http.post<import('@/type/types').Advertisement>('/v1/admin/ads', data),
+  update: (id: string, data: import('@/type/types').UpdateAdPayload) =>
+    http.patch<import('@/type/types').Advertisement>(
+      `/v1/admin/ads/${id}`,
+      data,
+    ),
+  toggleStatus: (id: string) =>
+    http.patch<import('@/type/types').Advertisement>(
+      `/v1/admin/ads/${id}/toggle-status`,
+      {},
+    ),
+  remove: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/ads/${id}`),
+};
+
+/**
+ * 秒杀活动管理 API
+ */
+export const flashSaleApi = {
+  getSessions: () =>
+    http.get<{ list: import('@/type/types').FlashSaleSession[] }>(
+      '/v1/admin/flash-sale/sessions',
+    ),
+  createSession: (data: import('@/type/types').CreateFlashSaleSessionPayload) =>
+    http.post<import('@/type/types').FlashSaleSession>(
+      '/v1/admin/flash-sale/sessions',
+      data,
+    ),
+  updateSession: (
+    id: string,
+    data: import('@/type/types').UpdateFlashSaleSessionPayload,
+  ) =>
+    http.patch<import('@/type/types').FlashSaleSession>(
+      `/v1/admin/flash-sale/sessions/${id}`,
+      data,
+    ),
+  deleteSession: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/flash-sale/sessions/${id}`),
+  getSessionProducts: (sessionId: string) =>
+    http.get<{ list: import('@/type/types').FlashSaleProduct[] }>(
+      `/v1/admin/flash-sale/sessions/${sessionId}/products`,
+    ),
+  bindProduct: (
+    sessionId: string,
+    data: import('@/type/types').BindFlashSaleProductPayload,
+  ) =>
+    http.post<import('@/type/types').FlashSaleProduct>(
+      `/v1/admin/flash-sale/sessions/${sessionId}/products`,
+      data,
+    ),
+  updateProduct: (
+    productId: string,
+    data: import('@/type/types').UpdateFlashSaleProductPayload,
+  ) =>
+    http.patch<import('@/type/types').FlashSaleProduct>(
+      `/v1/admin/flash-sale/products/${productId}`,
+      data,
+    ),
+  removeProduct: (productId: string) =>
+    http.delete<{ success: boolean }>(
+      `/v1/admin/flash-sale/products/${productId}`,
+    ),
+};
+
+/**
+ * 系统配置管理 API
+ */
+export const systemConfigApi = {
+  getAll: () =>
+    http.get<{ list: import('@/type/types').SystemConfigItem[] }>(
+      '/v1/admin/system-config',
+    ),
+  update: (key: string, value: string) =>
+    http.patch<import('@/type/types').SystemConfigItem>(
+      `/v1/admin/system-config/${key}`,
+      { value },
+    ),
+};
+
+/**
+ * 用户登录日志 API
+ */
+export const loginLogApi = {
+  getList: (params: import('@/type/types').QueryLoginLogParams) =>
+    http.get<PaginatedResponse<import('@/type/types').UserLoginLog>>(
+      '/v1/admin/login-logs/list',
+      params,
+    ),
+};
+
+/**
+ * 管理员注册申请 API
+ */
+export const applicationApi = {
+  /** 公开提交申请（无需 token） */
+  submit: (data: import('@/type/types').CreateApplicationPayload) =>
+    http.post<{ message: string; id: string }>('/v1/auth/admin/apply', data),
+
+  /** 申请列表（SUPER_ADMIN）*/
+  getList: (params: import('@/type/types').ApplicationListParams) =>
+    http.get<PaginatedResponse<import('@/type/types').AdminApplication>>(
+      '/v1/admin/applications',
+      params,
+    ),
+
+  /** 待审批数量（侧边栏红点）*/
+  pendingCount: () =>
+    http.get<{ count: number }>('/v1/admin/applications/pending-count'),
+
+  /** 审批通过 */
+  approve: (id: string) =>
+    http.patch<{ message: string }>(`/v1/admin/applications/${id}/approve`),
+
+  /** 审批拒绝 */
+  reject: (id: string, reviewNote?: string) =>
+    http.patch<{ message: string }>(`/v1/admin/applications/${id}/reject`, {
+      reviewNote,
+    }),
+};
+
+/**
+ * 福利抽奖管理 API
+ */
+
+type LuckyDrawPrizeResponse = Omit<
+  LuckyDrawPrize,
+  'probability' | 'prizeValue'
+> & {
+  probability: number | string;
+  prizeValue: number | string | null;
+};
+
+type LuckyDrawActivityResponse = {
+  id: string;
+  createdAt: number | string;
+  title: string;
+  description: string | null;
+  treasureId: string | null;
+  treasureName?: string | null;
+  status: number;
+  startAt: number | string | null;
+  endAt: number | string | null;
+  prizes?: LuckyDrawPrizeResponse[];
+  prizesCount?: number;
+  ticketsCount?: number;
+};
+
+type LuckyDrawResultResponse = {
+  id: string;
+  createdAt: number | string;
+  userId: string;
+  userNickname: string | null;
+  userAvatar: string | null;
+  prizeId: string;
+  prizeName: string;
+  prizeType: number;
+  activityId: string;
+  activityTitle: string | null;
+  orderId: string;
+  couponName?: string | null;
+  treasureName?: string | null;
+  prizeSnapshot: unknown;
+};
+
+const toTimestamp = (
+  value: number | string | null | undefined,
+): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.getTime();
+};
+
+const toLuckyDrawNumber = (
+  value: number | string | null | undefined,
+): number | null => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
+const normalizeLuckyDrawPrize = (
+  prize: LuckyDrawPrizeResponse,
+): LuckyDrawPrize => ({
+  ...prize,
+  probability: toLuckyDrawNumber(prize.probability) ?? 0,
+  prizeValue: toLuckyDrawNumber(prize.prizeValue),
+});
+
+const normalizeLuckyDrawActivity = (
+  activity: LuckyDrawActivityResponse,
+): LuckyDrawActivity => ({
+  id: activity.id,
+  createdAt: toTimestamp(activity.createdAt) ?? Date.now(),
+  title: activity.title,
+  description: activity.description,
+  treasureId: activity.treasureId,
+  treasureName: activity.treasureName ?? null,
+  status: activity.status,
+  startAt: toTimestamp(activity.startAt),
+  endAt: toTimestamp(activity.endAt),
+  prizes: activity.prizes?.map(normalizeLuckyDrawPrize),
+  prizesCount: activity.prizesCount ?? activity.prizes?.length ?? 0,
+  ticketsCount: activity.ticketsCount ?? 0,
+});
+
+const normalizeLuckyDrawResult = (
+  result: LuckyDrawResultResponse,
+): LuckyDrawResult => ({
+  ...result,
+  createdAt: toTimestamp(result.createdAt) ?? Date.now(),
+  prizeType: result.prizeType as LuckyDrawResult['prizeType'],
+});
+
+export const luckyDrawApi = {
+  // ── 活动 ──────────────────────────────────────────────────────
+  listActivities: async (params?: PaginationParams) => {
+    const data = await http.get<{
+      list: LuckyDrawActivityResponse[];
+      total: number;
+      page?: number;
+      pageSize?: number;
+    }>('/v1/admin/lucky-draw/activities', params);
+
+    const page = params?.page ?? data.page ?? 1;
+    const pageSize =
+      (params?.pageSize ?? data.pageSize ?? data.list.length) || 20;
+
+    return {
+      list: data.list.map(normalizeLuckyDrawActivity),
+      total: data.total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(data.total / Math.max(pageSize, 1))),
+    };
+  },
+
+  getActivity: async (id: string) => {
+    const data = await http.get<LuckyDrawActivityResponse>(
+      `/v1/admin/lucky-draw/activities/${id}`,
+    );
+
+    return normalizeLuckyDrawActivity(data);
+  },
+
+  createActivity: (data: CreateLuckyDrawActivityPayload) =>
+    http.post<{ id: string }>('/v1/admin/lucky-draw/activities', data),
+
+  updateActivity: (id: string, data: UpdateLuckyDrawActivityPayload) =>
+    http.patch<{ success: boolean }>(
+      `/v1/admin/lucky-draw/activities/${id}`,
+      data,
+    ),
+
+  deleteActivity: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/lucky-draw/activities/${id}`),
+
+  // ── 奖品 ──────────────────────────────────────────────────────
+  listPrizes: async (activityId: string) => {
+    const data = await http.get<LuckyDrawPrizeResponse[]>(
+      `/v1/admin/lucky-draw/activities/${activityId}/prizes`,
+    );
+
+    const list = data.map(normalizeLuckyDrawPrize);
+
+    return {
+      list,
+      total: list.length,
+      page: 1,
+      pageSize: list.length || 1,
+      totalPages: 1,
+    };
+  },
+
+  createPrize: (data: CreateLuckyDrawPrizePayload) =>
+    http.post<{ id: string }>('/v1/admin/lucky-draw/prizes', data),
+
+  updatePrize: (id: string, data: UpdateLuckyDrawPrizePayload) =>
+    http.patch<{ success: boolean }>(`/v1/admin/lucky-draw/prizes/${id}`, data),
+
+  deletePrize: (id: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/lucky-draw/prizes/${id}`),
+
+  // ── 抽奖结果 ──────────────────────────────────────────────────
+  listResults: async (params: QueryLuckyDrawResultsParams) => {
+    if (!params.activityId) {
+      return {
+        list: [],
+        total: 0,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 20,
+        totalPages: 1,
+      } as PaginatedResponse<LuckyDrawResult>;
+    }
+
+    const data = await http.get<{
+      list: LuckyDrawResultResponse[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>(`/v1/admin/lucky-draw/activities/${params.activityId}/results`, {
+      page: params.page,
+      pageSize: params.pageSize,
+    });
+
+    return {
+      list: data.list.map(normalizeLuckyDrawResult),
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(
+        1,
+        Math.ceil(data.total / Math.max(data.pageSize, 1)),
+      ),
+    };
+  },
 };

@@ -64,7 +64,7 @@ export class PaymentService {
       };
 
       if (channelCode) {
-        let method = channelCode.replace('PH_', '');
+        const method = channelCode.replace('PH_', '');
         invoiceData.paymentMethods = [method];
       }
 
@@ -74,7 +74,7 @@ export class PaymentService {
 
       this.logger.log(`[Xendit] Invoice created: ${response.invoiceUrl}`);
       return response.invoiceUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.handleXenditError(error, 'Create Invoice');
     }
   }
@@ -119,7 +119,7 @@ export class PaymentService {
       );
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.handleXenditError(error, 'Create Disbursement');
     }
   }
@@ -133,7 +133,7 @@ export class PaymentService {
       return await this.xenditClient.Invoice.getInvoiceById({
         invoiceId: invoiceId,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.handleXenditError(error, `Get Invoice By ID: ${invoiceId}`);
       return null;
     }
@@ -158,7 +158,7 @@ export class PaymentService {
         return response[0];
       }
       return null;
-    } catch (e) {
+    } catch (e: unknown) {
       this.handleXenditError(e, `Get Invoice By External ID: ${externalId}`);
       return null;
     }
@@ -179,9 +179,7 @@ export class PaymentService {
         return response.data[0];
       }
       return null; // 显式返回 null，表示没找到
-    } catch (e) {
-      // 这里如果报错（比如网络不通），你的 handleXenditError 会 throw Exception
-      // 这是对的，Task 里 catch 了这个 Exception，不会误判为“没找到”
+    } catch (e: unknown) {
       this.handleXenditError(
         e,
         `Get Disbursement By External ID: ${externalId}`,
@@ -194,16 +192,22 @@ export class PaymentService {
    * @param error
    * @param context
    */
-  private handleXenditError(error: any, context: string) {
-    this.logger.error(`[Xendit Error - ${context}] ${error.message}`);
-    if (error.response) {
-      console.error(
-        'Xendit Response Body:',
-        JSON.stringify(error.response, null, 2),
-      );
-    }
-    if (error.issues) {
-      console.error('Xendit Issues:', JSON.stringify(error.issues, null, 2));
+  private handleXenditError(error: unknown, context: string) {
+    const msg = error instanceof Error ? error.message : String(error);
+    this.logger.error(`[Xendit Error - ${context}] ${msg}`);
+    if (error !== null && typeof error === 'object') {
+      if ('response' in error) {
+        console.error(
+          'Xendit Response Body:',
+          JSON.stringify((error as { response: unknown }).response, null, 2),
+        );
+      }
+      if ('issues' in error) {
+        console.error(
+          'Xendit Issues:',
+          JSON.stringify((error as { issues: unknown }).issues, null, 2),
+        );
+      }
     }
     throw new InternalServerErrorException(`Payment Gateway Error: ${context}`);
   }

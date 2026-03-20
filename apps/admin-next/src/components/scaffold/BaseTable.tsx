@@ -375,7 +375,7 @@ export const BaseTable = <TData,>({
         <TableRow>
           <TableCell
             colSpan={columns.length}
-            className="h-40 text-center text-gray-500"
+            className="h-40 text-center text-gray-500 dark:text-gray-400"
           >
             No data available.
           </TableCell>
@@ -417,14 +417,14 @@ export const BaseTable = <TData,>({
                 <TableHead
                   key={header.id}
                   style={{ width: header.getSize() }}
-                  className="h-11 px-4 text-gray-500"
+                  className="h-11 px-4 text-gray-500 dark:text-gray-300"
                 >
                   {header.isPlaceholder ? null : (
                     <div
                       className={cn(
                         'flex items-center gap-2',
                         header.column.getCanSort() &&
-                          'cursor-pointer select-none hover:text-gray-900',
+                          'cursor-pointer select-none hover:text-gray-900 dark:hover:text-gray-100',
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
@@ -440,7 +440,7 @@ export const BaseTable = <TData,>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className="dark:divide-white/5 bg-white dark:bg-black/20 [&_tr:last-child_td]:border-b-0">
+        <TableBody className="dark:divide-white/5 bg-white dark:bg-gray-900 [&_tr:last-child_td]:border-b-0">
           {renderTableContent()}
         </TableBody>
       </Table>

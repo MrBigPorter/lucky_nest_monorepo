@@ -1,12 +1,11 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@api/common/jwt/jwt.guard';
 import { CurrentUserId } from '@api/common/decorators/user.decorator';
 import { plainToInstance } from 'class-transformer';
 import {
-  AddFriendDto,
+  ClientAddFriendDto,
   UserInfoResponseDto,
 } from '@api/client/users/dto/user-relation.dto';
 
@@ -22,7 +21,7 @@ export class UsersController {
    */
   @Get('contacts')
   @ApiResponse({ type: [UserInfoResponseDto] })
-  async getContacts(@CurrentUserId() userId: string) {
+  getContacts(@CurrentUserId() userId: string) {
     const data = this.users.getContacts(userId);
     return plainToInstance(UserInfoResponseDto, data);
   }
@@ -34,7 +33,10 @@ export class UsersController {
    */
   @Post('add-friend')
   @ApiResponse({ type: UserInfoResponseDto })
-  async addFriend(@CurrentUserId() userId: string, @Body() dto: AddFriendDto) {
+  async addFriend(
+    @CurrentUserId() userId: string,
+    @Body() dto: ClientAddFriendDto,
+  ) {
     const data = await this.users.addFriend(userId, dto.friendId);
     return data && data.length > 0;
   }

@@ -50,6 +50,36 @@ export interface LoginResponse {
   userInfo: AdminUser;
 }
 
+export type OauthProvider = 'google' | 'facebook' | 'apple';
+
+export interface OauthLoginResponse {
+  tokens: Tokens;
+  id: string;
+  phone: string;
+  phoneMd5: string;
+  nickname: string | null;
+  username: string | null;
+  avatar: string | null;
+  provider: OauthProvider;
+}
+
+export interface GoogleOauthLoginPayload {
+  idToken: string;
+  inviteCode?: string;
+}
+
+export interface FacebookOauthLoginPayload {
+  accessToken: string;
+  userId: string;
+  inviteCode?: string;
+}
+
+export interface AppleOauthLoginPayload {
+  idToken: string;
+  code?: string;
+  inviteCode?: string;
+}
+
 export interface User {
   id: string;
   nickname: string;

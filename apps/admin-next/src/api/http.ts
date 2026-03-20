@@ -2,6 +2,7 @@ import axios, {
   AxiosInstance,
   AxiosRequestConfig,
   AxiosResponse,
+  CanceledError,
   InternalAxiosRequestConfig,
 } from 'axios';
 import type { ApiResponse, RequestConfig } from './types'; // 注意：这里不要写 .ts 后缀
@@ -11,6 +12,12 @@ import { useToastStore } from '@/store/useToastStore';
 class HttpClient {
   private readonly instance: AxiosInstance;
   private requestQueue = new Set<string>();
+  private pendingControllers = new Map<string, AbortController>();
+  private inflightGetRequests = new Map<string, Promise<unknown>>();
+  /** 防止多个并发 401 重复触发 toast + redirect */
+  private _unauthorizedHandling = false;
+  /** 单飞 refresh：并发 401 时只刷新一次 */
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor() {
     this.instance = axios.create({
@@ -30,9 +37,12 @@ class HttpClient {
     // 请求拦截
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        const skipRefresh = config.headers['x-skip-auth-refresh'];
+        const method = (config.method || 'get').toLowerCase();
+
         // 1. token
         const token = this.getToken();
-        if (token) {
+        if (token && !skipRefresh) {
           config.headers.Authorization = `Bearer ${token}`;
         }
 
@@ -43,12 +53,21 @@ class HttpClient {
         }
 
         // 3. 去重请求 key
-        const key = this.genKey(config);
-        if (this.requestQueue.has(key)) {
-          // 这里你可以选择直接取消请求（需要 axios.CancelToken）
-          console.warn('[HTTP] duplicate request:', key);
+        if (method !== 'get') {
+          const key = this.genKey(config);
+          if (this.requestQueue.has(key)) {
+            const oldController = this.pendingControllers.get(key);
+            if (oldController) {
+              oldController.abort();
+            }
+            console.warn('[HTTP] duplicate request replaced:', key);
+          }
+
+          const controller = new AbortController();
+          config.signal = controller.signal;
+          this.pendingControllers.set(key, controller);
+          this.requestQueue.add(key);
         }
-        this.requestQueue.add(key);
 
         // 4. dev 日志
         if (process.env.NODE_ENV === 'development') {
@@ -68,9 +87,13 @@ class HttpClient {
 
     // 响应拦截
     this.instance.interceptors.response.use(
-      (res: AxiosResponse<ApiResponse>) => {
-        const key = this.genKey(res.config);
-        this.requestQueue.delete(key);
+      async (res: AxiosResponse<ApiResponse>) => {
+        const method = (res.config.method || 'get').toLowerCase();
+        if (method !== 'get') {
+          const key = this.genKey(res.config);
+          this.requestQueue.delete(key);
+          this.pendingControllers.delete(key);
+        }
 
         if (process.env.NODE_ENV === 'development') {
           console.log(
@@ -86,13 +109,40 @@ class HttpClient {
         }
 
         // 业务错误
+        if (data.code === 401) {
+          const retryConfig = res.config as InternalAxiosRequestConfig & {
+            _retry?: boolean;
+          };
+          // 已重试过则直接登出，防止无限 refresh 循环
+          if (retryConfig._retry) {
+            await this.handleUnauthorized();
+            return Promise.reject(data);
+          }
+          return this.handle401AndRetry(retryConfig);
+        }
+
         this.handleBizError(data);
         return Promise.reject(data);
       },
-      (error) => {
+      async (error) => {
         if (error.config) {
-          const key = this.genKey(error.config);
-          this.requestQueue.delete(key);
+          const method = (error.config.method || 'get').toLowerCase();
+          if (method !== 'get') {
+            const key = this.genKey(error.config);
+            this.requestQueue.delete(key);
+            this.pendingControllers.delete(key);
+          }
+
+          const config = error.config as InternalAxiosRequestConfig & {
+            _retry?: boolean;
+          };
+          if (
+            error.response?.status === 401 &&
+            !config._retry &&
+            !config.headers['x-skip-auth-refresh']
+          ) {
+            return this.handle401AndRetry(config);
+          }
         }
         this.handleHttpError(error);
         return Promise.reject(error);
@@ -111,6 +161,17 @@ class HttpClient {
     return localStorage.getItem('auth_token');
   }
 
+  private getRefreshToken(): string | null {
+    return localStorage.getItem('refresh_token');
+  }
+
+  private setAuthTokens(accessToken: string, refreshToken?: string) {
+    localStorage.setItem('auth_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+  }
+
   private getLanguage(): string {
     return localStorage.getItem('lang') || 'en';
   }
@@ -118,58 +179,145 @@ class HttpClient {
   // ================= 错误处理 =================
 
   private handleBizError(data: ApiResponse) {
+    // 401 单独处理，不再额外弹 toast
+    if (data.code === 401) {
+      void this.handleUnauthorized();
+      return;
+    }
+
     const fallbackMap: Record<number, string> = {
-      400: '请求参数错误',
-      401: '未授权，请重新登录',
-      403: '没有权限访问该资源',
-      404: '请求资源不存在',
-      500: '服务器内部错误',
+      400: 'Bad Request',
+      403: 'Forbidden',
+      404: 'Not Found',
+      500: 'Internal Server Error',
     };
 
     const msg =
       data.message || fallbackMap[data.code] || `业务错误（${data.code}）`;
 
-    // 401 单独处理
-    if (data.code === 401) {
-      this.handleUnauthorized();
-    }
-
     this.toastError(msg);
   }
 
   private handleHttpError(error: any) {
-    if (axios.isCancel(error)) {
+    if (axios.isCancel(error) || error instanceof CanceledError) {
       console.log('[HTTP] request cancelled:', error.message);
       return;
     }
 
-    let msg = '网络请求失败，请稍后重试';
-
     if (error.response) {
       const { status, data } = error.response;
-      msg = data?.message || `服务器错误（${status}）`;
 
       if (status === 401) {
-        this.handleUnauthorized();
+        // x-skip-auth-refresh 的内部请求（refresh / set-cookie / clear-cookie）
+        // 不再重复触发登出——它们的 401 由调用方统一处理
+        if (!error.config?.headers?.['x-skip-auth-refresh']) {
+          void this.handleUnauthorized();
+        }
+        return;
       }
+
+      const msg = data?.message || `Server Error: ${error.message}`;
+      this.toastError(msg);
     } else if (error.request) {
-      msg = 'unknown network error, please check your connection';
+      this.toastError('No response from server, please check your network');
     } else {
-      msg = error.message || msg;
+      this.toastError(error.message || 'Unexpected error occurred');
     }
 
     console.error('[HTTP Error]', error);
-    this.toastError(msg);
   }
 
-  private handleUnauthorized() {
-    // 清 token
-    localStorage.removeItem('auth_token');
+  private async handleUnauthorized() {
+    // 多个并发请求同时 401 时，只处理一次
+    if (this._unauthorizedHandling) return;
+    this._unauthorizedHandling = true;
 
-    // 跳登录
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+
     if (window.location.pathname !== '/login') {
+      this.toastError('Unauthorized, please log in again');
+      // 必须先清除 HTTP-only Cookie，否则 middleware 看到 Cookie 还在，
+      // 会把 /login 重定向回 /，导致 Sidebar polling 死循环
+      await this.instance
+        .post(
+          '/v1/auth/admin/clear-cookie',
+          {},
+          { headers: { 'x-skip-auth-refresh': '1' } },
+        )
+        .catch(() => {}); // 忽略错误，清不掉也要跳转
       window.location.href = '/login';
     }
+
+    queueMicrotask(() => {
+      this._unauthorizedHandling = false;
+    });
+  }
+
+  private async handle401AndRetry(
+    config: InternalAxiosRequestConfig & { _retry?: boolean },
+  ) {
+    const accessToken = await this.refreshAccessToken();
+    if (!accessToken) {
+      await this.handleUnauthorized();
+      return Promise.reject(new Error('Unauthorized'));
+    }
+
+    config._retry = true;
+    config.headers.Authorization = `Bearer ${accessToken}`;
+    return this.instance.request(config);
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      return null;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshRes = await this.instance.post<
+          ApiResponse<{
+            tokens: { accessToken: string; refreshToken: string };
+          }>
+        >(
+          '/v1/auth/admin/refresh',
+          { refreshToken },
+          {
+            headers: {
+              'x-skip-auth-refresh': '1',
+            },
+          },
+        );
+
+        const newAccessToken = refreshRes.data.data.tokens.accessToken;
+        const newRefreshToken = refreshRes.data.data.tokens.refreshToken;
+        this.setAuthTokens(newAccessToken, newRefreshToken);
+
+        // 同步刷新 HTTP-only cookie，SSR 中间件可继续读到有效 token
+        await this.instance
+          .post(
+            '/v1/auth/admin/set-cookie',
+            { token: newAccessToken },
+            { headers: { 'x-skip-auth-refresh': '1' } },
+          )
+          .catch((e) => {
+            console.warn('[HTTP] set-cookie after refresh failed', e);
+          });
+
+        return newAccessToken;
+      } catch (error) {
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
   }
 
   // ================= Toast 封装 =================
@@ -185,11 +333,31 @@ class HttpClient {
     params?: any,
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
-    const res = await this.instance.get<ApiResponse<T>>(url, {
+    const mergedConfig = {
       params,
       ...config,
+    };
+    const key = this.genKey({
+      method: 'get',
+      url,
+      params: mergedConfig.params,
+      data: mergedConfig.data,
     });
-    return res.data.data;
+
+    const existing = this.inflightGetRequests.get(key);
+    if (existing) {
+      return existing as Promise<T>;
+    }
+
+    const requestPromise = this.instance
+      .get<ApiResponse<T>>(url, mergedConfig)
+      .then((res) => res.data.data)
+      .finally(() => {
+        this.inflightGetRequests.delete(key);
+      });
+
+    this.inflightGetRequests.set(key, requestPromise);
+    return requestPromise;
   }
 
   public async post<T = any>(
