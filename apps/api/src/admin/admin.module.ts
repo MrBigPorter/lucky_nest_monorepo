@@ -24,6 +24,7 @@ import { AdsModule } from '@api/admin/ads/ads.module';
 import { FlashSaleModule } from '@api/admin/flash-sale/flash-sale.module';
 import { RegisterApplicationModule } from '@api/admin/register-application/register-application.module';
 import { AdminLuckyDrawModule } from '@api/admin/lucky-draw/lucky-draw.module';
+import { SupportChannelModule } from '@api/admin/support-channel/support-channel.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { AdminLuckyDrawModule } from '@api/admin/lucky-draw/lucky-draw.module';
     FlashSaleModule,
     RegisterApplicationModule,
     AdminLuckyDrawModule,
+    SupportChannelModule,
   ],
   providers: [],
   controllers: [],

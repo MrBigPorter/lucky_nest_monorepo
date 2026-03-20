@@ -724,6 +724,38 @@ export const chatApi = {
 };
 
 /**
+ * 客服渠道管理 API
+ */
+export const supportChannelApi = {
+  getList: (params: import('@/type/types').QuerySupportChannelsParams) =>
+    http.get<import('@/type/types').SupportChannelsResult>(
+      '/v1/admin/support-channels',
+      params,
+    ),
+
+  create: (data: import('@/type/types').CreateSupportChannelPayload) =>
+    http.post<import('@/type/types').SupportChannelItem>(
+      '/v1/admin/support-channels',
+      data,
+    ),
+
+  update: (
+    id: string,
+    data: import('@/type/types').UpdateSupportChannelPayload,
+  ) =>
+    http.patch<import('@/type/types').SupportChannelItem>(
+      `/v1/admin/support-channels/${id}`,
+      data,
+    ),
+
+  toggle: (id: string, isActive: boolean) =>
+    http.patch<import('@/type/types').SupportChannelItem>(
+      `/v1/admin/support-channels/${id}/toggle`,
+      { isActive },
+    ),
+};
+
+/**
  * 广告管理 API
  */
 export const adsApi = {

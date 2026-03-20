@@ -226,7 +226,7 @@ export class ChatController {
    */
   @Get('detail/:id')
   @ApiResponse({ type: ConversationDetailResponseDto })
-  async getDetail(@Param('id') id: string, @CurrentUserId() userId: string) {
+  getDetail(@Param('id') id: string, @CurrentUserId() userId: string) {
     const data = this.chatService.getConversationDetail(id, userId);
     return plainToInstance(ConversationDetailResponseDto, data);
   }

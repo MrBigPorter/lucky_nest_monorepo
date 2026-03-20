@@ -42,6 +42,7 @@ export const TRANSLATIONS = {
     service: 'Service Center',
     roles: 'Role Management',
     im: 'Customer Service',
+    supportChannels: 'Support Channels',
     ads: 'Advertisements',
     flashSale: 'Flash Sale',
     loginLogs: 'Login Logs',
@@ -91,6 +92,7 @@ export const TRANSLATIONS = {
     service: '客服中心',
     roles: '角色权限',
     im: '客服接待台',
+    supportChannels: '客服渠道管理',
     ads: '广告管理',
     flashSale: '秒杀活动',
     loginLogs: '登录日志',
@@ -107,4 +109,3 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
   VIEWER: 'Viewer',
   FINANCE: 'Finance',
 };
-

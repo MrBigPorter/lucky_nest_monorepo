@@ -13,6 +13,7 @@ import { seedCoupons } from './seed-coupons';
 import { seedLuckyDraw } from './seed-lucky-draw';
 import { seedTestUserWallet } from './seed-wallet';
 import { seedRobotsLite } from './seed-robots-lite';
+import { seedSupportChannels } from './seed-support-channels';
 import { seedGroups } from './seed-groups';
 import { seedLoginLogs } from './seed-login-logs';
 
@@ -69,6 +70,9 @@ async function main() {
 
   // [14] 机器人用户（供拼团补位与登录日志演示）
   await seedRobotsLite();
+
+  // [14.5] 客服渠道 + 虚拟 bot 用户（依赖机器人用户基础设施）
+  await seedSupportChannels();
 
   // [15] 拼团演示数据（依赖产品 + 测试用户）
   await seedGroups();
