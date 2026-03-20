@@ -538,6 +538,44 @@ async replyToConversation(conversationId, content, adminId) {
 | 渠道硬删除 | 历史消息 FK 约束错误 | 只软停用 (`isActive: false`) |
 | Admin 回复无推送 | 用户离线收不到消息 | 必须用 Bot User 代发（senderId = botUserId） |
 | 并发 Admin 冲突 | 两个 Admin 同时回复会乱序 | 加乐观锁或排他锁（Phase 3 考虑） |
+| **Close 后用户无法重新发起** 🔴 | Admin 关闭会话后用户再点「联系客服」，`findFirst` 找到已 CLOSED 的旧会话并返回，用户卡在无法继续的对话里 | `addMemberToBusinessGroup` 的 `findFirst` 查询必须加 `status: ConversationStatus.NORMAL` 过滤，CLOSED 会话不复用，自动新建 |
+
+**关键 Fix（已落地）**：
+
+```typescript
+// ❌ 旧代码：没有 status 过滤，会找到 CLOSED 的旧会话
+const existingConversation = await this.prisma.conversation.findFirst({
+  where: {
+    type: CONVERSATION_TYPE.SUPPORT,
+    AND: [
+      { members: { some: { userId } } },
+      { members: { some: { userId: channel.botUserId } } },
+    ],
+  },
+});
+
+// ✅ 修复后：只复用 NORMAL 状态的会话
+const existingConversation = await this.prisma.conversation.findFirst({
+  where: {
+    type: CONVERSATION_TYPE.SUPPORT,
+    status: ConversationStatus.NORMAL, // ← 关键：CLOSED(2) 的旧会话不复用
+    AND: [
+      { members: { some: { userId } } },
+      { members: { some: { userId: channel.botUserId } } },
+    ],
+  },
+});
+```
+
+**用户视角**（修复后完整闭环）：
+```
+用户第一次发起    → 创建新 SUPPORT 会话
+Admin close 会话  → status 设为 2(CLOSED)，推送系统消息
+用户再次点「联系客服」
+  → findFirst 找不到 NORMAL 会话（旧的是 CLOSED）
+  → 自动创建新会话 ✅
+  → Admin 客服台收到 support_new_conversation 事件 ✅
+```
 
 ---
 
