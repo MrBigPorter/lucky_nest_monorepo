@@ -9,7 +9,18 @@ on:
       - "packages/ui/**"
       - ".github/workflows/deploy-admin-cloudflare.yml"
   workflow_dispatch:
+    inputs:
+      runner:
+        description: "🖥️ Runner (ubuntu-latest = GitHub托管 / self-hosted = 本地Mac算力)"
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+        default: ubuntu-latest
   workflow_call:
+    inputs:
+      runner:
+        description: "Runner to use"
+        type: string
+        default: ubuntu-latest
 
 concurrency:
   group: deploy-admin-cloudflare-${{ github.ref }}
@@ -21,7 +32,7 @@ permissions:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
 
     steps:
       - name: 1. Checkout Code
@@ -51,7 +62,7 @@ jobs:
 
   deploy:
     needs: quality
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
 
     steps:
