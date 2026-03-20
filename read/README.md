@@ -12,6 +12,8 @@
 
 - `运维/发布`
   - `RUNBOOK.md`
+  - `RUNBOOK.md` 第 6.1（上线前 1 分钟检查）
+  - `RUNBOOK.md` 第 6.2（首次失败排障）
   - `.github/workflows/deploy-admin-cloudflare.yml`
   - `.github/workflows/deploy-backend.yml`
 - `后端开发`
@@ -27,6 +29,7 @@
 
 - 部署快启：`read/DEPLOY_QUICKSTART_CN.md`
 - 发布与回滚：`RUNBOOK.md`
+- Cloudflare 自动部署速查：`RUNBOOK.md` 第 6.1 / 6.2
 - OAuth 三方登录：`read/OAUTH_THIRDPARTY_LOGIN_CN.md`
 - IM 客服：`read/IM_SUPPORT_REALTIME_CN.md`
 - 测试规范：`read/TESTING_STANDARDS_CN.md`

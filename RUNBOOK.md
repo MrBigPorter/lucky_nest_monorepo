@@ -124,6 +124,34 @@ yarn deploy:quick
 - 若变更了 `packages/shared` 或 `packages/ui`，对应 build 已执行并提交产物/源码一致。
 - `compose.prod.yml` 与 `nginx/nginx.prod.conf` 与当前发布目标一致。
 
+### 6.1 Admin Cloudflare 自动部署（上线前 1 分钟检查）
+
+> 适用工作流：`.github/workflows/deploy-admin-cloudflare.yml`
+
+- 分支与环境映射确认：`main -> production`，`test -> preview`。
+- 触发路径命中：`apps/admin-next/**`、`packages/shared/**`、`packages/ui/**` 或手动触发。
+- 必需 Secrets（按对应 GitHub Environment 配置）：
+  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_ACCOUNT_ID`
+  - `NEXT_PUBLIC_API_BASE_URL`
+- 建议 Secrets：`CF_ADMIN_HEALTHCHECK_URL`（用于主分支 smoke check）。
+- 可选 Secrets：`NEXT_PUBLIC_WS_URL`、`TELEGRAM_TOKEN`、`TELEGRAM_CHAT_ID`。
+- Cloudflare 构建文件存在：`apps/admin-next/wrangler.jsonc`、`apps/admin-next/open-next.config.ts`。
+- 若改动了共享包：确认已提交对应 build 结果（`packages/shared` / `packages/ui`）。
+
+### 6.2 Admin Cloudflare 首次失败排障（按报错关键字）
+
+| 报错关键字 | 优先检查项 | 处理动作 |
+| --- | --- | --- |
+| `Invalid API token` / `Authentication error` | `CLOUDFLARE_API_TOKEN` 是否配置在当前 Environment，权限是否正确 | 重新生成/更新 Token，并在 `production`/`preview` 分别校验 |
+| `CLOUDFLARE_ACCOUNT_ID` / `account id` | Account ID 是否与 Token 所属账户一致 | 到 Cloudflare 控制台复制 Account ID，覆盖 Secret |
+| `open-next.config.ts` / `wrangler.jsonc` not found | 文件路径是否在 `apps/admin-next/` | 恢复文件并重试部署 |
+| `NEXT_PUBLIC_API_BASE_URL` missing | 当前 Environment 是否有该 Secret | 补齐后重跑 workflow |
+| `quality` job failed (`lint`/`check-types`/`test`) | 代码质量关口失败 | 先修复代码，再触发部署 job |
+| `Failed to create GitHub deployment` | workflow 权限 | 确认 `deployments: write` 未被移除 |
+| `Smoke Check` failed | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问 | 先本地 `curl` 验证 URL，再修复健康检查地址 |
+| Telegram send failed | 通知配置缺失 | 补齐 Telegram secrets，或接受通知失败不阻断发布 |
+
 ## 7) 发布后验证清单
 
 ```bash
