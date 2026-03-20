@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { Users, Timer, Eye } from 'lucide-react';
 import { Badge, BadgeColor } from '@/components/UIComponents';
 import { Card } from '@/components/UIComponents';
@@ -135,12 +136,14 @@ const GroupDetailModalContent: React.FC<{ groupId: string }> = ({
               key={m.user.id ?? i}
               className="flex items-center gap-2.5 p-2 rounded-lg bg-gray-50 dark:bg-white/5"
             >
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
                 {m.user.avatar ? (
-                  <img
+                  <Image
+                    fill
                     src={m.user.avatar}
-                    className="w-full h-full object-cover"
+                    className="object-cover"
                     alt=""
+                    sizes="32px"
                   />
                 ) : (
                   <span className="text-[10px] font-bold text-gray-400 uppercase">
@@ -229,12 +232,14 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
         width: 160,
         render: (_, row) => (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center relative">
               {row.creator?.avatar ? (
-                <img
+                <Image
+                  fill
                   src={row.creator.avatar}
-                  className="w-full h-full object-cover"
+                  className="object-cover"
                   alt=""
+                  sizes="28px"
                 />
               ) : (
                 <span className="text-[9px] font-bold text-gray-400 uppercase">

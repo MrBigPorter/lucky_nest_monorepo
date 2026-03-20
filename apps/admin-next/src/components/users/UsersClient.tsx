@@ -10,6 +10,7 @@
  *   3. 用户改变 filter 时，调用 router.replace() 更新 URL（无跳转，无白屏）
  */
 import React, { useCallback, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, ModalManager, cn } from '@repo/ui';
 import {
@@ -173,11 +174,15 @@ export function UsersClient() {
                 )}
               >
                 {row.avatar ? (
-                  <img
-                    src={row.avatar}
-                    className="h-full w-full object-cover"
-                    alt=""
-                  />
+                  <div className="relative h-full w-full">
+                    <Image
+                      fill
+                      src={row.avatar}
+                      className="object-cover"
+                      alt=""
+                      sizes="40px"
+                    />
+                  </div>
                 ) : (
                   <span className="text-slate-400 text-xs font-bold uppercase">
                     {row.nickname?.slice(0, 1) || 'U'}

@@ -123,7 +123,10 @@ export function DashboardOrdersClient() {
                     </td>
                     <td className="py-3 text-xs text-gray-400">
                       {order.createdAt
-                        ? format(new Date(order.createdAt * 1000), 'MM-dd HH:mm')
+                        ? format(
+                            new Date(order.createdAt * 1000),
+                            'MM-dd HH:mm',
+                          )
                         : '—'}
                     </td>
                   </tr>
@@ -136,4 +139,3 @@ export function DashboardOrdersClient() {
     </Card>
   );
 }
-

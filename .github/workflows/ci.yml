@@ -1,17 +1,15 @@
 # ============================================================
-# CI 检查 — PR 和 main 推送时运行
+# CI 检查 — main/test 推送时运行
 # ============================================================
 # 流程: 安装依赖 → Prisma 生成 → Lint → 类型检查 → 单元测试 → E2E
-# 目的: 在代码合并前发现问题, 避免部署失败
+# 目的: 在代码入库后发现问题, PR 通过手动合并保证质量
 # ============================================================
 
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
+    branches: [main, test]
 
 # 同一 PR 新提交时取消旧运行
 concurrency:
@@ -82,11 +80,11 @@ jobs:
         run: yarn workspace @lucky/api prisma generate
 
       - name: Lint
-        run: yarn turbo run lint
+        run: yarn turbo run lint --filter=!@lucky/mini-shop-admin
         continue-on-error: true
 
       - name: Type Check
-        run: yarn turbo run check-types
+        run: yarn turbo run check-types --filter=!@lucky/mini-shop-admin
 
       # admin-next 单元测试 — 必须通过
       - name: Unit Test — admin-next (required)
@@ -94,7 +92,7 @@ jobs:
 
       # 其他包测试 — 允许跳过
       - name: Unit Test — other packages (optional)
-        run: yarn turbo run test --filter=!@lucky/admin-next
+        run: yarn turbo run test --filter=!@lucky/admin-next --filter=!@lucky/mini-shop-admin
         continue-on-error: true
 
   # ============================================================

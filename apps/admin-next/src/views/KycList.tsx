@@ -41,6 +41,11 @@ export const KycList: React.FC<KycListProps> = ({
 }) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
+  const getErrorMessage = useCallback(
+    (error: unknown, fallback: string) =>
+      error instanceof Error ? error.message : fallback,
+    [],
+  );
 
   // --- Actions ---
 
@@ -102,11 +107,11 @@ export const KycList: React.FC<KycListProps> = ({
         await kycApi.revoke(record.userId, reason);
         addToast('success', 'KYC revoked successfully');
         actionRef.current?.reload();
-      } catch (err: any) {
-        addToast('error', err.message || 'Revoke failed');
+      } catch (error: unknown) {
+        addToast('error', getErrorMessage(error, 'Revoke failed'));
       }
     },
-    [addToast],
+    [addToast, getErrorMessage],
   );
 
   // 5. 执行 [删除]
@@ -121,13 +126,13 @@ export const KycList: React.FC<KycListProps> = ({
             await kycApi.delete(record.userId);
             addToast('success', 'Record deleted successfully');
             actionRef.current?.reload();
-          } catch (err: any) {
-            addToast('error', err.message || 'Delete failed');
+          } catch (error: unknown) {
+            addToast('error', getErrorMessage(error, 'Delete failed'));
           }
         },
       });
     },
-    [addToast],
+    [addToast, getErrorMessage],
   );
 
   // --- Configs ---
