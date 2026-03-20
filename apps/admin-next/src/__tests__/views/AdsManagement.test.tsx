@@ -83,7 +83,6 @@ describe('AdsManagement', () => {
     vi.clearAllMocks();
   });
 
-
   it('renders empty state when ad list is empty', () => {
     mockAdsRequest({ list: [] });
 
@@ -150,14 +149,12 @@ describe('AdsManagement', () => {
   it('deletes ad after confirmation and refreshes list', async () => {
     const refresh = mockAdsRequest({ list: [createAd()] });
     // Simulate user clicking "Confirm" in the modal
-    vi.mocked(ModalManager.open).mockImplementation(
-      (props) => {
-        props.onConfirm?.();
-        return {
-          close: vi.fn(),
-        };
-      },
-    );
+    vi.mocked(ModalManager.open).mockImplementation((props) => {
+      props.onConfirm?.();
+      return {
+        close: vi.fn(),
+      };
+    });
 
     render(<AdsManagement />);
 

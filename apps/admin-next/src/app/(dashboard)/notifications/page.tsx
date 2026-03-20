@@ -12,4 +12,3 @@ import { NotificationManagement } from '@/views/NotificationManagement';
 export default function NotificationsPage() {
   return <NotificationManagement />;
 }
-

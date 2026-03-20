@@ -17,7 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const pathname = (h.get('x-pathname') || '/').replace(/\/$/, '') || '/';
   const route = routes.find((r) => r.path === pathname);
   const title = route
-    ? (TRANSLATIONS.en[route.name as keyof typeof TRANSLATIONS.en] ?? route.name)
+    ? (TRANSLATIONS.en[route.name as keyof typeof TRANSLATIONS.en] ??
+      route.name)
     : undefined;
   return { title };
 }

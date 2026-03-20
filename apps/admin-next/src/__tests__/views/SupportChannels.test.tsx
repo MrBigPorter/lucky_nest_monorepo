@@ -77,7 +77,9 @@ describe('SupportChannels', () => {
     render(<SupportChannels />);
     expect(screen.getByTestId('page-header')).toBeInTheDocument();
     expect(screen.getByText('Lucky Support')).toBeInTheDocument();
-    expect(screen.getByText('official_platform_support_v1')).toBeInTheDocument();
+    expect(
+      screen.getByText('official_platform_support_v1'),
+    ).toBeInTheDocument();
   });
 
   it('creates support channel from built-in business id', async () => {
@@ -142,4 +144,3 @@ describe('SupportChannels', () => {
     });
   });
 });
-

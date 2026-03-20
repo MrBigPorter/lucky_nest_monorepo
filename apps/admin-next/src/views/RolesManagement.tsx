@@ -98,12 +98,16 @@ function RoleCard({
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${style.bg}`}>
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center ${style.bg}`}
+          >
             {style.icon}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className={`font-bold text-base ${style.color}`}>{item.nameEn}</h3>
+              <h3 className={`font-bold text-base ${style.color}`}>
+                {item.nameEn}
+              </h3>
               <span className="text-xs text-gray-400 dark:text-gray-500">
                 {item.nameZh}
               </span>
@@ -130,7 +134,10 @@ function RoleCard({
             <>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {item.permissions.length} permission{item.permissions.length !== 1 ? 's' : ''} across {moduleEntries.length} module{moduleEntries.length !== 1 ? 's' : ''}
+                  {item.permissions.length} permission
+                  {item.permissions.length !== 1 ? 's' : ''} across{' '}
+                  {moduleEntries.length} module
+                  {moduleEntries.length !== 1 ? 's' : ''}
                 </span>
                 <button
                   className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-600"
@@ -140,9 +147,13 @@ function RoleCard({
                   }}
                 >
                   {expanded ? (
-                    <><ChevronUp size={13} /> Hide</>
+                    <>
+                      <ChevronUp size={13} /> Hide
+                    </>
                   ) : (
-                    <><ChevronDown size={13} /> Details</>
+                    <>
+                      <ChevronDown size={13} /> Details
+                    </>
                   )}
                 </button>
               </div>
@@ -185,7 +196,10 @@ function RoleUsersPanel({
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const { data, loading, refresh } = useRequest(
-    () => userApi.getUsers({ role, pageSize: 100 } as Parameters<typeof userApi.getUsers>[0]),
+    () =>
+      userApi.getUsers({ role, pageSize: 100 } as Parameters<
+        typeof userApi.getUsers
+      >[0]),
     { refreshDeps: [role] },
   );
 
@@ -198,7 +212,8 @@ function RoleUsersPanel({
         <div className="flex items-center gap-2">
           <Users size={18} className="text-primary-500" />
           <span className="font-semibold text-gray-800 dark:text-white">
-            Admins with role: <span className="text-primary-500">{roleName}</span>
+            Admins with role:{' '}
+            <span className="text-primary-500">{roleName}</span>
           </span>
           <Badge color="blue">{users.length}</Badge>
         </div>
@@ -215,7 +230,10 @@ function RoleUsersPanel({
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-14 rounded-xl bg-gray-100 dark:bg-white/5 animate-pulse" />
+              <div
+                key={i}
+                className="h-14 rounded-xl bg-gray-100 dark:bg-white/5 animate-pulse"
+              />
             ))}
           </div>
         ) : users.length === 0 ? (
@@ -231,13 +249,16 @@ function RoleUsersPanel({
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-500/20 flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-semibold">
-                    {(user.realName || user.username)?.[0]?.toUpperCase() ?? '?'}
+                    {(user.realName || user.username)?.[0]?.toUpperCase() ??
+                      '?'}
                   </div>
                   <div>
                     <div className="font-medium text-sm text-gray-800 dark:text-white">
                       {user.realName || user.username}
                     </div>
-                    <div className="text-xs text-gray-400">@{user.username}</div>
+                    <div className="text-xs text-gray-400">
+                      @{user.username}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -286,7 +307,10 @@ export function RolesManagement() {
     data: roles,
     loading,
     error,
-  } = useRequest(rolesApi.getSummary, { cacheKey: 'roles-summary', ready: mounted });
+  } = useRequest(rolesApi.getSummary, {
+    cacheKey: 'roles-summary',
+    ready: mounted,
+  });
 
   const selectedItem = roles?.find((r) => r.role === selectedRole);
 
@@ -304,7 +328,8 @@ export function RolesManagement() {
       {/* Error */}
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/30 p-4 text-sm text-red-600 dark:text-red-400">
-          Failed to load roles summary. You may not have permission to view this page.
+          Failed to load roles summary. You may not have permission to view this
+          page.
         </div>
       )}
 
@@ -342,4 +367,3 @@ export function RolesManagement() {
     </div>
   );
 }
-
