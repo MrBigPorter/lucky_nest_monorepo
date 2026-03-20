@@ -3,6 +3,7 @@ import { Prisma, ConversationType } from '@prisma/client';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { UploadService } from '@api/common/upload/upload.service';
 import { EventsGateway } from '@api/common/events/events.gateway';
+import { ChatService } from '@api/common/chat/chat.service';
 import { v4 as uuidv4 } from 'uuid';
 import { QueryConversationsDto } from './dto/query-conversations.dto';
 import {
@@ -20,26 +21,6 @@ const MSG_TYPE_TEXT = 0;
 /** 系统消息类型（前端可以根据 senderId===null 判断样式） */
 const MSG_TYPE_SYSTEM = 99;
 
-/** 生成消息预览文本 */
-function getMsgPreview(type: number, content: string): string {
-  switch (type) {
-    case 1:
-      return '[Image]';
-    case 2:
-      return '[Voice]';
-    case 3:
-      return '[Video]';
-    case 5:
-      return '[File]';
-    case 6:
-      return '[Location]';
-    case 99:
-      return content;
-    default:
-      return content.slice(0, 120);
-  }
-}
-
 @Injectable()
 export class AdminChatService {
   private readonly logger = new Logger(AdminChatService.name);
@@ -48,6 +29,7 @@ export class AdminChatService {
     private readonly prisma: PrismaService,
     private readonly uploadService: UploadService,
     private readonly eventsGateway: EventsGateway,
+    private readonly chatService: ChatService,
   ) {}
 
   // ─────────────────────────────────────────────
@@ -175,78 +157,56 @@ export class AdminChatService {
   }
 
   // ─────────────────────────────────────────────
-  // 3. 客服回复（senderId = null → 系统消息）
+  // 3. 客服回复（通过 botUserId 走 ChatService 标准链路）
   // ─────────────────────────────────────────────
   async replyToConversation(
     conversationId: string,
     dto: AdminReplyDto,
     adminName: string,
+    adminId: string,
   ) {
     const conv = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, status: true },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, isRobot: true } },
+          },
+        },
+      },
     });
     if (!conv) throw new NotFoundException('Conversation not found');
 
+    const botMember = conv.members.find((m) => m.user?.isRobot);
+    if (!botMember) {
+      throw new NotFoundException('Support bot member not found');
+    }
+
     const agentLabel = dto.agentName ?? adminName ?? 'Support';
     const msgType = dto.type ?? MSG_TYPE_TEXT;
-    const finalContent = dto.content;
-    const previewText = getMsgPreview(msgType, finalContent);
-
-    const messageId = uuidv4();
-
-    const message = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.conversation.update({
-        where: { id: conversationId },
-        data: {
-          lastMsgSeqId: { increment: 1 },
-          lastMsgContent: `[${agentLabel}]: ${previewText}`,
-          lastMsgType: msgType,
-          lastMsgTime: new Date(),
-          status: CONV_STATUS.NORMAL,
-        },
-        select: { lastMsgSeqId: true },
-      });
-
-      return tx.chatMessage.create({
-        data: {
-          id: messageId,
-          conversationId,
-          senderId: null,
-          content: finalContent,
-          type: msgType,
-          seqId: updated.lastMsgSeqId,
-          meta: { agentName: agentLabel, isSupport: true, ...(dto.meta ?? {}) },
-        },
-      });
+    const message = await this.chatService.sendMessage(botMember.userId, {
+      id: uuidv4(),
+      conversationId,
+      content: dto.content,
+      type: msgType,
+      meta: {
+        isSupport: true,
+        agentName: agentLabel,
+        realAdminId: adminId,
+        ...(dto.meta ?? {}),
+      },
     });
 
     this.logger.log(
-      `Admin [${adminName}] replied to conversation ${conversationId} (type=${msgType})`,
+      `Admin [${adminName}] replied to conversation ${conversationId} via bot ${botMember.userId} (type=${msgType})`,
     );
-
-    // 🔔 实时推送到 Flutter 客户端 & 管理员 Socket 监听者
-    this.eventsGateway.dispatch(conversationId, 'chat_message', {
-      id: message.id,
-      conversationId,
-      senderId: null,
-      content: message.content,
-      type: message.type,
-      createdAt: message.createdAt.getTime(),
-      seqId: message.seqId,
-      isSystem: true,
-      isSelf: false,
-      isRecalled: false,
-      meta: message.meta,
-      sender: null,
-    });
 
     return {
       id: message.id,
       seqId: message.seqId,
       content: message.content,
-      createdAt: message.createdAt.getTime(),
-      isSystem: true,
+      createdAt: message.createdAt,
+      isSystem: false,
       meta: message.meta,
     };
   }

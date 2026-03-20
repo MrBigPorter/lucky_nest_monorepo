@@ -15,7 +15,7 @@ export class QueryConversationsDto {
   @Min(1)
   pageSize?: number = 20;
 
-  /** 按会话类型筛选，默认只看 SUPPORT */
+  /** 按会话类型筛选，默认只看 BUSINESS */
   @IsOptional()
   @IsEnum(ConversationType)
   type?: ConversationType;
@@ -34,4 +34,3 @@ export class QueryConversationsDto {
   @IsInt()
   status?: number;
 }
-

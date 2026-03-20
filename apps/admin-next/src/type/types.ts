@@ -1315,6 +1315,51 @@ export interface ChatMessagesResult {
   totalSeqId: number;
 }
 
+// ─── Support Channels ───────────────────────────────────────────────────────
+
+export interface SupportChannelItem {
+  id: string;
+  name: string;
+  description: string | null;
+  botUserId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  botUser: {
+    id: string;
+    nickname: string | null;
+    avatar: string | null;
+    isRobot: boolean;
+  };
+}
+
+export interface QuerySupportChannelsParams {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  isActive?: boolean;
+}
+
+export interface SupportChannelsResult {
+  list: SupportChannelItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CreateSupportChannelPayload {
+  id: string;
+  name: string;
+  description?: string;
+  avatar?: string;
+}
+
+export interface UpdateSupportChannelPayload {
+  name?: string;
+  description?: string;
+  avatar?: string;
+}
+
 // ─── Advertisement ────────────────────────────────────────────────────────────
 
 export interface Advertisement {
