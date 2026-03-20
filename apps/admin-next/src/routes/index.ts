@@ -4,12 +4,9 @@ import {
   ShoppingBag,
   Ticket,
   CreditCard,
-  Settings,
   Users,
   Package,
   Bell,
-  Crown,
-  Gift,
   Shield,
   FileText,
   PieChart,
@@ -30,236 +27,111 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export type RouteGroup = 'Overview' | 'Management' | 'Operations' | 'System';
+export type RouteGroup =
+  | 'Overview'
+  | 'Users'
+  | 'Catalog'
+  | 'Commerce'
+  | 'Marketing'
+  | 'Customer Service'
+  | 'Analytics'
+  | 'System';
 
 export interface RouteConfig {
   path: string;
-  /** 对应 TRANSLATIONS 中的 key */
   name: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   group: RouteGroup;
-  /** true = 路由保留但不在侧边栏显示 */
   hidden?: boolean;
 }
 
 export const routes: RouteConfig[] = [
-  // ── Overview ──────────────────────────────────────────────────
-  {
-    path: '/',
-    name: 'dashboard',
-    icon: LayoutDashboard,
-    group: 'Overview',
-  },
+  // Overview
+  { path: '/', name: 'dashboard', icon: LayoutDashboard, group: 'Overview' },
 
-  // ── Management ────────────────────────────────────────────────
+  // Users
+  { path: '/users', name: 'users', icon: Users, group: 'Users' },
+  { path: '/kyc', name: 'kyc', icon: UserCheck, group: 'Users' },
+  { path: '/address', name: 'address', icon: MapPin, group: 'Users' },
+
+  // Catalog
+  { path: '/products', name: 'products', icon: ShoppingBag, group: 'Catalog' },
+  { path: '/categories', name: 'categories', icon: Tag, group: 'Catalog' },
+  { path: '/banners', name: 'banners', icon: Image, group: 'Catalog' },
   {
-    path: '/users',
-    name: 'users',
-    icon: Users,
-    group: 'Management',
-  },
-  {
-    path: '/kyc',
-    name: 'kyc',
-    icon: UserCheck,
-    group: 'Management',
-  },
-  {
-    path: '/address',
-    name: 'address',
-    icon: MapPin,
-    group: 'Management',
-  },
-  {
-    path: '/admin-users',
-    name: 'admin',
-    icon: Shield,
-    group: 'Management',
-  },
-  {
-    path: '/products',
-    name: 'products',
-    icon: ShoppingBag,
-    group: 'Management',
-  },
-  {
-    path: '/categories',
-    name: 'categories',
-    icon: Tag,
-    group: 'Management',
-  },
-  {
-    path: '/act/section',
+    path: '/act-sections',
     name: 'actSection',
     icon: LayoutGrid,
-    group: 'Management',
-  },
-  {
-    path: '/banners',
-    name: 'banners',
-    icon: Image,
-    group: 'Management',
-  },
-  {
-    path: '/groups',
-    name: 'groups',
-    icon: UsersRound,
-    group: 'Management',
-  },
-  {
-    path: '/orders',
-    name: 'orders',
-    icon: Package,
-    group: 'Management',
-  },
-  {
-    path: '/service',
-    name: 'service',
-    icon: Headphones,
-    group: 'Management',
-    hidden: true,
+    group: 'Catalog',
   },
 
-  // ── Operations ────────────────────────────────────────────────
+  // Commerce
+  { path: '/orders', name: 'orders', icon: Package, group: 'Commerce' },
+  { path: '/groups', name: 'groups', icon: UsersRound, group: 'Commerce' },
+
+  // Marketing
+  { path: '/marketing', name: 'marketing', icon: Ticket, group: 'Marketing' },
+  { path: '/ads', name: 'ads', icon: Megaphone, group: 'Marketing' },
+  { path: '/flash-sale', name: 'flashSale', icon: Zap, group: 'Marketing' },
   {
-    path: '/analytics',
-    name: 'analytics',
-    icon: PieChart,
-    group: 'Operations',
-  },
-  {
-    path: '/operation-logs',
-    name: 'operationLogs',
-    icon: FileText,
-    group: 'Operations',
-  },
-  {
-    path: '/lottery',
-    name: 'lottery',
-    icon: Zap,
-    group: 'Operations',
-    hidden: true,
-  },
-  {
-    path: '/activity',
-    name: 'activity',
-    icon: Gift,
-    group: 'Operations',
-    hidden: true,
-  },
-  {
-    path: '/vip',
-    name: 'vip',
-    icon: Crown,
-    group: 'Operations',
-    hidden: true,
+    path: '/lucky-draw',
+    name: 'luckyDraw',
+    icon: Sparkles,
+    group: 'Marketing',
   },
   {
     path: '/notifications',
     name: 'notifications',
     icon: Bell,
-    group: 'Operations',
+    group: 'Marketing',
   },
+
+  // Customer Service
   {
-    path: '/im',
+    path: '/customer-service',
     name: 'im',
     icon: MessageSquare,
-    group: 'Operations',
+    group: 'Customer Service',
   },
   {
     path: '/support-channels',
     name: 'supportChannels',
     icon: Headphones,
-    group: 'Operations',
-  },
-  {
-    path: '/marketing',
-    name: 'marketing',
-    icon: Ticket,
-    group: 'Operations',
-  },
-  {
-    path: '/ads',
-    name: 'ads',
-    icon: Megaphone,
-    group: 'Operations',
-  },
-  {
-    path: '/flash-sale',
-    name: 'flashSale',
-    icon: Zap,
-    group: 'Operations',
-  },
-  {
-    path: '/lucky-draw',
-    name: 'luckyDraw',
-    icon: Sparkles,
-    group: 'Operations',
-  },
-  {
-    path: '/login-logs',
-    name: 'loginLogs',
-    icon: LogIn,
-    group: 'Operations',
-  },
-  {
-    path: '/login-log',
-    name: 'loginLogs',
-    icon: LogIn,
-    group: 'Operations',
-    hidden: true,
+    group: 'Customer Service',
   },
 
-  // ── System ────────────────────────────────────────────────────
+  // Analytics
+  { path: '/analytics', name: 'analytics', icon: PieChart, group: 'Analytics' },
   {
-    path: '/payment/channels',
+    path: '/operation-logs',
+    name: 'operationLogs',
+    icon: FileText,
+    group: 'Analytics',
+  },
+  { path: '/login-logs', name: 'loginLogs', icon: LogIn, group: 'Analytics' },
+
+  // System
+  { path: '/finance', name: 'finance', icon: Wallet, group: 'System' },
+  {
+    path: '/payment-channels',
     name: 'paymentChannels',
     icon: CreditCard,
     group: 'System',
   },
-  {
-    path: '/finance',
-    name: 'finance',
-    icon: Wallet,
-    group: 'System',
-  },
-  {
-    path: '/finance/detail',
-    name: 'finance_page',
-    icon: Wallet,
-    group: 'System',
-    hidden: true,
-  },
-  {
-    path: '/roles',
-    name: 'roles',
-    icon: KeyRound,
-    group: 'System',
-  },
+  { path: '/admin-users', name: 'admin', icon: Shield, group: 'System' },
+  { path: '/roles', name: 'roles', icon: KeyRound, group: 'System' },
   {
     path: '/settings',
     name: 'settings',
     icon: SlidersHorizontal,
     group: 'System',
   },
+
+  // Hidden (for metadata matching only)
   {
-    path: '/admin-security',
-    name: 'admin_security',
-    icon: KeyRound,
-    group: 'System',
-    hidden: true,
-  },
-  {
-    path: '/content',
-    name: 'content_cms',
-    icon: FileText,
-    group: 'System',
-    hidden: true,
-  },
-  {
-    path: '/system',
-    name: 'system',
-    icon: Settings,
+    path: '/finance/detail',
+    name: 'finance_page',
+    icon: Wallet,
     group: 'System',
     hidden: true,
   },

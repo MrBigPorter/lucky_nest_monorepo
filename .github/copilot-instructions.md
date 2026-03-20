@@ -33,6 +33,20 @@
 
 ---
 
+## 🧹 Admin Next 路由 & 侧边栏清理（Phase 6 插入任务）
+
+**背景**：路由目录/routes.ts/Sidebar 分组三处不对齐，积累了重复路由、无实体 hidden 占位、分组臃肿等问题，趁 Phase 2 完成后一次性整理。
+
+- [x] 删除 `/login-log` 冗余目录（`app/(dashboard)/login-log/`）
+- [x] 清理 `routes/index.ts`：删除 8 个无对应页面的 hidden 占位路由（`/service /lottery /activity /vip /admin-security /content /system /login-log`）
+- [x] 重命名 `/im` → `/customer-service`：新建目录 + 旧目录加 `redirect()`
+- [x] Sidebar 分组从 4 组重构为 8 组（Overview / Users / Catalog / Commerce / Marketing / Customer Service / Analytics / System）
+- [x] 同步更新 `routes/index.ts` 的 `RouteGroup` 类型与所有 `group` 字段
+- [x] 扁平化 `/act/section` → `/act-sections`（新目录 + 旧目录 redirect）
+- [x] 扁平化 `/payment/channels` → `/payment-channels`（新目录 + 旧目录 redirect）
+
+---
+
 ## 一、项目全景
 
 | 维度 | 详情 |

@@ -38,8 +38,8 @@ export function PaymentChannelsClient() {
         }
       });
       const newUrl = qs.toString()
-        ? `/payment/channels?${qs.toString()}`
-        : '/payment/channels';
+        ? `/payment-channels?${qs.toString()}`
+        : '/payment-channels';
       router.replace(newUrl, { scroll: false });
     },
     [router],

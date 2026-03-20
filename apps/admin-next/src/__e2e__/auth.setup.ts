@@ -7,7 +7,7 @@
  *
  * All business spec files pick up the saved storageState via playwright.config.ts.
  */
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect } from './fixtures';
 import { loginViaUI } from './helpers';
 
 const AUTH_FILE = 'playwright/.auth/admin.json';
@@ -26,13 +26,13 @@ const WARMUP_ROUTES = [
   '/groups/',
   '/admin-users/',
   '/address/',
-  '/act/section/',
-  '/payment/channels/',
+  '/act-sections/',
+  '/payment-channels/',
   // Phase 5 — new feature pages
   '/ads/',
   '/flash-sale/',
   '/settings/',
-  '/im/',
+  '/customer-service/',
   '/login-logs/',
   '/analytics/',
   '/notifications/',
@@ -78,9 +78,13 @@ setup('authenticate and warmup all routes', async ({ page, browser }) => {
         // Verify the page didn't 302 away (would mean middleware is blocking it)
         const finalUrl = publicPage.url();
         if (!finalUrl.includes(path.replace(/\/$/, ''))) {
-          console.warn(`  ⚠️  ${path} redirected to ${finalUrl} — possible middleware issue`);
+          console.warn(
+            `  ⚠️  ${path} redirected to ${finalUrl} — possible middleware issue`,
+          );
         }
-        await publicPage.locator('body').waitFor({ state: 'visible', timeout: 30_000 });
+        await publicPage
+          .locator('body')
+          .waitFor({ state: 'visible', timeout: 30_000 });
       } catch {
         console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
       } finally {

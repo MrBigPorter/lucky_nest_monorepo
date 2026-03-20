@@ -37,7 +37,9 @@ export function ActSectionClient() {
           qs.set(key, String(value));
         }
       });
-      const newUrl = qs.toString() ? `/act/section?${qs.toString()}` : '/act/section';
+      const newUrl = qs.toString()
+        ? `/act-sections?${qs.toString()}`
+        : '/act-sections';
       router.replace(newUrl, { scroll: false });
     },
     [router],
