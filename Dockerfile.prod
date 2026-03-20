@@ -48,8 +48,8 @@ RUN node_modules/.bin/tsc -p packages/shared/tsconfig.json
 RUN yarn workspace @lucky/api build
 
     # 7) 编译 CLI 脚本 (独立 tsc, 不走 webpack, 产物放入 dist/cli/)
-#    生产使用: docker exec -it lucky-backend-prod node apps/api/dist/cli/create-admin.js
-RUN cd apps/api && node_modules/.bin/tsc -p tsconfig.cli.json
+    #    生产使用: docker exec -it lucky-backend-prod node apps/api/dist/cli/create-admin.js
+RUN node_modules/.bin/tsc -p apps/api/tsconfig.cli.json
 
 # ============================================================
 # Stage 2: Pruner — 裁剪 node_modules (中间层)
