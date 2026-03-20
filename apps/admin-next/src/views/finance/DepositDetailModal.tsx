@@ -16,7 +16,9 @@ const InfoRow = ({
 }) => (
   <div className="flex flex-col gap-1">
     <span className="text-xs text-gray-500">{label}</span>
-    <div className="text-sm font-medium break-all">{value || '-'}</div>
+    <div className="text-sm font-medium break-words">
+      {value || '-'}
+    </div>
   </div>
 );
 
@@ -41,7 +43,7 @@ export const DepositDetailModal: React.FC<{
       </div>
 
       {/* 基础信息 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <InfoRow
           label="User"
           value={`${data.user?.nickname} (${data.user?.phone})`}
@@ -50,8 +52,10 @@ export const DepositDetailModal: React.FC<{
 
         <div className="col-span-2">
           <div className="text-xs text-gray-500 mb-1">Order No.</div>
-          <div className="flex items-center gap-2 font-mono text-sm font-bold">
-            {data.rechargeNo}
+          <div className="flex items-center gap-2 font-mono text-sm font-bold min-w-0">
+            <span className="break-all [overflow-wrap:anywhere] min-w-0">
+              {data.rechargeNo}
+            </span>
             <Copy
               size={12}
               className="cursor-pointer text-gray-400 hover:text-primary-500"
@@ -65,7 +69,7 @@ export const DepositDetailModal: React.FC<{
             <div className="text-xs text-gray-500 mb-1">
               Gateway Ref ID (Xendit)
             </div>
-            <div className="font-mono text-sm bg-gray-100 dark:bg-gray-800 p-1.5 rounded select-all">
+            <div className="font-mono text-sm bg-gray-100 dark:bg-gray-800 p-1.5 rounded select-all break-all [overflow-wrap:anywhere]">
               {data.thirdPartyOrderNo}
             </div>
           </div>
@@ -74,7 +78,7 @@ export const DepositDetailModal: React.FC<{
 
       {/* 支付时间线 */}
       <div className="border-t pt-4 border-gray-100 dark:border-white/10">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InfoRow
             label="Created At"
             value={TimeHelper.formatDateTime(data.createdAt)}

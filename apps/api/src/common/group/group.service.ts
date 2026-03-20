@@ -524,6 +524,15 @@ export class GroupService {
       );
     }
 
+    // 秒杀订单退款时恢复 flashStock
+    if (order.flashSaleProductId) {
+      await tx.$executeRaw`
+        UPDATE flash_sale_products
+           SET flash_stock = flash_stock + ${order.buyQuantity ?? 1}
+         WHERE id = ${order.flashSaleProductId}
+      `;
+    }
+
     await tx.order.update({
       where: { orderId: order.orderId },
       data: {

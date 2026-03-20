@@ -5,6 +5,7 @@ import {
   AdminUpdateAddressDto,
 } from '@api/admin/address/dto/admin-address.dto';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { RegionService } from '@api/common/region/region.service';
 
 @Injectable()
@@ -124,12 +125,11 @@ export class AddressService {
         where: { addressId },
       });
       return { success: true };
-    } catch (error: any) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new BadRequestException('Address not found');
+    } catch (error: unknown) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new BadRequestException('Address not found');
+        }
       }
       throw error;
     }

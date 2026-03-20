@@ -20,16 +20,13 @@ const AdjustSchema = z.object({
   userId: z.string().min(1, 'User ID is required'),
   actionType: z.coerce.number(), // 1: Income, 2: Outcome
   balanceType: z.coerce.number(), // 1: Cash, 2: Coin
-  amount: z
-    .string()
-    .regex(
-      /^\d+(\.\d{1,2})?$/,
+  amount: z.coerce
+    .number()
+    .positive('Amount must be greater than zero')
+    .refine(
+      (val) => /^\d+(\.\d{1,2})?$/.test(String(val)),
       'Must be a valid amount with up to 2 decimal places',
-    )
-    .transform((val) => Number(val))
-    .refine((val) => val > 0, {
-      message: 'Amount must be greater than zero',
-    }),
+    ),
   remark: z.string().min(1, 'Remark is required for audit trail'),
 });
 

@@ -41,6 +41,8 @@ services:
                echo '>>> yarn.lock unchanged - skipping install';
              fi &&
              export PATH=/app/node_modules/.bin:$$PATH &&
+             echo '>>> Applying pending DB migrations...' &&
+             yarn workspace @lucky/api pr:deploy &&
              yarn workspace @lucky/api start:dev"
     expose:
       - "3000"
@@ -93,8 +95,12 @@ services:
       - pkg_config_nm:/app/packages/config/node_modules
     environment:
       NEXT_PUBLIC_API_BASE_URL: /api
+      # Server Components 直连后端（跳过 nginx 公网往返，降低 SSR 延迟）
+      INTERNAL_API_URL: http://lucky-backend-dev:3000/api
       NEXT_PUBLIC_APP_ENV: development
       HOSTNAME: "0.0.0.0"
+      # Google reCAPTCHA v3 Site Key (前端用，可公开)
+      NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${NEXT_PUBLIC_RECAPTCHA_SITE_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:4001/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))\""]
       interval: 10s

@@ -7,7 +7,7 @@
  *
  * All business spec files pick up the saved storageState via playwright.config.ts.
  */
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect } from './fixtures';
 import { loginViaUI } from './helpers';
 
 const AUTH_FILE = 'playwright/.auth/admin.json';
@@ -26,11 +26,24 @@ const WARMUP_ROUTES = [
   '/groups/',
   '/admin-users/',
   '/address/',
-  '/act/section/',
-  '/payment/channels/',
+  '/act-sections/',
+  '/payment-channels/',
+  // Phase 5 — new feature pages
+  '/ads/',
+  '/flash-sale/',
+  '/settings/',
+  '/customer-service/',
+  '/login-logs/',
+  '/analytics/',
+  '/notifications/',
+  '/roles/',
+  '/operation-logs/',
 ];
 
-setup('authenticate and warmup all routes', async ({ page }) => {
+// Routes that don't show the sidebar (public / login pages)
+const PUBLIC_WARMUP_ROUTES = ['/register-apply/'];
+
+setup('authenticate and warmup all routes', async ({ page, browser }) => {
   // ── Step 1: Login ──────────────────────────────────────────────────────────
   await loginViaUI(page);
 
@@ -43,19 +56,53 @@ setup('authenticate and warmup all routes', async ({ page }) => {
   // ── Step 2: Warmup ─────────────────────────────────────────────────────────
   // Visit each route so Turbopack compiles it now rather than during a spec.
   // If a route is already compiled (persistent cache hit), this is near-instant.
-  console.log(`\n🔥 Warming up ${WARMUP_ROUTES.length} routes…`);
-  for (const route of WARMUP_ROUTES) {
-    try {
-      console.log(`  → ${route}`);
-      await page.goto(route, { waitUntil: 'domcontentloaded', timeout: 300_000 });
-      // Wait for the sidebar which signals the layout is fully rendered
-      await page.locator('aside').waitFor({ state: 'visible', timeout: 300_000 });
-    } catch {
-      // Non-fatal: some routes may redirect or take longer than expected.
-      // The spec itself will retry on its own timeout.
-      console.warn(`  ⚠️  Warmup failed for ${route} — continuing`);
+  const allRoutes = [
+    ...WARMUP_ROUTES.map((r) => ({ path: r, isPublic: false })),
+    ...PUBLIC_WARMUP_ROUTES.map((r) => ({ path: r, isPublic: true })),
+  ];
+  console.log(`\n🔥 Warming up ${allRoutes.length} routes…`);
+
+  for (const { path, isPublic } of allRoutes) {
+    console.log(`  → ${path}${isPublic ? ' (public)' : ''}`);
+
+    if (isPublic) {
+      // ⚠️  Public routes: middleware redirects authenticated users to /
+      //     Must use a fresh context with NO auth cookies so the real page is compiled.
+      const ctx = await browser.newContext();
+      const publicPage = await ctx.newPage();
+      try {
+        await publicPage.goto(path, {
+          waitUntil: 'domcontentloaded',
+          timeout: 300_000,
+        });
+        // Verify the page didn't 302 away (would mean middleware is blocking it)
+        const finalUrl = publicPage.url();
+        if (!finalUrl.includes(path.replace(/\/$/, ''))) {
+          console.warn(
+            `  ⚠️  ${path} redirected to ${finalUrl} — possible middleware issue`,
+          );
+        }
+        await publicPage
+          .locator('body')
+          .waitFor({ state: 'visible', timeout: 30_000 });
+      } catch {
+        console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
+      } finally {
+        await ctx.close();
+      }
+    } else {
+      try {
+        await page.goto(path, {
+          waitUntil: 'domcontentloaded',
+          timeout: 300_000,
+        });
+        await page
+          .locator('aside')
+          .waitFor({ state: 'visible', timeout: 300_000 });
+      } catch {
+        console.warn(`  ⚠️  Warmup failed for ${path} — continuing`);
+      }
     }
   }
   console.log('✅ Warmup complete\n');
 });
-

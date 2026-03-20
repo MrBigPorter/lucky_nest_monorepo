@@ -40,6 +40,18 @@ interface SmartTableProps<T extends Record<string, any>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onExport?: (params: any) => void;
   defaultPageSize?: number;
+  /**
+   * 初始搜索参数（来自 URL searchParams）。
+   * 表单渲染时预填充，SmartTable 首次请求也会带上这些参数。
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialFormParams?: Record<string, any>;
+  /**
+   * 搜索条件变化时的回调（search / reset 都会触发）。
+   * 用于 URL searchParams 同步：父组件拿到新 params 后调用 router.replace()。
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onParamsChange?: (params: Record<string, any>) => void;
 }
 
 // ------------------------------------
@@ -58,13 +70,13 @@ const renderSmartCell = (
       return <span className="font-mono">{NumHelper.formatMoney(text)}</span>;
     case 'date':
       return (
-        <span className="text-gray-500 text-xs">
+        <span className="text-gray-500 dark:text-gray-400 text-xs">
           {TimeHelper.formatDate(text)}
         </span>
       );
     case 'dateTime':
       return (
-        <span className="text-gray-500 text-xs">
+        <span className="text-gray-500 dark:text-gray-400 text-xs">
           {TimeHelper.formatDateTime(text)}
         </span>
       );
@@ -175,6 +187,8 @@ const SmartTableInner = <T extends Record<string, any>>(
     onExport,
     defaultPageSize = 10,
     params,
+    initialFormParams = {},
+    onParamsChange,
   } = props;
 
   // 引用锁定，防止死循环
@@ -190,7 +204,8 @@ const SmartTableInner = <T extends Record<string, any>>(
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [formParams, setFormParams] = useState<Record<string, any>>({});
+  const [formParams, setFormParams] =
+    useState<Record<string, any>>(initialFormParams);
 
   const onPageChange = useCallback((p: number, ps: number) => {
     setPagination((prev) => {
@@ -323,27 +338,31 @@ const SmartTableInner = <T extends Record<string, any>>(
   }, [columns]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSearch = useCallback((values: any) => {
-    setPagination((p) => {
-      if (p.page === 1) return p;
-      return { ...p, page: 1 };
-    });
+  const handleSearch = useCallback(
+    (values: any) => {
+      setPagination((p) => {
+        if (p.page === 1) return p;
+        return { ...p, page: 1 };
+      });
 
-    for (const key in values) {
-      if (
-        values[key] === '' ||
-        values[key] === undefined ||
-        values[key] === null
-      ) {
-        delete values[key];
+      for (const key in values) {
+        if (
+          values[key] === '' ||
+          values[key] === undefined ||
+          values[key] === null
+        ) {
+          delete values[key];
+        }
+        if (values[key] === 'ALL') {
+          delete values[key];
+        }
       }
-      if (values[key] === 'ALL') {
-        delete values[key];
-      }
-    }
 
-    setFormParams(values);
-  }, []);
+      setFormParams(values);
+      onParamsChange?.(values);
+    },
+    [onParamsChange],
+  );
 
   const handleReset = useCallback(() => {
     setPagination((p) => {
@@ -351,7 +370,8 @@ const SmartTableInner = <T extends Record<string, any>>(
       return { ...p, page: 1 };
     });
     setFormParams({});
-  }, []);
+    onParamsChange?.({});
+  }, [onParamsChange]);
 
   const handleRefresh = useCallback(() => {
     fetchData().catch();
@@ -362,6 +382,7 @@ const SmartTableInner = <T extends Record<string, any>>(
       {finalSearchSchema.length > 0 && (
         <SchemaSearchForm
           schema={finalSearchSchema}
+          initialValues={initialFormParams}
           onSearch={handleSearch}
           onReset={handleReset}
         />
@@ -370,7 +391,9 @@ const SmartTableInner = <T extends Record<string, any>>(
       {(headerTitle || toolBarRender || onExport || request) && (
         <div className="flex justify-between items-center px-1">
           {headerTitle ? (
-            <div className="text-lg font-bold">{headerTitle}</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              {headerTitle}
+            </div>
           ) : (
             <div />
           )}

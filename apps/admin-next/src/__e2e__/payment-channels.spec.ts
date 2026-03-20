@@ -1,14 +1,13 @@
 /**
- * E2E — Payment Channel Management (/payment/channels)
+ * E2E — Payment Channel Management (/payment-channels)
  *
  * 覆盖: 页面加载  渠道列表  搜索  Add Channel 按钮  弹窗
  */
-import { test, expect } from '@playwright/test';
-import { expectNoError, waitForDashboard } from './fixtures';
+import { test, expect, expectNoError, waitForDashboard } from './fixtures';
 
-const PATH = '/payment/channels/';
+const PATH = '/payment-channels/';
 
-test.describe('Payment Channel Management — /payment/channels', () => {
+test.describe('Payment Channel Management — /payment-channels', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(PATH);
     await waitForDashboard(page);
@@ -22,9 +21,9 @@ test.describe('Payment Channel Management — /payment/channels', () => {
   });
 
   test('显示 Payment Channel 相关标题', async ({ page }) => {
-    await expect(
-      page.getByText(/payment channel/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/payment channel/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test('渠道表格或列表渲染', async ({ page }) => {
@@ -60,4 +59,3 @@ test.describe('Payment Channel Management — /payment/channels', () => {
     await expectNoError(page);
   });
 });
-

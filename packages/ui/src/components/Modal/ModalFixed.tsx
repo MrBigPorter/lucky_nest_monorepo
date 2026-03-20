@@ -5,6 +5,24 @@ import { cn } from "../../lib/utils.ts";
 import { Button } from "../../button.tsx";
 import { ModalProps } from "./Types.ts";
 
+/**
+ * Wrapper component that calls the renderChildren function as a proper React
+ * component. This isolates any hooks inside the function from ModalFixed's
+ * own hook tree, preventing "Rendered fewer hooks than expected" errors when
+ * the modal closes (visible becomes false) and the function is no longer called.
+ */
+function RenderChildrenWrapper({
+  fn,
+  close,
+  confirm,
+}: {
+  fn: (helpers: { close: () => void; confirm: () => void }) => React.ReactNode;
+  close: () => void;
+  confirm: () => void;
+}) {
+  return <>{fn({ close, confirm })}</>;
+}
+
 export function ModalFixed({
   title,
   content,
@@ -86,9 +104,15 @@ export function ModalFixed({
             )}
 
             <div className="p-6 overflow-y-auto custom-scrollbar">
-              {renderChildren && typeof renderChildren === "function"
-                ? renderChildren({ close: cancel, confirm })
-                : (renderChildren ?? content)}
+              {renderChildren && typeof renderChildren === "function" ? (
+                <RenderChildrenWrapper
+                  fn={renderChildren}
+                  close={cancel}
+                  confirm={confirm}
+                />
+              ) : (
+                renderChildren ?? content
+              )}
             </div>
 
             {(confirmText || cancelText) && (

@@ -27,7 +27,18 @@ import {
 import { useToastStore } from '@/store/useToastStore';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 
-export const KycList: React.FC = () => {
+interface KycListProps {
+  // Phase 3: URL searchParams 驱动 filter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialFormParams?: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onParamsChange?: (params: Record<string, any>) => void;
+}
+
+export const KycList: React.FC<KycListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -100,22 +111,21 @@ export const KycList: React.FC = () => {
 
   // 5. 执行 [删除]
   const handleDelete = useCallback(
-    async (record: KycRecord) => {
-      if (
-        !window.confirm(
-          `⚠️ DANGER: Physically delete record for ${record.userId}?\nThis cannot be undone.`,
-        )
-      ) {
-        return;
-      }
-
-      try {
-        await kycApi.delete(record.userId);
-        addToast('success', 'Record deleted successfully');
-        actionRef.current?.reload();
-      } catch (err: any) {
-        addToast('error', err.message || 'Delete failed');
-      }
+    (record: KycRecord) => {
+      ModalManager.open({
+        title: 'Delete KYC Record',
+        content: `Physically delete record for ${record.userId}? This cannot be undone.`,
+        confirmText: 'Delete',
+        onConfirm: async () => {
+          try {
+            await kycApi.delete(record.userId);
+            addToast('success', 'Record deleted successfully');
+            actionRef.current?.reload();
+          } catch (err: any) {
+            addToast('error', err.message || 'Delete failed');
+          }
+        },
+      });
     },
     [addToast],
   );
@@ -327,6 +337,8 @@ export const KycList: React.FC = () => {
             columns={columns}
             searchSchema={searchSchema}
             request={requestKyc}
+            initialFormParams={initialFormParams}
+            onParamsChange={onParamsChange}
           />
         </div>
       </Card>

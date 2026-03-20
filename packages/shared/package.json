@@ -1,11 +1,27 @@
 {
   "name": "@lucky/shared",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./dist/types/order": {
+      "types": "./dist/types/order.d.ts",
+      "default": "./dist/types/order.js"
+    },
+    "./dist/types/treasure": {
+      "types": "./dist/types/treasure.d.ts",
+      "default": "./dist/types/treasure.js"
+    },
+    "./dist/types/wallet": {
+      "types": "./dist/types/wallet.d.ts",
+      "default": "./dist/types/wallet.js"
+    },
+    "./dist/types/*": {
+      "types": "./dist/types/*.d.ts",
+      "default": "./dist/types/*.js"
     }
   },
   "files": [

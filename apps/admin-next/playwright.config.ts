@@ -27,7 +27,8 @@ export default defineConfig({
   timeout: 120_000,
 
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'https://admin-dev.joyminis.com',
+    baseURL:
+      process.env.PLAYWRIGHT_BASE_URL ?? 'https://admin-dev.joyminis.com',
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -54,7 +55,17 @@ export default defineConfig({
         storageState: STORAGE_STATE,
       },
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: [/auth\.setup\.ts/, /register-apply\.spec\.ts/],
+    },
+    // Step 3: 公开页测试（无需登录，不依赖 setup）
+    // 公开页 500 不会拖累认证测试，两者完全隔离
+    {
+      name: 'public',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: { cookies: [], origins: [] },
+      },
+      testMatch: /register-apply\.spec\.ts|home\.spec\.ts/,
     },
   ],
 });

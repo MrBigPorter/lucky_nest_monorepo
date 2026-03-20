@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       deploy_admin:
-        description: '🌐 Deploy Admin Frontend (Cloudflare)'
+        description: '🌐 Deploy Admin Frontend (VPS — rollback channel)'
+        type: boolean
+        default: false
+      deploy_admin_cloudflare:
+        description: '☁️ Deploy Admin Frontend (Cloudflare Workers — default)'
         type: boolean
         default: true
       deploy_api:
@@ -12,11 +16,8 @@ on:
         type: boolean
         default: true
 
-# 🔑 KEY FIX: Explicitly grant permissions to the master workflow
-# This allows the child workflows to inherit the rights they need.
 permissions:
   contents: read
-  deployments: write   # Required for Cloudflare Pages status
   packages: write      # Required for GHCR (Docker) pushing
 
 jobs:
@@ -25,11 +26,18 @@ jobs:
     name: 🌐 Trigger Admin Deploy
     if: ${{ inputs.deploy_admin == true }}
     uses: ./.github/workflows/deploy-admin.yml
-    secrets: inherit # Pass all repository secrets down
+    secrets: inherit
 
-  # 2. Calls the Backend deployment workflow
+  # 2. Calls the Admin Cloudflare deployment workflow
+  run-admin-cloudflare-deploy:
+    name: ☁️ Trigger Admin Cloudflare Deploy
+    if: ${{ inputs.deploy_admin_cloudflare == true }}
+    uses: ./.github/workflows/deploy-admin-cloudflare.yml
+    secrets: inherit
+
+  # 3. Calls the Backend deployment workflow
   run-backend-deploy:
     name: ⚙️ Trigger Backend Deploy
     if: ${{ inputs.deploy_api == true }}
     uses: ./.github/workflows/deploy-backend.yml
-    secrets: inherit # Pass all repository secrets down
+    secrets: inherit

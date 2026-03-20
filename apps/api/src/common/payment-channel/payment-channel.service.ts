@@ -1,11 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class PaymentChannelService {
-  private readonly logger = new Logger(PaymentChannelService.name);
   constructor(private prismaService: PrismaService) {}
 
   /**
@@ -17,15 +17,16 @@ export class PaymentChannelService {
       return await this.prismaService.paymentChannel.create({
         data: {
           ...dto,
-          fixedAmounts: dto.fixedAmounts ? (dto.fixedAmounts as any) : null,
+          fixedAmounts: dto.fixedAmounts
+            ? (dto.fixedAmounts as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         },
       });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new Error('Payment channel with this name already exists');
+    } catch (error: unknown) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new Error('Payment channel with this name already exists');
+        }
       }
       throw error;
     }
@@ -82,15 +83,16 @@ export class PaymentChannelService {
         where: { id },
         data: {
           ...dto,
-          fixedAmounts: dto.fixedAmounts ? (dto.fixedAmounts as any) : null,
+          fixedAmounts: dto.fixedAmounts
+            ? (dto.fixedAmounts as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         },
       });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new NotFoundException(`Channel #${id} not found`);
+    } catch (error: unknown) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new NotFoundException(`Channel #${id} not found`);
+        }
       }
       throw error;
     }

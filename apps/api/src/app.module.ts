@@ -21,6 +21,8 @@ import { ChatModule } from '@api/common/chat/chat.module';
 import { MediaModule } from '@api/common/media/media.module';
 import { CallModule } from '@api/common/events/call/call.module';
 import { EventsModule } from '@api/common/events/events.module';
+import { EmailModule } from '@api/common/email/email.module';
+import { RecaptchaModule } from '@api/common/recaptcha/recaptcha.module';
 
 // 根模块（第2步，挂子模块、配置、JWT等）
 @Module({
@@ -63,6 +65,22 @@ import { EventsModule } from '@api/common/events/events.module';
           )
           .default('7d'),
         DATABASE_URL: Joi.string().required(),
+
+        // Email service (Resend)
+        RESEND_API_KEY: Joi.string().allow('').optional(),
+        EMAIL_FROM: Joi.string().default(
+          'JoyMini Admin <noreply@joyminis.com>',
+        ),
+        FRONTEND_URL: Joi.string().uri().optional(),
+
+        // Email OTP fallback (no SMS budget)
+        EMAIL_OTP_TTL_SECONDS: Joi.number().integer().positive().default(300),
+        EMAIL_OTP_INTERVAL_SECONDS: Joi.number()
+          .integer()
+          .positive()
+          .default(60),
+        EMAIL_OTP_MAX_ATTEMPTS: Joi.number().integer().positive().default(5),
+        EMAIL_OTP_DEV_CODE: Joi.string().min(4).max(20).optional(),
 
         CACHE_TTL: Joi.number().integer().positive().default(300),
         CACHE_PREFIX: Joi.string().default('lucky:'),
@@ -107,6 +125,8 @@ import { EventsModule } from '@api/common/events/events.module';
     MediaModule,
     CallModule,
     EventsModule,
+    EmailModule,
+    RecaptchaModule,
 
     // 其他模块：PrismaModule、ThrottlerModule、UsersModule、AuthModule 等
   ],
