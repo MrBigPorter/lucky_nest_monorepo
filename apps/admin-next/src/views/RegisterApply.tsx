@@ -288,14 +288,12 @@ export function RegisterApply() {
               {/* reCAPTCHA notice */}
               <p className="text-xs text-gray-400 text-center">
                 Protected by Google reCAPTCHA. By submitting you agree to the{' '}
-                <a
-                  href="https://policies.google.com/privacy"
-                  target="_blank"
-                  rel="noreferrer"
+                <Link
+                  href="/privacy-policy"
                   className="underline hover:text-primary-500"
                 >
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
 

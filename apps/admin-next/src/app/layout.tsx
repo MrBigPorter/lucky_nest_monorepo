@@ -75,6 +75,7 @@ export default function RootLayout({
             __html: `(function(){try{var s=JSON.parse(localStorage.getItem('app-store')||'{}');var t=(s.state&&s.state.theme)||'dark';document.documentElement.classList.add(t);}catch(e){document.documentElement.classList.add('dark');}})();`,
           }}
         />
+        <title></title>
       </head>
       <body>{children}</body>
     </html>

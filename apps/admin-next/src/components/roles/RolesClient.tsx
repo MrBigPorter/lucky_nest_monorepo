@@ -10,4 +10,3 @@ import { RolesManagement } from '@/views/RolesManagement';
 export function RolesClient() {
   return <RolesManagement />;
 }
-
