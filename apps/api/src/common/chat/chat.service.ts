@@ -658,6 +658,9 @@ export class ChatService {
     const existingConversation = await this.prisma.conversation.findFirst({
       where: {
         type: CONVERSATION_TYPE.SUPPORT,
+        // 只复用「正常」状态的会话；CLOSED(status=2) 的旧会话不复用，
+        // 让用户在 Admin 关闭对话后可以重新发起一个全新的客服会话。
+        status: ConversationStatus.NORMAL,
         AND: [
           { members: { some: { userId } } },
           { members: { some: { userId: channel.botUserId } } },

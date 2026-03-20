@@ -247,14 +247,32 @@ export function SupportChannels() {
               placeholder="Description"
               className="h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
             />
-            <input
-              value={form.avatar ?? ''}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, avatar: e.target.value }))
-              }
-              placeholder="Avatar URL (optional)"
-              className="h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
-            />
+            {form.avatar ? (
+              <div className="flex items-center gap-2 h-9 px-1">
+                <img
+                  src={form.avatar}
+                  alt="avatar preview"
+                  className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-white/10"
+                />
+                <span className="text-xs text-gray-500 truncate max-w-[140px]">Avatar uploaded</span>
+                <button
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, avatar: '' }))}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <input
+                value={form.avatar ?? ''}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, avatar: e.target.value }))
+                }
+                placeholder="Avatar URL (optional)"
+                className="h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+              />
+            )}
             <div className="md:col-span-4">
               <label className="mr-2 inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-gray-200 dark:border-white/10 text-sm cursor-pointer">
                 <input
