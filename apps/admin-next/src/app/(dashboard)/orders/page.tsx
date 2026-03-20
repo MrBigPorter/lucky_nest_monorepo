@@ -15,7 +15,10 @@ function OrdersPageSkeleton() {
       <div className="h-9 w-64 rounded-lg bg-gray-100 dark:bg-white/10" />
       <div className="h-12 w-full rounded-xl bg-gray-100 dark:bg-white/10" />
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-14 w-full rounded-xl bg-gray-100 dark:bg-white/5" />
+        <div
+          key={i}
+          className="h-14 w-full rounded-xl bg-gray-100 dark:bg-white/5"
+        />
       ))}
     </div>
   );

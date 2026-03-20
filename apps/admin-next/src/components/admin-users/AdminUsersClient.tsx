@@ -37,7 +37,9 @@ export function AdminUsersClient() {
           qs.set(key, String(value));
         }
       });
-      const newUrl = qs.toString() ? `/admin-users?${qs.toString()}` : '/admin-users';
+      const newUrl = qs.toString()
+        ? `/admin-users?${qs.toString()}`
+        : '/admin-users';
       router.replace(newUrl, { scroll: false });
     },
     [router],
