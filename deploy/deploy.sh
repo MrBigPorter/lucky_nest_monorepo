@@ -179,7 +179,7 @@ ssh "$SSH_TARGET" << REMOTE_SCRIPT
               --env-file deploy/.env.prod \
               --entrypoint "" \
               lucky-backend-prod:latest \
-              ./apps/api/node_modules/.bin/prisma migrate deploy \
+              ./node_modules/.bin/prisma migrate deploy \
                 --schema=apps/api/prisma/schema.prisma 2>&1) && MIGRATE_OK=true || MIGRATE_OK=false
 
             echo "\$MIGRATE_OUT"

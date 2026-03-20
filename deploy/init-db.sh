@@ -61,7 +61,7 @@ docker run --rm \
   --env DATABASE_URL="$DB_URL" \
   --entrypoint "" \
   "$BACKEND_IMAGE" \
-  ./apps/api/node_modules/.bin/prisma migrate deploy \
+  ./node_modules/.bin/prisma migrate deploy \
     --schema=apps/api/prisma/schema.prisma
 
 APPLIED=$(docker run --rm \
@@ -69,7 +69,7 @@ APPLIED=$(docker run --rm \
   --env DATABASE_URL="$DB_URL" \
   --entrypoint "" \
   "$BACKEND_IMAGE" \
-  ./apps/api/node_modules/.bin/prisma migrate status \
+  ./node_modules/.bin/prisma migrate status \
     --schema=apps/api/prisma/schema.prisma 2>&1 | grep -c 'Applied' || echo '?')
 echo "✅ 迁移完成 — ${APPLIED} 个迁移已应用"
 
