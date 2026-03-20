@@ -40,8 +40,8 @@ COPY turbo.json tsconfig.json ./
 # 4) Prisma generate (prisma CLI 在 apps/api/node_modules/.bin/ 里)
 RUN yarn workspace @lucky/api prisma generate
 
-# 5) Build API + 依赖包
-RUN yarn turbo run build --filter=@lucky/api
+    # 5) Build API + 依赖包
+RUN yarn workspace @lucky/api build
 
 # 6) 编译 CLI 脚本 (独立 tsc, 不走 webpack, 产物放入 dist/cli/)
 #    生产使用: docker exec -it lucky-backend-prod node apps/api/dist/cli/create-admin.js
