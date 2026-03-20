@@ -81,19 +81,19 @@ test.describe('Register Apply page', () => {
 
   test('渲染所有必填字段', async ({ page }) => {
     await expect(
-      page.getByPlaceholderText(/desired username/i),
+      page.getByPlaceholder(/desired username/i),
     ).toBeVisible({ timeout: 20_000 });
     await expect(
-      page.getByPlaceholderText(/full name/i),
+      page.getByPlaceholder(/full name/i),
     ).toBeVisible();
     await expect(
-      page.getByPlaceholderText(/email address/i),
+      page.getByPlaceholder(/email address/i),
     ).toBeVisible();
     await expect(
-      page.getByPlaceholderText(/password \(min/i),
+      page.getByPlaceholder(/password \(min/i),
     ).toBeVisible();
     await expect(
-      page.getByPlaceholderText(/confirm password/i),
+      page.getByPlaceholder(/confirm password/i),
     ).toBeVisible();
   });
 
@@ -122,8 +122,8 @@ test.describe('Register Apply page', () => {
   });
 
   test('密码不一致时显示 "do not match" 错误', async ({ page }) => {
-    await page.getByPlaceholderText(/password \(min/i).fill('Pass1234');
-    await page.getByPlaceholderText(/confirm password/i).fill('Different1');
+    await page.getByPlaceholder(/password \(min/i).fill('Pass1234');
+    await page.getByPlaceholder(/confirm password/i).fill('Different1');
     await page
       .getByRole('button', { name: /submit application/i })
       .click({ force: true });
@@ -133,24 +133,24 @@ test.describe('Register Apply page', () => {
   });
 
   test('密码不含数字时显示强度错误', async ({ page }) => {
-    await page.getByPlaceholderText(/password \(min/i).fill('OnlyLetters');
-    await page.getByPlaceholderText(/confirm password/i).click(); // blur
+    await page.getByPlaceholder(/password \(min/i).fill('OnlyLetters');
+    await page.getByPlaceholder(/confirm password/i).click(); // blur
     await expect(
       page.getByText(/letter and a number|must contain/i).first(),
     ).toBeVisible({ timeout: 8_000 });
   });
 
   test('用户名含特殊字符时显示校验错误', async ({ page }) => {
-    await page.getByPlaceholderText(/desired username/i).fill('bad user!');
-    await page.getByPlaceholderText(/full name/i).click(); // blur
+    await page.getByPlaceholder(/desired username/i).fill('bad user!');
+    await page.getByPlaceholder(/full name/i).click(); // blur
     await expect(
       page.getByText(/only.*letters|underscores/i).first(),
     ).toBeVisible({ timeout: 8_000 });
   });
 
   test('用户名少于 3 个字符时显示长度错误', async ({ page }) => {
-    await page.getByPlaceholderText(/desired username/i).fill('ab');
-    await page.getByPlaceholderText(/full name/i).click(); // blur
+    await page.getByPlaceholder(/desired username/i).fill('ab');
+    await page.getByPlaceholder(/full name/i).click(); // blur
     await expect(
       page.getByText(/at least 3 characters/i).first(),
     ).toBeVisible({ timeout: 8_000 });
