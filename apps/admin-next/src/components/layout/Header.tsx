@@ -7,6 +7,7 @@ import {
   Search,
   Moon,
   Sun,
+  Bell,
   User,
   Settings,
   LogOut,
@@ -20,6 +21,9 @@ import { Dropdown, Breadcrumbs } from '@/components/UIComponents';
 import { useRequest } from 'ahooks';
 import { routes } from '@/routes';
 import { TRANSLATIONS, ROLE_DISPLAY_NAMES } from '@/constants';
+import { applicationApi } from '@/api';
+
+const PENDING_APPLICATIONS_UPDATED_EVENT = 'applications:pending-updated';
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -149,6 +153,8 @@ export const Header: React.FC<HeaderProps> = ({
   const logoutAction = useAuthStore((state) => state.logout);
   const userInfo = useAuthStore((state) => state.userInfo);
   const addToast = useToastStore((state) => state.addToast);
+  const t = TRANSLATIONS[lang];
+  const canReviewApplications = userInfo?.role === 'SUPER_ADMIN';
 
   const { loading: isLoggingOut, run: handleLogout } = useRequest(
     logoutAction,
@@ -158,6 +164,32 @@ export const Header: React.FC<HeaderProps> = ({
       onError: (error) => addToast('error', `Logout failed: ${error.message}`),
     },
   );
+
+  const { data: pendingData, refresh: refreshPendingCount } = useRequest(
+    () => applicationApi.pendingCount(),
+    {
+      ready: canReviewApplications,
+      pollingInterval: 60_000,
+      pollingWhenHidden: false,
+      onError: () => {
+        // 403/401 等错误由 http 层处理，这里保持静默
+      },
+    },
+  );
+
+  useEffect(() => {
+    if (!canReviewApplications) return;
+    const handler = () => {
+      void refreshPendingCount();
+    };
+
+    window.addEventListener(PENDING_APPLICATIONS_UPDATED_EVENT, handler);
+    return () => {
+      window.removeEventListener(PENDING_APPLICATIONS_UPDATED_EVENT, handler);
+    };
+  }, [canReviewApplications, refreshPendingCount]);
+
+  const pendingCount = pendingData?.count ?? 0;
 
   const displayName = userInfo?.realName || userInfo?.username || 'Admin';
   const initial = displayName.charAt(0).toUpperCase();
@@ -183,6 +215,22 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right */}
       <div className="flex items-center gap-1 flex-shrink-0">
+        {canReviewApplications && (
+          <button
+            onClick={() => router.push('/admin-users')}
+            title={`${t.pendingApplications} (${pendingCount})`}
+            aria-label={`${t.pendingApplications}: ${pendingCount}`}
+            className="relative p-2 text-gray-500 hover:text-primary-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/5"
+          >
+            <Bell size={18} />
+            {pendingCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center">
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            )}
+          </button>
+        )}
+
         <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-2" />
 
         {/* Language toggle */}

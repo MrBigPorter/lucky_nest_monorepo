@@ -13,6 +13,8 @@ import { useRequest } from 'ahooks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { applicationApi } from '@/api';
 
+const PENDING_APPLICATIONS_UPDATED_EVENT = 'applications:pending-updated';
+
 // ── SidebarItem ───────────────────────────────────────────────────────────────
 const SidebarItem: React.FC<{
   to: string;
@@ -81,6 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const userInfo = useAuthStore((state) => state.userInfo);
   const addToast = useToastStore((state) => state.addToast);
   const t = TRANSLATIONS[lang];
+  const canReviewApplications = userInfo?.role === 'SUPER_ADMIN';
 
   const { loading: isLoggingOut, run: handleLogout } = useRequest(
     logoutAction,
@@ -92,9 +95,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 
   // Pending application count for badge on /users menu item
-  const { data: pendingData } = useRequest(
+  const { data: pendingData, refresh: refreshPendingCount } = useRequest(
     () => applicationApi.pendingCount(),
     {
+      ready: canReviewApplications,
       pollingInterval: 60_000, // refresh every 60s
       pollingWhenHidden: false, // 切后台时暂停，减少无效请求
       onError: () => {
@@ -102,6 +106,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
     },
   );
+
+  React.useEffect(() => {
+    if (!canReviewApplications) return;
+    const handler = () => {
+      void refreshPendingCount();
+    };
+
+    window.addEventListener(PENDING_APPLICATIONS_UPDATED_EVENT, handler);
+    return () => {
+      window.removeEventListener(PENDING_APPLICATIONS_UPDATED_EVENT, handler);
+    };
+  }, [canReviewApplications, refreshPendingCount]);
 
   const groupedRoutes = routes
     .filter((route) => !route.hidden)
@@ -175,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       label={t[route.name as keyof typeof t] || route.name}
                       isCollapsed={isSidebarCollapsed}
                       badge={
-                        route.path === '/users'
+                        route.path === '/admin-users' && canReviewApplications
                           ? (pendingData?.count ?? 0)
                           : undefined
                       }

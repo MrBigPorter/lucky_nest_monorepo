@@ -9,6 +9,8 @@ import { useToastStore } from '@/store/useToastStore';
 import { applicationApi } from '@/api';
 import { AdminApplication, ApplicationStatus } from '@/type/types';
 
+const PENDING_APPLICATIONS_UPDATED_EVENT = 'applications:pending-updated';
+
 // ─── Reject modal ─────────────────────────────────────────────────────────────
 function RejectModal({
   app,
@@ -125,6 +127,7 @@ export function ApplicationsManagement() {
         addToast('success', res.message);
         refresh();
         refreshCount();
+        window.dispatchEvent(new Event(PENDING_APPLICATIONS_UPDATED_EVENT));
       },
       onError: (err) => addToast('error', err.message),
     },
@@ -140,6 +143,7 @@ export function ApplicationsManagement() {
         setRejectTarget(null);
         refresh();
         refreshCount();
+        window.dispatchEvent(new Event(PENDING_APPLICATIONS_UPDATED_EVENT));
       },
       onError: (err) => addToast('error', err.message),
     },
