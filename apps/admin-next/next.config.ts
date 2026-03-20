@@ -56,6 +56,16 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/login-log/:path*',
+        destination: '/login-logs/:path*',
+        permanent: true,
+      },
+    ];
+  },
+
   webpack: (config, { isServer, webpack }) => {
     // Polyfill Node.js built-ins for browser bundles
     if (!isServer) {
@@ -67,9 +77,15 @@ const nextConfig: NextConfig = {
       };
       // Replace node:crypto with empty module on client
       config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(/^node:crypto$/, (resource: { request: string }) => {
-          resource.request = path.resolve(__dirname, './src/lib/crypto-shim.ts');
-        }),
+        new webpack.NormalModuleReplacementPlugin(
+          /^node:crypto$/,
+          (resource: { request: string }) => {
+            resource.request = path.resolve(
+              __dirname,
+              './src/lib/crypto-shim.ts',
+            );
+          },
+        ),
       );
     }
     return config;

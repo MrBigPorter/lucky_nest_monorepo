@@ -1,15 +1,20 @@
 /**
- * E2E — Customer Service Desk / IM (/im)
+ * E2E — Customer Service Desk (/customer-service)
  * Phase 5-D
  *
  * 覆盖: 页面加载  双栏布局  会话列表  空态占位  Socket 状态指示
  */
-import { test, expect } from '@playwright/test';
-import { expectNoError, dismissDevOverlay, waitForDashboard } from './fixtures';
+import {
+  test,
+  expect,
+  expectNoError,
+  dismissDevOverlay,
+  waitForDashboard,
+} from './fixtures';
 
-const PATH = '/im/';
+const PATH = '/customer-service/';
 
-test.describe('Customer Service Desk — /im', () => {
+test.describe('Customer Service Desk — /customer-service', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(PATH);
     await waitForDashboard(page);
@@ -28,7 +33,6 @@ test.describe('Customer Service Desk — /im', () => {
       page
         .getByText(/customer service/i)
         .or(page.getByText(/support/i))
-        .or(page.getByText(/im/i))
         .first(),
     ).toBeVisible({ timeout: 20_000 });
   });

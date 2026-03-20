@@ -38,7 +38,16 @@ describe('routes 配置', () => {
   });
 
   it('所有 group 值合法', () => {
-    const validGroups = ['Overview', 'Management', 'Operations', 'System'];
+    const validGroups = [
+      'Overview',
+      'Users',
+      'Catalog',
+      'Commerce',
+      'Marketing',
+      'Customer Service',
+      'Analytics',
+      'System',
+    ];
     routes.forEach((r) => {
       expect(validGroups, `${r.path} group 非法`).toContain(r.group);
     });
