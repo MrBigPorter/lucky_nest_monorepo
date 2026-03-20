@@ -5,22 +5,34 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
+}
+
+/** Extract a human-readable message from any thrown value. */
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
 // 事件最小结构
 type LogEvent = { message: string };
 type QueryEvent = { duration: number; query: string; params?: string };
 
+// Prisma v6 removed LogDefinition from the generated-client Prisma namespace —
+// define it locally so the constructor log option stays type-safe.
+type LogDefinition = {
+  level: 'query' | 'info' | 'warn' | 'error';
+  emit: 'stdout' | 'event';
+};
+
 // 固定包含 query，避免 $on 被推成 never
-const LOG_CONFIG = [
+const LOG_CONFIG: LogDefinition[] = [
   { level: 'warn', emit: 'event' },
   { level: 'error', emit: 'event' },
   { level: 'query', emit: 'event' },
-] as const satisfies Prisma.LogDefinition[];
+];
 
 // 收窄签名（仅为类型提示）
 type OnLogFn = (t: 'warn' | 'error', l: (e: LogEvent) => void) => void;
@@ -40,7 +52,7 @@ export class PrismaService
   constructor() {
     super({
       errorFormat: process.env.NODE_ENV !== 'production' ? 'pretty' : 'minimal',
-      log: LOG_CONFIG as unknown as Prisma.LogDefinition[],
+      log: LOG_CONFIG,
     });
 
     // 关键：把 $on 绑定回当前实例，避免丢失 this
@@ -66,10 +78,10 @@ export class PrismaService
         await this.$connect();
         this.logger.log('Prisma connected');
         return;
-      } catch (err: any) {
+      } catch (err: unknown) {
         const backoff = Math.min(1000 * 2 ** (i - 1), 10_000);
         this.logger.warn(
-          `Prisma connect failed #${i}: ${err?.message ?? err}. Retry in ${backoff}ms`,
+          `Prisma connect failed #${i}: ${errMsg(err)}. Retry in ${backoff}ms`,
         );
         await sleep(backoff);
       }
@@ -80,8 +92,8 @@ export class PrismaService
   async onModuleDestroy() {
     try {
       await this.$disconnect();
-    } catch (e: any) {
-      this.logger.error(`Prisma disconnect error: ${e?.message ?? e}`);
+    } catch (e: unknown) {
+      this.logger.error(`Prisma disconnect error: ${errMsg(e)}`);
     }
   }
 
@@ -89,19 +101,9 @@ export class PrismaService
     try {
       await this.$queryRaw`SELECT 1`;
       return true;
-    } catch (e: any) {
-      this.logger.warn(`DB ping failed: ${e?.message ?? e}`);
+    } catch (e: unknown) {
+      this.logger.warn(`DB ping failed: ${errMsg(e)}`);
       return false;
-    }
-  }
-
-  async explain(sql: string) {
-    if (!this.isDev) return [];
-    try {
-      return await this.$queryRawUnsafe<any[]>(`EXPLAIN ${sql}`);
-    } catch (e: any) {
-      this.logger.warn(`EXPLAIN failed: ${e?.message ?? e}`);
-      return [];
     }
   }
 }

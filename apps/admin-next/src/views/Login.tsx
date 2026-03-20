@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation'; // ← next/navigation
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
 import { z } from 'zod';
 import { useRequest } from 'ahooks';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,7 +14,7 @@ import { Button, Input } from '@/components/UIComponents';
 import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authApi } from '@/api';
-import { LoginResponse } from '@/type/types';
+import { LoginResponse, UserRole } from '@/type/types';
 
 const loginSchema = z.object({
   username: z.string().min(1, { message: 'Username is required.' }),
@@ -42,11 +44,16 @@ export const Login: React.FC = () => {
 
   const { loading, runAsync } = useRequest(signIn, {
     manual: true,
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       if (result.tokens.accessToken) {
-        loginAction(result.tokens.accessToken);
+        await loginAction(
+          result.tokens.accessToken,
+          result.userInfo.role as UserRole,
+          result.userInfo,
+          result.tokens.refreshToken ?? null,
+        );
         addToast('success', 'Welcome back, Admin!');
-        router.push('/'); // ← router.push instead of router.push('/')
+        router.push('/');
       } else {
         addToast('error', 'Login failed: No access token received.');
       }
@@ -89,7 +96,7 @@ export const Login: React.FC = () => {
               transition={{ delay: 0.2, type: 'spring' }}
               className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/30 mb-4"
             >
-              L
+              J
             </motion.div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               Welcome Back
@@ -141,6 +148,16 @@ export const Login: React.FC = () => {
                 Sign In <ArrowRight size={18} />
               </span>
             </Button>
+
+            <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+              Don&apos;t have an account?{' '}
+              <Link
+                href="/register-apply"
+                className="text-primary-500 hover:underline font-medium"
+              >
+                Apply for access
+              </Link>
+            </div>
           </form>
         </motion.div>
 
@@ -150,7 +167,7 @@ export const Login: React.FC = () => {
           transition={{ delay: 0.5 }}
           className="mt-8 text-center text-gray-400 text-xs"
         >
-          &copy; 2024 LuxeAdmin Pro. All rights reserved.
+          &copy; {new Date().getFullYear()} JoyMini Admin. All rights reserved.
         </motion.div>
       </div>
     </div>

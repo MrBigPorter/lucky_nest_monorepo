@@ -10,8 +10,15 @@ interface ToastState {
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   addToast: (type, message) => {
-    const id = Date.now().toString();
-    set((state) => ({ toasts: [...state.toasts, { id, type, message }] }));
+    set((state) => {
+      // 相同 type + message 已存在时不重复叠加
+      const exists = state.toasts.some(
+        (t) => t.type === type && t.message === message,
+      );
+      if (exists) return state;
+      const id = Date.now().toString();
+      return { toasts: [...state.toasts, { id, type, message }] };
+    });
   },
   removeToast: (id) => {
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));

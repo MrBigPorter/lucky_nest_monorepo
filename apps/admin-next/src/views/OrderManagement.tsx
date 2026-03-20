@@ -9,7 +9,7 @@ import { PageHeader } from '@/components/scaffold/PageHeader';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { useAntdTable, useRequest } from 'ahooks';
 import { orderApi } from '@/api';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { ORDER_STATUS, ORDER_STATUS_LABEL } from '@lucky/shared';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { ModalManager } from '@repo/ui';
@@ -73,47 +73,37 @@ export const OrderManagement: React.FC = () => {
 
   // 3. Logic: Handle Delete
   const handleDelete = useCallback(
-    async (orderId: string) => {
-      if (
-        ModalManager.open({
-          title: 'Confirm Deletion',
-          renderChildren: ({ close }) => (
-            <div className="space-y-4">
-              <p>
-                Are you sure you want to delete this order? This action cannot
-                be undone.
-              </p>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="ghost" onClick={close}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await deleteOrderApi(orderId);
-                      addToast('success', 'Order deleted successfully');
-                      refresh();
-                      close();
-                    } catch (error) {
-                      addToast('error', 'Failed to delete order');
-                    }
-                  }}
-                >
-                  Delete
-                </Button>
-              </div>
+    (orderId: string) => {
+      ModalManager.open({
+        title: 'Confirm Deletion',
+        renderChildren: ({ close }) => (
+          <div className="space-y-4">
+            <p>
+              Are you sure you want to delete this order? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="ghost" onClick={close}>
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    await deleteOrderApi(orderId);
+                    addToast('success', 'Order deleted successfully');
+                    refresh();
+                    close();
+                  } catch (error) {
+                    addToast('error', 'Failed to delete order');
+                  }
+                }}
+              >
+                Delete
+              </Button>
             </div>
-          ),
-        })
-      )
-        return;
-      try {
-        await deleteOrderApi(orderId);
-        addToast('success', 'Order deleted successfully');
-        refresh();
-      } catch (error) {
-        addToast('error', 'Failed to delete order');
-      }
+          </div>
+        ),
+      });
     },
     [addToast, deleteOrderApi, refresh],
   );
@@ -241,7 +231,7 @@ export const OrderManagement: React.FC = () => {
   );
 
   // 7. Table Configuration
-  const columns = useMemo(() => {
+  const columns: ColumnDef<Order>[] = useMemo(() => {
     const columnsHelper = createColumnHelper<Order>();
     return [
       columnsHelper.accessor('orderNo', {

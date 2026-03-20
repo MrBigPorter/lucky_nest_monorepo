@@ -186,7 +186,9 @@ describe('Input', () => {
 
   it('有 error 时 input 带 red border 样式', () => {
     render(<Input error="Oops" />);
-    expect(screen.getByRole('textbox')).toHaveClass('border-red-500');
+    const input = screen.getByRole('textbox');
+    // border-red-500 is applied to the wrapper div, not the <input> itself
+    expect(input.parentElement).toHaveClass('border-red-500');
   });
 });
 

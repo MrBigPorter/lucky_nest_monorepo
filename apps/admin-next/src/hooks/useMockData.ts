@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { ModalManager } from '@repo/ui';
 
 // Generic hook to handle list data with simulated delay
 export function useMockData<T>(initialData: T[]) {
@@ -32,16 +33,25 @@ export function useMockData<T>(initialData: T[]) {
   };
 
   const remove = (id: string, requireConfirm = true) => {
-    if (
-      requireConfirm &&
-      !window.confirm('Are you sure you want to delete this item?')
-    )
+    const runRemove = () => {
+      setLoading(true);
+      setTimeout(() => {
+        setData((prev) => prev.filter((item: any) => item.id !== id));
+        setLoading(false);
+      }, 500);
+    };
+
+    if (!requireConfirm) {
+      runRemove();
       return;
-    setLoading(true);
-    setTimeout(() => {
-      setData((prev) => prev.filter((item: any) => item.id !== id));
-      setLoading(false);
-    }, 500);
+    }
+
+    ModalManager.open({
+      title: 'Delete Item',
+      content: 'Are you sure you want to delete this item?',
+      confirmText: 'Delete',
+      onConfirm: runRemove,
+    });
   };
 
   return { data, loading, add, update, remove, refresh };

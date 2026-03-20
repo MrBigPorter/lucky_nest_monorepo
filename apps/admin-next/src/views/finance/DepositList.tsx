@@ -21,7 +21,15 @@ import { RECHARGE_STATUS } from '@lucky/shared';
 // Assuming your RECHARGE_STATUS enum/const looks something like this:
 // const RECHARGE_STATUS = { PENDING: 0, SUCCESS: 1, FAILED: 2 };
 
-export const DepositList: React.FC = () => {
+interface DepositListProps {
+  initialFormParams?: Record<string, unknown>;
+  onParamsChange?: (params: Record<string, unknown>) => void;
+}
+
+export const DepositList: React.FC<DepositListProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null); // State for loading effect
   const addToast = useToastStore((state) => state.addToast);
@@ -89,7 +97,7 @@ export const DepositList: React.FC = () => {
           <div className="flex flex-col">
             <span className="font-mono font-medium">{dom}</span>
             {row.thirdPartyOrderNo && (
-              <span className="text-[10px] text-gray-400 font-mono">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
                 Ref: {row.thirdPartyOrderNo}
               </span>
             )}
@@ -101,8 +109,12 @@ export const DepositList: React.FC = () => {
         dataIndex: 'user',
         render: (_, row) => (
           <div>
-            <div className="font-medium">{row.user?.nickname || 'Unknown'}</div>
-            <div className="text-xs text-gray-500">{row.user?.phone}</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">
+              {row.user?.nickname || 'Unknown'}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {row.user?.phone}
+            </div>
           </div>
         ),
       },
@@ -239,6 +251,7 @@ export const DepositList: React.FC = () => {
 
   const requestDeposits = useCallback(async (params: RechargeListParams) => {
     const requestData = { ...params };
+    delete (requestData as Record<string, unknown>).tab;
     if (requestData.status === 'ALL') delete requestData.status;
     if (requestData.dateRange) {
       requestData.startDate = requestData.dateRange.from;
@@ -276,6 +289,8 @@ export const DepositList: React.FC = () => {
         ref={actionRef}
         columns={columns}
         searchSchema={searchSchema}
+        initialFormParams={initialFormParams}
+        onParamsChange={onParamsChange}
         request={requestDeposits}
         toolBarRender={toolBarRender}
       />

@@ -2,12 +2,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { QueryKycDto } from '@api/admin/kyc/dto/query-kyc.dto';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
   KYC_STATUS,
   KycOpAction,
   KycStatus,
   OP_ACTION,
-  OP_MODULE,
   OpAction,
   OpModule,
   TimeHelper,
@@ -205,16 +205,15 @@ export class KycService {
             rejectReason: dto.action === OP_ACTION.REJECT ? dto.remark : null,
           },
         })
-        .catch((error) => {
-          if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === 'P2025'
-          ) {
-            throw new BadRequestException(
-              'KYC record not found or already updated',
-            );
+        .catch((error: unknown) => {
+          if (error instanceof PrismaClientKnownRequestError) {
+            if (error.code === 'P2025') {
+              throw new BadRequestException(
+                'KYC record not found or already updated',
+              );
+            }
           }
-          return error;
+          throw error;
         });
 
       // update user's kyc status

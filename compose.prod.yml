@@ -39,6 +39,7 @@ services:
     environment:
       # 限制 Node.js 堆内存 (防 OOM)
       - NODE_OPTIONS=--max-old-space-size=256
+      # 迁移默认自动执行（entrypoint.sh）；若需跳过设 SKIP_MIGRATIONS=true
     deploy:
       resources:
         limits:
@@ -60,23 +61,44 @@ services:
     networks: [app]
 
   # =========================================
-  # Admin 前端构建器 (仅本地/自托管部署时使用)
+  # Admin Next 前端 (Node.js SSR 服务器)
   # =========================================
-  # CI 部署: admin-next 由 Cloudflare Pages 托管，不需要此服务
-  # 本地/自托管部署: deploy.sh 使用 --profile local 启动
+  # 镜像来源:
+  #   - CI 部署: GHCR 拉取 (ghcr.io/mrbigporter/lucky-admin-next-prod:latest)
+  #   - 本地部署: deploy.sh 本地构建
   # =========================================
-  admin-builder:
-    profiles: [local]
-    build:
-      context: .
-      dockerfile: apps/admin-next/Dockerfile.prod
-      args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.joyminis.com}
-        NEXT_PUBLIC_APP_ENV: production
-    image: lucky-admin-next-builder:latest
-    container_name: lucky-admin-next-builder
-    volumes:
-      - admin_dist:/app/apps/admin-next/out
+  admin-next:
+    image: ${ADMIN_IMAGE:-lucky-admin-next-prod:latest}
+    container_name: lucky-admin-next-prod
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-https://api.joyminis.com}
+      # Server Components 直连后端（内网，不走公网）
+      - INTERNAL_API_URL=http://lucky-backend-prod:3000/api
+      - NEXT_PUBLIC_APP_ENV=production
+      # Google reCAPTCHA v3 Site Key
+      - NEXT_PUBLIC_RECAPTCHA_SITE_KEY=${NEXT_PUBLIC_RECAPTCHA_SITE_KEY:-}
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+        reservations:
+          memory: 100M
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks: [app]
 
   # =========================================
@@ -103,9 +125,10 @@ services:
       - ./nginx/whitelist.conf:/etc/nginx/conf.d/whitelist.conf
       - ./certs:/etc/nginx/certs
       - ./nginx/html:/var/www/html
-      - admin_dist:/var/www/admin
     depends_on:
       backend:
+        condition: service_healthy
+      admin-next:
         condition: service_healthy
     networks: [app]
 
@@ -183,5 +206,4 @@ networks:
 volumes:
   db_data:
   redis_data:
-  admin_dist:
 

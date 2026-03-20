@@ -109,7 +109,18 @@ const DateRangeDisplay = ({ start, end }: { start?: number; end?: number }) => {
 // -----------------------------------------------------------------------------
 // 主组件
 // -----------------------------------------------------------------------------
-export const ProductManagement: React.FC = () => {
+interface ProductManagementProps {
+  // Phase 3: URL searchParams 驱动 filter
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  initialFormParams?: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onParamsChange?: (params: Record<string, any>) => void;
+}
+
+export const ProductManagement: React.FC<ProductManagementProps> = ({
+  initialFormParams,
+  onParamsChange,
+}) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -308,7 +319,7 @@ export const ProductManagement: React.FC = () => {
             </div>
 
             {/* 2. 单独购买价 (如果有) */}
-            {row.soloAmount && (
+            {row.soloAmount !== undefined && row.soloAmount !== null && (
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-gray-400">Solo</span>
                 <span className="font-mono text-xs text-gray-700 dark:text-gray-300">
@@ -318,7 +329,7 @@ export const ProductManagement: React.FC = () => {
             )}
 
             {/* 3. 市场划线价 (如果有) */}
-            {row.marketAmount && (
+            {row.marketAmount !== undefined && row.marketAmount !== null && (
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-gray-400">MSRP</span>
                 <span className="font-mono text-[10px] text-gray-400 line-through">
@@ -513,6 +524,8 @@ export const ProductManagement: React.FC = () => {
           columns={columns}
           request={requestProducts}
           searchSchema={searchSchema}
+          initialFormParams={initialFormParams}
+          onParamsChange={onParamsChange}
         />
       </Card>
     </div>

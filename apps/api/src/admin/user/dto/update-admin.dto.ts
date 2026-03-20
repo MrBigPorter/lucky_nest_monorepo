@@ -25,7 +25,7 @@ export class UpdateAdminDto {
   @ApiProperty({ description: 'role', example: 'ADMIN', type: 'string' })
   @IsOptional()
   @IsEnum(Role)
-  role?: Role;
+  role?: string;
 
   @ApiProperty({ description: 'status', example: 1, type: 'number' })
   @IsOptional()

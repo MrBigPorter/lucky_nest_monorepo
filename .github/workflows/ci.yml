@@ -40,42 +40,41 @@ jobs:
       - name: Enable Corepack (Yarn 4)
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
-      # ---- 依赖缓存 (zip 包层) ----
-      - name: Cache Yarn zip cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .yarn/cache
-            .yarn/install-state.gz
-          key: yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-
+      # ---- 依赖缓存 (zip 包层) — 暂时禁用，GHA 存储空间不足，后续迁移 Docker Hub ----
+      # - name: Cache Yarn zip cache
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       .yarn/cache
+      #       .yarn/install-state.gz
+      #     key: yarn-${{ hashFiles('yarn.lock') }}
+      #     restore-keys: yarn-
 
-      # ---- node_modules 缓存 (加速 link 步骤) ----
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: nm-cache
-        with:
-          path: |
-            node_modules
-            apps/api/node_modules
-            apps/admin-next/node_modules
-            apps/mini-shop-admin/node_modules
-            apps/liveness-web/node_modules
-            packages/*/node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      # ---- node_modules 缓存 — 暂时禁用 ----
+      # - name: Cache node_modules
+      #   uses: actions/cache@v4
+      #   id: nm-cache
+      #   with:
+      #     path: |
+      #       node_modules
+      #       apps/api/node_modules
+      #       apps/admin-next/node_modules
+      #       apps/mini-shop-admin/node_modules
+      #       apps/liveness-web/node_modules
+      #       packages/*/node_modules
+      #     key: nm-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
-      # ---- Turbo 远程缓存 ----
-      - name: Cache Turbo
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ github.ref_name }}-
-            turbo-main-
+      # ---- Turbo 远程缓存 — 暂时禁用 ----
+      # - name: Cache Turbo
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: .turbo
+      #     key: turbo-${{ github.ref_name }}-${{ github.sha }}
+      #     restore-keys: |
+      #       turbo-${{ github.ref_name }}-
+      #       turbo-main-
 
       - name: Install dependencies
-        if: steps.nm-cache.outputs.cache-hit != 'true'
         run: yarn install --immutable
 
       # Prisma generate 必须在类型检查前运行
@@ -105,65 +104,82 @@ jobs:
   e2e:
     needs: check
     runs-on: ubuntu-latest
-    # 只有配置了 E2E secret 才运行（避免 fork PR 失败）
-    if: ${{ secrets.E2E_ADMIN_PASSWORD != '' }}
 
     steps:
+      - name: Check E2E secret availability
+        id: e2e_gate
+        env:
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [ -n "$E2E_ADMIN_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "E2E_ADMIN_PASSWORD is not set, skip E2E job steps"
+          fi
+
       - name: Checkout
+        if: steps.e2e_gate.outputs.enabled == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: steps.e2e_gate.outputs.enabled == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Enable Corepack (Yarn 4)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
-      - name: Cache Yarn zip cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .yarn/cache
-            .yarn/install-state.gz
-          key: yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: yarn-
+      # ---- 依赖缓存 — 暂时禁用 ----
+      # - name: Cache Yarn zip cache
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       .yarn/cache
+      #       .yarn/install-state.gz
+      #     key: yarn-${{ hashFiles('yarn.lock') }}
+      #     restore-keys: yarn-
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: nm-cache-e2e
-        with:
-          path: |
-            node_modules
-            apps/admin-next/node_modules
-            packages/ui/node_modules
-            packages/config/node_modules
-          key: nm-e2e-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      # - name: Cache node_modules
+      #   uses: actions/cache@v4
+      #   id: nm-cache-e2e
+      #   with:
+      #     path: |
+      #       node_modules
+      #       apps/admin-next/node_modules
+      #       packages/ui/node_modules
+      #       packages/config/node_modules
+      #     key: nm-e2e-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
       - name: Install dependencies
-        if: steps.nm-cache-e2e.outputs.cache-hit != 'true'
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn install --immutable
 
-      # 安装 Playwright 浏览器（带缓存）
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: pw-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('apps/admin-next/package.json') }}
+      # ---- Playwright 浏览器缓存 — 暂时禁用 ----
+      # - name: Cache Playwright browsers
+      #   uses: actions/cache@v4
+      #   id: pw-cache
+      #   with:
+      #     path: ~/.cache/ms-playwright
+      #     key: playwright-${{ hashFiles('apps/admin-next/package.json') }}
 
       - name: Install Playwright browsers
-        if: steps.pw-cache.outputs.cache-hit != 'true'
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next playwright install chromium --with-deps
 
       # 构建 Next.js（静态导出 + 本地 serve，无需后端）
       - name: Build @lucky/shared
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: node packages/shared/scripts/build.js
 
       - name: Build @repo/ui
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: node packages/ui/scripts/build.js
 
       - name: Build admin-next
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next build
         env:
           NODE_ENV: production
@@ -171,17 +187,9 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
           NEXT_PUBLIC_APP_ENV: production
 
-      # 用 npx serve 本地服务静态导出文件
-      - name: Start static server
-        run: |
-          npm install -g serve
-          serve apps/admin-next/out -l 4001 &
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-          # 等待服务器就绪
-          npx wait-on http://localhost:4001 --timeout 30000
-
-      # 启动 mock API server（拦截登录等请求，返回假 token）
+      # 启动 mock API server（先启动，让 Next.js 环境变量指向它）
       - name: Start mock API server
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: |
           cat > /tmp/mock-api.js << 'EOF'
           const http = require('http');
@@ -202,7 +210,15 @@ jobs:
           EOF
           node /tmp/mock-api.js &
 
+      # 启动 Next.js standalone 服务器 (output: 'standalone' — 不再用 serve out/)
+      - name: Start Next.js server
+        if: steps.e2e_gate.outputs.enabled == 'true'
+        run: |
+          PORT=4001 yarn workspace @lucky/admin-next start &
+          npx wait-on http://localhost:4001 --timeout 60000
+
       - name: Run Playwright E2E tests
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4001
@@ -212,7 +228,7 @@ jobs:
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.e2e_gate.outputs.enabled == 'true'
         with:
           name: playwright-report
           path: apps/admin-next/playwright-report/
@@ -221,7 +237,12 @@ jobs:
       - name: E2E Summary
         if: always()
         run: |
-          echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
-          echo "- **浏览器**: Chromium" >> $GITHUB_STEP_SUMMARY
-          echo "- **报告**: 见 Artifacts → playwright-report" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.e2e_gate.outputs.enabled }}" = "true" ]; then
+            echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
+            echo "- **浏览器**: Chromium" >> $GITHUB_STEP_SUMMARY
+            echo "- **报告**: 见 Artifacts → playwright-report" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
+            echo "- **状态**: skipped (missing E2E_ADMIN_PASSWORD secret)" >> $GITHUB_STEP_SUMMARY
+          fi
 

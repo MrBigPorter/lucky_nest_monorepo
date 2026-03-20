@@ -24,55 +24,8 @@
 import * as readline from 'readline';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { resolve } from 'path';
-import { existsSync, readFileSync } from 'fs';
 import { Role } from '@lucky/shared';
-
-// ── 加载环境变量 (必须在 new PrismaClient() 之前调用) ──────────────
-// 宿主机运行时自动找到 deploy/.env.dev 并加载
-// Docker exec 场景下 DATABASE_URL 已存在，直接跳过
-function loadEnvForHost(): void {
-  if (process.env.DATABASE_URL) return; // 已有则跳过 (容器内)
-
-  // yarn workspace 会把 cwd 切换到 apps/api/，向上查找 deploy/.env.dev
-  const searchRoots = [
-    process.cwd(),
-    resolve(process.cwd(), '../..'),
-    resolve(process.cwd(), '../../..'),
-  ];
-
-  for (const root of searchRoots) {
-    for (const name of ['deploy/.env.dev', 'deploy/.env', '.env']) {
-      const envPath = resolve(root, name);
-      if (!existsSync(envPath)) continue;
-
-      // 解析 KEY=VALUE，跳过注释和空行
-      for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) continue;
-        const eqIdx = trimmed.indexOf('=');
-        if (eqIdx === -1) continue;
-        const key = trimmed.slice(0, eqIdx).trim();
-        const val = trimmed
-          .slice(eqIdx + 1)
-          .trim()
-          .replace(/^["']|["']$/g, '');
-        if (key && !process.env[key]) process.env[key] = val;
-      }
-
-      // 宿主机运行时 Docker 内部域名 "db" 无法解析 → 替换为 localhost
-      if (process.env.DATABASE_URL?.includes('@db:')) {
-        process.env.DATABASE_URL = process.env.DATABASE_URL.replace(
-          '@db:',
-          '@localhost:',
-        );
-        console.log(`\n  ℹ️  已加载: ${envPath}`);
-        console.log('  ℹ️  DB host: db → localhost (宿主机直接运行)\n');
-      }
-      return;
-    }
-  }
-}
+import { loadEnvForHost } from '../utils/load-env-for-host';
 
 loadEnvForHost(); // ← 必须在 new PrismaClient() 前执行
 

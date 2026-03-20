@@ -1,26 +1,31 @@
-import { SocketEvents } from '@lucky/shared';
+import { Role, SocketEvents } from '@lucky/shared';
 import {
   CHAT_EVENTS,
   ConversationReadEvent,
   MessageCreatedEvent,
   MessageRecalledEvent,
+  SupportConversationStartedEvent,
 } from '@api/common/chat/events/chat.events';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventsGateway } from '@api/common/events/events.gateway';
+import { PrismaService } from '@api/common/prisma/prisma.service';
 
 @Injectable()
 export class SocketListener {
   private readonly logger = new Logger(SocketListener.name);
   //  定义熔断阈值：500人以上的大群，不再给列表页发推送
   private readonly LARGE_GROUP_THRESHOLD = 500;
-  constructor(private readonly eventsGateway: EventsGateway) {}
+  constructor(
+    private readonly eventsGateway: EventsGateway,
+    private readonly prismaService: PrismaService,
+  ) {}
 
   // ===========================================================================
   // 1. 处理新消息 (Message Created)
   // ===========================================================================
   @OnEvent(CHAT_EVENTS.MESSAGE_CREATED)
-  handleMessageCreated(event: MessageCreatedEvent) {
+  async handleMessageCreated(event: MessageCreatedEvent) {
     const socketPayload = {
       id: event.messageId,
       conversationId: event.conversationId,
@@ -63,6 +68,8 @@ export class SocketListener {
         }
       });
     }
+
+    // SUPPORT 标准路径：通过 memberIds 分发即可，避免业务常量硬编码。
   }
 
   // ===========================================================================
@@ -126,5 +133,44 @@ export class SocketListener {
       SocketEvents.CONVERSATION_READ,
       readPayload,
     );
+  }
+
+  // ===========================================================================
+  // 4. 官方客服新会话 (Support Conversation Started)
+  //    Flutter 用户首次点击「联系客服」时触发，通知所有在线 admin 刷新会话列表
+  // ===========================================================================
+  @OnEvent(CHAT_EVENTS.SUPPORT_CONVERSATION_STARTED)
+  async handleSupportConversationStarted(
+    event: SupportConversationStartedEvent,
+  ) {
+    try {
+      const supportAdmins = await this.prismaService.adminUser.findMany({
+        where: { status: 1, deletedAt: null },
+        select: { id: true },
+      });
+
+      const payload = {
+        conversationId: event.conversationId,
+        businessId: event.businessId,
+        userId: event.userId,
+        timestamp: Date.now(),
+      };
+
+      supportAdmins.forEach((admin) => {
+        this.eventsGateway.dispatch(
+          `user_${admin.id}`,
+          'support_new_conversation',
+          payload,
+        );
+      });
+
+      this.logger.log(
+        `[SupportConversationStarted] Notified ${supportAdmins.length} admin(s) for conv ${event.conversationId}`,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        `Support conversation notify failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 }

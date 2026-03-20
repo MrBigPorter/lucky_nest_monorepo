@@ -32,13 +32,22 @@ describe('routes 配置', () => {
     expect(orders?.hidden).toBeFalsy();
   });
 
-  it('analytics 路由被隐藏 (功能未上线)', () => {
+  it('analytics 路由已上线，不被隐藏', () => {
     const analytics = routes.find((r) => r.name === 'analytics');
-    expect(analytics?.hidden).toBe(true);
+    expect(analytics?.hidden).toBeFalsy();
   });
 
   it('所有 group 值合法', () => {
-    const validGroups = ['Overview', 'Management', 'Operations', 'System'];
+    const validGroups = [
+      'Overview',
+      'Users',
+      'Catalog',
+      'Commerce',
+      'Marketing',
+      'Customer Service',
+      'Analytics',
+      'System',
+    ];
     routes.forEach((r) => {
       expect(validGroups, `${r.path} group 非法`).toContain(r.group);
     });

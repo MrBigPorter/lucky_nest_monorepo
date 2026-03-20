@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import {
   DateToTimestamp,
   DecimalToNumber,
@@ -47,6 +47,20 @@ export class AdminTreasureResponseDto {
   @Expose()
   @DecimalToString(2, '0.00')
   unitAmount!: string;
+
+  @ApiProperty({
+    description: '市场划线价',
+    example: '299.00',
+    required: false,
+  })
+  @Expose()
+  @DecimalToString(2)
+  marketAmount?: string;
+
+  @ApiProperty({ description: '单买价', example: '129.00', required: false })
+  @Expose()
+  @DecimalToString(2)
+  soloAmount?: string;
 
   @ApiProperty({ description: '总库存' })
   @Expose()
