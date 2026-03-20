@@ -12,6 +12,37 @@ import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { SocketEvents } from '@lucky/shared';
+import type { Prisma } from '@prisma/client';
+
+interface JwtPayloadLike {
+  sub?: string;
+}
+
+const extractErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+const getSocketUserId = (client: Socket): string | null => {
+  const data = client.data as Record<string, unknown>;
+  return typeof data.userId === 'string' ? data.userId : null;
+};
+
+const setSocketUserId = (client: Socket, userId: string): void => {
+  const data = client.data as Record<string, unknown>;
+  data.userId = userId;
+};
+
+const isConversationSeqRows = (
+  value: unknown,
+): value is Array<{ lastMsgSeqId: number }> =>
+  Array.isArray(value) &&
+  value.every((item) => {
+    if (typeof item !== 'object' || item === null) {
+      return false;
+    }
+
+    const row = item as Record<string, unknown>;
+    return typeof row.lastMsgSeqId === 'number';
+  });
 
 export enum SocketRoom {
   LOBBY = 'group_lobby', // 拼团大厅
@@ -19,18 +50,10 @@ export enum SocketRoom {
 
 // 定义推送子类型
 export enum PushEventType {
-  GROUP_UPDATE = 'group_update',
   GROUP_SUCCESS = 'group_success',
   GROUP_FAILED = 'group_failed',
-  WALLET_CHANGE = 'wallet_change',
 }
-
-@WebSocketGateway({
-  namespace: 'events',
-  cors: { origin: '*' },
-  pingInterval: 10000,
-  pingTimeout: 5000,
-})
+@WebSocketGateway()
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
@@ -45,8 +68,12 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     try {
       const token =
-        (client.handshake.query.token as string) ||
-        (client.handshake.auth?.token as string);
+        (typeof client.handshake.query.token === 'string'
+          ? client.handshake.query.token
+          : undefined) ||
+        (typeof client.handshake.auth?.token === 'string'
+          ? client.handshake.auth.token
+          : undefined);
 
       let userId: string | null = null;
       if (token) {
@@ -58,8 +85,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         for (const secret of secrets) {
           try {
-            const payload = this.jwtService.verify(token, { secret });
-            userId = payload.sub;
+            const payload = this.jwtService.verify<JwtPayloadLike>(token, {
+              secret,
+            });
+            userId = typeof payload.sub === 'string' ? payload.sub : null;
             this.logger.debug(` User verified via JWT: ${userId}`);
             break;
           } catch {
@@ -70,14 +99,14 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (userId) {
           const privateRoom = `user_${userId}`;
           await client.join(privateRoom);
-          (client as any).userId = userId;
+          setSocketUserId(client, userId);
           this.logger.log(
             `🔌 Client connected: ${client.id} (User: ${userId})`,
           );
         }
       }
-    } catch (error: any) {
-      this.logger.error(`Connection error: ${error.message}`);
+    } catch (error: unknown) {
+      this.logger.error(`Connection error: ${extractErrorMessage(error)}`);
     }
   }
 
@@ -93,7 +122,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    *  修改点 1: 增加统一分发出口
    * 所有业务指令的最终出口，前端只监听 SocketEvents.DISPATCH ('dispatch')
    */
-  dispatch(room: string, type: string, data: any, excludeRoom?: string) {
+  dispatch(room: string, type: string, data: unknown, excludeRoom?: string) {
     if (excludeRoom) {
       this.server
         .to(room)
@@ -119,7 +148,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    *  修改点 2: 修改大厅广播逻辑
    */
-  broadcastToLobby(payload: any) {
+  broadcastToLobby(payload: unknown) {
     // 统一走 dispatch 出口，类型设为 GROUP_UPDATE
     this.dispatch(SocketRoom.LOBBY, SocketEvents.GROUP_UPDATE, payload);
   }
@@ -127,7 +156,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    *  修改点 3: 修改个人私信通知逻辑
    */
-  notifyUser(userId: string, type: string, payload: any) {
+  notifyUser(userId: string, type: string, payload: unknown) {
     const privateRoom = `user_${userId}`;
     this.dispatch(privateRoom, type, payload);
   }
@@ -136,17 +165,10 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 精准分发：发给特定用户 (通过私有房间)
    * 这就是你问的 dispatchToUser 的来源
    */
-  dispatchToUser(userId: string, type: string, data: any) {
+  dispatchToUser(userId: string, type: string, data: unknown) {
     const privateRoom = `user_${userId}`;
     // 直接复用 dispatch 逻辑，发送到该用户的私有房间
     this.dispatch(privateRoom, type, data);
-  }
-
-  /**
-   *  修改点 4: 兼容旧 sendPush 方法，内部重定向至 dispatch
-   */
-  private sendPush(room: string, type: string, payload: any) {
-    this.dispatch(room, type, payload);
   }
 
   // ---------------------------------------------------------
@@ -159,7 +181,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { conversationId: string },
   ) {
     if (!payload.conversationId) return;
-    client.join(payload.conversationId);
+    void client.join(payload.conversationId);
     return { status: 'joined', conversationId: payload.conversationId };
   }
 
@@ -168,7 +190,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { conversationId: string },
   ) {
-    client.leave(payload.conversationId);
+    void client.leave(payload.conversationId);
   }
 
   @SubscribeMessage(SocketEvents.SEND_MESSAGE)
@@ -182,41 +204,48 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       tempId: string;
     },
   ) {
-    const userId = (client as any).userId;
+    const userId = getSocketUserId(client);
     if (!userId) return { error: 'Unauthorized' };
 
     const { conversationId, content, type, tempId } = payload;
 
     try {
-      const result = await this.prismaService.$transaction(async (tx) => {
-        const conv = await tx.conversation.update({
-          where: { id: conversationId },
-          data: { lastMsgSeqId: { increment: 1 } },
-          select: { lastMsgSeqId: true },
-        });
+      const result = await this.prismaService.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          await tx.conversation.updateMany({
+            where: { id: conversationId },
+            data: { lastMsgSeqId: { increment: 1 } },
+          });
 
-        const msg = await tx.chatMessage.create({
-          data: {
-            conversationId,
-            senderId: userId,
-            content,
-            type,
-            seqId: conv.lastMsgSeqId,
-            clientTempId: tempId,
-          },
-          include: { sender: true },
-        });
+          const conversationRowsUnknown =
+            await (tx.$queryRaw`SELECT "lastMsgSeqId" FROM "Conversation" WHERE "id" = ${conversationId} LIMIT 1` as Promise<unknown>);
+          const seqId = isConversationSeqRows(conversationRowsUnknown)
+            ? (conversationRowsUnknown[0]?.lastMsgSeqId ?? 0)
+            : 0;
 
-        await tx.conversation.update({
-          where: { id: conversationId },
-          data: {
-            lastMsgContent: type === 0 ? content : '[Media]',
-            lastMsgType: type,
-            lastMsgTime: new Date(),
-          },
-        });
-        return msg;
-      });
+          const msg = await tx.chatMessage.create({
+            data: {
+              conversationId,
+              senderId: userId,
+              content,
+              type,
+              seqId,
+              clientTempId: tempId,
+            },
+            include: { sender: true },
+          });
+
+          await tx.conversation.update({
+            where: { id: conversationId },
+            data: {
+              lastMsgContent: type === 0 ? content : '[Media]',
+              lastMsgType: type,
+              lastMsgTime: new Date(),
+            },
+          });
+          return msg;
+        },
+      );
 
       /**
        *  修改点 5: 修改发送消息后的广播逻辑
@@ -236,19 +265,20 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           createdAt: result.createdAt,
         },
       };
-    } catch (error: any) {
-      this.logger.error(`Send Message Failed: ${error.message}`);
-      return { status: 'error', message: error.message };
+    } catch (error: unknown) {
+      const message = extractErrorMessage(error);
+      this.logger.error(`Send Message Failed: ${message}`);
+      return { status: 'error', message };
     }
   }
 
   @SubscribeMessage('join_lobby')
   handleJoinLobby(@ConnectedSocket() client: Socket) {
-    client.join(SocketRoom.LOBBY);
+    void client.join(SocketRoom.LOBBY);
   }
 
   @SubscribeMessage('leave_lobby')
   handleLeaveLobby(@ConnectedSocket() client: Socket) {
-    client.leave(SocketRoom.LOBBY);
+    void client.leave(SocketRoom.LOBBY);
   }
 }

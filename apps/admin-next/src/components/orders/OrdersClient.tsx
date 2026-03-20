@@ -4,7 +4,7 @@
  * OrdersClient — Client Component
  * Phase 3: URL searchParams 驱动 filter
  */
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Truck, XCircle, Trash2, Eye } from 'lucide-react';
 import { Card, Button, Badge, Input } from '@/components/UIComponents';
@@ -91,7 +91,12 @@ export function OrdersClient() {
 
   // 2. Logic: Handle Status Updates
   const handleUpdateStatus = useCallback(
-    async (orderId: string, status: number, extraData: Record<string, unknown> = {}) => {
+    async (
+      orderId: string,
+      status: number,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _extraData: Record<string, unknown> = {},
+    ) => {
       try {
         await updateStatusApi(orderId, status);
         addToast(
@@ -154,8 +159,11 @@ export function OrdersClient() {
   );
 
   // 4. Interaction: Open Shipping Modal
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const openShippingModal = (_orderId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let _trackingNumber = '';
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let _courierName = '';
 
     ModalManager.open({
@@ -254,7 +262,7 @@ export function OrdersClient() {
   );
 
   // 7. Table Configuration
-  const columns: ColumnDef<Order>[] = useMemo(() => {
+  const columns = useMemo(() => {
     const columnsHelper = createColumnHelper<Order>();
     return [
       columnsHelper.accessor('orderNo', {
@@ -326,7 +334,7 @@ export function OrdersClient() {
           </div>
         ),
       }),
-    ];
+    ] as ColumnDef<Order>[];
   }, [handleDelete, handleOrderDetails]);
 
   return (
@@ -383,4 +391,3 @@ export function OrdersClient() {
     </div>
   );
 }
-

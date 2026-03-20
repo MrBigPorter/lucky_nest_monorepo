@@ -366,7 +366,8 @@ export function FlashSaleManagement() {
       renderChildren: ({ close }) => (
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Delete "{s.title}"? This will also remove all bound products.
+            Delete &quot;{s.title}&quot;? This will also remove all bound
+            products.
           </p>
           <div className="flex justify-end gap-2">
             <button

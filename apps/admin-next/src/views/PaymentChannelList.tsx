@@ -14,6 +14,7 @@ import { PaymentChannelModal } from './payment-channel/PaymentChannelModal';
 import { useAntdTable } from 'ahooks';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { BaseTable } from '@/components/scaffold/BaseTable';
+import { SmartImage } from '@/components/ui/SmartImage';
 
 // --- 辅助组件：状态标签 ---
 const StatusBadge = ({ status }: { status: number }) => {
@@ -136,7 +137,7 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
     run({ current: 1, pageSize: 10 }, values);
     onParamsChange?.(values);
   };
-  
+
   const handleReset = () => {
     reset();
     onParamsChange?.({ name: '', status: 'ALL', type: 'ALL' });
@@ -148,19 +149,18 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
   );
 
   // 打开弹窗
-  const handleEdit = useCallback((record?: PaymentChannel) => {
-    ModalManager.open({
-      title: record ? `Edit Channel` : 'Create New Channel',
-      size: 'xl',
-      renderChildren: ({ close }) => (
-        <PaymentChannelModal
-          data={record}
-          close={close}
-          reload={refresh}
-        />
-      ),
-    });
-  }, [refresh]);
+  const handleEdit = useCallback(
+    (record?: PaymentChannel) => {
+      ModalManager.open({
+        title: record ? `Edit Channel` : 'Create New Channel',
+        size: 'xl',
+        renderChildren: ({ close }) => (
+          <PaymentChannelModal data={record} close={close} reload={refresh} />
+        ),
+      });
+    },
+    [refresh],
+  );
 
   // 删除操作 (使用 ModalManager 而不是原生 confirm 会更好，这里保持逻辑不变但优化体验)
   const handleDelete = useCallback(
@@ -196,7 +196,12 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
             <div className="flex items-center gap-3 group">
               <div className="w-10 h-10 rounded-xl border border-gray-200 bg-gray-50 p-1.5 flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-all">
                 {row.icon ? (
-                  <img src={row.icon} className="w-full h-full object-contain" alt={row.name} />
+                  <SmartImage
+                    src={row.icon}
+                    alt={row.name}
+                    className="w-full h-full"
+                    imgClassName="w-full h-full object-contain"
+                  />
                 ) : (
                   <CreditCard size={20} className="text-gray-400" />
                 )}
@@ -211,7 +216,9 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
                   )}
                 </div>
                 <div className="text-xs text-gray-500 font-mono mt-0.5 flex items-center gap-1">
-                  <span className="bg-gray-100 px-1 rounded text-[10px] text-gray-600">CODE</span>
+                  <span className="bg-gray-100 px-1 rounded text-[10px] text-gray-600">
+                    CODE
+                  </span>
                   {row.code}
                 </div>
               </div>
@@ -232,7 +239,8 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
           return (
             <div className="flex flex-col justify-center">
               <div className="text-sm font-medium text-gray-700 dark:text-gray-300 font-mono">
-                ₱{row.minAmount.toLocaleString()} - ₱{row.maxAmount.toLocaleString()}
+                ₱{row.minAmount.toLocaleString()} - ₱
+                {row.maxAmount.toLocaleString()}
               </div>
             </div>
           );
@@ -243,7 +251,8 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
         size: 150,
         cell: (info) => {
           const row = info.row.original;
-          if (row.type === 1) return <span className="text-gray-400 text-xs italic">No Fee</span>;
+          if (row.type === 1)
+            return <span className="text-gray-400 text-xs italic">No Fee</span>;
           const isFree = row.feeFixed === 0 && row.feeRate === 0;
           if (isFree)
             return (
@@ -258,7 +267,9 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
                   ₱{row.feeFixed}
                 </span>
               )}
-              {row.feeFixed > 0 && row.feeRate > 0 && <span className="text-gray-400">+</span>}
+              {row.feeFixed > 0 && row.feeRate > 0 && (
+                <span className="text-gray-400">+</span>
+              )}
               {row.feeRate > 0 && (
                 <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded border border-gray-200 font-medium">
                   {(row.feeRate * 100).toFixed(1)}%
@@ -272,7 +283,9 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
         header: 'Sort',
         size: 80,
         cell: (info) => (
-          <span className="font-mono text-gray-500 text-xs">#{info.getValue()}</span>
+          <span className="font-mono text-gray-500 text-xs">
+            #{info.getValue()}
+          </span>
         ),
       }),
       col.accessor('status', {
@@ -313,9 +326,7 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
         },
       }),
     ] as ColumnDef<PaymentChannel>[];
-  },
-    [handleEdit, handleDelete],
-  );
+  }, [handleEdit, handleDelete]);
 
   const searchSchema: FormSchema[] = useMemo(
     () => [
