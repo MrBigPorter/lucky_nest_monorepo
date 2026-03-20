@@ -18,7 +18,7 @@ on:
 
 concurrency:
   group: deploy-admin
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   IMAGE_NAME: ghcr.io/mrbigporter/lucky-admin-next-prod
@@ -53,6 +53,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
+            type=raw,value=${{ github.sha }}
             type=sha,prefix=
             type=raw,value=latest
 
@@ -83,7 +84,7 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.VPS_GHCR_PAT }}
           GHCR_USER: ${{ github.repository_owner }}
-          IMAGE: ${{ env.IMAGE_NAME }}:latest
+          IMAGE: ${{ env.IMAGE_NAME }}:${{ github.sha }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}

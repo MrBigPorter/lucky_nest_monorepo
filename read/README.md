@@ -1,110 +1,39 @@
-# 项目文档中心
+# 文档导航（精简版）
 
-你好！这里是项目的统一文档中心。所有分散的文档都已在这里进行了汇总和简化，方便你快速查阅。
+> 目标：减少新人迷路。先按角色读，再按专题查。
 
----
+## 先读（按顺序）
 
-## 1. 快速开始
+1. `read/DEPLOY_QUICKSTART_CN.md`（15 分钟部署快启）
+2. `RUNBOOK.md`（完整发布/回滚手册）
+3. `ARCHITECTURE_CN.md`（系统架构全景）
 
-本文档的目标是让你在 10 分钟内将项目跑起来，并了解如何进行日常开发。
+## 按角色阅读
 
-### 1.1. 【推荐】使用 Docker 一键启动
+- `运维/发布`
+  - `RUNBOOK.md`
+  - `.github/workflows/deploy-admin-cloudflare.yml`
+  - `.github/workflows/deploy-backend.yml`
+- `后端开发`
+  - `read/ARCHITECTURE.md`
+  - `read/TESTING_API_CN.md`
+  - `read/PRISMA_V6_MIGRATION_CN.md`
+- `Admin 前端开发`
+  - `read/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md`
+  - `read/SERVER_FETCH_GUIDE_CN.md`
+  - `read/TESTING_CN.md`
 
-这种方式会自动为你启动所有服务（后端API、数据库等）。
+## 重点专题索引
 
-**前提**: 你的电脑上已经安装了 [Docker Desktop](https://www.docker.com/products/docker-desktop/)。
+- 部署快启：`read/DEPLOY_QUICKSTART_CN.md`
+- 发布与回滚：`RUNBOOK.md`
+- OAuth 三方登录：`read/OAUTH_THIRDPARTY_LOGIN_CN.md`
+- IM 客服：`read/IM_SUPPORT_REALTIME_CN.md`
+- 测试规范：`read/TESTING_STANDARDS_CN.md`
+- 文档迁移记录：`read/MIGRATION_LOG_CN.md`
 
-**步骤**:
+## 文档维护约定
 
-1.  **准备配置文件**:
-    - 在 `apps/api/` 目录下，复制 `.env.docker.prod` 并重命名为 `.env.docker`。
-
-2.  **启动服务**:
-    - 在项目的 **根目录** 下，打开终端，运行以下命令：
-      ```sh
-      yarn docker:up
-      ```
-
-3.  **验证**:
-    - **后端 API**: 浏览器访问 `http://localhost:4000/docs`，如果能看到 Swagger API 文档页面，说明后端已成功运行。
-    - **数据库管理**: 浏览器访问 `http://localhost:5050`，使用邮箱 `admin@example.com` 和密码 `admin123` 登录 pgAdmin。
-
-### 1.2. 常用命令
-
-所有命令都在项目 **根目录** 下执行。
-
-- `yarn dev`: **启动所有**应用的开发模式。
-- `yarn build`: **构建所有**应用和包。
-- `yarn dev --filter=mini-shop-admin`: **只启动** `mini-shop-admin` 前端。
-
-**Docker 相关:**
-
-- `yarn docker:up`: 一键启动所有服务。
-- `yarn docker:down`: 停止所有服务。
-- `yarn docker:logs`: 查看后端日志。
-- `yarn docker:ps`: 查看服务状态。
-
----
-
-## 2. 核心文档链接
-
-- **[项目架构与核心上下文 (ARCHITECTURE.md)](./ARCHITECTURE.md)**
-  - **必读！** 这份文档是项目的"地图"，它描述了整个项目的技术选型、分层结构、各个应用（`api`, `admin`, `web` 等）的职责以及它们之间的关系。在进行任何开发前，请先阅读此文档。
-
-- **[✅ 已完成功能文档 (FEATURES_CN.md)](./FEATURES_CN.md)**
-  - **开发必查！** 记录所有已上线的后台功能（17 个模块）：每个模块的接口列表、权限要求、关键代码路径、数据模型说明。新功能开发前请先查阅，避免重复造轮子。
-
-- **[项目优化待办事项 (TODO.md)](./TODO.md)**
-  - 这份文档记录了对项目进行结构优化和功能增强的详细步骤。你可以按照这个清单来了解项目的后续开发计划，或者参与其中。
-
-### SSR 升级系列文档
-
-| 文档 | 内容 |
-|------|------|
-| [SSR 升级完整分析 (SSR_UPGRADE_ANALYSIS_CN.md)](./SSR_UPGRADE_ANALYSIS_CN.md) | 为什么升级、升级路线图、各页面渲染策略决策 |
-| [Phase 0 — 基础设施 (REFACTOR_PHASE0_CN.md)](./REFACTOR_PHASE0_CN.md) | standalone 模式、Dockerfile、Nginx、CI/CD 迁移 |
-| [Phase 2 — Dashboard SSR (REFACTOR_PHASE2_CN.md)](./REFACTOR_PHASE2_CN.md) | Server Component、HydrationBoundary、serverFetch、内网直连 |
-
-### 测试与 Bug 修复
-
-| 文档 | 内容 |
-|------|------|
-| [自动化测试指南 (TESTING_CN.md)](./TESTING_CN.md) | Vitest 单元测试 + Playwright E2E 全指南 |
-| [Phase 5 E2E 补全 & Bug 修复 (PHASE5_E2E_AND_BUGFIX_CN.md)](./PHASE5_E2E_AND_BUGFIX_CN.md) | 2026-03-17：9 个新 E2E spec、auth warmup 扩展、SmartTable render 参数误用导致的 `RangeError` 根因与修复 |
-
-### Admin Next 架构与面试资料
-
-| 文档 | 内容 |
-|------|------|
-| [Admin Next 架构总结（完整版）(ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md)](./ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md) | 架构分层、技术现状、快速上手、面试题、优化路线 |
-| [Admin Next 5 分钟口述稿 (ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md)](./ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md) | 面试开场/技术分享快讲提纲（5 分钟） |
-| [Admin Next 面试闪卡 (ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md)](./ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md) | Q/A 速记题库（基础+进阶） |
-| [serverFetch 指南 (SERVER_FETCH_GUIDE_CN.md)](./SERVER_FETCH_GUIDE_CN.md) | Server Component 取数基座：原理、边界、渲染影响、Do/Don't |
-
----
-
-## 3. 开发规范
-
-### 3.1. 代码提交流程
-
-1.  **分支管理**:
-    - `main`: 主分支，受保护。
-    - `feat/*`: 用于开发新功能 (e.g., `feat/add-coupon-feature`)。
-    - `fix/*`: 用于修复 Bug (e.g., `fix/login-error`)。
-
-2.  **提交信息**:
-    - **格式**: `类型(范围): 做了什么`
-    - **示例**: `feat(api): add user registration endpoint`
-
-### 3.2. 数据库修改流程 (Prisma)
-
-所有数据库的表结构都由 `apps/api/prisma/schema.prisma` 文件定义。
-
-当你修改了 `schema.prisma` 文件后，请执行以下命令来更新数据库：
-
-```sh
-yarn workspace api prisma migrate dev --name <你的变更描述>
-```
-
-- **`<你的变更描述>`**: 请用简短的英文描述你做了什么，例如 `add_user_coupons`。
-- **重要**: 执行完命令后，记得将新生成的 `prisma/migrations` 文件夹下的所有文件都提交到 Git。
+- 发布流程只在 `RUNBOOK.md` 维护。
+- 新人上手只在 `read/DEPLOY_QUICKSTART_CN.md` 维护。
+- 其它文档只保留架构背景、历史复盘和专题细节，避免重复操作步骤。
