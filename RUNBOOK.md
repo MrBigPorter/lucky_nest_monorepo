@@ -2,7 +2,7 @@
 
 > 这是仓库中唯一维护的发布文档。涉及部署、回滚、备份、监控、证书、上线检查的流程，统一以本文为准。
 >
-> 最后更新: 2026-03-20
+> 最后更新: 2026-03-21
 
 ## 新人入口（先看这个）
 
@@ -52,7 +52,7 @@
 - 自动链路（推荐）: GitHub Actions 构建镜像 -> 推送 GHCR -> VPS 拉取并重启。
 - 手动链路（兜底）: 本地执行 `deploy/deploy.sh` -> 本地构建镜像并传输到 VPS -> 迁移 -> 启动服务。
 
-## 3) 发布脚本清单（唯一真相）
+## 3) 发布脚本清单（可以在本地（你的电脑）使用的命令）
 
 | 脚本/命令                         | 用途                              | 典型场景                |
 | --------------------------------- | --------------------------------- | ----------------------- |
@@ -129,9 +129,9 @@ yarn deploy:quick
 > 适用工作流：`.github/workflows/deploy-admin-cloudflare.yml`
 
 - 分支与环境映射确认：`main -> production`，`test -> preview`。
-- 触发路径命中：`apps/admin-next/**`、`packages/shared/**`、`packages/ui/**` 或手动触发。
+- 触发路径命中：`apps/admin-next/**`、`packages/shared/**`、`packages/ui/**`、`.github/workflows/deploy-admin-cloudflare.yml` 或手动触发。
 - 必需 Secrets（按对应 GitHub Environment 配置）：
-  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_API_TOKEN` — 必须有效，可通过 Step 7「Validate Cloudflare Secrets」自动预检
   - `CLOUDFLARE_ACCOUNT_ID`
   - `NEXT_PUBLIC_API_BASE_URL`
 - 建议 Secrets：`CF_ADMIN_HEALTHCHECK_URL`（用于主分支 smoke check）。
@@ -139,18 +139,34 @@ yarn deploy:quick
 - Cloudflare 构建文件存在：`apps/admin-next/wrangler.jsonc`、`apps/admin-next/open-next.config.ts`。
 - 若改动了共享包：确认已提交对应 build 结果（`packages/shared` / `packages/ui`）。
 
+#### Cloudflare API Token 权限要求（创建/重建 Token 时必看）
+
+| 权限类型           | 资源                                 | 权限                          |
+| ------------------ | ------------------------------------ | ----------------------------- |
+| Permissions        | Account > Workers Scripts            | Edit                          |
+| Permissions        | Account > Workers Assets             | Edit                          |
+| Permissions        | User > User Details                  | Read（可选，避免 email 警告） |
+| Account Resources  | Include > All accounts（或指定账户） | —                             |
+| **Zone Resources** | **Include > All zones**              | **— ← UI 必填，不选无法保存** |
+
+> ⚠️ Zone Resources 是 Cloudflare UI 表单强制字段，Workers 部署本身不需要 Zone 权限，但不填则无法保存 Token。
+
+Token 创建地址：https://dash.cloudflare.com/profile/api-tokens
+
 ### 6.2 Admin Cloudflare 首次失败排障（按报错关键字）
 
-| 报错关键字                                         | 优先检查项                                                      | 处理动作                                                  |
-| -------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
-| `Invalid API token` / `Authentication error`       | `CLOUDFLARE_API_TOKEN` 是否配置在当前 Environment，权限是否正确 | 重新生成/更新 Token，并在 `production`/`preview` 分别校验 |
-| `CLOUDFLARE_ACCOUNT_ID` / `account id`             | Account ID 是否与 Token 所属账户一致                            | 到 Cloudflare 控制台复制 Account ID，覆盖 Secret          |
-| `open-next.config.ts` / `wrangler.jsonc` not found | 文件路径是否在 `apps/admin-next/`                               | 恢复文件并重试部署                                        |
-| `NEXT_PUBLIC_API_BASE_URL` missing                 | 当前 Environment 是否有该 Secret                                | 补齐后重跑 workflow                                       |
-| `quality` job failed (`lint`/`check-types`/`test`) | 代码质量关口失败                                                | 先修复代码，再触发部署 job                                |
-| `Failed to create GitHub deployment`               | workflow 权限                                                   | 确认 `deployments: write` 未被移除                        |
-| `Smoke Check` failed                               | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问                           | 先本地 `curl` 验证 URL，再修复健康检查地址                |
-| Telegram send failed                               | 通知配置缺失                                                    | 补齐 Telegram secrets，或接受通知失败不阻断发布           |
+| 报错关键字                                                 | 优先检查项                                                                                                              | 处理动作                                                                                                                           |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Invalid API token` / `Authentication error [code: 10000]` | `CLOUDFLARE_API_TOKEN` 是否配置在当前 Environment（注意是 Environment Secret，不是 Repo Secret），Token 是否过期/被撤销 | 重建 Token（见 6.1 权限表），更新 `production` Environment Secret                                                                  |
+| `CLOUDFLARE_ACCOUNT_ID` / `account id`                     | Account ID 是否与 Token 所属账户一致                                                                                    | 到 Cloudflare 控制台复制 Account ID，覆盖 Secret                                                                                   |
+| `Unable to retrieve email` / `User Details Read`           | Token 缺少 `User > User Details > Read` 权限                                                                            | 重建 Token 时勾选该权限（非阻断性，仅警告）                                                                                        |
+| `Artifact storage quota has been hit`                      | GitHub Actions artifact 存储已满（免费 500 MB 上限）                                                                    | 到仓库 Actions → Artifacts 手动清理历史 artifact；deploy-admin-cloudflare.yml 已移除 artifact 上传步骤，信息改由 Step Summary 保留 |
+| `open-next.config.ts` / `wrangler.jsonc` not found         | 文件路径是否在 `apps/admin-next/`                                                                                       | 恢复文件并重试部署                                                                                                                 |
+| `NEXT_PUBLIC_API_BASE_URL` missing                         | 当前 Environment 是否有该 Secret                                                                                        | 补齐后重跑 workflow                                                                                                                |
+| `quality` job failed (`lint`/`check-types`/`test`)         | 代码质量关口失败                                                                                                        | 先修复代码，再触发部署 job                                                                                                         |
+| `Failed to create GitHub deployment`                       | workflow 权限                                                                                                           | 确认 `deployments: write` 未被移除                                                                                                 |
+| `Smoke Check` failed                                       | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问                                                                                   | 先本地 `curl` 验证 URL，再修复健康检查地址                                                                                         |
+| Telegram send failed                                       | 通知配置缺失                                                                                                            | 补齐 Telegram secrets，或接受通知失败不阻断发布                                                                                    |
 
 ### 6.3 本地提交前校验（Husky）
 
@@ -287,9 +303,10 @@ curl -sS https://api.joyminis.com/api/v1/health
 
 ### 8.5 Cloudflare 部署追踪与回退注记
 
-- `deploy-admin-cloudflare.yml` 会记录 Cloudflare deployment id/version id 到 Job Summary。
-- 工作流会上传 `admin-cloudflare-release-note-<run_id>` artifact，包含 commit、环境与回退注记。
-- 回退时优先查看最近一次成功部署的 Summary/Artifact，再执行 DNS 回滚命令。
+- `deploy-admin-cloudflare.yml` 会记录 Cloudflare deployment id/version id 到 Job Summary（Step 12）。
+- Telegram 通知（Step 15）同步播报 deployment id / version id / commit。
+- ~~artifact 上传~~：已移除（曾因存储配额问题阻断流水线，信息已由 Summary 完全覆盖）。
+- 回退时优先查看最近一次成功部署的 Actions Summary，再执行 DNS 回滚命令。
 
 ## 9) 数据库与 Seed 规则
 
@@ -333,8 +350,65 @@ ssh root@107.175.53.104 '(crontab -l 2>/dev/null; echo "0 3 * * 1 /opt/lucky/dep
 - 迁移报 `P3005`:
   - 按提示在 VPS 执行 `bash deploy/baseline-db.sh` 后重试。
 
+### Docker 构建常见报错（Dockerfile.prod）
+
+| 报错                                                        | 根因                                                                                             | 修复                                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `Couldn't find a script named "turbo"`                      | `turbo` 在 root devDependencies，`yarn workspaces focus @lucky/api` 不安装 root devDeps          | 已修复：用 `yarn workspace @lucky/api build` 替代 `yarn turbo run build`                 |
+| `node_modules/.bin/tsc: not found`（在 `apps/api/` 子目录） | Yarn 4 `nodeLinker: node-modules` 将 `typescript` 提升到根 `node_modules`，不在 workspace 子目录 | 已修复：统一从根目录调用 `node_modules/.bin/tsc -p apps/api/tsconfig.cli.json`           |
+| `Cannot find module '@lucky/shared/dist/types/*'`           | `@lucky/shared` 未编译，`dist/` 不存在；`esbuild` 只在 `admin-next`，focused 安装不包含          | 已修复：在 api build 前先执行 `node_modules/.bin/tsc -p packages/shared/tsconfig.json`   |
+| `COPY --from=builder /app/apps/api/node_modules: not found` | Docker 干净环境下 focused 安装无版本冲突，所有包提升到根 `node_modules`，子目录不存在            | 已修复：builder 末尾加 `RUN mkdir -p apps/api/node_modules packages/shared/node_modules` |
+
+### CI / 分支触发常见问题
+
+| 问题                                                      | 根因                                                                        | 修复                                                                      |
+| --------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 推 `test` 分支但后端未部署                                | `deploy-backend.yml` 只配置了 `branches: [main]`                            | 已修复：改为 `branches: [main, test]`                                     |
+| `check-types` 报 `Cannot find module './data/ph-address'` | `seed-address.ts` 在 `main`/`test`，但其依赖 `ph-address.ts` 只在本地未推送 | 已修复：push 本地 dev commit，merge 到 test                               |
+| `yarn workspace @lucky/api lint -- --fix` 报错            | Yarn 4 将 `--` 原样传给 ESLint，`--fix` 被当作文件 glob                     | 已修复：在 `apps/api/package.json` 加 `"lint:fix"` 脚本，直接内嵌 `--fix` |
+
 ## 12) 文档维护规则
 
 - 发布相关内容只更新本文件。
 - 其他文档仅保留跳转说明，不再写重复流程。
 - 当 `deploy/*.sh`、`compose.prod.yml`、根发布脚本变更时，必须同步更新本文件。
+
+## 13) 本地算力（Self-Hosted Runner）
+
+GitHub 免费额度有限，排队时可切换到本地 Mac 运行部署任务。
+
+### 13.1 适用场景
+
+- GitHub Actions 排队超过 5 分钟。
+- 需要紧急发布，不想等 GHA 调度。
+
+### 13.2 一次性注册（已注册可跳过）
+
+```bash
+# 1. 在 GitHub 仓库 → Settings → Actions → Runners → New self-hosted runner
+# 2. 选择 macOS / arm64，按页面指引下载并配置 runner
+# 3. 启动 runner（长期运行建议配置为 launchd service）
+./run.sh
+```
+
+### 13.3 触发方式
+
+所有部署工作流（`deploy-backend.yml`、`deploy-admin-cloudflare.yml`、`deploy-admin.yml`）均支持 `runner` 输入参数：
+
+**通过 `deploy-master.yml`（推荐）**：
+
+1. GitHub 仓库 → Actions → **🚀 Master Deployment Control** → Run workflow
+2. `Runner` 下拉选择 `self-hosted`
+3. 按需勾选要部署的服务
+
+**直接触发单个工作流**：
+
+1. 选择对应工作流 → Run workflow
+2. `Runner` 下拉选择 `self-hosted`
+
+### 13.4 注意事项
+
+- 后端 Docker build 在 Apple Silicon 构建 `linux/amd64` 镜像需要 QEMU 模拟，速度比 x86 慢约 3–5 倍，但无需排队。
+- 需要本地安装 Docker Desktop 并开启 **Use Rosetta for x86/amd64 emulation**。
+- self-hosted runner 运行期间需保持 Mac 联网且不休眠。
+- `push` 自动触发的工作流仍走 `ubuntu-latest`；`self-hosted` 仅对手动触发生效。
