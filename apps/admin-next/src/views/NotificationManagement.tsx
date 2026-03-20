@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Bell,
   Send,
   Users,
   Smartphone,
@@ -22,6 +21,50 @@ import { PageHeader } from '@/components/scaffold/PageHeader';
 import { notificationApi } from '@/api';
 import type { AdminPushLog, QueryPushLogParams } from '@/type/types';
 import { format } from 'date-fns';
+import { useAppStore } from '@/store/useAppStore';
+
+const NOTIFICATION_I18N = {
+  en: {
+    pageTitle: 'Notifications / Push Management',
+    pageDescription:
+      'Firebase Cloud Messaging - broadcast to all users or target specific users',
+    broadcastTitle: 'Broadcast',
+    broadcastHint: '- Send to all subscribed devices via Firebase Topic',
+    pushTitle: 'Push Title',
+    pushBody: 'Push Body',
+    broadcastTitlePlaceholder: 'e.g. New campaign is live!',
+    pushBodyPlaceholder: 'Notification content...',
+    sending: 'Sending...',
+    sendBroadcast: 'Send Broadcast',
+    targetedTitle: 'Targeted Push',
+    targetedHint: '- Send to all bound devices of a specific user',
+    targetUserId: 'Target User ID',
+    targetUserIdPlaceholder: 'Enter user ID',
+    targetedTitlePlaceholder: 'e.g. Your order has been shipped',
+    sendTargeted: 'Send Push',
+    logsTitle: 'Push History',
+  },
+  zh: {
+    pageTitle: '通知 / 推送管理',
+    pageDescription:
+      'Firebase Cloud Messaging - 向所有用户广播或向指定用户推送通知',
+    broadcastTitle: '全员广播',
+    broadcastHint: '- 通过 Firebase Topic 发给所有订阅设备',
+    pushTitle: '推送标题',
+    pushBody: '推送内容',
+    broadcastTitlePlaceholder: 'e.g. 新活动上线了！',
+    pushBodyPlaceholder: '通知正文内容...',
+    sending: '发送中...',
+    sendBroadcast: '发送广播',
+    targetedTitle: '定向推送',
+    targetedHint: '- 向指定用户的所有绑定设备发送',
+    targetUserId: '目标用户 ID',
+    targetUserIdPlaceholder: '输入用户 ID',
+    targetedTitlePlaceholder: 'e.g. 您的订单已发货',
+    sendTargeted: '发送推送',
+    logsTitle: '推送历史',
+  },
+} as const;
 
 // ─── Zod schemas (no .default(), no .transform()) ─────────────────────────────
 const broadcastSchema = z.object({
@@ -78,7 +121,7 @@ function PushLogRow({ log }: { log: AdminPushLog }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm truncate">{log.title}</span>
-          <Badge variant={log.status === 'sent' ? 'success' : 'error'}>
+          <Badge color={log.status === 'sent' ? 'green' : 'red'}>
             {log.status === 'sent' ? (
               <>
                 <CheckCircle size={10} className="mr-1" />
@@ -91,9 +134,7 @@ function PushLogRow({ log }: { log: AdminPushLog }) {
               </>
             )}
           </Badge>
-          <Badge variant="default">
-            {isBroadcast ? 'Broadcast' : 'Targeted'}
-          </Badge>
+          <Badge color="gray">{isBroadcast ? 'Broadcast' : 'Targeted'}</Badge>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
           {log.body}
@@ -113,6 +154,8 @@ function PushLogRow({ log }: { log: AdminPushLog }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function NotificationManagement() {
+  const lang = useAppStore((s) => s.lang);
+  const t = NOTIFICATION_I18N[lang];
   const [activeTab, setActiveTab] = useState<'broadcast' | 'targeted' | 'logs'>(
     'broadcast',
   );
@@ -160,8 +203,9 @@ export function NotificationManagement() {
         setTimeout(() => setSendSuccess(null), 4000);
         if (activeTab === 'logs') refreshLogs();
       },
-      onError: (err: any) => {
-        setSendError(err?.message || 'Failed to send broadcast');
+      onError: (err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        setSendError(message || 'Failed to send broadcast');
         setSendSuccess(null);
       },
     },
@@ -189,8 +233,9 @@ export function NotificationManagement() {
         setTimeout(() => setSendSuccess(null), 4000);
         if (activeTab === 'logs') refreshLogs();
       },
-      onError: (err: any) => {
-        setSendError(err?.message || 'Failed to send targeted push');
+      onError: (err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        setSendError(message || 'Failed to send targeted push');
         setSendSuccess(null);
       },
     },
@@ -206,11 +251,7 @@ export function NotificationManagement() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="通知 / 推送管理"
-        description="Firebase Cloud Messaging — 向所有用户广播或向指定用户推送通知"
-        icon={<Bell size={20} />}
-      />
+      <PageHeader title={t.pageTitle} description={t.pageDescription} />
 
       {/* Device Stats */}
       {deviceStats && (
@@ -289,9 +330,9 @@ export function NotificationManagement() {
         <Card className="p-6 max-w-2xl">
           <div className="flex items-center gap-2 mb-5">
             <Radio size={18} className="text-indigo-500" />
-            <h3 className="font-semibold text-lg">全员广播</h3>
+            <h3 className="font-semibold text-lg">{t.broadcastTitle}</h3>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              — 通过 Firebase Topic 发给所有订阅设备
+              {t.broadcastHint}
             </span>
           </div>
           <form
@@ -300,11 +341,11 @@ export function NotificationManagement() {
           >
             <div>
               <label className="block text-sm font-medium mb-1">
-                推送标题 <span className="text-red-500">*</span>
+                {t.pushTitle} <span className="text-red-500">*</span>
               </label>
               <input
                 {...bcRegister('title')}
-                placeholder="e.g. 新活动上线了！"
+                placeholder={t.broadcastTitlePlaceholder}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
               />
               {bcErrors.title && (
@@ -315,12 +356,12 @@ export function NotificationManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                推送内容 <span className="text-red-500">*</span>
+                {t.pushBody} <span className="text-red-500">*</span>
               </label>
               <textarea
                 {...bcRegister('body')}
                 rows={4}
-                placeholder="通知正文内容..."
+                placeholder={t.pushBodyPlaceholder}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none"
               />
               {bcErrors.body && (
@@ -335,7 +376,7 @@ export function NotificationManagement() {
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
             >
               <Send size={14} />
-              {bcLoading ? '发送中...' : '发送广播'}
+              {bcLoading ? t.sending : t.sendBroadcast}
             </button>
           </form>
         </Card>
@@ -346,9 +387,9 @@ export function NotificationManagement() {
         <Card className="p-6 max-w-2xl">
           <div className="flex items-center gap-2 mb-5">
             <User size={18} className="text-sky-500" />
-            <h3 className="font-semibold text-lg">定向推送</h3>
+            <h3 className="font-semibold text-lg">{t.targetedTitle}</h3>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              — 向指定用户的所有绑定设备发送
+              {t.targetedHint}
             </span>
           </div>
           <form
@@ -357,11 +398,11 @@ export function NotificationManagement() {
           >
             <div>
               <label className="block text-sm font-medium mb-1">
-                目标用户 ID <span className="text-red-500">*</span>
+                {t.targetUserId} <span className="text-red-500">*</span>
               </label>
               <input
                 {...tgRegister('targetUserId')}
-                placeholder="输入用户 ID"
+                placeholder={t.targetUserIdPlaceholder}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sky-500/30"
               />
               {tgErrors.targetUserId && (
@@ -372,11 +413,11 @@ export function NotificationManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                推送标题 <span className="text-red-500">*</span>
+                {t.pushTitle} <span className="text-red-500">*</span>
               </label>
               <input
                 {...tgRegister('title')}
-                placeholder="e.g. 您的订单已发货"
+                placeholder={t.targetedTitlePlaceholder}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30"
               />
               {tgErrors.title && (
@@ -387,12 +428,12 @@ export function NotificationManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                推送内容 <span className="text-red-500">*</span>
+                {t.pushBody} <span className="text-red-500">*</span>
               </label>
               <textarea
                 {...tgRegister('body')}
                 rows={4}
-                placeholder="通知正文内容..."
+                placeholder={t.pushBodyPlaceholder}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 resize-none"
               />
               {tgErrors.body && (
@@ -407,7 +448,7 @@ export function NotificationManagement() {
               className="flex items-center gap-2 px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-sm font-medium transition-colors"
             >
               <Send size={14} />
-              {tgLoading ? '发送中...' : '发送推送'}
+              {tgLoading ? t.sending : t.sendTargeted}
             </button>
           </form>
         </Card>
@@ -419,7 +460,7 @@ export function NotificationManagement() {
           {/* Filter bar */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/5">
             <Users size={15} className="text-gray-400" />
-            <span className="text-sm font-medium">推送历史</span>
+            <span className="text-sm font-medium">{t.logsTitle}</span>
             <div className="ml-auto flex gap-1">
               {['ALL', 'broadcast', 'targeted'].map((t) => (
                 <button

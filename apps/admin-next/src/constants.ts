@@ -39,6 +39,7 @@ export const TRANSLATIONS = {
     loginLogs: 'Login Logs',
     luckyDraw: 'Lucky Draw',
     settings: 'System Config',
+    pendingApplications: 'Pending Applications',
   },
   zh: {
     dashboard: '仪表盘',
@@ -80,6 +81,7 @@ export const TRANSLATIONS = {
     loginLogs: '登录日志',
     luckyDraw: '福利抽奖',
     settings: '系统配置',
+    pendingApplications: '待审批申请',
   },
 };
 

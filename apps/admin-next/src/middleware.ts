@@ -10,6 +10,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = ['/login', '/register-apply', '/privacy-policy'];
 
+function isExactOrSubPath(pathname: string, basePath: string): boolean {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`);
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -26,7 +30,7 @@ export function middleware(request: NextRequest) {
     request.cookies.get('auth_token')?.value ||
     request.headers.get('x-auth-token');
 
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some((p) => isExactOrSubPath(pathname, p));
 
   // 未登录 → 跳登录页
   if (!token && !isPublicPath) {

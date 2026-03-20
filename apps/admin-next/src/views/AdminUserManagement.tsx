@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban, CheckCircle, Edit3, User as UserIcon, Key } from 'lucide-react';
 import { Card, Badge } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
@@ -16,6 +16,8 @@ import { Button } from '@repo/ui';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { PageHeader } from '@/components/scaffold/PageHeader';
+
+const PENDING_APPLICATIONS_UPDATED_EVENT = 'applications:pending-updated';
 
 type AdminUserSearchForm = {
   username: string;
@@ -82,13 +84,24 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   const [activeTab, setActiveTab] = useState<'users' | 'applications'>('users');
 
   // Pending applications count for badge
-  const { data: pendingData } = useRequest(
+  const { data: pendingData, refresh: refreshPendingCount } = useRequest(
     () => applicationApi.pendingCount(),
     {
       refreshDeps: [activeTab],
     },
   );
   const pendingCount = pendingData?.count ?? 0;
+
+  useEffect(() => {
+    const handler = () => {
+      void refreshPendingCount();
+    };
+
+    window.addEventListener(PENDING_APPLICATIONS_UPDATED_EVENT, handler);
+    return () => {
+      window.removeEventListener(PENDING_APPLICATIONS_UPDATED_EVENT, handler);
+    };
+  }, [refreshPendingCount]);
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
