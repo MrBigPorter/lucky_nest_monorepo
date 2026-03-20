@@ -86,6 +86,18 @@ export CF_ROLLBACK_TYPE="CNAME" # 或 A
 - API CORS 白名单：`apps/api/src/main.ts`
 - 生产 Nginx：`nginx/nginx.prod.conf`
 
+## 6.1 main 分支保护（安全必配，新仓库首次必做）
+
+> `main` push = 立即上生产。**必须开启分支保护，防止误操作直接上线。**
+
+GitHub 仓库 → Settings → Branches → Add rule → `main`：
+
+- ☑ Require a pull request before merging
+- ☑ Require status checks → 选 **`check`**（CI job）
+- ☑ Do not allow bypassing the above settings
+
+详细步骤见 `RUNBOOK.md` §6.4。
+
 ## 7. 发布后最小验收
 
 ```bash
