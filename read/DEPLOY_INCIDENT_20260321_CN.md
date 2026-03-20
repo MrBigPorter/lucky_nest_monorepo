@@ -7,18 +7,19 @@
 
 ## 问题总览
 
-| #   | 类别       | 现象                                              |    严重度     |
-| --- | ---------- | ------------------------------------------------- | :-----------: |
-| 1   | Cloudflare | API Token 认证失败（code: 10000）                 |    🔴 阻断    |
-| 2   | Cloudflare | GitHub Actions artifact 存储配额满                | 🟡 阻断流水线 |
-| 3   | CI         | `test` 分支 `check-types` 报 `Cannot find module` |    🔴 阻断    |
-| 4   | CI         | 推 `test` 分支后端未触发部署                      |   🟡 漏部署   |
-| 5   | CI         | GitHub Actions 排队拥堵                           |    🟡 效率    |
-| 6a  | Docker     | `yarn turbo run build` 找不到 turbo               |    🔴 阻断    |
-| 6b  | Docker     | `node_modules/.bin/tsc: not found`（子目录）      |    🔴 阻断    |
-| 6c  | Docker     | `@lucky/shared/dist/types/*` TS2307               |    🔴 阻断    |
-| 6d  | Docker     | `COPY apps/api/node_modules: not found`           |    🔴 阻断    |
-| 7   | 开发体验   | `yarn workspace @lucky/api lint -- --fix` 报错    |    🟢 体验    |
+| #   | 类别       | 现象                                                              |    严重度     |
+| --- | ---------- | ----------------------------------------------------------------- | :-----------: |
+| 1   | Cloudflare | API Token 认证失败（code: 10000）                                 |    🔴 阻断    |
+| 2   | Cloudflare | GitHub Actions artifact 存储配额满                                | 🟡 阻断流水线 |
+| 3   | CI         | `test` 分支 `check-types` 报 `Cannot find module`                 |    🔴 阻断    |
+| 4   | CI         | 推 `test` 分支后端未触发部署                                      |   🟡 漏部署   |
+| 5   | CI         | GitHub Actions 排队拥堵                                           |    🟡 效率    |
+| 6a  | Docker     | `yarn turbo run build` 找不到 turbo                               |    🔴 阻断    |
+| 6b  | Docker     | `node_modules/.bin/tsc: not found`（子目录）                      |    🔴 阻断    |
+| 6c  | Docker     | `@lucky/shared/dist/types/*` TS2307                               |    🔴 阻断    |
+| 6d  | Docker     | `COPY apps/api/node_modules: not found`                           |    🔴 阻断    |
+| 6e  | Docker     | `apps/api/node_modules/.bin/prisma: no such file` — 迁移/启动失败 |    🔴 阻断    |
+| 7   | 开发体验   | `yarn workspace @lucky/api lint -- --fix` 报错                    |    🟢 体验    |
 
 ---
 
@@ -273,6 +274,51 @@ RUN mkdir -p apps/api/node_modules packages/shared/node_modules
 
 ---
 
+### 问题 6e — 容器启动/迁移: `apps/api/node_modules/.bin/prisma: no such file`
+
+**现象**
+
+```
+exec: "./apps/api/node_modules/.bin/prisma": stat ./apps/api/node_modules/.bin/prisma: no such file or directory
+```
+
+（在 `entrypoint.sh` 和 `deploy-backend.yml` 迁移临时容器步骤）
+
+**根因**  
+与问题 6d 同源：`apps/api/node_modules` 在 Docker 里是 `mkdir -p` 创建的**空目录**，`prisma` CLI 被 Yarn 4 提升到了根 `node_modules/.bin/prisma`。
+
+所有历史脚本都硬编码了 `apps/api/node_modules/.bin/prisma`，在新的 Docker 构建产物里全部失效。
+
+**修复**  
+全库扫描替换，共 6 处：
+
+| 文件                                   | 行                              |
+| -------------------------------------- | ------------------------------- |
+| `apps/api/docker/entrypoint.sh`        | migrate deploy 调用             |
+| `.github/workflows/deploy-backend.yml` | 迁移临时容器命令                |
+| `deploy/init-db.sh`                    | migrate deploy + migrate status |
+| `deploy/baseline-db.sh`                | PRISMA 变量 + migrate status    |
+| `deploy/deploy.sh`                     | migrate deploy                  |
+| `Dockerfile.prod`                      | 注释更新                        |
+
+```sh
+# 修复前
+./apps/api/node_modules/.bin/prisma migrate deploy ...
+
+# 修复后
+./node_modules/.bin/prisma migrate deploy ...
+```
+
+**验证**
+
+```bash
+docker run --rm --entrypoint="" lucky-backend-prod-test sh -c \
+  "ls node_modules/.bin/prisma && echo OK"
+# → OK
+```
+
+---
+
 ### 问题 7 — `yarn workspace @lucky/api lint -- --fix` 报错
 
 **现象**
@@ -303,14 +349,18 @@ ESLint 将 `--` 后面的所有内容视为文件 glob，`--fix` 被当作文件
 
 ## 修复涉及的文件汇总
 
-| 文件                                            | 变更摘要                                                                                  |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `.github/workflows/deploy-admin-cloudflare.yml` | 新增 Step 7 Token 预检；移除 Step 13-14 artifact；步骤编号重排                            |
-| `.github/workflows/deploy-backend.yml`          | 触发分支加 `test`；paths 加工作流自身；Telegram 加分支名；加 `runner` input               |
-| `.github/workflows/deploy-admin.yml`            | 加 `runner` input                                                                         |
-| `.github/workflows/deploy-master.yml`           | 加 `runner` choice input；透传给三个子工作流                                              |
-| `Dockerfile.prod`                               | 替换 turbo → workspace build；tsc 路径改为根路径；新增 shared tsc 编译步骤；新增 mkdir -p |
-| `apps/api/package.json`                         | 新增 `lint:fix`；`prebuild` 改为直接调用 node                                             |
+| 文件                                            | 变更摘要                                                                                            |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `.github/workflows/deploy-admin-cloudflare.yml` | 新增 Step 7 Token 预检；移除 Step 13-14 artifact；步骤编号重排                                      |
+| `.github/workflows/deploy-backend.yml`          | 触发分支加 `test`；paths 加工作流自身；Telegram 加分支名；加 `runner` input；prisma 路径修正        |
+| `.github/workflows/deploy-admin.yml`            | 加 `runner` input                                                                                   |
+| `.github/workflows/deploy-master.yml`           | 加 `runner` choice input；透传给三个子工作流                                                        |
+| `Dockerfile.prod`                               | 替换 turbo → workspace build；tsc 路径改为根路径；新增 shared tsc 编译步骤；新增 mkdir -p；注释修正 |
+| `apps/api/docker/entrypoint.sh`                 | prisma 路径从 `apps/api/node_modules/.bin/` 改为 `node_modules/.bin/`                               |
+| `deploy/init-db.sh`                             | prisma 路径修正（2 处）                                                                             |
+| `deploy/baseline-db.sh`                         | prisma 路径修正（2 处）                                                                             |
+| `deploy/deploy.sh`                              | prisma 路径修正（1 处）                                                                             |
+| `apps/api/package.json`                         | 新增 `lint:fix`；`prebuild` 改为直接调用 node                                                       |
 
 ---
 
