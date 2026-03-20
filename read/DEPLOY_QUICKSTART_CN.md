@@ -66,12 +66,16 @@ export CF_ROLLBACK_TYPE="CNAME" # 或 A
 ## 5. GitHub Actions 现在怎么工作
 
 - `main` 分支：Admin Cloudflare 走 `production` 环境。
-- `develop` 分支：Admin Cloudflare 走 `preview` 环境。
+- `test` 分支：Admin Cloudflare 走 `preview` 环境。
 - Admin 部署会执行：`lint + check-types + test`，再 build+deploy。
 - 部署后会记录：
   - Cloudflare deployment id
   - Cloudflare version id
   - 回退注记（artifact + summary）
+
+> 快速检查与故障定位请直接看 `RUNBOOK.md`：
+> - 上线前检查：`6.1 Admin Cloudflare 自动部署（上线前 1 分钟检查）`
+> - 首次失败排障：`6.2 Admin Cloudflare 首次失败排障（按报错关键字）`
 
 ## 6. 关键配置位置（改动必看）
 
@@ -99,6 +103,6 @@ yarn rollback:admin:dns:execute
 ## 8. 新人阅读顺序（最省时间）
 
 1. 本文：`read/DEPLOY_QUICKSTART_CN.md`
-2. 细节手册：`RUNBOOK.md`
+2. 细节手册：`RUNBOOK.md`（重点先看 6.1 / 6.2）
 3. 架构全景：`ARCHITECTURE_CN.md`
 

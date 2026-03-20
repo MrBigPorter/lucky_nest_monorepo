@@ -1,5 +1,5 @@
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fireEvent,
   render,
@@ -12,6 +12,13 @@ const mockUseRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('ahooks', () => ({
   useRequest: (...args: unknown[]) => mockUseRequest(...args),
+}));
+
+vi.mock('@repo/ui', () => ({
+  ModalManager: {
+    open: vi.fn(),
+    close: vi.fn(),
+  },
 }));
 
 vi.mock('@/components/scaffold/PageHeader', () => ({
@@ -31,6 +38,7 @@ vi.mock('@/api', () => ({
 }));
 
 import { adsApi } from '@/api';
+import { ModalManager } from '@repo/ui';
 import { AdsManagement } from '@/views/AdsManagement';
 
 const createAd = (overrides?: Record<string, unknown>) => ({
@@ -75,9 +83,6 @@ describe('AdsManagement', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
 
   it('renders empty state when ad list is empty', () => {
     mockAdsRequest({ list: [] });
@@ -121,10 +126,10 @@ describe('AdsManagement', () => {
 
   it('does not delete ad when confirmation is cancelled', async () => {
     const refresh = mockAdsRequest({ list: [createAd()] });
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => false),
-    );
+    // ModalManager.open is mocked as vi.fn() — onConfirm is never called (modal dismissed)
+    vi.mocked(ModalManager.open).mockImplementation(() => ({
+      close: vi.fn(),
+    }));
 
     render(<AdsManagement />);
 
@@ -144,9 +149,14 @@ describe('AdsManagement', () => {
 
   it('deletes ad after confirmation and refreshes list', async () => {
     const refresh = mockAdsRequest({ list: [createAd()] });
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
+    // Simulate user clicking "Confirm" in the modal
+    vi.mocked(ModalManager.open).mockImplementation(
+      (props) => {
+        props.onConfirm?.();
+        return {
+          close: vi.fn(),
+        };
+      },
     );
 
     render(<AdsManagement />);
