@@ -175,14 +175,15 @@ function ImageMessage({
   meta,
 }: {
   content: string;
-  meta: Record<string, any> | null;
+  meta: Record<string, unknown> | null;
 }) {
   const [lightbox, setLightbox] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const thumbUrl = resolveImageUrl(content, 240);
   const fullUrl = resolveImageUrl(content, 1200);
-  const aspect =
-    meta?.w && meta?.h ? Math.min(2, Math.max(0.5, meta.w / meta.h)) : 1;
+  const w = meta?.w as number | undefined;
+  const h = meta?.h as number | undefined;
+  const aspect = w && h ? Math.min(2, Math.max(0.5, w / h)) : 1;
 
   return (
     <>
@@ -241,13 +242,12 @@ function AudioMessage({
 }: {
   msgId: string;
   content: string;
-  meta: Record<string, any> | null;
+  meta: Record<string, unknown> | null;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const duration = meta?.duration as number | undefined;
   const bars = generateWaveform(msgId);
-  const barCount = bars.length;
   const minW = 140;
   const dynW = Math.min(280, minW + Math.round((duration ?? 0) / 1000) * 5);
 
@@ -307,15 +307,16 @@ function VideoMessage({
   meta,
 }: {
   content: string;
-  meta: Record<string, any> | null;
+  meta: Record<string, unknown> | null;
 }) {
   const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const thumbUrl = meta?.remote_thumb ?? meta?.thumb;
+  const thumbUrl = (meta?.remote_thumb ?? meta?.thumb) as string | undefined;
   const thumbResolved = thumbUrl ? resolveImageUrl(thumbUrl, 240) : undefined;
   const videoUrl = resolveMediaUrl(content);
-  const aspect =
-    meta?.w && meta?.h ? Math.min(2, Math.max(0.5, meta.w / meta.h)) : 16 / 9;
+  const vw = meta?.w as number | undefined;
+  const vh = meta?.h as number | undefined;
+  const aspect = vw && vh ? Math.min(2, Math.max(0.5, vw / vh)) : 16 / 9;
 
   const handlePlay = () => {
     setPlaying(true);
@@ -378,7 +379,7 @@ function FileMessage({
   isSupport,
 }: {
   content: string;
-  meta: Record<string, any> | null;
+  meta: Record<string, unknown> | null;
   isSupport: boolean;
 }) {
   const fileUrl = resolveMediaUrl(content);
@@ -427,7 +428,7 @@ function FileMessage({
 
 // ─── 位置消息 ─────────────────────────────────────────────────────────────────
 
-function LocationMessage({ meta }: { meta: Record<string, any> | null }) {
+function LocationMessage({ meta }: { meta: Record<string, unknown> | null }) {
   const thumb = meta?.thumb as string | undefined;
   const title = (meta?.title as string) ?? 'Location';
   const address = meta?.address as string | undefined;
@@ -498,7 +499,7 @@ function MessageBubble({
         <span className="italic opacity-60 text-sm">[Message recalled]</span>
       );
     }
-    const meta = msg.meta as Record<string, any> | null;
+    const meta = msg.meta as Record<string, unknown> | null;
     switch (msg.type) {
       case 1: // image
         return <ImageMessage content={msg.content} meta={meta} />;

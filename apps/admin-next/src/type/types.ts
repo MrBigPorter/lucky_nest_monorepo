@@ -1204,7 +1204,7 @@ export interface AdminPushLog {
   targetUserId?: string;
   title: string;
   body: string;
-  extraData?: Record<string, any>;
+  extraData?: Record<string, unknown>;
   /** sent | failed */
   status: 'sent' | 'failed';
   successCount: number;
@@ -1231,14 +1231,14 @@ export interface QueryPushLogParams {
 export interface SendBroadcastPayload {
   title: string;
   body: string;
-  extraData?: Record<string, any>;
+  extraData?: Record<string, unknown>;
 }
 
 export interface SendTargetedPayload {
   targetUserId: string;
   title: string;
   body: string;
-  extraData?: Record<string, any>;
+  extraData?: Record<string, unknown>;
 }
 
 // ─── IM / Chat Moderation ─────────────────────────────────────────────────────
@@ -1271,7 +1271,7 @@ export interface ChatMessage {
   type: number; // 0=text 1=image 2=audio 3=video 99=system
   isRecalled: boolean;
   createdAt: number;
-  meta: Record<string, any> | null;
+  meta: Record<string, unknown> | null;
   senderId: string | null;
   sender: { id: string; nickname: string; avatar: string | null } | null;
   isSystem: boolean;

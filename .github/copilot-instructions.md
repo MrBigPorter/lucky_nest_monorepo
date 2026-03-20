@@ -23,10 +23,10 @@
 - [x] 清理实时分发特判：`apps/api/src/common/events/listeners/socket.listener.ts` 移除 `official_platform_support_v1` 硬编码依赖，走 SUPPORT 标准路径
 - [x] 定向补测：后端（support-channel/chat/socket）+ 前端（SupportChannels/CustomerServiceDesk）最小回归通过
 - [x] 种子数据补全：新增 `seed-support-channels.ts` 为 `official_platform_support_v1` 初始化虚拟 bot + SupportChannel 记录
-- [ ] Phase 6 延续（顺延）：前端 SDK 联调（Google/Facebook/Apple 按钮 + token 提交闭环）
-- [ ] 频控与安全（顺延）：邮箱验证码 TTL/重发限制/IP 限流/禁用万能码
-- [ ] 登录策略落地（顺延）：OAuth 主入口 + Email Code 次入口（文案和埋点同步）
-- [ ] 定向验收（顺延）：OAuth 联调自测 + Email OTP 接口单测 + 登录日志校验
+- [x] Phase 6 延续（顺延）：前端 SDK 联调（Google/Facebook/Apple 按钮 + token 提交闭环）
+- [x] 频控与安全（顺延）：邮箱验证码 TTL/重发限制/IP 限流/禁用万能码
+- [x] 登录策略落地（顺延）：OAuth 主入口 + Email Code 次入口（文案和埋点同步）
+- [x] 定向验收（顺延）：OAuth 联调自测 + Email OTP 接口单测 + 登录日志校验
 - [x] Phase 6 插入：BUSINESS 官方客服会话实时分发方案（Phase 1，admin 无需 `join_chat`）
 - [x] 后端改造：`chat.message.created` 针对 `official_platform_support_v1` 补发给在线客服 admin 私有房间（Phase 1）
 - [x] 定向验收：Flutter 点击联系客服 + 用户发首条消息后，Admin Next 未选中会话也能收到实时刷新（Phase 1）
@@ -36,7 +36,7 @@
 - [x] 前端修复：`apps/admin-next/src/components/ui/SmartImage.tsx` 修复 `ImageProps` 合并导致的 TS2322 类型报错（保持现有渲染行为）
 - [x] 后端收口：`apps/api/src/common/jwt/option-jwt.guard.ts` 清理 `OptionalJwtAuthGuard` lint 阻塞（scoped ESLint 通过）
 
-> 最后对齐时间：2026-03-20（夜间同步）。当前优先级已切换到 Phase 6-IM Phase 2（多客服渠道 + Admin UI），OAuth/Email 未完成项按顺延标记处理。
+> 最后对齐时间：2026-03-20（深夜同步）。Phase 6 OAuth/Email OTP 全部项已完成（Flutter SDK 联调 + 频控安全 + 登录策略 + 定向验收）。`deploy/.env.prod` 已补充 `GOOGLE_CLIENT_ID`（audience 强校验）。
 
 ---
 
@@ -65,7 +65,9 @@
 - [x] `deploy-backend.yml` / `deploy-admin.yml` 已支持自动同步 `deploy/*.sh` 到 VPS，避免服务器脚本滞后
 - [x] `RUNBOOK.md` 已同步本地提交前校验、分支级 pre-push 策略与跳过 hook 规则
 - [x] `@repo/ui` 与 `@lucky/admin-next` 当前本地关键检查已打通：`lint` / `check-types` 通过，`admin-next` 单测通过
-- [ ] 持续清理 `@lucky/api` 现有 lint debt，完成后纳入本地 `prepush:heavy` / 或新增独立后端本地检查
+- [x] 已完成本地全量质量检查（排除 `apps/mini-shop-admin`）：其余工作区按当前闸门策略执行完毕
+- [x] 当前阻塞已解除：`@lucky/shared` 的 `check-types` TypeScript 可执行路径解析问题已修复
+- [ ] `@lucky/api` lint debt 规模较大，按模块分批清理后再纳入本地重闸门（`prepush:heavy` 或独立后端检查）
 - [ ] 评估将 CI 中 `Lint` 从 `continue-on-error` 收紧为硬性失败门槛，避免 lint 问题继续后移
 - [ ] 等 GHA 缓存方案恢复后，重新启用 Yarn / node_modules / Playwright / Turbo 缓存，缩短质量闸门耗时
 

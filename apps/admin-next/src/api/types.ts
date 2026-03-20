@@ -2,7 +2,7 @@
  * HTTP 请求相关类型定义
  */
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
@@ -12,7 +12,7 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   code: number;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 export interface PaginationParams {

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, useEffect } from 'react';
 import { useAntdTable, useRequest } from 'ahooks';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { Edit3, Trash2, Calendar, Hash } from 'lucide-react';
 
 import { Button, ModalManager } from '@repo/ui';
@@ -308,7 +308,7 @@ export const CouponList: React.FC<CouponListProps> = ({
           </div>
         ),
       }),
-    ] as any; //在这里加上 "as any"，告诉 TS 闭嘴
+    ] as ColumnDef<Coupon>[];
   }, [handleDelete, handleOpenModal]);
 
   return (

@@ -186,7 +186,7 @@ export const ActSectionManagement: React.FC<ActSectionManagementProps> = ({
     });
   };
 
-  const columns: ColumnDef<actSectionWithProducts>[] = useMemo(() => {
+  const columns = useMemo(() => {
     // --- Table Columns ---
     const columnHelper = createColumnHelper<actSectionWithProducts>();
 
@@ -311,7 +311,7 @@ export const ActSectionManagement: React.FC<ActSectionManagementProps> = ({
           </div>
         ),
       }),
-    ];
+    ] as ColumnDef<actSectionWithProducts>[];
   }, [
     handleBindProduct,
     handleDelete,
