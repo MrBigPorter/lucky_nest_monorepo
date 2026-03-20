@@ -1,7 +1,7 @@
 # Lucky Nest Admin — 已完成核心功能文档
 
-> **最后更新**: 2026-03-16（Phase 5-D 客服接待台）  
-> **阶段**: Phase 5 遗漏功能补全（进行中）  
+> **最后更新**: 2026-03-20（Phase 6-IM Phase 2 多客服渠道 + Admin UI）  
+> **阶段**: Phase 6-IM Phase 2（进行中，OAuth/Email 顺延）  
 > **约定**: 所有 Admin 接口路径以 `/v1/` 为 baseURL 前缀，受 `AdminJwtAuthGuard` + `RolesGuard` 双重保护。
 
 ---
@@ -27,6 +27,7 @@
 17. [通知 / 推送管理（Firebase FCM）](#17-通知--推送管理firebase-fcm)
 18. [地区数据（Region）](#18-地区数据region)
 19. [客服接待台（IM Chat Moderation）](#19-客服接待台im-chat-moderation)
+20. [客服渠道管理（Support Channels）](#20-客服渠道管理support-channels)
 
 ---
 
@@ -320,7 +321,7 @@ apps/admin-next/src/
 apps/api/src/admin/act-section/
 
 apps/admin-next/src/
-  ├── app/(dashboard)/act/section/page.tsx
+  ├── app/(dashboard)/act-sections/page.tsx
   └── views/ActSectionManagement.tsx
       └── views/act-section/ActSectionBindProductModal.tsx
 ```
@@ -498,7 +499,7 @@ apps/admin-next/src/
 apps/api/src/admin/payment-channel/
 
 apps/admin-next/src/
-  ├── app/(dashboard)/payment/channels/page.tsx
+  ├── app/(dashboard)/payment-channels/page.tsx
   └── views/PaymentChannelList.tsx
       └── views/payment-channel/PaymentChannelModal.tsx
 ```
@@ -908,7 +909,7 @@ apps/api/src/admin/chat/
       └── admin-chat.dto.ts      # QueryMessagesDto / AdminReplyDto / CloseConversationDto
 
 apps/admin-next/src/
-  ├── app/(dashboard)/im/page.tsx           # Server Component 包装
+  ├── app/(dashboard)/customer-service/page.tsx # Server Component 包装
   ├── views/CustomerServiceDesk.tsx         # 完整客服接待台（'use client'）
   ├── api/index.ts → chatApi                # 5 个 API 方法
   └── type/types.ts → ChatConversation / ChatMessage / ChatMessagesResult
@@ -962,8 +963,8 @@ CustomerServiceDesk（'use client'）
 ### 路由 & 导航
 
 ```
-侧边栏路由: Operations 组 → /im（MessageSquare 图标）
-翻译键: im → "Customer Service"（en）/ "客服接待台"（zh）
+侧边栏路由: Customer Service 组 → /customer-service（MessageSquare 图标）
+翻译键: customerService → "Customer Service"（en）/ "客服接待台"（zh）
 ```
 
 ### 与客户端 Socket 的关系
@@ -971,6 +972,56 @@ CustomerServiceDesk（'use client'）
 - Admin **不接入** Socket.io Gateway，避免复杂度
 - 用户发消息 → Socket 推给其他在线客户端 → Admin 侧 10 s 轮询自动刷新
 - Admin 回复 → HTTP POST 写数据库 → 下次用户端拉消息或收到 Socket 推送时看到
+
+---
+
+## 20. 客服渠道管理（Support Channels）
+
+> **Phase 6-IM Phase 2** | 完成时间：2026-03-20
+
+### 能力概述
+
+- 支持后台为不同业务线创建多个客服渠道（每渠道对应一个 bot 用户）
+- 支持渠道启停，停用后不再用于新会话建联
+- 默认客服会话类型统一为 `SUPPORT`，避免混用历史 `BUSINESS` 共享群逻辑
+
+### 后端接口
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| `GET` | `/v1/admin/support-channels/list` | `ADMIN` / `EDITOR` | 渠道列表（含业务 ID、bot、状态） |
+| `POST` | `/v1/admin/support-channels/create` | `ADMIN` | 创建渠道（事务内自动创建 bot 用户） |
+| `PATCH` | `/v1/admin/support-channels/:id` | `ADMIN` | 编辑渠道信息 |
+| `PATCH` | `/v1/admin/support-channels/:id/status` | `ADMIN` | 启用/停用渠道 |
+
+### 关键代码
+
+```
+apps/api/src/admin/support-channel/
+  ├── support-channel.controller.ts
+  ├── support-channel.service.ts
+  └── dto/
+
+apps/api/src/common/chat/chat.service.ts
+  # addMemberToBusinessGroup() 已重构为 SUPPORT 1v1 建联（按 SupportChannel 找 bot）
+
+apps/admin-next/src/
+  ├── app/(dashboard)/support-channels/page.tsx
+  ├── views/SupportChannels.tsx
+  └── api/index.ts → supportChannelApi
+```
+
+### 数据模型
+
+```prisma
+model SupportChannel {
+  id         String   @id      // 业务标识（businessId）
+  botUserId  String   @unique
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+```
 
 ---
 
@@ -1011,6 +1062,7 @@ adminOperationLogApi // 操作日志
 rolesApi             // 角色权限汇总
 notificationApi      // 推送通知（广播/定向/日志/设备统计）
 chatApi              // 客服 IM（会话列表/消息历史/回复/撤回/关闭）
+supportChannelApi    // 客服渠道（列表/创建/编辑/启停）
 uploadApi            // 文件上传
 ```
 
