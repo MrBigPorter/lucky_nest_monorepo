@@ -20,4 +20,3 @@ export function RecaptchaClientProvider({ siteKey, children }: Props) {
     </GoogleReCaptchaProvider>
   );
 }
-

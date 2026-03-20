@@ -72,6 +72,15 @@
 | [自动化测试指南 (TESTING_CN.md)](./TESTING_CN.md) | Vitest 单元测试 + Playwright E2E 全指南 |
 | [Phase 5 E2E 补全 & Bug 修复 (PHASE5_E2E_AND_BUGFIX_CN.md)](./PHASE5_E2E_AND_BUGFIX_CN.md) | 2026-03-17：9 个新 E2E spec、auth warmup 扩展、SmartTable render 参数误用导致的 `RangeError` 根因与修复 |
 
+### Admin Next 架构与面试资料
+
+| 文档 | 内容 |
+|------|------|
+| [Admin Next 架构总结（完整版）(ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md)](./ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md) | 架构分层、技术现状、快速上手、面试题、优化路线 |
+| [Admin Next 5 分钟口述稿 (ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md)](./ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md) | 面试开场/技术分享快讲提纲（5 分钟） |
+| [Admin Next 面试闪卡 (ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md)](./ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md) | Q/A 速记题库（基础+进阶） |
+| [serverFetch 指南 (SERVER_FETCH_GUIDE_CN.md)](./SERVER_FETCH_GUIDE_CN.md) | Server Component 取数基座：原理、边界、渲染影响、Do/Don't |
+
 ---
 
 ## 3. 开发规范
