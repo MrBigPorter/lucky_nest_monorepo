@@ -33,7 +33,7 @@ export const staggerContainer: Variants = {
 };
 
 // --- Helper: CSV Export ---
-const exportToCSV = (data: any[], filename: string) => {
+const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
   if (!data || !data.length) return;
 
   // Extract headers
@@ -156,6 +156,7 @@ export const Button: React.FC<ButtonProps> = ({
       whileTap={{ scale: 0.95 }}
       className={`${baseStyle} ${sizeStyles[size]} ${variants[variant]} ${className}`}
       disabled={isLoading}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- motion.button onDrag type conflicts with HTMLButtonElement DragEventHandler
       {...(props as any)}
     >
       {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -166,7 +167,7 @@ export const Button: React.FC<ButtonProps> = ({
 
 // --- Export Button ---
 export const ExportButton: React.FC<{
-  data?: any[];
+  data?: Record<string, unknown>[];
   filename?: string;
   onClick?: () => void;
 }> = ({ data, filename = 'export', onClick }) => {
@@ -463,6 +464,7 @@ export const ImageUpload: React.FC<{
           </div>
         ) : value ? (
           <div className="relative w-full h-full group">
+            {/* eslint-disable-next-line @next/next/no-img-element -- uploader preview: src is a blob URL, dimensions unknown */}
             <img
               src={value}
               alt="Uploaded"

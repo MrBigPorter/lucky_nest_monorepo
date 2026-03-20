@@ -174,6 +174,10 @@ yarn deploy:quick
 - 包含 `prepush:light`
 - `@lucky/admin-next`：`test`
 
+`prepush:api`（可选）：
+
+- `@lucky/api`：`lint`（当前为发布期临时策略：保留告警可见、避免历史 debt 阻塞上线）
+
 > 当前未把 `@lucky/api` 放入本地 `prepush:heavy`，原因是后端仍有存量 lint debt；后端质量仍由 CI 兜底，待清债后再纳入本地重检查。
 
 常用命令：
@@ -182,6 +186,7 @@ yarn deploy:quick
 yarn lint:staged
 yarn prepush:light
 yarn prepush:heavy
+yarn prepush:api
 yarn prepush:check
 ```
 

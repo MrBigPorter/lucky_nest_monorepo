@@ -130,7 +130,7 @@ export const FlashSaleBindProductModal: React.FC<Props> = ({
   // ── 列定义 ──────────────────────────────────────────────────────────────────
   const handleSelectionChange = useCallback(() => {}, []);
 
-  const columns: ColumnDef<Product>[] = useMemo(() => {
+  const columns = useMemo(() => {
     const col = createColumnHelper<Product>();
     return [
       col.accessor('treasureName', {
@@ -192,7 +192,7 @@ export const FlashSaleBindProductModal: React.FC<Props> = ({
           );
         },
       }),
-    ];
+    ] as ColumnDef<Product>[];
   }, [boundIds, doUnbind, pending?.treasureId, unbindLoading]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
