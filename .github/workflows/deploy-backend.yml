@@ -1,17 +1,18 @@
 # ============================================================
-# 后端部署 — 推送 main 分支时自动触发 (包含 Telegram 通知)
+# 后端部署 — 推送 main/test 分支时自动触发 (包含 Telegram 通知)
 # ============================================================
 name: Deploy Backend
 
 on:
   push:
-    branches: [main]
+    branches: [main, test]
     paths:
-      - 'apps/api/**'
-      - 'packages/shared/**'
-      - 'packages/config/**'
-      - 'Dockerfile.prod'
-      - 'compose.prod.yml'
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "packages/config/**"
+      - "Dockerfile.prod"
+      - "compose.prod.yml"
+      - ".github/workflows/deploy-backend.yml"
   workflow_dispatch:
   workflow_call:
 
@@ -182,14 +183,14 @@ jobs:
           if [ "${{ job.status }}" != "success" ]; then
             STATUS_EMOJI="❌ 失败 (Failed)"
           fi
-          
+
           # 专门为后端定制的消息模板
           MESSAGE="⚙️ *Lucky Backend 部署报告*
           📌 *状态*: $STATUS_EMOJI
-          🏷️ *环境*: Production (VPS: 107.175.53.104)
+          🏷️ *环境*: Production (VPS: 107.175.53.104) — branch: \`${{ github.ref_name }}\`
           🔗 *API*: [api.joyminis.com](https://api.joyminis.com/api/v1/health)
           📝 *Commit ID*: \`${{ github.sha }}\`"
-          
+
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d "text=$MESSAGE" \
