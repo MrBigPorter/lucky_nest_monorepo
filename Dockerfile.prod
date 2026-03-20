@@ -51,6 +51,10 @@ RUN yarn workspace @lucky/api build
     #    生产使用: docker exec -it lucky-backend-prod node apps/api/dist/cli/create-admin.js
 RUN node_modules/.bin/tsc -p apps/api/tsconfig.cli.json
 
+    # 8) 确保工作区级 node_modules 目录存在（yarn workspaces focus 在 Docker 中会把
+    #    所有包提升到根 node_modules，workspace 子目录可能不存在，导致 Pruner 的 COPY 失败）
+RUN mkdir -p apps/api/node_modules packages/shared/node_modules
+
 # ============================================================
 # Stage 2: Pruner — 裁剪 node_modules (中间层)
 # ============================================================
