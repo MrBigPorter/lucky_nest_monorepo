@@ -24,6 +24,8 @@ deploy/.env.prod
 
 # Docker 数据 (绝不提交)
 data/
+!apps/api/scripts/seed/data/
+!apps/api/scripts/seed/data/ph-address.ts
 backup.sql
 # Testing
 coverage
@@ -58,4 +60,6 @@ yarn-error.log*
 *.pem
 .idea/
 *.tsbuildinfo
+repomix-output*
+tsconfig.tsbuildinfo
 

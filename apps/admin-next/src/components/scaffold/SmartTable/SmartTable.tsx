@@ -203,9 +203,8 @@ const SmartTableInner = <T extends Record<string, any>>(
     pageSize: defaultPageSize,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formParams, setFormParams] =
-    useState<Record<string, any>>(initialFormParams);
+    useState<Record<string, unknown>>(initialFormParams);
 
   const onPageChange = useCallback((p: number, ps: number) => {
     setPagination((prev) => {
@@ -337,9 +336,8 @@ const SmartTableInner = <T extends Record<string, any>>(
       }));
   }, [columns]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSearch = useCallback(
-    (values: any) => {
+    (values: Record<string, unknown>) => {
       setPagination((p) => {
         if (p.page === 1) return p;
         return { ...p, page: 1 };

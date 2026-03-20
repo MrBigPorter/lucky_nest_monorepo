@@ -3,22 +3,27 @@ name: 🚀 Master Deployment Control
 on:
   workflow_dispatch:
     inputs:
+      runner:
+        description: "🖥️ Runner (ubuntu-latest = GitHub托管 / self-hosted = 本地Mac算力)"
+        type: choice
+        options: [ubuntu-latest, self-hosted]
+        default: ubuntu-latest
       deploy_admin:
-        description: '🌐 Deploy Admin Frontend (VPS — rollback channel)'
+        description: "🌐 Deploy Admin Frontend (VPS — rollback channel)"
         type: boolean
         default: false
       deploy_admin_cloudflare:
-        description: '☁️ Deploy Admin Frontend (Cloudflare Workers — default)'
+        description: "☁️ Deploy Admin Frontend (Cloudflare Workers — default)"
         type: boolean
         default: true
       deploy_api:
-        description: '⚙️ Deploy Backend API (VPS)'
+        description: "⚙️ Deploy Backend API (VPS)"
         type: boolean
         default: true
 
 permissions:
   contents: read
-  packages: write      # Required for GHCR (Docker) pushing
+  packages: write # Required for GHCR (Docker) pushing
 
 jobs:
   # 1. Calls the Admin deployment workflow
@@ -26,6 +31,8 @@ jobs:
     name: 🌐 Trigger Admin Deploy
     if: ${{ inputs.deploy_admin == true }}
     uses: ./.github/workflows/deploy-admin.yml
+    with:
+      runner: ${{ inputs.runner }}
     secrets: inherit
 
   # 2. Calls the Admin Cloudflare deployment workflow
@@ -33,6 +40,8 @@ jobs:
     name: ☁️ Trigger Admin Cloudflare Deploy
     if: ${{ inputs.deploy_admin_cloudflare == true }}
     uses: ./.github/workflows/deploy-admin-cloudflare.yml
+    with:
+      runner: ${{ inputs.runner }}
     secrets: inherit
 
   # 3. Calls the Backend deployment workflow
@@ -40,4 +49,6 @@ jobs:
     name: ⚙️ Trigger Backend Deploy
     if: ${{ inputs.deploy_api == true }}
     uses: ./.github/workflows/deploy-backend.yml
+    with:
+      runner: ${{ inputs.runner }}
     secrets: inherit

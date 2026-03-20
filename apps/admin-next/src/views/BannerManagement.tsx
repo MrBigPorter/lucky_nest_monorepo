@@ -161,7 +161,7 @@ export const BannerManagement: React.FC<BannerManagementProps> = ({
     [deleteBanner],
   );
 
-  const columns: ColumnDef<Banner>[] = useMemo(() => {
+  const columns = useMemo(() => {
     const columnHelper = createColumnHelper<Banner>();
     return [
       columnHelper.display({
@@ -276,7 +276,7 @@ export const BannerManagement: React.FC<BannerManagementProps> = ({
           </div>
         ),
       }),
-    ];
+    ] as ColumnDef<Banner>[];
   }, [handleDelete, handleOpenModal, updateStatus]);
 
   return (
