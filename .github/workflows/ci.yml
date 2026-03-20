@@ -1,8 +1,8 @@
 # ============================================================
-# CI 检查 — main/test 推送时运行
+# CI 检查 — main/test 推送 & PR 时运行
 # ============================================================
 # 流程: 安装依赖 → Prisma 生成 → Lint → 类型检查 → 单元测试 → E2E
-# 目的: 在代码入库后发现问题, PR 通过手动合并保证质量
+# 目的: PR 合并前强制通过质量门禁（需配合 GitHub 分支保护规则）
 # ============================================================
 
 name: CI
@@ -10,6 +10,8 @@ name: CI
 on:
   push:
     branches: [main, test]
+  pull_request:
+    branches: [main] # PR 目标为 main 时触发，配合分支保护作为合并门禁
 
 # 同一 PR 新提交时取消旧运行
 concurrency:
@@ -222,7 +224,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:4001
           E2E_ADMIN_USERNAME: ${{ secrets.E2E_ADMIN_USERNAME || 'admin' }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-        continue-on-error: true  # E2E 失败不阻断 CI，但会在 Summary 中标注
+        continue-on-error: true # E2E 失败不阻断 CI，但会在 Summary 中标注
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -243,4 +245,3 @@ jobs:
             echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
             echo "- **状态**: skipped (missing E2E_ADMIN_PASSWORD secret)" >> $GITHUB_STEP_SUMMARY
           fi
-
