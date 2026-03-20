@@ -14,7 +14,7 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30_000,   // 30s 内不重新请求
+        staleTime: 30_000, // 30s 内不重新请求
         retry: 1,
       },
     },

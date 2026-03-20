@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * 注: 静态资源（/_next/*、favicon 等）直接放行，不走认证逻辑。
  */
 
-const PUBLIC_PATHS = ['/login', '/register-apply'];
+const PUBLIC_PATHS = ['/login', '/register-apply', '/privacy-policy'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

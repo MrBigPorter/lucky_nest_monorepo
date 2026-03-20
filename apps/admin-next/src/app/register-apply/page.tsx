@@ -10,7 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: '/register-apply' },
   openGraph: {
     title: 'Apply for Access | JoyMini Admin',
-    description: 'Submit an account application to request access to JoyMini Admin.',
+    description:
+      'Submit an account application to request access to JoyMini Admin.',
     url: '/register-apply',
   },
 };

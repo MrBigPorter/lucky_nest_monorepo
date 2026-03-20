@@ -5,6 +5,7 @@
  * - INTERNAL_API_URL 优先（Docker 内网，跳过公网往返）
  *   回退到 NEXT_PUBLIC_API_BASE_URL（本地开发 / 非 Docker）
  */
+
 import { cookies } from 'next/headers';
 import type { ApiResponse } from '@/api/types';
 
@@ -74,4 +75,3 @@ export async function serverGet<T>(
 
   return json.data;
 }
-
