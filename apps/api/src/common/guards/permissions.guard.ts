@@ -48,8 +48,7 @@ export class PermissionsGuard implements CanActivate {
     //  核心逻辑：查配置表
     // 根据用户的 Role，拿到他所有的权限列表
     // 例如：user.role 是 'EDITOR'，这里就拿到运营的所有权限数组
-    const userPermissions =
-      RolePermissions[role as keyof typeof RolePermissions] ?? [];
+    const userPermissions = RolePermissions[role] ?? [];
 
     // 7. 检查用户是否拥有当前接口所需的权限
     const hasPermission = userPermissions.includes(requiredPermission);

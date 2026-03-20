@@ -13,6 +13,7 @@
     "generate": "nest g",
     "check-types": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint src --max-warnings 2000",
+    "lint:fix": "eslint src --fix --max-warnings 2000",
     "pr:fmt": "prisma format",
     "pr:val": "prisma validate",
     "pr:dev": "prisma migrate dev",
