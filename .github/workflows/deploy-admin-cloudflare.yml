@@ -84,8 +84,7 @@ jobs:
           NEXT_PUBLIC_APP_ENV: production
           NEXT_BUILD_TARGET: cloudflare
         run: |
-          npm exec --yes --package=@opennextjs/cloudflare@latest \
-            opennextjs-cloudflare -- build -c wrangler.jsonc
+          yarn exec opennextjs-cloudflare build -c wrangler.jsonc
 
       - name: 7. Deploy to Cloudflare Workers
         id: cloudflare_deploy
@@ -96,8 +95,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          npm exec --yes --package=@opennextjs/cloudflare@latest \
-            opennextjs-cloudflare -- deploy -c wrangler.jsonc 2>&1 | tee /tmp/cloudflare-deploy.log
+          yarn exec opennextjs-cloudflare deploy -c wrangler.jsonc 2>&1 | tee /tmp/cloudflare-deploy.log
 
           CF_DEPLOYMENT_ID=$(grep -Eio 'deployment( id)?[: ]+[a-z0-9_-]+' /tmp/cloudflare-deploy.log \
             | tail -1 \
