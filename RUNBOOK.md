@@ -168,6 +168,68 @@ Token 创建地址：https://dash.cloudflare.com/profile/api-tokens
 | `Smoke Check` failed                                       | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问                                                                                   | 先本地 `curl` 验证 URL，再修复健康检查地址                                                                                         |
 | Telegram send failed                                       | 通知配置缺失                                                                                                            | 补齐 Telegram secrets，或接受通知失败不阻断发布                                                                                    |
 
+### 6.4 main 分支保护（强制 PR — 安全必配项）
+
+> ⚠️ **本项目高风险点**：`main` 分支的任何 push 都会**立即触发生产部署**（后端 VPS 重启 + Cloudflare Workers 更新），直接 push = 直接上线，中间没有任何缓冲。
+
+#### 为什么必须开启
+
+| 层次         | 未开启的风险                                        | 开启后的保护                           |
+| ------------ | --------------------------------------------------- | -------------------------------------- |
+| **操作安全** | 手抖 / 脚本误操作 `git push origin main` = 立即上线 | 必须经过 PR，物理上不可能直接 push     |
+| **质量门禁** | CI 是 post-merge（代码坏了才发现，已在生产）        | CI 是 pre-merge 门禁，挂了就不让合并   |
+| **审计追踪** | 生产变更无记录，出事找不到是谁改的                  | 每次上线都有 PR + review + CI 状态留档 |
+| **协作安全** | 任何有 push 权限的人可绕过所有检查直接上线          | 即使仓库 owner 也要走 PR 流程          |
+
+#### 一次性配置（GitHub UI）
+
+> 仓库 → **Settings** → **Branches** → **Add branch protection rule**
+
+```
+Branch name pattern:  main
+```
+
+按下图勾选：
+
+- ☑ **Require a pull request before merging**
+  - Number of approvals required: `1`（单人项目可设 0，但保留审查习惯）
+  - ☑ Dismiss stale pull request approvals when new commits are pushed
+- ☑ **Require status checks to pass before merging**
+  - 在搜索框输入 `check`，选中 CI workflow 的 **`check`** job
+  - ☑ Require branches to be up to date before merging
+- ☑ **Require conversation resolution before merging**（可选）
+- ☑ **Do not allow bypassing the above settings**（管理员也不能绕过，建议勾选）
+
+点 **Create** 保存。
+
+> CI `check` job 出现在搜索框的前提：`ci.yml` 已配置 `pull_request: branches: [main]`（已完成，见当前 `ci.yml`）。如果搜索不到，先开一个 draft PR 触发一次 CI 即可。
+
+#### 配置后的标准发布流程
+
+```
+feature/fix 分支 (本地开发)
+        ↓  git push origin feature/xxx
+dev 分支 (集成)
+        ↓  PR dev → test
+test 分支 (验证 + 预部署，触发后端 VPS + Cloudflare preview)
+        ↓  PR test → main  （必须 CI 绿灯才能合并）
+main 分支 → 自动触发生产部署
+```
+
+#### 紧急修复绕过（hotfix）
+
+极端情况下确实需要绕过 PR（如生产宕机紧急回滚），操作方法：
+
+```bash
+# 方法 1：临时禁用分支保护（Settings → Branches → Edit → 取消 Bypass 限制）
+# 操作完成后立即重新开启
+
+# 方法 2：用 deploy-master.yml 手动触发（推荐，不需要改分支保护）
+# Actions → 🚀 Master Deployment Control → Run workflow
+```
+
+> 任何绕过分支保护的操作都应在 Slack/Issue 里记录原因，补上事后 PR。
+
 ### 6.3 本地提交前校验（Husky）
 
 为减少 CI 噪音，仓库已启用本地 Git Hook：
