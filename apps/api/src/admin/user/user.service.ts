@@ -217,8 +217,9 @@ export class UserService {
         role === Role.SUPER_ADMIN
           ? ['*'] // 超级管理员拥有全部权限
           : [
-              ...((RolePermissions as Record<string, readonly string[]>)[role] ??
-                []),
+              ...((RolePermissions as Record<string, readonly string[]>)[
+                role
+              ] ?? []),
             ];
 
       // 将权限按模块分组
