@@ -10,6 +10,7 @@ import type {
   UpdateSupportChannelPayload,
 } from '@/type/types';
 import { PageHeader } from '@/components/scaffold/PageHeader';
+import { SmartImage } from '@/components/ui/SmartImage';
 import { useToastStore } from '@/store/useToastStore';
 
 type FilterStatus = 'ALL' | 'ACTIVE' | 'INACTIVE';
@@ -27,6 +28,9 @@ const DEFAULT_FORM: CreateSupportChannelPayload = {
   description: '',
   avatar: '',
 };
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export function SupportChannels() {
   const addToast = useToastStore((s) => s.addToast);
@@ -48,8 +52,7 @@ export function SupportChannels() {
       page,
       pageSize: 20,
       keyword: keyword || undefined,
-      isActive:
-        status === 'ALL' ? undefined : status === 'ACTIVE' ? true : false,
+      isActive: status === 'ALL' ? undefined : status === 'ACTIVE',
     };
   }, [page, keyword, status]);
 
@@ -84,8 +87,11 @@ export function SupportChannels() {
       setForm(DEFAULT_FORM);
       setPage(1);
       refresh();
-    } catch (error: any) {
-      addToast('error', error?.message ?? 'Create support channel failed');
+    } catch (error: unknown) {
+      addToast(
+        'error',
+        getErrorMessage(error, 'Create support channel failed'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -110,7 +116,8 @@ export function SupportChannels() {
       });
 
       if (!uploadResp.ok) {
-        throw new Error(`Upload failed (${uploadResp.status})`);
+        addToast('error', `Upload failed (${uploadResp.status})`);
+        return;
       }
 
       const avatar = token.cdnUrl || token.key;
@@ -135,8 +142,8 @@ export function SupportChannels() {
           : 'Channel resumed successfully',
       );
       refresh();
-    } catch (error: any) {
-      addToast('error', error?.message ?? 'Toggle channel status failed');
+    } catch (error: unknown) {
+      addToast('error', getErrorMessage(error, 'Toggle channel status failed'));
     }
   };
 
@@ -161,8 +168,11 @@ export function SupportChannels() {
       await supportChannelApi.update(item.id, payload);
       addToast('success', 'Support channel updated');
       refresh();
-    } catch (error: any) {
-      addToast('error', error?.message ?? 'Update support channel failed');
+    } catch (error: unknown) {
+      addToast(
+        'error',
+        getErrorMessage(error, 'Update support channel failed'),
+      );
     }
   };
 
@@ -257,10 +267,11 @@ export function SupportChannels() {
             />
             {form.avatar ? (
               <div className="flex items-center gap-2 h-9 px-1">
-                <img
+                <SmartImage
                   src={form.avatar}
                   alt="avatar preview"
-                  className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-white/10"
+                  className="h-8 w-8 rounded-full border border-gray-200 dark:border-white/10"
+                  imgClassName="h-8 w-8 rounded-full object-cover"
                 />
                 <span className="text-xs text-gray-500 truncate max-w-[140px]">
                   Avatar uploaded

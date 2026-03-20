@@ -54,22 +54,22 @@
 
 ## 3) 发布脚本清单（唯一真相）
 
-| 脚本/命令 | 用途 | 典型场景 |
-| --- | --- | --- |
-| `yarn deploy` | 全量发布（后端+Admin） | 常规手动发布 |
-| `yarn deploy:backend` | 仅后端发布 | API 改动 |
-| `yarn deploy:admin` | 仅 Admin 发布 | 前端改动 |
-| `yarn deploy:quick` | 跳过构建，仅重启 | 配置变更后快速生效 |
-| `yarn deploy:sync` | 仅同步配置文件 | 证书/Nginx/Compose 更新 |
-| `yarn rollback` | 服务级回滚 | 发布后异常快速恢复 |
-| `yarn rollback:backend` | 仅后端回滚 | 后端异常 |
-| `yarn rollback:db` | 恢复最近备份 | 数据层事故 |
-| `yarn switch:admin:dns` | Admin 域名正向切流演练（dry-run） | Cloudflare 切流前检查 |
-| `yarn switch:admin:dns:execute` | Admin 域名正向切流生效 | Cloudflare 切流执行 |
-| `yarn rollback:admin:dns` | Admin 域名回滚演练（dry-run） | Cloudflare 切流前检查 |
-| `yarn rollback:admin:dns:execute` | Admin 域名回滚生效 | Cloudflare 前端异常 |
-| `yarn pr:m:deploy` | 生产迁移（容器内） | 独立执行迁移 |
-| `yarn db:seed:dev` | 开发环境 seed | 本地/开发初始化 |
+| 脚本/命令                         | 用途                              | 典型场景                |
+| --------------------------------- | --------------------------------- | ----------------------- |
+| `yarn deploy`                     | 全量发布（后端+Admin）            | 常规手动发布            |
+| `yarn deploy:backend`             | 仅后端发布                        | API 改动                |
+| `yarn deploy:admin`               | 仅 Admin 发布                     | 前端改动                |
+| `yarn deploy:quick`               | 跳过构建，仅重启                  | 配置变更后快速生效      |
+| `yarn deploy:sync`                | 仅同步配置文件                    | 证书/Nginx/Compose 更新 |
+| `yarn rollback`                   | 服务级回滚                        | 发布后异常快速恢复      |
+| `yarn rollback:backend`           | 仅后端回滚                        | 后端异常                |
+| `yarn rollback:db`                | 恢复最近备份                      | 数据层事故              |
+| `yarn switch:admin:dns`           | Admin 域名正向切流演练（dry-run） | Cloudflare 切流前检查   |
+| `yarn switch:admin:dns:execute`   | Admin 域名正向切流生效            | Cloudflare 切流执行     |
+| `yarn rollback:admin:dns`         | Admin 域名回滚演练（dry-run）     | Cloudflare 切流前检查   |
+| `yarn rollback:admin:dns:execute` | Admin 域名回滚生效                | Cloudflare 前端异常     |
+| `yarn pr:m:deploy`                | 生产迁移（容器内）                | 独立执行迁移            |
+| `yarn db:seed:dev`                | 开发环境 seed                     | 本地/开发初始化         |
 
 ## 4) 生产首发（一次性）
 
@@ -141,16 +141,58 @@ yarn deploy:quick
 
 ### 6.2 Admin Cloudflare 首次失败排障（按报错关键字）
 
-| 报错关键字 | 优先检查项 | 处理动作 |
-| --- | --- | --- |
-| `Invalid API token` / `Authentication error` | `CLOUDFLARE_API_TOKEN` 是否配置在当前 Environment，权限是否正确 | 重新生成/更新 Token，并在 `production`/`preview` 分别校验 |
-| `CLOUDFLARE_ACCOUNT_ID` / `account id` | Account ID 是否与 Token 所属账户一致 | 到 Cloudflare 控制台复制 Account ID，覆盖 Secret |
-| `open-next.config.ts` / `wrangler.jsonc` not found | 文件路径是否在 `apps/admin-next/` | 恢复文件并重试部署 |
-| `NEXT_PUBLIC_API_BASE_URL` missing | 当前 Environment 是否有该 Secret | 补齐后重跑 workflow |
-| `quality` job failed (`lint`/`check-types`/`test`) | 代码质量关口失败 | 先修复代码，再触发部署 job |
-| `Failed to create GitHub deployment` | workflow 权限 | 确认 `deployments: write` 未被移除 |
-| `Smoke Check` failed | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问 | 先本地 `curl` 验证 URL，再修复健康检查地址 |
-| Telegram send failed | 通知配置缺失 | 补齐 Telegram secrets，或接受通知失败不阻断发布 |
+| 报错关键字                                         | 优先检查项                                                      | 处理动作                                                  |
+| -------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| `Invalid API token` / `Authentication error`       | `CLOUDFLARE_API_TOKEN` 是否配置在当前 Environment，权限是否正确 | 重新生成/更新 Token，并在 `production`/`preview` 分别校验 |
+| `CLOUDFLARE_ACCOUNT_ID` / `account id`             | Account ID 是否与 Token 所属账户一致                            | 到 Cloudflare 控制台复制 Account ID，覆盖 Secret          |
+| `open-next.config.ts` / `wrangler.jsonc` not found | 文件路径是否在 `apps/admin-next/`                               | 恢复文件并重试部署                                        |
+| `NEXT_PUBLIC_API_BASE_URL` missing                 | 当前 Environment 是否有该 Secret                                | 补齐后重跑 workflow                                       |
+| `quality` job failed (`lint`/`check-types`/`test`) | 代码质量关口失败                                                | 先修复代码，再触发部署 job                                |
+| `Failed to create GitHub deployment`               | workflow 权限                                                   | 确认 `deployments: write` 未被移除                        |
+| `Smoke Check` failed                               | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问                           | 先本地 `curl` 验证 URL，再修复健康检查地址                |
+| Telegram send failed                               | 通知配置缺失                                                    | 补齐 Telegram secrets，或接受通知失败不阻断发布           |
+
+### 6.3 本地提交前校验（Husky）
+
+为减少 CI 噪音，仓库已启用本地 Git Hook：
+
+- `pre-commit`：自动执行 `yarn lint:staged`，对暂存文件按工作区路由执行：
+  - `apps/admin-next` / `apps/api` / `packages/ui` / `apps/liveness-web`：`Prettier + ESLint --fix`
+  - 其它文档/配置文件：仅 `Prettier`
+  - `apps/mini-shop-admin`：当前不参与本地 hook
+- `pre-push`：按分支自动选择检查强度：
+  - `dev` / 其它功能分支 → `yarn prepush:light`
+  - `test` / `main` → `yarn prepush:heavy`
+
+`prepush:light`：
+
+- `@repo/ui`：`lint` + `check-types`
+- `@lucky/admin-next`：`lint` + `check-types`
+
+`prepush:heavy`：
+
+- 包含 `prepush:light`
+- `@lucky/admin-next`：`test`
+
+> 当前未把 `@lucky/api` 放入本地 `prepush:heavy`，原因是后端仍有存量 lint debt；后端质量仍由 CI 兜底，待清债后再纳入本地重检查。
+
+常用命令：
+
+```bash
+yarn lint:staged
+yarn prepush:light
+yarn prepush:heavy
+yarn prepush:check
+```
+
+仅在紧急场景可临时跳过 hook：
+
+```bash
+git commit --no-verify
+git push --no-verify
+```
+
+> 跳过后必须至少手动补跑当前分支对应的检查（`prepush:light` 或 `prepush:heavy`），避免把格式化/类型问题带入 CI。
 
 ## 7) 发布后验证清单
 

@@ -14,6 +14,7 @@ import { PaymentChannelModal } from './payment-channel/PaymentChannelModal';
 import { useAntdTable } from 'ahooks';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { BaseTable } from '@/components/scaffold/BaseTable';
+import { SmartImage } from '@/components/ui/SmartImage';
 
 // --- 辅助组件：状态标签 ---
 const StatusBadge = ({ status }: { status: number }) => {
@@ -195,10 +196,11 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
             <div className="flex items-center gap-3 group">
               <div className="w-10 h-10 rounded-xl border border-gray-200 bg-gray-50 p-1.5 flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-all">
                 {row.icon ? (
-                  <img
+                  <SmartImage
                     src={row.icon}
-                    className="w-full h-full object-contain"
                     alt={row.name}
+                    className="w-full h-full"
+                    imgClassName="w-full h-full object-contain"
                   />
                 ) : (
                   <CreditCard size={20} className="text-gray-400" />

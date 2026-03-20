@@ -106,8 +106,7 @@ export const SmartImageImpl: React.FC<SmartImageProps> = ({
             status === 'loaded' ? 'opacity-100' : 'opacity-0',
             imgClassName || 'w-full h-full object-cover',
           )}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          {...(props as any)}
+          {...props}
         />
       )}
     </div>
