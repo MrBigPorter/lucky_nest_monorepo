@@ -28,7 +28,9 @@ async function bootstrap() {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean)
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+    : isProd
+      ? []
+      : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
   const expressApp = app
     .getHttpAdapter()
@@ -51,7 +53,18 @@ async function bootstrap() {
   );
   app.use(cookieParser());
   app.enableCors({
-    origin: originList,
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      // Browser same-origin requests may not include Origin header.
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, originList.includes(origin));
+    },
     credentials: true,
   });
 
