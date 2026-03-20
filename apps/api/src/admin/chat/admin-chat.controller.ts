@@ -71,8 +71,14 @@ export class AdminChatController {
     @Param('id') conversationId: string,
     @Body() dto: AdminReplyDto,
     @CurrentAdminName() adminName: string,
+    @CurrentAdminId() adminId: string,
   ) {
-    return this.service.replyToConversation(conversationId, dto, adminName);
+    return this.service.replyToConversation(
+      conversationId,
+      dto,
+      adminName,
+      adminId,
+    );
   }
 
   /** POST /v1/admin/chat/messages/:id/force-recall — 强制撤回 */

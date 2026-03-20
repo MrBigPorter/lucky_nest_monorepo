@@ -140,6 +140,12 @@ export function useChatSocket({
           case 'conversation_updated':
             onConversationUpdatedRef.current?.(payload.data.conversationId);
             break;
+
+          // Flutter 用户首次点击「联系客服」时，后端推送到 admin 私有房间
+          // 触发 admin 侧会话列表刷新，无需等到用户发第一条消息
+          case 'support_new_conversation':
+            onConversationUpdatedRef.current?.(payload.data.conversationId);
+            break;
         }
       },
     );

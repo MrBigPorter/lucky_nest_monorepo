@@ -63,6 +63,7 @@ model User {
   lotteryResults       LotteryResult[]
   luckyDrawTickets     LuckyDrawTicket[]
   luckyDrawResults     LuckyDrawResult[]
+  supportChannel       SupportChannel? @relation("SupportChannelBotUser")
 
   @@index([status], map: "idx_user_status")
   @@index([phoneMd5], map: "idx_user_phone_md5")
@@ -70,6 +71,26 @@ model User {
   @@index([kycStatus], map: "idx_user_kyc_status")
   @@index([createdAt], map: "idx_user_created_at")
   @@map("users")
+}
+
+model SupportChannel {
+  /// 渠道 ID，同时作为 Flutter 端传入的 businessId
+  id          String   @id @db.VarChar(64)
+  /// 渠道显示名称（英文）
+  name        String   @db.VarChar(100)
+  /// 渠道描述（后台可见）
+  description String?  @db.VarChar(255)
+  /// 对应的虚拟 bot User ID（一个 bot 仅绑定一个渠道）
+  botUserId   String   @unique @db.VarChar(32)
+  botUser     User     @relation("SupportChannelBotUser", fields: [botUserId], references: [id])
+  /// 软停用开关（历史消息引用 botUserId，不能硬删除）
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive], map: "idx_support_channel_is_active")
+  @@map("support_channels")
 }
 
 model UserDevice {

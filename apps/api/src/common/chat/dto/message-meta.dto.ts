@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsNumber, IsInt } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsInt,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class MessageMetaDto {
@@ -78,4 +84,25 @@ export class MessageMetaDto {
   @IsOptional()
   @IsString()
   title?: string;
+
+  // =========================================================
+  // 新增：客服代理发送审计字段
+  // =========================================================
+  @ApiProperty({ description: '是否为客服代理发送', required: false })
+  @IsOptional()
+  @IsBoolean()
+  isSupport?: boolean;
+
+  @ApiProperty({ description: '展示给用户的客服名称', required: false })
+  @IsOptional()
+  @IsString()
+  agentName?: string;
+
+  @ApiProperty({
+    description: '实际后台操作员 adminId（审计字段）',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  realAdminId?: string;
 }

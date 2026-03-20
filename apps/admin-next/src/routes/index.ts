@@ -167,6 +167,12 @@ export const routes: RouteConfig[] = [
     group: 'Operations',
   },
   {
+    path: '/support-channels',
+    name: 'supportChannels',
+    icon: Headphones,
+    group: 'Operations',
+  },
+  {
     path: '/marketing',
     name: 'marketing',
     icon: Ticket,
