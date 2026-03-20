@@ -78,6 +78,19 @@ jobs:
     environment: production
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync deploy scripts to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy/*.sh"
+          target: /opt/lucky/deploy
+          overwrite: true
+
       - name: Deploy via SSH (登录服务器执行脚本)
         uses: appleboy/ssh-action@v1.2.0
         env:
@@ -92,6 +105,9 @@ jobs:
           script: |
             set -e
             cd /opt/lucky
+
+            # 0. 确保同步后的脚本可执行
+            chmod +x deploy/*.sh || true
 
             # 1. 登录 GHCR
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
