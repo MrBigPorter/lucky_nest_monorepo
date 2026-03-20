@@ -104,19 +104,32 @@ jobs:
   e2e:
     needs: check
     runs-on: ubuntu-latest
-    # 只有配置了 E2E secret 才运行（避免 fork PR 失败）
-    if: ${{ secrets.E2E_ADMIN_PASSWORD != '' }}
 
     steps:
+      - name: Check E2E secret availability
+        id: e2e_gate
+        env:
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+        run: |
+          if [ -n "$E2E_ADMIN_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "E2E_ADMIN_PASSWORD is not set, skip E2E job steps"
+          fi
+
       - name: Checkout
+        if: steps.e2e_gate.outputs.enabled == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: steps.e2e_gate.outputs.enabled == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Enable Corepack (Yarn 4)
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: corepack enable && corepack prepare yarn@4.9.2 --activate
 
       # ---- 依赖缓存 — 暂时禁用 ----
@@ -141,6 +154,7 @@ jobs:
       #     key: nm-e2e-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
 
       - name: Install dependencies
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn install --immutable
 
       # ---- Playwright 浏览器缓存 — 暂时禁用 ----
@@ -152,16 +166,20 @@ jobs:
       #     key: playwright-${{ hashFiles('apps/admin-next/package.json') }}
 
       - name: Install Playwright browsers
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next playwright install chromium --with-deps
 
       # 构建 Next.js（静态导出 + 本地 serve，无需后端）
       - name: Build @lucky/shared
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: node packages/shared/scripts/build.js
 
       - name: Build @repo/ui
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: node packages/ui/scripts/build.js
 
       - name: Build admin-next
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next build
         env:
           NODE_ENV: production
@@ -171,6 +189,7 @@ jobs:
 
       # 启动 mock API server（先启动，让 Next.js 环境变量指向它）
       - name: Start mock API server
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: |
           cat > /tmp/mock-api.js << 'EOF'
           const http = require('http');
@@ -193,11 +212,13 @@ jobs:
 
       # 启动 Next.js standalone 服务器 (output: 'standalone' — 不再用 serve out/)
       - name: Start Next.js server
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: |
           PORT=4001 yarn workspace @lucky/admin-next start &
           npx wait-on http://localhost:4001 --timeout 60000
 
       - name: Run Playwright E2E tests
+        if: steps.e2e_gate.outputs.enabled == 'true'
         run: yarn workspace @lucky/admin-next e2e
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4001
@@ -207,7 +228,7 @@ jobs:
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.e2e_gate.outputs.enabled == 'true'
         with:
           name: playwright-report
           path: apps/admin-next/playwright-report/
@@ -216,7 +237,12 @@ jobs:
       - name: E2E Summary
         if: always()
         run: |
-          echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
-          echo "- **浏览器**: Chromium" >> $GITHUB_STEP_SUMMARY
-          echo "- **报告**: 见 Artifacts → playwright-report" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.e2e_gate.outputs.enabled }}" = "true" ]; then
+            echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
+            echo "- **浏览器**: Chromium" >> $GITHUB_STEP_SUMMARY
+            echo "- **报告**: 见 Artifacts → playwright-report" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### 🎭 Playwright E2E Report" >> $GITHUB_STEP_SUMMARY
+            echo "- **状态**: skipped (missing E2E_ADMIN_PASSWORD secret)" >> $GITHUB_STEP_SUMMARY
+          fi
 
