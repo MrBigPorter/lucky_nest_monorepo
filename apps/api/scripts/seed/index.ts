@@ -27,7 +27,7 @@ function applySeedDbConnectionGuards() {
   }
 }
 
-async function main() {
+export async function runSeed() {
   applySeedDbConnectionGuards();
 
   console.log('\n🌱  JoyMinis Demo Seed ─────────────────────────');
@@ -113,9 +113,11 @@ async function main() {
   console.log('\n✨  Seed 完成！\n');
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((e) => {
-    console.error('❌  Seed 失败:', e);
-    process.exit(1);
-  });
+if (require.main === module) {
+  runSeed()
+    .then(() => process.exit(0))
+    .catch((e) => {
+      console.error('❌  Seed 失败:', e);
+      process.exit(1);
+    });
+}

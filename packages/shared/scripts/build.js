@@ -58,15 +58,11 @@ async function build() {
   console.log('   ✓ JS compiled (esbuild)');
 
   // Step 2: tsc — emit .d.ts declaration files only
-  try {
-    execSync('npx tsc --emitDeclarationOnly --noEmit false', {
-      cwd: pkgRoot,
-      stdio: 'inherit',
-    });
-    console.log('   ✓ .d.ts generated (tsc)');
-  } catch {
-    console.warn('   ⚠ tsc had warnings (non-fatal, continuing)');
-  }
+  execSync('node_modules/.bin/tsc -p tsconfig.json --emitDeclarationOnly --noEmit false', {
+    cwd: pkgRoot,
+    stdio: 'inherit',
+  });
+  console.log('   ✓ .d.ts generated (tsc)');
 
   const ms = Date.now() - t0;
   console.log('✅ @lucky/shared built in', ms + 'ms');
