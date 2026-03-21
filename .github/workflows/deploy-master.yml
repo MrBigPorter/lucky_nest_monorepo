@@ -26,7 +26,7 @@ permissions:
   packages: write # Required for GHCR (Docker) pushing
 
 jobs:
-  # 1. Calls the Admin deployment workflow
+  # Job 1 / 任务 1: Call the Admin VPS rollback deployment workflow
   run-admin-deploy:
     name: 🌐 Trigger Admin Deploy
     if: ${{ inputs.deploy_admin == true }}
@@ -35,7 +35,7 @@ jobs:
       runner: ${{ inputs.runner }}
     secrets: inherit
 
-  # 2. Calls the Admin Cloudflare deployment workflow
+  # Job 2 / 任务 2: Call the Admin Cloudflare primary deployment workflow
   run-admin-cloudflare-deploy:
     name: ☁️ Trigger Admin Cloudflare Deploy
     if: ${{ inputs.deploy_admin_cloudflare == true }}
@@ -44,7 +44,7 @@ jobs:
       runner: ${{ inputs.runner }}
     secrets: inherit
 
-  # 3. Calls the Backend deployment workflow
+  # Job 3 / 任务 3: Call the Backend VPS deployment workflow
   run-backend-deploy:
     name: ⚙️ Trigger Backend Deploy
     if: ${{ inputs.deploy_api == true }}
