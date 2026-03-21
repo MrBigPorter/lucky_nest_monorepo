@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { GroupService } from '@api/common/group/group.service';
-import { GROUP_STATUS } from '@lucky/shared/dist/types/treasure';
+import { GROUP_STATUS } from '@lucky/shared';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { GroupListForTreasureResponseDto } from '@api/common/group/dto/group-list-for-treasure-response.dto';
 import { plainToInstance } from 'class-transformer';

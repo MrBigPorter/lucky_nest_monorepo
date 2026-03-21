@@ -26,6 +26,17 @@ export default tseslint.config(
   },
   {
     rules: {
+      // ESLint 8.57 in this workspace crashes when this rule receives empty options.
+      'no-unused-expressions': 'off',
+      '@typescript-eslint/no-unused-expressions': [
+        'warn',
+        {
+          allowShortCircuit: false,
+          allowTernary: false,
+          allowTaggedTemplates: false,
+          enforceForJSX: false,
+        },
+      ],
       '@typescript-eslint/no-explicit-any': 'off',
       // Temporary release-mode relaxations for API lint debt.
       '@typescript-eslint/no-floating-promises': 'warn',
