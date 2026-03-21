@@ -9,9 +9,10 @@ name: CI
 
 on:
   push:
-    branches: [main, test]
+    branches: [main, test] # dev push 不触发；如果 dev 有开放的 →main PR，仍会由 pull_request 事件触发
   pull_request:
     branches: [main] # PR 目标为 main 时触发，配合分支保护作为合并门禁
+    # Workflow note: dev->main PR updates also trigger this workflow.
 
 # 同一 PR 新提交时取消旧运行
 concurrency:
