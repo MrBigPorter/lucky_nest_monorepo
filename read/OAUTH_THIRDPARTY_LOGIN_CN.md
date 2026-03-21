@@ -2,7 +2,7 @@
 
 > **文档状态**: 设计阶段（2026-03-19）  
 > **目标**: 为客户端小程序/H5/Flutter App 添加 Google、Facebook、Apple 三方登录支持  
-> **负责模块**: `apps/api/src/client/auth/` + `apps/mini-shop-admin/` + 未来 Flutter App  
+> **负责模块**: `apps/api/src/client/auth/` + 客户端前端（H5/Flutter）  
 > **Flutter 适配结论**: ✅ 后端方案 100% 兼容 Flutter，无需改动任何接口
 
 ---
@@ -14,7 +14,7 @@
 3. [完整登录流程](#三完整登录流程)
 4. [数据库层（已就绪）](#四数据库层已就绪)
 5. [后端实现计划](#五后端实现计划)
-6. [前端实现计划（Vue 3）](#六前端实现计划vue-3)
+6. [前端实现计划（客户端前端）](#六前端实现计划客户端前端)
 7. [Flutter 适配分析](#七flutter-适配分析)
 8. [环境变量清单](#八环境变量清单)
 9. [安全清单](#九安全清单)
@@ -29,23 +29,23 @@
 
 ### 已有基础（不需要重做）
 
-| 层次 | 状态 | 说明 |
-|------|------|------|
-| 数据库 `OauthAccount` 模型 | ✅ 已建 | 存 provider / providerUserId / email / avatar / token |
-| 共享枚举 `PROVIDER` | ✅ 已建 | `GOOGLE / FACEBOOK / APPLE` |
-| 共享枚举 `LOGIN_METHOD` | ✅ 已建 | `google / facebook / OTP / password` |
-| 共享枚举 `LOGIN_TYPE.OAUTH` | ✅ 已建 | 值 = 3 |
-| JWT 双 Token 体系 | ✅ 已建 | `accessToken 1h` + `refreshToken 7d` |
-| `UserLoginLog` 表 | ✅ 已建 | loginType=3 即第三方登录 |
+| 层次                        | 状态    | 说明                                                  |
+| --------------------------- | ------- | ----------------------------------------------------- |
+| 数据库 `OauthAccount` 模型  | ✅ 已建 | 存 provider / providerUserId / email / avatar / token |
+| 共享枚举 `PROVIDER`         | ✅ 已建 | `GOOGLE / FACEBOOK / APPLE`                           |
+| 共享枚举 `LOGIN_METHOD`     | ✅ 已建 | `google / facebook / OTP / password`                  |
+| 共享枚举 `LOGIN_TYPE.OAUTH` | ✅ 已建 | 值 = 3                                                |
+| JWT 双 Token 体系           | ✅ 已建 | `accessToken 1h` + `refreshToken 7d`                  |
+| `UserLoginLog` 表           | ✅ 已建 | loginType=3 即第三方登录                              |
 
 ### 当前缺口
 
-| 缺口 | 影响 |
-|------|------|
-| 无 `POST /auth/oauth/:provider` 接口 | 前端无法发起三方登录 |
-| 无 Google / Facebook / Apple token 验证 Service | 无法校验第三方令牌 |
-| 无绑定/解绑接口 | 用户无法在设置页管理三方账号 |
-| 前端无 Google/Facebook SDK 集成 | 无法拉起授权弹窗 |
+| 缺口                                            | 影响                         |
+| ----------------------------------------------- | ---------------------------- |
+| 无 `POST /auth/oauth/:provider` 接口            | 前端无法发起三方登录         |
+| 无 Google / Facebook / Apple token 验证 Service | 无法校验第三方令牌           |
+| 无绑定/解绑接口                                 | 用户无法在设置页管理三方账号 |
+| 前端无 Google/Facebook SDK 集成                 | 无法拉起授权弹窗             |
 
 ---
 
@@ -79,21 +79,21 @@
 
 ### 为什么选方案 B？
 
-| 维度 | 方案 A 服务端重定向 | 方案 B 客户端令牌（✅ 选） |
-|------|-------------------|--------------------------|
-| **适合小程序/SPA** | ❌ 重定向复杂，微信小程序不支持 | ✅ SDK 直接弹窗，体验流畅 |
-| **部署复杂度** | 需要公网回调 URL、HTTPS 证书 | 后端只需一个 POST 接口 |
-| **安全性** | 服务端控制全流程 | Google `id_token` 有签名，后端验证即可 |
-| **开发工时** | 高（OAuth 状态机/CSRF/code→token） | 低（一个 verify 接口） |
-| **适用平台** | Web 应用 | Web + H5 + 小程序 ✅ |
+| 维度               | 方案 A 服务端重定向                | 方案 B 客户端令牌（✅ 选）             |
+| ------------------ | ---------------------------------- | -------------------------------------- |
+| **适合小程序/SPA** | ❌ 重定向复杂，微信小程序不支持    | ✅ SDK 直接弹窗，体验流畅              |
+| **部署复杂度**     | 需要公网回调 URL、HTTPS 证书       | 后端只需一个 POST 接口                 |
+| **安全性**         | 服务端控制全流程                   | Google `id_token` 有签名，后端验证即可 |
+| **开发工时**       | 高（OAuth 状态机/CSRF/code→token） | 低（一个 verify 接口）                 |
+| **适用平台**       | Web 应用                           | Web + H5 + 小程序 ✅                   |
 
 ### 三方平台优先级（菲律宾市场）
 
-| 平台 | 优先级 | 原因 |
-|------|--------|------|
-| **Google** | 🔴 P0 | Android 设备率高，Google 账号普及 |
-| **Facebook** | 🔴 P0 | 菲律宾 Facebook 用户渗透率全球最高（~97%） |
-| **Apple** | 🟡 P1 | App Store 强制要求（有 Google/FB 登录就必须也支持 Apple） |
+| 平台         | 优先级 | 原因                                                      |
+| ------------ | ------ | --------------------------------------------------------- |
+| **Google**   | 🔴 P0  | Android 设备率高，Google 账号普及                         |
+| **Facebook** | 🔴 P0  | 菲律宾 Facebook 用户渗透率全球最高（~97%）                |
+| **Apple**    | 🟡 P1  | App Store 强制要求（有 Google/FB 登录就必须也支持 Apple） |
 
 ---
 
@@ -275,11 +275,11 @@ GET  /auth/oauth/accounts            ← 查看已绑定的三方账号
 
 ```typescript
 // apps/api/src/client/auth/dto/oauth-login.dto.ts
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsOptional } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class GoogleLoginDto {
-  @ApiProperty({ description: 'Google id_token (JWT)' })
+  @ApiProperty({ description: "Google id_token (JWT)" })
   @IsString()
   @IsNotEmpty()
   idToken!: string;
@@ -291,12 +291,12 @@ export class GoogleLoginDto {
 }
 
 export class FacebookLoginDto {
-  @ApiProperty({ description: 'Facebook access_token' })
+  @ApiProperty({ description: "Facebook access_token" })
   @IsString()
   @IsNotEmpty()
   accessToken!: string;
 
-  @ApiProperty({ description: 'Facebook user ID (防止伪造)' })
+  @ApiProperty({ description: "Facebook user ID (防止伪造)" })
   @IsString()
   @IsNotEmpty()
   userId!: string;
@@ -308,17 +308,17 @@ export class FacebookLoginDto {
 }
 
 export class AppleLoginDto {
-  @ApiProperty({ description: 'Apple authorization code' })
+  @ApiProperty({ description: "Apple authorization code" })
   @IsString()
   @IsNotEmpty()
   code!: string;
 
-  @ApiProperty({ description: 'Apple id_token (JWT)' })
+  @ApiProperty({ description: "Apple id_token (JWT)" })
   @IsString()
   @IsNotEmpty()
   idToken!: string;
 
-  @ApiPropertyOptional({ description: '首次授权时 Apple 返回的名字' })
+  @ApiPropertyOptional({ description: "首次授权时 Apple 返回的名字" })
   @IsOptional()
   @IsString()
   firstName?: string;
@@ -339,11 +339,11 @@ export class AppleLoginDto {
 
 ```typescript
 // apps/api/src/client/auth/providers/google.provider.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 export interface GoogleUserInfo {
-  sub: string;        // Google 用户唯一 ID
+  sub: string; // Google 用户唯一 ID
   email: string;
   name: string;
   picture: string;
@@ -357,23 +357,23 @@ export class GoogleProvider {
   async verifyIdToken(idToken: string): Promise<GoogleUserInfo> {
     // 方案1: 调用 Google tokeninfo endpoint（简单，有网络开销）
     const res = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
     );
 
     if (!res.ok) {
-      throw new UnauthorizedException('Google token verification failed');
+      throw new UnauthorizedException("Google token verification failed");
     }
 
     const data = await res.json();
 
     // 验证 audience（防止其他应用的 token 被滥用）
-    const clientId = this.config.get<string>('GOOGLE_CLIENT_ID');
+    const clientId = this.config.get<string>("GOOGLE_CLIENT_ID");
     if (data.aud !== clientId) {
-      throw new UnauthorizedException('Google token audience mismatch');
+      throw new UnauthorizedException("Google token audience mismatch");
     }
 
     if (!data.email_verified) {
-      throw new UnauthorizedException('Google email not verified');
+      throw new UnauthorizedException("Google email not verified");
     }
 
     return {
@@ -388,11 +388,13 @@ export class GoogleProvider {
 ```
 
 > **进阶方案**: 使用 `google-auth-library` npm 包，本地用 Google 公钥验证签名，无网络延迟：
+>
 > ```bash
 > yarn workspace @lucky/api add google-auth-library
 > ```
+>
 > ```typescript
-> import { OAuth2Client } from 'google-auth-library';
+> import { OAuth2Client } from "google-auth-library";
 > const client = new OAuth2Client(clientId);
 > const ticket = await client.verifyIdToken({ idToken, audience: clientId });
 > const payload = ticket.getPayload();
@@ -402,12 +404,12 @@ export class GoogleProvider {
 
 ```typescript
 // apps/api/src/client/auth/providers/facebook.provider.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 export interface FacebookUserInfo {
   id: string;
   name: string;
-  email?: string;    // 用户可能不授权 email
+  email?: string; // 用户可能不授权 email
   picture?: { data: { url: string } };
 }
 
@@ -417,19 +419,19 @@ export class FacebookProvider {
     accessToken: string,
     userId: string,
   ): Promise<FacebookUserInfo> {
-    const fields = 'id,name,email,picture';
+    const fields = "id,name,email,picture";
     const url = `https://graph.facebook.com/me?fields=${fields}&access_token=${accessToken}`;
 
     const res = await fetch(url);
     if (!res.ok) {
-      throw new UnauthorizedException('Facebook token verification failed');
+      throw new UnauthorizedException("Facebook token verification failed");
     }
 
     const data: FacebookUserInfo = await res.json();
 
     // 关键：比对 userId，防止 A 的 token 伪造 B 的登录
     if (data.id !== userId) {
-      throw new UnauthorizedException('Facebook userId mismatch');
+      throw new UnauthorizedException("Facebook userId mismatch");
     }
 
     return data;
@@ -445,18 +447,18 @@ export class FacebookProvider {
 // yarn workspace @lucky/api add jsonwebtoken jwks-rsa
 // yarn workspace @lucky/api add -D @types/jsonwebtoken
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
-import jwksRsa from 'jwks-rsa';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import * as jwt from "jsonwebtoken";
+import jwksRsa from "jwks-rsa";
 
 export interface AppleUserInfo {
-  sub: string;       // Apple 用户唯一 ID（稳定不变）
+  sub: string; // Apple 用户唯一 ID（稳定不变）
   email?: string;
   email_verified?: boolean;
 }
 
 const jwksClient = jwksRsa({
-  jwksUri: 'https://appleid.apple.com/auth/keys',
+  jwksUri: "https://appleid.apple.com/auth/keys",
   cache: true,
   cacheMaxEntries: 5,
   cacheMaxAge: 24 * 60 * 60 * 1000, // 24h
@@ -470,8 +472,8 @@ export class AppleProvider {
   ): Promise<AppleUserInfo> {
     // 1. 解码 header，取 kid
     const decoded = jwt.decode(idToken, { complete: true });
-    if (!decoded || typeof decoded === 'string') {
-      throw new UnauthorizedException('Invalid Apple id_token format');
+    if (!decoded || typeof decoded === "string") {
+      throw new UnauthorizedException("Invalid Apple id_token format");
     }
 
     const kid = decoded.header.kid;
@@ -480,14 +482,14 @@ export class AppleProvider {
 
     try {
       const payload = jwt.verify(idToken, publicKey, {
-        algorithms: ['RS256'],
-        audience: clientId,    // 你的 Apple Service ID 或 Bundle ID
-        issuer: 'https://appleid.apple.com',
+        algorithms: ["RS256"],
+        audience: clientId, // 你的 Apple Service ID 或 Bundle ID
+        issuer: "https://appleid.apple.com",
       }) as AppleUserInfo;
 
       return payload;
     } catch (e) {
-      throw new UnauthorizedException('Apple id_token verification failed');
+      throw new UnauthorizedException("Apple id_token verification failed");
     }
   }
 }
@@ -684,9 +686,9 @@ async loginWithApple(
 
 ---
 
-## 六、前端实现计划（Vue 3）
+## 六、前端实现计划（客户端前端）
 
-> 目标 APP: `apps/mini-shop-admin`（Vue 3 + Vite）
+> 目标端: 客户端前端（H5/Flutter，以下 Web 示例仅用于 API 联调参考）
 
 ### 6.1 Google 登录集成
 
@@ -697,7 +699,7 @@ async loginWithApple(
 
 ```typescript
 // src/composables/useGoogleLogin.ts
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from "@/store/useAuthStore";
 
 export function useGoogleLogin() {
   const authStore = useAuthStore();
@@ -719,7 +721,7 @@ export function useGoogleLogin() {
       authStore.login(result.tokens.accessToken);
       // 跳转首页
     } catch (err) {
-      console.error('Google login failed', err);
+      console.error("Google login failed", err);
     }
   }
 
@@ -736,12 +738,12 @@ export function useGoogleLogin() {
 ```html
 <!-- index.html -->
 <script>
-  window.fbAsyncInit = function() {
+  window.fbAsyncInit = function () {
     FB.init({
-      appId: '{{VITE_FACEBOOK_APP_ID}}',
+      appId: "{{VITE_FACEBOOK_APP_ID}}",
       cookie: true,
       xfbml: true,
-      version: 'v19.0'
+      version: "v19.0",
     });
   };
 </script>
@@ -753,23 +755,26 @@ export function useGoogleLogin() {
 export function useFacebookLogin() {
   function login() {
     return new Promise<void>((resolve, reject) => {
-      FB.login(async (response) => {
-        if (response.status === 'connected') {
-          const { accessToken, userID } = response.authResponse;
-          try {
-            const result = await authApi.loginWithFacebook({
-              accessToken,
-              userId: userID,
-            });
-            authStore.login(result.tokens.accessToken);
-            resolve();
-          } catch (err) {
-            reject(err);
+      FB.login(
+        async (response) => {
+          if (response.status === "connected") {
+            const { accessToken, userID } = response.authResponse;
+            try {
+              const result = await authApi.loginWithFacebook({
+                accessToken,
+                userId: userID,
+              });
+              authStore.login(result.tokens.accessToken);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          } else {
+            reject(new Error("Facebook login cancelled"));
           }
-        } else {
-          reject(new Error('Facebook login cancelled'));
-        }
-      }, { scope: 'email' });
+        },
+        { scope: "email" },
+      );
     });
   }
 
@@ -781,7 +786,10 @@ export function useFacebookLogin() {
 
 ```html
 <!-- index.html -->
-<script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+<script
+  type="text/javascript"
+  src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
+></script>
 ```
 
 ```typescript
@@ -789,17 +797,17 @@ export function useFacebookLogin() {
 export function useAppleLogin() {
   function init() {
     AppleID.auth.init({
-      clientId: import.meta.env.VITE_APPLE_CLIENT_ID,  // Service ID
-      scope: 'name email',
+      clientId: import.meta.env.VITE_APPLE_CLIENT_ID, // Service ID
+      scope: "name email",
       redirectURI: import.meta.env.VITE_APPLE_REDIRECT_URI, // 必须是 HTTPS
-      usePopup: true,  // 弹窗模式
+      usePopup: true, // 弹窗模式
     });
   }
 
   async function login() {
     const response = await AppleID.auth.signIn();
     const { code, id_token } = response.authorization;
-    const name = response.user?.name;  // 仅首次出现
+    const name = response.user?.name; // 仅首次出现
 
     return authApi.loginWithApple({
       code,
@@ -816,23 +824,23 @@ export function useAppleLogin() {
 ### 6.4 API 调用封装
 
 ```typescript
-// apps/mini-shop-admin/src/api/index.ts 新增
+// 客户端 Web 项目 src/api/index.ts 新增
 
 export const authApi = {
   // ...现有方法...
 
   loginWithGoogle: (data: { idToken: string; inviteCode?: string }) =>
-    http.post<LoginResponse>('/auth/oauth/google', data),
+    http.post<LoginResponse>("/auth/oauth/google", data),
 
   loginWithFacebook: (data: { accessToken: string; userId: string }) =>
-    http.post<LoginResponse>('/auth/oauth/facebook', data),
+    http.post<LoginResponse>("/auth/oauth/facebook", data),
 
   loginWithApple: (data: {
     code: string;
     idToken: string;
     firstName?: string;
     lastName?: string;
-  }) => http.post<LoginResponse>('/auth/oauth/apple', data),
+  }) => http.post<LoginResponse>("/auth/oauth/apple", data),
 };
 ```
 
@@ -897,26 +905,26 @@ export const authApi = {
 
 ### 7.2 Flutter vs Vue 3 对比
 
-| 维度 | Vue 3 Web | Flutter Mobile | 差异说明 |
-|------|-----------|----------------|---------|
-| **Google 登录** | 浏览器 GSI SDK（JS） | `google_sign_in` 包（原生） | Flutter 更流畅，系统账号选择器 |
-| **Facebook 登录** | FB JS SDK | `flutter_facebook_auth` 包 | 均可获取 accessToken |
-| **Apple 登录** | `AppleID.auth.js`（Safari 限定） | `sign_in_with_apple` 包 | Flutter 在 iOS 上是原生体验 |
-| **idToken 格式** | JWT 字符串 | JWT 字符串（相同） | ✅ 后端无需区分 |
-| **token 存储** | `localStorage` | `flutter_secure_storage`（加密） | Flutter **更安全** |
-| **后端接口** | `POST /auth/oauth/google` 等 | **完全相同** | ✅ 无需新增接口 |
-| **平台配置** | HTML `<script>` 引入 | `pubspec.yaml` + 原生配置文件 | 各有配置，互不影响 |
-| **Apple 限制** | 仅 Safari 支持 | iOS/macOS 原生支持 | Flutter 体验更好 |
+| 维度              | Vue 3 Web                        | Flutter Mobile                   | 差异说明                       |
+| ----------------- | -------------------------------- | -------------------------------- | ------------------------------ |
+| **Google 登录**   | 浏览器 GSI SDK（JS）             | `google_sign_in` 包（原生）      | Flutter 更流畅，系统账号选择器 |
+| **Facebook 登录** | FB JS SDK                        | `flutter_facebook_auth` 包       | 均可获取 accessToken           |
+| **Apple 登录**    | `AppleID.auth.js`（Safari 限定） | `sign_in_with_apple` 包          | Flutter 在 iOS 上是原生体验    |
+| **idToken 格式**  | JWT 字符串                       | JWT 字符串（相同）               | ✅ 后端无需区分                |
+| **token 存储**    | `localStorage`                   | `flutter_secure_storage`（加密） | Flutter **更安全**             |
+| **后端接口**      | `POST /auth/oauth/google` 等     | **完全相同**                     | ✅ 无需新增接口                |
+| **平台配置**      | HTML `<script>` 引入             | `pubspec.yaml` + 原生配置文件    | 各有配置，互不影响             |
+| **Apple 限制**    | 仅 Safari 支持                   | iOS/macOS 原生支持               | Flutter 体验更好               |
 
 ### 7.3 Flutter 三方登录插件选型
 
-| 平台 | 推荐插件 | pub.dev 评分 | 说明 |
-|------|---------|------------|------|
-| **Google** | `google_sign_in: ^6.2.0` | ⭐ 140 likes | Google 官方维护 |
-| **Facebook** | `flutter_facebook_auth: ^7.0.0` | ⭐ 高 | 支持 iOS/Android/Web |
-| **Apple** | `sign_in_with_apple: ^6.1.0` | ⭐ 高 | 支持 iOS/macOS/Android/Web |
-| **Token 存储** | `flutter_secure_storage: ^9.0.0` | ⭐ 高 | Keychain/Keystore 加密存储 |
-| **HTTP 客户端** | `dio: ^5.0.0` | ⭐ 高 | 功能完整，支持拦截器 |
+| 平台            | 推荐插件                         | pub.dev 评分 | 说明                       |
+| --------------- | -------------------------------- | ------------ | -------------------------- |
+| **Google**      | `google_sign_in: ^6.2.0`         | ⭐ 140 likes | Google 官方维护            |
+| **Facebook**    | `flutter_facebook_auth: ^7.0.0`  | ⭐ 高        | 支持 iOS/Android/Web       |
+| **Apple**       | `sign_in_with_apple: ^6.1.0`     | ⭐ 高        | 支持 iOS/macOS/Android/Web |
+| **Token 存储**  | `flutter_secure_storage: ^9.0.0` | ⭐ 高        | Keychain/Keystore 加密存储 |
+| **HTTP 客户端** | `dio: ^5.0.0`                    | ⭐ 高        | 功能完整，支持拦截器       |
 
 ### 7.4 Flutter 端实现代码
 
@@ -1180,11 +1188,11 @@ class LoginPage extends StatelessWidget {
 
 #### 必须放置的配置文件
 
-| 文件 | 平台 | 来源 |
-|------|------|------|
-| `android/app/google-services.json` | Android | Firebase Console 下载 |
-| `ios/Runner/GoogleService-Info.plist` | iOS | Firebase Console 下载 |
-| `ios/Runner/Runner.entitlements` | iOS | Apple Developer Portal |
+| 文件                                  | 平台    | 来源                   |
+| ------------------------------------- | ------- | ---------------------- |
+| `android/app/google-services.json`    | Android | Firebase Console 下载  |
+| `ios/Runner/GoogleService-Info.plist` | iOS     | Firebase Console 下载  |
+| `ios/Runner/Runner.entitlements`      | iOS     | Apple Developer Portal |
 
 ### 7.6 Flutter Web 的特殊处理
 
@@ -1200,12 +1208,12 @@ Flutter Web 可以复用 Vue 3 的 HTML SDK 方式，或者用 `google_sign_in` 
 <!-- web/index.html （Flutter Web 专用） -->
 <!-- Facebook SDK（flutter_facebook_auth 官方要求） -->
 <script>
-  window.fbAsyncInit = function() {
+  window.fbAsyncInit = function () {
     FB.init({
-      appId: 'YOUR_APP_ID',
+      appId: "YOUR_APP_ID",
       cookie: true,
       xfbml: true,
-      version: 'v19.0'
+      version: "v19.0",
     });
   };
 </script>
@@ -1214,27 +1222,27 @@ Flutter Web 可以复用 Vue 3 的 HTML SDK 方式，或者用 `google_sign_in` 
 
 ### 7.7 关键差异总结
 
-| 问题 | Vue 3 Web | Flutter |
-|------|-----------|---------|
-| **Apple 登录支持范围** | 仅 Safari（iOS/macOS） | iOS + Android + macOS + Web |
-| **Token 安全存储** | localStorage（可被 XSS 读取） | Keychain/Keystore（系统级加密）✅ |
-| **Google 账号选择体验** | 弹窗（GSI UI） | 系统原生账号选择器 ✅ |
-| **离线 token 刷新** | 需要手写逻辑 | Dio Interceptor 自动刷新 |
-| **需要后端新接口** | ❌ 不需要 | ❌ 不需要 |
-| **调试便利性** | Chrome DevTools | Flutter DevTools + `flutter run` |
+| 问题                    | Vue 3 Web                     | Flutter                           |
+| ----------------------- | ----------------------------- | --------------------------------- |
+| **Apple 登录支持范围**  | 仅 Safari（iOS/macOS）        | iOS + Android + macOS + Web       |
+| **Token 安全存储**      | localStorage（可被 XSS 读取） | Keychain/Keystore（系统级加密）✅ |
+| **Google 账号选择体验** | 弹窗（GSI UI）                | 系统原生账号选择器 ✅             |
+| **离线 token 刷新**     | 需要手写逻辑                  | Dio Interceptor 自动刷新          |
+| **需要后端新接口**      | ❌ 不需要                     | ❌ 不需要                         |
+| **调试便利性**          | Chrome DevTools               | Flutter DevTools + `flutter run`  |
 
 ### 7.8 Flutter 接入工时估算
 
-| 任务 | 工时 |
-|------|------|
-| pubspec.yaml + 依赖安装 | 0.5h |
-| Google Sign-In 接入（含 Firebase 配置） | 3h |
-| Facebook Login 接入（含原生配置） | 4h |
-| Apple Sign-In 接入（含 Entitlement 配置） | 3h |
-| 统一 OAuthLoginService + token 存储 | 2h |
-| 登录页 UI（三个按钮 + 平台判断） | 2h |
-| 联调测试（真机） | 4h |
-| **合计** | **~18-20h** |
+| 任务                                      | 工时        |
+| ----------------------------------------- | ----------- |
+| pubspec.yaml + 依赖安装                   | 0.5h        |
+| Google Sign-In 接入（含 Firebase 配置）   | 3h          |
+| Facebook Login 接入（含原生配置）         | 4h          |
+| Apple Sign-In 接入（含 Entitlement 配置） | 3h          |
+| 统一 OAuthLoginService + token 存储       | 2h          |
+| 登录页 UI（三个按钮 + 平台判断）          | 2h          |
+| 联调测试（真机）                          | 4h          |
+| **合计**                                  | **~18-20h** |
 
 > 💡 **与 Vue 3 共用的部分**：后端接口、API 路由、数据库、JWT 验证逻辑 —— 全部不变。
 
@@ -1267,7 +1275,7 @@ APPLE_KEY_ID=YYYYYYYYYY
 APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```
 
-### 前端环境变量（`apps/mini-shop-admin/.env`）
+### Web 端环境变量（`.env`）
 
 ```bash
 VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
@@ -1312,7 +1320,7 @@ const apiBaseUrl = String.fromEnvironment(
 
 #### A) Google OAuth 申请步骤（Web + Android + iOS）
 
-1. 进入 [Google Cloud Console](https://console.cloud.google.com) 新建或选择 Project。  
+1. 进入 [Google Cloud Console](https://console.cloud.google.com) 新建或选择 Project。
 2. 在 `APIs & Services -> OAuth consent screen` 配置应用信息：
    - App name / Support email
    - Scopes（至少 `email`、`profile`）
@@ -1329,13 +1337,14 @@ const apiBaseUrl = String.fromEnvironment(
    - `GOOGLE_CLIENT_SECRET`（仅部分服务端流程需要）
 
 常见错误：
-- `aud mismatch`：前端使用了 A 项目的 clientId，后端配置了 B 项目 clientId。  
+
+- `aud mismatch`：前端使用了 A 项目的 clientId，后端配置了 B 项目 clientId。
 - `origin_mismatch`：漏配本地端口或生产域名。
 
 #### B) Facebook OAuth 申请步骤
 
-1. 进入 [Meta for Developers](https://developers.facebook.com) -> `My Apps` 创建 App。  
-2. 添加产品 `Facebook Login`。  
+1. 进入 [Meta for Developers](https://developers.facebook.com) -> `My Apps` 创建 App。
+2. 添加产品 `Facebook Login`。
 3. 在 `Settings -> Basic` 获取：
    - `FACEBOOK_APP_ID`
    - `FACEBOOK_APP_SECRET`
@@ -1349,12 +1358,13 @@ const apiBaseUrl = String.fromEnvironment(
 6. App 状态：开发阶段可用测试账号；上线要提交审核（若申请扩展权限）。
 
 常见错误：
-- `URL blocked`：redirect URI 不在白名单。  
+
+- `URL blocked`：redirect URI 不在白名单。
 - `userId mismatch`：前端传的 `userId` 与 Graph API 返回 `id` 不一致（后端应拒绝）。
 
 #### C) Apple Sign In 申请步骤
 
-1. 进入 [Apple Developer](https://developer.apple.com/account) 并开通付费开发者账号。  
+1. 进入 [Apple Developer](https://developer.apple.com/account) 并开通付费开发者账号。
 2. 在 `Certificates, Identifiers & Profiles` 中：
    - 创建 `Identifier`（App ID 或 Service ID）
    - 开启 `Sign In with Apple`
@@ -1371,26 +1381,27 @@ APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```
 
 常见错误：
-- `invalid_client`：`APPLE_CLIENT_ID` 配错（Service ID / Bundle ID 混用）。  
-- `invalid_grant`：`code` 过期或重放。  
+
+- `invalid_client`：`APPLE_CLIENT_ID` 配错（Service ID / Bundle ID 混用）。
+- `invalid_grant`：`code` 过期或重放。
 - 私钥丢失：`.p8` 未妥善保存，需重新生成 key。
 
 #### D) 本项目最低必填变量对照
 
-| 平台 | 后端必填 | 前端必填 |
-|------|---------|---------|
-| Google | `GOOGLE_CLIENT_ID` | `VITE_GOOGLE_CLIENT_ID` |
-| Facebook | （MVP 可无）`FACEBOOK_APP_ID` | `VITE_FACEBOOK_APP_ID` |
-| Apple | `APPLE_CLIENT_ID` | `VITE_APPLE_CLIENT_ID` |
+| 平台     | 后端必填                      | 前端必填                |
+| -------- | ----------------------------- | ----------------------- |
+| Google   | `GOOGLE_CLIENT_ID`            | `VITE_GOOGLE_CLIENT_ID` |
+| Facebook | （MVP 可无）`FACEBOOK_APP_ID` | `VITE_FACEBOOK_APP_ID`  |
+| Apple    | `APPLE_CLIENT_ID`             | `VITE_APPLE_CLIENT_ID`  |
 
 > 当前后端实现对 `Google/Apple` 会做受众校验，因此这两个 `CLIENT_ID` 必须与前端同一应用配置。
 
 #### E) 配置完成后的验收顺序
 
-1. 先在前端拿到第三方 token（Google idToken / Facebook accessToken / Apple idToken）。  
-2. 调后端 `POST /auth/oauth/:provider`。  
-3. 检查返回是否含 `tokens.accessToken`。  
-4. 检查数据库：`oauth_accounts` 有新纪录，`user_login_logs` 有 `loginType=3`。  
+1. 先在前端拿到第三方 token（Google idToken / Facebook accessToken / Apple idToken）。
+2. 调后端 `POST /auth/oauth/:provider`。
+3. 检查返回是否含 `tokens.accessToken`。
+4. 检查数据库：`oauth_accounts` 有新纪录，`user_login_logs` 有 `loginType=3`。
 5. 再验证 `GET /auth/profile` 是否可正常访问。
 
 ---
@@ -1399,13 +1410,13 @@ APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 
 ### 9.1 Token 验证安全
 
-| 风险 | 防御措施 |
-|------|---------|
+| 风险                 | 防御措施                                          |
+| -------------------- | ------------------------------------------------- |
 | 伪造 Google id_token | 验证 `aud`（必须等于 GOOGLE_CLIENT_ID）+ 验证签名 |
-| Facebook userId 伪造 | 后端比对 API 返回的 `id` 与请求中的 `userId` |
-| Apple token 过期 | `jwt.verify` 自动检查 `exp` |
-| 重放攻击 | 三方 token 本身有短 TTL（5分钟），配合限流即可 |
-| MITM 中间人 | 全程 HTTPS，token 不进 query string |
+| Facebook userId 伪造 | 后端比对 API 返回的 `id` 与请求中的 `userId`      |
+| Apple token 过期     | `jwt.verify` 自动检查 `exp`                       |
+| 重放攻击             | 三方 token 本身有短 TTL（5分钟），配合限流即可    |
+| MITM 中间人          | 全程 HTTPS，token 不进 query string               |
 
 ### 9.2 限流配置
 
@@ -1457,23 +1468,23 @@ APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```typescript
 // auth.service.spec.ts 新增测试用例
 
-describe('loginWithOauth', () => {
-  it('Google 新用户 → 创建 User + OauthAccount + 返回 tokens', async () => {
+describe("loginWithOauth", () => {
+  it("Google 新用户 → 创建 User + OauthAccount + 返回 tokens", async () => {
     // mock prisma.$transaction
     // 断言 user.upsert + oauthAccount.upsert 被调用
     // 断言返回 tokens 结构
   });
 
-  it('Google 老用户 → 更新 lastLoginAt + 返回相同 userId', async () => {
+  it("Google 老用户 → 更新 lastLoginAt + 返回相同 userId", async () => {
     // mock oauthAccount.findUnique 返回已有记录
     // 断言 user 不重新创建
   });
 
-  it('无效 Google token → 抛出 UnauthorizedException', async () => {
+  it("无效 Google token → 抛出 UnauthorizedException", async () => {
     // mock googleProvider.verifyIdToken 抛错
   });
 
-  it('Facebook userId 不匹配 → 抛出 UnauthorizedException', async () => {
+  it("Facebook userId 不匹配 → 抛出 UnauthorizedException", async () => {
     // mock FB API 返回的 id 与传入 userId 不同
   });
 });
@@ -1539,7 +1550,7 @@ curl -X POST http://localhost:3000/auth/oauth/google \
 
 - [ ] 在各平台控制台创建应用，获取凭证
 - [ ] 更新 `deploy/.env.dev` 和 `deploy/.env.prod`（后端变量）
-- [ ] Vue 3：更新 `apps/mini-shop-admin/.env`
+- [ ] Web 端：更新对应项目 `.env`
 - [ ] Flutter：配置 `--dart-define` 编译参数（或 `flutter_dotenv`）
 - [ ] 配置 Google OAuth 授权来源（`localhost:5173` + `joyminis.com`）
 - [ ] 配置 Facebook App 有效 OAuth 重定向 URI
@@ -1566,7 +1577,7 @@ curl -X POST http://localhost:3000/auth/oauth/google \
 - [x] 统一审计：Email OTP 登录同样写 `UserLoginLog`（区分 loginMethod）
 - [ ] 安全收口：生产环境禁用测试万能码，错误提示避免邮箱枚举
 
-#### Phase F 前端对接文档（mini-shop-admin，仅接口联调，不改登录页 UI）
+#### Phase F 前端对接文档（客户端前端，仅接口联调，不改登录页 UI）
 
 > 当前范围：仅完成 API 层联调与类型对齐，登录页入口改造暂缓。
 
@@ -1597,7 +1608,7 @@ Content-Type: application/json
   - `devCode` 仅非生产环境可能返回，用于本地联调。
 - `email/login`：与客户端登录响应保持一致，包含 `tokens.accessToken` / `tokens.refreshToken`。
 
-**3) mini-shop-admin 推荐类型定义（API 层）**
+**3) 客户端前端推荐类型定义（API 层）**
 
 ```ts
 export interface SendEmailCodePayload {
@@ -1626,14 +1637,17 @@ export interface EmailCodeLoginResponse {
 }
 ```
 
-**4) mini-shop-admin API 封装示例（仅接口，不涉及 UI）**
+**4) 客户端前端 API 封装示例（仅接口，不涉及 UI）**
 
 ```ts
 export const authApi = {
   // ...existing methods...
 
   sendEmailCode: (data: { email: string }) =>
-    http.post<{ sent: boolean; devCode?: string }>('/auth/email/send-code', data),
+    http.post<{ sent: boolean; devCode?: string }>(
+      "/auth/email/send-code",
+      data,
+    ),
 
   loginWithEmailCode: (data: { email: string; code: string }) =>
     http.post<{
@@ -1642,16 +1656,16 @@ export const authApi = {
       nickname: string | null;
       avatar: string | null;
       email: string;
-    }>('/auth/email/login', data),
+    }>("/auth/email/login", data),
 };
 ```
 
 **5) 联调建议顺序（不改页面也可跑通）**
 
-1. 先在本地调用 `sendEmailCode`，确认返回 `sent=true`。  
-2. 非生产环境直接用 `devCode` 调 `loginWithEmailCode`。  
-3. 校验响应里 `tokens.accessToken` 是否可用于后续 `GET /auth/profile`。  
-4. 后端 DB 验证：`user_login_logs` 存在 `loginMethod=email` 记录。  
+1. 先在本地调用 `sendEmailCode`，确认返回 `sent=true`。
+2. 非生产环境直接用 `devCode` 调 `loginWithEmailCode`。
+3. 校验响应里 `tokens.accessToken` 是否可用于后续 `GET /auth/profile`。
+4. 后端 DB 验证：`user_login_logs` 存在 `loginMethod=email` 记录。
 
 **6) 错误码与前端提示建议**
 
@@ -1668,54 +1682,54 @@ export const authApi = {
 
 ### 12.1 必读文件清单（按优先级）
 
-| 优先级 | 文件 | 你要看什么 |
-|------|------|------|
-| P0 | `apps/api/src/client/auth/auth.controller.ts` | OAuth 路由入口、入参、调用链 |
-| P0 | `apps/api/src/client/auth/auth.service.ts` | `loginWithOauth()` 核心业务：登录即注册 / upsert / 发 token / 写登录日志 |
-| P0 | `apps/api/src/client/auth/providers/google.provider.ts` | Google token 校验逻辑（`aud`、`sub`） |
-| P0 | `apps/api/src/client/auth/providers/facebook.provider.ts` | FB token 校验与 `userId` 一致性校验 |
-| P0 | `apps/api/src/client/auth/providers/apple.provider.ts` | Apple idToken 解析与过期/受众校验 |
-| P0 | `apps/api/prisma/schema.prisma` | `OauthAccount` / `User` / `UserLoginLog` 约束与关系 |
-| P1 | `apps/api/src/client/auth/dto/oauth-login.dto.ts` | 三个平台入参差异 |
-| P1 | `apps/api/src/client/auth/dto/oauth-login.response.dto.ts` | OAuth 登录统一返回结构 |
-| P1 | `apps/api/src/client/auth/auth.module.ts` | Provider 依赖注入与 JWT 配置 |
-| P1 | `apps/mini-shop-admin/src/type/types.ts` | 前端 OAuth 请求/响应类型 |
-| P1 | `apps/mini-shop-admin/src/api/index.ts` | 前端如何调用 `/auth/oauth/*` |
-| P2 | `apps/api/src/client/auth/auth.service.spec.ts` | 新用户/老用户/异常路径测试思路 |
-| P2 | `apps/api/src/client/auth/providers/*.spec.ts` | Provider 校验边界条件 |
+| 优先级 | 文件                                                       | 你要看什么                                                               |
+| ------ | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| P0     | `apps/api/src/client/auth/auth.controller.ts`              | OAuth 路由入口、入参、调用链                                             |
+| P0     | `apps/api/src/client/auth/auth.service.ts`                 | `loginWithOauth()` 核心业务：登录即注册 / upsert / 发 token / 写登录日志 |
+| P0     | `apps/api/src/client/auth/providers/google.provider.ts`    | Google token 校验逻辑（`aud`、`sub`）                                    |
+| P0     | `apps/api/src/client/auth/providers/facebook.provider.ts`  | FB token 校验与 `userId` 一致性校验                                      |
+| P0     | `apps/api/src/client/auth/providers/apple.provider.ts`     | Apple idToken 解析与过期/受众校验                                        |
+| P0     | `apps/api/prisma/schema.prisma`                            | `OauthAccount` / `User` / `UserLoginLog` 约束与关系                      |
+| P1     | `apps/api/src/client/auth/dto/oauth-login.dto.ts`          | 三个平台入参差异                                                         |
+| P1     | `apps/api/src/client/auth/dto/oauth-login.response.dto.ts` | OAuth 登录统一返回结构                                                   |
+| P1     | `apps/api/src/client/auth/auth.module.ts`                  | Provider 依赖注入与 JWT 配置                                             |
+| P1     | `client/src/type/types.ts`                                 | 前端 OAuth 请求/响应类型（示例路径）                                     |
+| P1     | `client/src/api/index.ts`                                  | 前端如何调用 `/auth/oauth/*`（示例路径）                                 |
+| P2     | `apps/api/src/client/auth/auth.service.spec.ts`            | 新用户/老用户/异常路径测试思路                                           |
+| P2     | `apps/api/src/client/auth/providers/*.spec.ts`             | Provider 校验边界条件                                                    |
 
 ### 12.2 必会 API（最小闭环）
 
-| API | 作用 | 关键入参 |
-|-----|------|---------|
-| `POST /auth/oauth/google` | Google 三方登录 | `idToken`, `inviteCode?` |
+| API                         | 作用              | 关键入参                               |
+| --------------------------- | ----------------- | -------------------------------------- |
+| `POST /auth/oauth/google`   | Google 三方登录   | `idToken`, `inviteCode?`               |
 | `POST /auth/oauth/facebook` | Facebook 三方登录 | `accessToken`, `userId`, `inviteCode?` |
-| `POST /auth/oauth/apple` | Apple 三方登录 | `idToken`, `code?`, `inviteCode?` |
-| `POST /auth/refresh` | 刷新 token | `refreshToken` |
-| `GET /auth/profile` | 获取当前用户信息 | Bearer Token |
+| `POST /auth/oauth/apple`    | Apple 三方登录    | `idToken`, `code?`, `inviteCode?`      |
+| `POST /auth/refresh`        | 刷新 token        | `refreshToken`                         |
+| `GET /auth/profile`         | 获取当前用户信息  | Bearer Token                           |
 
 ### 12.3 建议学习顺序（2-3 小时速通）
 
-1. 先读 `auth.controller.ts`，画出三条 OAuth 路由到 `AuthService` 的调用图。  
-2. 再读 `auth.service.ts` 的 `loginWithOauth()`，按“老用户复用 / 新用户创建”两条分支理解。  
-3. 对照 `schema.prisma` 看 `@@unique([provider, providerUserId])` 为什么是核心约束。  
-4. 精读三个 Provider，理解三平台 token 校验差异。  
-5. 最后看 `*.spec.ts`，把异常路径（无效 token、ID 不匹配）一次性补齐。  
+1. 先读 `auth.controller.ts`，画出三条 OAuth 路由到 `AuthService` 的调用图。
+2. 再读 `auth.service.ts` 的 `loginWithOauth()`，按“老用户复用 / 新用户创建”两条分支理解。
+3. 对照 `schema.prisma` 看 `@@unique([provider, providerUserId])` 为什么是核心约束。
+4. 精读三个 Provider，理解三平台 token 校验差异。
+5. 最后看 `*.spec.ts`，把异常路径（无效 token、ID 不匹配）一次性补齐。
 
 ### 12.4 需要真正吃透的 5 个设计点
 
-1. **为什么是客户端令牌流**：更适合 SPA/小程序/Flutter，多端统一接口。  
-2. **为什么要 upsert OauthAccount**：保证幂等和重复登录稳定。  
-3. **为什么要“登录即注册”**：降低首登门槛，先拿到会话再引导补全资料。  
-4. **为什么写 UserLoginLog**：审计、风控、问题追溯都依赖登录日志。  
-5. **为什么校验 audience / userId**：防止拿别的应用 token 或伪造 ID 越权登录。  
+1. **为什么是客户端令牌流**：更适合 SPA/小程序/Flutter，多端统一接口。
+2. **为什么要 upsert OauthAccount**：保证幂等和重复登录稳定。
+3. **为什么要“登录即注册”**：降低首登门槛，先拿到会话再引导补全资料。
+4. **为什么写 UserLoginLog**：审计、风控、问题追溯都依赖登录日志。
+5. **为什么校验 audience / userId**：防止拿别的应用 token 或伪造 ID 越权登录。
 
 ### 12.5 自测清单（学完可快速自证）
 
-- 能说清 Google / Facebook / Apple 三个平台入参和验证差异。  
-- 能解释 `OauthAccount` 唯一索引如何避免重复绑定。  
-- 能手写出 `loginWithOauth()` 的核心事务步骤（查绑→建/更 user→upsert oauth→写 log→发 token）。  
-- 能用单测覆盖“成功登录 / token 无效 / 账号复用”三条主路径。  
+- 能说清 Google / Facebook / Apple 三个平台入参和验证差异。
+- 能解释 `OauthAccount` 唯一索引如何避免重复绑定。
+- 能手写出 `loginWithOauth()` 的核心事务步骤（查绑→建/更 user→upsert oauth→写 log→发 token）。
+- 能用单测覆盖“成功登录 / token 无效 / 账号复用”三条主路径。
 
 ---
 
@@ -1807,15 +1821,15 @@ Apple `.p8` 私钥不能存明文，应通过环境变量注入（换行用 `\n`
 
 ### ADR-004: Flutter 为什么不用 Firebase Authentication？
 
-| 方案 | 优点 | 缺点 | 结论 |
-|------|------|------|------|
-| **Firebase Auth（托管）** | 开箱即用，支持 Google/FB/Apple | 用户数据在 Firebase，迁移难；多一层依赖；需同步到自己 DB | ❌ 不选 |
-| **自建后端验证（本方案）** | 数据完全自控；与现有 JWT 体系统一；无额外 Firebase 费用 | 需要手写 Provider 验证逻辑 | ✅ 选 |
+| 方案                       | 优点                                                    | 缺点                                                     | 结论    |
+| -------------------------- | ------------------------------------------------------- | -------------------------------------------------------- | ------- |
+| **Firebase Auth（托管）**  | 开箱即用，支持 Google/FB/Apple                          | 用户数据在 Firebase，迁移难；多一层依赖；需同步到自己 DB | ❌ 不选 |
+| **自建后端验证（本方案）** | 数据完全自控；与现有 JWT 体系统一；无额外 Firebase 费用 | 需要手写 Provider 验证逻辑                               | ✅ 选   |
 
 虽然 Firebase Auth 更快上手，但项目已有完整的 JWT 体系和用户表，引入 Firebase Auth 会造成：
+
 1. 两套用户 ID（Firebase UID vs 自建 `User.id`）
 2. 额外的 Firebase 订阅费用（MAU > 5万后收费）
 3. 数据出境合规风险（菲律宾 DPA）
 
 因此，继续使用自建后端验证三方 token 是更合适的选择。
-
