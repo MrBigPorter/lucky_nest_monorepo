@@ -246,6 +246,8 @@ error TS2307: Cannot find module '@lucky/shared/dist/types/wallet'
 RUN node_modules/.bin/tsc -p packages/shared/tsconfig.json
 ```
 
+> 📖 完整原理与新手指南见 `read/TSCONFIG_MONOREPO_CN.md`
+
 ---
 
 ### 问题 6d — Docker build: `COPY apps/api/node_modules: not found`
