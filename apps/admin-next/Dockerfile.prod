@@ -26,6 +26,7 @@ COPY .yarn ./.yarn
 
 COPY apps/admin-next/package.json          ./apps/admin-next/package.json
 COPY apps/api/package.json                 ./apps/api/package.json
+COPY apps/liveness-web/package.json        ./apps/liveness-web/package.json
 COPY packages/shared/package.json          ./packages/shared/package.json
 COPY packages/ui/package.json              ./packages/ui/package.json
 COPY packages/eslint-config/package.json   ./packages/eslint-config/package.json
