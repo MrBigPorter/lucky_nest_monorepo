@@ -133,6 +133,51 @@
 - **文件末尾只允许一个 `\n`**，禁止两个以上空行
 - **长函数调用超过 80 字符必须拆行 + trailing comma**
 
+### ⚠️ Monorepo TypeScript 规范（违反会导致 Docker 构建产物路径错误）
+
+> 事故记录：2026-03-21，`dist/main.js` 变成 `dist/apps/api/src/main.js`，容器启动失败  
+> 详细复盘见 `read/DEPLOY_INCIDENT_20260321_CN.md`（问题 6c/rootDir 章节）
+
+**核心规则（必须记住）：**
+
+- **`paths` 里的跨包引用必须指向 `dist/`（`.d.ts`），不能指向 `src/`（`.ts`）**
+- `.ts` 源文件被 `paths` 引用 → TypeScript 把它纳入编译输出 → `rootDir` 被推断到 monorepo 根 → 所有输出路径错误嵌套
+
+```jsonc
+// ❌ 错误：指向 .ts 源码，会导致 rootDir 推断偏移
+"@lucky/shared": ["../../packages/shared/src/index.ts"]
+
+// ✅ 正确：指向 dist/ 声明文件，只用于类型检查，不影响编译输出
+"@lucky/shared": ["../../packages/shared/dist/index"]
+```
+
+**`tsconfig.build.json` 必须只含 `src/`：**
+
+```jsonc
+// apps/api/tsconfig.build.json — nest build 专用
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "declaration": false },
+  "include": ["src/**/*"], // ← 只编译 src/，不能有 scripts/
+  "exclude": ["node_modules", "dist", "test", "scripts", "**/*.spec.ts"],
+}
+// tsconfig.json 保留 scripts/ 供 check-types / IDE 使用（--noEmit 不受 rootDir 影响）
+```
+
+**症状速查（发现这些立即检查 tsconfig）：**
+
+| 症状                        | 根因                                                                |
+| --------------------------- | ------------------------------------------------------------------- |
+| `dist/apps/api/src/main.js` | `paths` 指向 `.ts`，rootDir 推断到 monorepo 根                      |
+| `dist/src/main.js`          | `tsconfig.build.json` 包含了 `scripts/`，rootDir 推断到 `apps/api/` |
+| `dist/main.js` ✅           | 正确，`tsconfig.build.json` 只含 `src/`                             |
+
+**修改 `packages/shared` 后的必要操作（保持 `dist/` 最新）：**
+
+```bash
+node packages/shared/scripts/build.js   # 重建 dist/，IDE 和 API 的类型才同步
+```
+
 ### ⚠️ Prisma v6 规范（违反会导致容器崩溃或大量 TS 报错）
 
 > 事故记录：2026-03-17，Apple Silicon Docker 容器启动崩溃 + 187 个 TS 错误  
