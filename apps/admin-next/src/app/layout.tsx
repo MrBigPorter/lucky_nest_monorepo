@@ -65,6 +65,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta
+          name="build-time"
+          content={process.env.NEXT_PUBLIC_DEPLOYED_AT ?? ''}
+        />
+        <meta name="git-sha" content={process.env.NEXT_PUBLIC_GIT_SHA ?? ''} />
         {/*
           内联脚本：在 React hydrate 之前同步读 localStorage 中的 theme，
           立即设置 <html> class，避免白色闪屏（FOUC）。

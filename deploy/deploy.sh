@@ -23,6 +23,8 @@ SSH_TARGET="${VPS_USER}@${VPS_IP}"
 # 镜像名称
 BACKEND_IMAGE="lucky-backend-prod:latest"
 ADMIN_IMAGE="lucky-admin-next-prod:latest"
+ADMIN_BUILD_DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ADMIN_BUILD_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo local-dev)"
 
 # 颜色
 RED='\033[0;31m'
@@ -124,6 +126,8 @@ if [ "$SKIP_BUILD" = false ]; then
             -f apps/admin-next/Dockerfile.prod \
             --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.joyminis.com/api \
             --build-arg NEXT_PUBLIC_APP_ENV=production \
+            --build-arg NEXT_PUBLIC_DEPLOYED_AT="$ADMIN_BUILD_DEPLOYED_AT" \
+            --build-arg NEXT_PUBLIC_GIT_SHA="$ADMIN_BUILD_GIT_SHA" \
             -t "$ADMIN_IMAGE" \
             .
         log "✅ admin-next 镜像构建完成"
