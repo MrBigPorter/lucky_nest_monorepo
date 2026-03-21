@@ -169,6 +169,32 @@ Token 创建地址：https://dash.cloudflare.com/profile/api-tokens
 | `Smoke Check` failed                                        | `CF_ADMIN_HEALTHCHECK_URL` 是否可访问                                                                                              | 先本地 `curl` 验证 URL，再修复健康检查地址                                                                                            |
 | Telegram send failed                                        | 通知配置缺失                                                                                                                       | 补齐 Telegram secrets，或接受通知失败不阻断发布                                                                                       |
 
+### 6.3 Admin 环境变量优先级（避免 API 少 `/api`）
+
+> 目标：明确 `NEXT_PUBLIC_API_BASE_URL` 到底由谁生效，避免线上请求变成 `https://api.joyminis.com/v1/...`。
+
+#### 生效链路（按构建路径）
+
+| 构建路径                        | 最终来源（高优先）                                                                                                  | 兜底来源（低优先）                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Cloudflare Workers 主发布       | `.github/workflows/deploy-admin-cloudflare.yml` 的 `env.NEXT_PUBLIC_API_BASE_URL`（来自 GitHub Environment Secret） | `apps/admin-next/.env.production`                                       |
+| VPS Docker 回滚发布（手动触发） | `.github/workflows/deploy-admin.yml` 的 `build-args.NEXT_PUBLIC_API_BASE_URL`（来自 GitHub Environment Secret）     | `apps/admin-next/Dockerfile.prod` 的 `ARG NEXT_PUBLIC_API_BASE_URL=...` |
+| 本地手动 Docker 构建            | `deploy/deploy.sh` 的 `--build-arg NEXT_PUBLIC_API_BASE_URL=...`                                                    | `apps/admin-next/Dockerfile.prod` 的 `ARG` 默认值                       |
+| 本地 `next dev`                 | `apps/admin-next/.env.development`                                                                                  | `apps/admin-next/.env`                                                  |
+
+#### 为什么要同时配 CI 和 Dockerfile
+
+- CI / workflow：决定“值是什么”（例如 Secret 中是否带 `/api`）。
+- Dockerfile `ARG/ENV`：决定“值能否进入 Docker 构建并被 `next build` 使用”。
+- 两者不是重复配置，是“传值方 + 接收方”。少任一侧都可能落回错误兜底值。
+
+#### 快速排障（线上少 `/api`）
+
+1. 检查 GitHub Environment Secret：`NEXT_PUBLIC_API_BASE_URL` 必须是 `https://api.joyminis.com/api`。
+2. 确认 `apps/admin-next/.env.production` 兜底值同样是 `https://api.joyminis.com/api`。
+3. 重新触发 `Deploy Admin (Cloudflare)`（`NEXT_PUBLIC_*` 为构建时注入，必须重建才生效）。
+4. 浏览器 Network 验证登录请求应为：`https://api.joyminis.com/api/v1/auth/admin/login`。
+
 ### 6.4 main 分支保护（强制 PR — 安全必配项）
 
 > ⚠️ **本项目高风险点**：`main` 分支的任何 push 都会**立即触发生产部署**（后端 VPS 重启 + Cloudflare Workers 更新），直接 push = 直接上线，中间没有任何缓冲。
