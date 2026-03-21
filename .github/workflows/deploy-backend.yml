@@ -190,17 +190,16 @@ jobs:
       - name: 📱 Send Telegram Notification
         if: always() # 无论成功失败，这步绝对不能丢！
         run: |
-          STATUS_EMOJI="✅ 成功 (Success)"
+          STATUS_EMOJI="✅ Success"
           if [ "${{ job.status }}" != "success" ]; then
-            STATUS_EMOJI="❌ 失败 (Failed)"
+            STATUS_EMOJI="❌ Failed"
           fi
 
-          # 专门为后端定制的消息模板
-          MESSAGE="⚙️ *Lucky Backend 部署报告*
-          📌 *状态*: $STATUS_EMOJI
-          🏷️ *环境*: Production (VPS: 107.175.53.104) — branch: \`${{ github.ref_name }}\`
-          🔗 *API*: [api.joyminis.com](https://api.joyminis.com/api/v1/health)
-          📝 *Commit ID*: \`${{ github.sha }}\`"
+          MESSAGE="⚙️ *Lucky Backend Deployment Report*
+          📌 *Status*: $STATUS_EMOJI
+          🏷️ *Environment*: Production (VPS) — branch: \`${{ github.ref_name }}\`
+          🔗 *API Health*: [api.joyminis.com](https://api.joyminis.com/api/v1/health)
+          📝 *Commit*: \`${{ github.sha }}\`"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
