@@ -187,7 +187,7 @@ docker compose -f compose.prod.yml --env-file deploy/.env.prod \
   up -d --no-build --force-recreate backend
 # Nginx
 docker compose -f compose.prod.yml --env-file deploy/.env.prod \
-  up -d --no-build --force-recreate nginx
+  up -d --no-build --force-recreate --no-deps nginx
 ```
 
 ### 4.3 Prisma 迁移诊断（判断生产是否落后）
@@ -309,6 +309,58 @@ ssh root@***REDACTED*** \
 2. 必须是：`https://api.joyminis.com/api`（结尾**没有**斜杠，**有** `/api`）
 3. 改完后**必须重新部署 Admin**（`NEXT_PUBLIC_*` 是构建时注入，不重建不生效）
 
+### 5.3 登录 `ERR_NETWORK`：Nginx / CORS 配置基线
+
+适用现象：浏览器里登录请求 `POST /api/v1/auth/admin/login` 显示 `200`，但 Axios 仍报 `ERR_NETWORK`。
+
+生产基线：`nginx/nginx.prod.conf` 的 `location /api/` **不再添加任何 CORS 头**，
+由后端 `apps/api/src/main.ts` 的 `app.enableCors(...)` 统一输出 CORS。
+
+```nginx
+# 通用 API (含上传超时 + 限流)
+# CORS 完全由 NestJS (main.ts enableCors) 处理，Nginx 不添加任何 CORS 头，
+# 避免双重 CORS 头冲突（浏览器会拒绝同时包含 * 和具体域名的响应）。
+location /api/ {
+    limit_req zone=api_limit burst=50 nodelay;
+
+    proxy_connect_timeout 600s;
+    proxy_send_timeout 600s;
+    proxy_read_timeout 600s;
+
+    proxy_pass http://backend:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+应用配置：
+
+```bash
+cd /Volumes/MySSD/work/dev/lucky_nest_monorepo
+yarn deploy:sync
+ssh root@***REDACTED*** 'cd /opt/lucky && docker compose -f compose.prod.yml --env-file deploy/.env.prod up -d --no-build --force-recreate --no-deps nginx'
+```
+
+验证（必须看到**单一**来源，且不是 `*`）：
+
+```bash
+curl -s -I -X OPTIONS https://api.joyminis.com/api/v1/auth/admin/login \
+  -H "Origin: https://admin.joyminis.com" \
+  -H "Access-Control-Request-Method: POST" | grep -i "access-control"
+```
+
+同时确认后端环境变量：`/opt/lucky/deploy/.env.prod` 里有：
+
+```dotenv
+CORS_ORIGIN=https://admin.joyminis.com
+AUTH_COOKIE_DOMAIN=.joyminis.com
+```
+
 ---
 
 ## 6. 回滚
@@ -365,6 +417,7 @@ yarn rollback:admin:dns:execute
 | 缓存   | `REDIS_URL` `REDIS_PASSWORD`                                     |
 | JWT    | `JWT_SECRET` `ADMIN_JWT_SECRET`                                  |
 | 跨域   | `CORS_ORIGIN` `FRONTEND_URL`                                     |
+| Cookie | `AUTH_COOKIE_DOMAIN`（生产建议 `.joyminis.com`）                 |
 | 第三方 | `FIREBASE_*` `RESEND_API_KEY` `RECAPTCHA_SECRET_KEY`             |
 | OAuth  | `GOOGLE_CLIENT_ID`                                               |
 | TURN   | `TURN_URL` `TURN_SECRET`                                         |
