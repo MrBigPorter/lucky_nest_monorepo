@@ -128,6 +128,18 @@ export class UserService {
       throw new ForbiddenException('cannot update yourself');
     }
 
+    // 仅超级管理员可以把任意账号设置为 SUPER_ADMIN，阻断间接提权路径
+    if (dto.role === Role.SUPER_ADMIN) {
+      const operator = await this.prisma.adminUser.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (!operator) throw new BadRequestException('operator not found');
+      if (operator.role !== Role.SUPER_ADMIN) {
+        throw new ForbiddenException('only super admin can assign super admin');
+      }
+    }
+
     if (dto.password) {
       dto.password = await this.passwordService.hash(dto.password);
     }
