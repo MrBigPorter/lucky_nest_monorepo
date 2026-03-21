@@ -250,17 +250,26 @@ jobs:
       - name: 13. Send Telegram Notification
         if: always()
         run: |
-          STATUS_EMOJI="✅ 成功 (Success)"
+          STATUS_EMOJI="✅ Success"
           if [ "${{ job.status }}" != "success" ]; then
-            STATUS_EMOJI="❌ 失败 (Failed)"
+            STATUS_EMOJI="❌ Failed"
           fi
 
-          MESSAGE="☁️ *Admin Next Cloudflare 部署报告*
-          📌 *状态*: $STATUS_EMOJI
-          🏷️ *环境*: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }} (Cloudflare Workers)
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            ADMIN_URL="https://admin.joyminis.com"
+            ADMIN_DOMAIN_LABEL="admin.joyminis.com"
+          else
+            ADMIN_URL="https://admin-dev.joyminis.com"
+            ADMIN_DOMAIN_LABEL="admin-dev.joyminis.com"
+          fi
+
+          MESSAGE="☁️ *Admin Next Cloudflare Deployment Report*
+          📌 *Status*: $STATUS_EMOJI
+          🏷️ *Environment*: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }} (Cloudflare Workers)
+          🔗 *Admin URL*: [$ADMIN_DOMAIN_LABEL]($ADMIN_URL)
           🆔 *Deployment*: \`${{ steps.cloudflare_deploy.outputs.cloudflare_deployment_id || 'n/a' }}\`
           🧩 *Version*: \`${{ steps.cloudflare_deploy.outputs.cloudflare_version_id || 'n/a' }}\`
-          📝 *Commit ID*: \`${{ github.sha }}\`"
+          📝 *Commit*: \`${{ github.sha }}\`"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
             -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
