@@ -46,12 +46,15 @@ jobs:
       packages: write
 
     steps:
+      # Step 1 / 步骤 1: Checkout repository source code
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Step 2 / 步骤 2: Enable Docker Buildx builder
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Step 3 / 步骤 3: Authenticate to GHCR for image push
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -59,6 +62,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Step 4 / 步骤 4: Generate Docker image tags/labels metadata
       - name: Docker meta (生成标签)
         id: meta
         uses: docker/metadata-action@v5
@@ -68,6 +72,7 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest
 
+      # Step 5 / 步骤 5: Build backend image and push to GHCR
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
@@ -90,9 +95,11 @@ jobs:
     environment: production
 
     steps:
+      # Step 1 / 步骤 1: Checkout repo for deployment artifacts/scripts
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Step 2 / 步骤 2: Sync deploy shell scripts to VPS
       - name: Sync deploy scripts to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -103,6 +110,7 @@ jobs:
           target: /opt/lucky/deploy
           overwrite: true
 
+      # Step 3 / 步骤 3: Pull image, migrate DB, restart service, health-check, and rollback via SSH
       - name: Deploy via SSH (登录服务器执行脚本)
         uses: appleboy/ssh-action@v1.2.0
         env:
@@ -187,6 +195,7 @@ jobs:
       # =========================================
       # 阶段三: Telegram 战报通知
       # =========================================
+      # Step 4 / 步骤 4: Send deployment status notification to Telegram
       - name: 📱 Send Telegram Notification
         if: always() # 无论成功失败，这步绝对不能丢！
         run: |
