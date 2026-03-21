@@ -553,10 +553,19 @@ export const authApi = {
 
   // 设置 HTTP-only Cookie（登录成功后调用，由后端写 httpOnly cookie）
   setCookie: (token: string) =>
-    http.post<{ ok: boolean }>('/v1/auth/admin/set-cookie', { token }),
+    http.post<{ ok: boolean }>(
+      '/v1/auth/admin/set-cookie',
+      { token },
+      { withCredentials: true, headers: { 'x-skip-auth-refresh': '1' } },
+    ),
 
   // 清除 HTTP-only Cookie（登出时调用）
-  clearCookie: () => http.post<{ ok: boolean }>('/v1/auth/admin/clear-cookie'),
+  clearCookie: () =>
+    http.post<{ ok: boolean }>(
+      '/v1/auth/admin/clear-cookie',
+      {},
+      { withCredentials: true, headers: { 'x-skip-auth-refresh': '1' } },
+    ),
 
   // 刷新 token
   refreshToken: (refreshToken: string) =>

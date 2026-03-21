@@ -358,6 +358,7 @@ curl -s -I -X OPTIONS https://api.joyminis.com/api/v1/auth/admin/login \
 
 ```dotenv
 CORS_ORIGIN=https://admin.joyminis.com
+AUTH_COOKIE_DOMAIN=.joyminis.com
 ```
 
 ---
@@ -416,6 +417,7 @@ yarn rollback:admin:dns:execute
 | 缓存   | `REDIS_URL` `REDIS_PASSWORD`                                     |
 | JWT    | `JWT_SECRET` `ADMIN_JWT_SECRET`                                  |
 | 跨域   | `CORS_ORIGIN` `FRONTEND_URL`                                     |
+| Cookie | `AUTH_COOKIE_DOMAIN`（生产建议 `.joyminis.com`）                 |
 | 第三方 | `FIREBASE_*` `RESEND_API_KEY` `RECAPTCHA_SECRET_KEY`             |
 | OAuth  | `GOOGLE_CLIENT_ID`                                               |
 | TURN   | `TURN_URL` `TURN_SECRET`                                         |
