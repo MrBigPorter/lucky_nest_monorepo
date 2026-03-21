@@ -172,11 +172,12 @@ jobs:
             | tail -1 \
             | sed -E 's/.*[: ]+([a-z0-9_-]+)$/\1/I' || true)
 
+          # Keep empty when parsing fails; downstream UI/Telegram falls back to n/a.
           if [ -z "$CF_DEPLOYMENT_ID" ]; then
-            CF_DEPLOYMENT_ID="unknown"
+            CF_DEPLOYMENT_ID=""
           fi
           if [ -z "$CF_VERSION_ID" ]; then
-            CF_VERSION_ID="unknown"
+            CF_VERSION_ID=""
           fi
 
           echo "cloudflare_deployment_id=$CF_DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
@@ -198,7 +199,7 @@ jobs:
             "environment": "${ENV_NAME}",
             "auto_merge": false,
             "required_contexts": [],
-            "description": "Admin Cloudflare deploy: ${{ steps.cloudflare_deploy.outputs.cloudflare_deployment_id }} / ${{ steps.cloudflare_deploy.outputs.cloudflare_version_id }}"
+            "description": "Admin Cloudflare deploy"
           }
           JSON
           )
@@ -265,8 +266,6 @@ jobs:
 
           - Environment: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
           - Commit: \`${{ github.sha }}\`
-          - Cloudflare Deployment ID: \`${{ steps.cloudflare_deploy.outputs.cloudflare_deployment_id || 'n/a' }}\`
-          - Cloudflare Version ID: \`${{ steps.cloudflare_deploy.outputs.cloudflare_version_id || 'n/a' }}\`
           - Rollback Note: rollback to previous known good deployment before commit \`${{ github.sha }}\`
 
           ### Quick Rollback Note (DNS)
@@ -295,8 +294,6 @@ jobs:
           📌 *Status*: $STATUS_EMOJI
           🏷️ *Environment*: ${{ github.ref_name == 'main' && 'Production' || 'Preview' }} (Cloudflare Workers)
           🔗 *Admin URL*: [$ADMIN_DOMAIN_LABEL]($ADMIN_URL)
-          🆔 *Deployment*: \`${{ steps.cloudflare_deploy.outputs.cloudflare_deployment_id || 'n/a' }}\`
-          🧩 *Version*: \`${{ steps.cloudflare_deploy.outputs.cloudflare_version_id || 'n/a' }}\`
           📝 *Commit*: \`${{ github.sha }}\`"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" \
