@@ -122,7 +122,7 @@ if [ "$SKIP_BUILD" = false ]; then
         docker build \
             --platform linux/amd64 \
             -f apps/admin-next/Dockerfile.prod \
-            --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.joyminis.com \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.joyminis.com/api \
             --build-arg NEXT_PUBLIC_APP_ENV=production \
             -t "$ADMIN_IMAGE" \
             .
