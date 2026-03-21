@@ -28,7 +28,6 @@ lucky_nest_monorepo/
 ├── apps/
 │   ├── admin-next/      ← 后台管理系统（Next.js）
 │   ├── api/             ← 后端 API（NestJS + Prisma）
-│   ├── mini-shop-admin/ ← 小程序后台（Vue）
 │   └── liveness-web/    ← 活体检测前端（Vite）
 ├── packages/
 │   ├── shared/          ← 公共工具函数（前后端共用）
