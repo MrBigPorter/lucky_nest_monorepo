@@ -15,12 +15,12 @@ import {
   OrderNoHelper,
   RECHARGE_STATUS,
   RelatedType,
+  TRANSACTION_STATUS,
   WITHDRAW_STATUS,
 } from '@lucky/shared';
 import { CreateRechargeDto } from '@api/client/wallet/dto/create-recharge.dto';
 import { WithdrawalHistoryQueryDto } from '@api/client/wallet/dto/withdrawal-history-query.dto';
 import { PaymentService } from '@api/common/payment/payment.service';
-import { TRANSACTION_STATUS } from '@lucky/shared/dist/types/wallet';
 import { GetRechargeHistoryDto } from '@api/client/wallet/dto/recharge.dto';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
