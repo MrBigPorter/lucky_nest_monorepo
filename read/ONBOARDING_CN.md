@@ -77,11 +77,11 @@ nodeLinker: node-modules
 
 ```typescript
 // next.config.ts
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = process.env.NODE_ENV === "production";
 
 const nextConfig: NextConfig = {
   // 仅生产环境开启静态导出
-  ...(isProd ? { output: 'export' } : {}),
+  ...(isProd ? { output: "export" } : {}),
 };
 ```
 
@@ -106,13 +106,13 @@ DashboardLayout.tsx        → 客户端 Auth Guard，生产/开发都生效
 ```typescript
 // src/components/layout/DashboardLayout.tsx
 useEffect(() => {
-  checkAuth();       // 读 localStorage 里的 token
+  checkAuth(); // 读 localStorage 里的 token
   setAuthChecked(true);
 }, [checkAuth]);
 
 useEffect(() => {
   if (authChecked && !isAuthenticated) {
-    router.replace('/login');  // 没登录 → 踢回去
+    router.replace("/login"); // 没登录 → 踢回去
   }
 }, [authChecked, isAuthenticated, router]);
 ```
@@ -133,8 +133,8 @@ if (!authChecked || !isAuthenticated) {
 ```typescript
 // src/app/(dashboard)/layout.tsx
 const DashboardClientShell = dynamic(
-  () => import('@/components/layout/DashboardLayout'),
-  { ssr: false }  // 关键：禁用服务端渲染
+  () => import("@/components/layout/DashboardLayout"),
+  { ssr: false }, // 关键：禁用服务端渲染
 );
 ```
 
@@ -227,11 +227,11 @@ private genKey(config: AxiosRequestConfig) {
 
 项目里有三个 Store：
 
-| Store | 存什么 | 为什么单独拆出来 |
-|-------|--------|----------------|
-| `useAuthStore` | token、是否登录、用户角色 | 全局共享，Header/Sidebar/Guard 都要读 |
-| `useToastStore` | 全局消息提示列表 | HTTP 层（非组件）需要触发，只能用 `.getState()` |
-| `useAppStore` | 语言设置（i18n） | 全局共享，切换语言后所有文字刷新 |
+| Store           | 存什么                    | 为什么单独拆出来                                |
+| --------------- | ------------------------- | ----------------------------------------------- |
+| `useAuthStore`  | token、是否登录、用户角色 | 全局共享，Header/Sidebar/Guard 都要读           |
+| `useToastStore` | 全局消息提示列表          | HTTP 层（非组件）需要触发，只能用 `.getState()` |
+| `useAppStore`   | 语言设置（i18n）          | 全局共享，切换语言后所有文字刷新                |
 
 ### 为什么不用 Redux？
 
@@ -294,6 +294,7 @@ npx prisma migrate resolve --applied "20240101_init"
 ### 为什么后端打包用 Webpack 而不是 esbuild/swc？
 
 NestJS 官方默认 Webpack，已经优化了：
+
 - 把整个项目打包成单文件 `dist/main.js`（部署简单）
 - Tree-shaking 去掉未使用的依赖（减小体积）
 - 支持 Prisma 这类有特殊 native 二进制的包
@@ -302,13 +303,13 @@ NestJS 官方默认 Webpack，已经优化了：
 
 ## 六、Docker 策略：为什么要两个 compose 文件？
 
-| | `compose.yml`（开发） | `compose.prod.yml`（生产） |
-|-|----------------------|--------------------------|
-| 用途 | 本地开发 | 生产服务器（1GB VPS） |
-| 前端 | 在 Docker 内热更新运行 | 不在 Docker，部署到 Cloudflare |
-| 镜像来源 | 本地 `docker build` | 从 GHCR 拉取（GitHub Actions 构建） |
-| 内存限制 | 无限制 | Backend ≤300MB（防 OOM） |
-| 数据持久化 | 挂载本地目录（卷） | Docker named volume |
+|            | `compose.yml`（开发）  | `compose.prod.yml`（生产）          |
+| ---------- | ---------------------- | ----------------------------------- |
+| 用途       | 本地开发               | 生产服务器（1GB VPS）               |
+| 前端       | 在 Docker 内热更新运行 | 不在 Docker，部署到 Cloudflare      |
+| 镜像来源   | 本地 `docker build`    | 从 GHCR 拉取（GitHub Actions 构建） |
+| 内存限制   | 无限制                 | Backend ≤300MB（防 OOM）            |
+| 数据持久化 | 挂载本地目录（卷）     | Docker named volume                 |
 
 ### 为什么 1GB 服务器要限制内存？
 
@@ -317,7 +318,7 @@ NestJS 官方默认 Webpack，已经优化了：
 deploy:
   resources:
     limits:
-      memory: 300M   # 超过 300MB 直接 OOM Kill 这个容器
+      memory: 300M # 超过 300MB 直接 OOM Kill 这个容器
 ```
 
 **内存预算（1GB 服务器）**：
@@ -400,8 +401,8 @@ GitHub Actions 自动触发
 ```yaml
 # GitHub Actions 界面手动触发时会出现勾选框
 inputs:
-  deploy_admin:   # 勾 ✓ 才部署前端（Cloudflare）
-  deploy_api:     # 勾 ✓ 才部署后端（VPS）
+  deploy_admin: # 勾 ✓ 才部署前端（Cloudflare）
+  deploy_api: # 勾 ✓ 才部署后端（VPS）
 ```
 
 **实用场景**：只改了前端样式 → 不想触发后端重启（重启时在线用户会断线 1-2 秒）。
@@ -434,17 +435,17 @@ fi
 
 ### GitHub Secrets 配置清单
 
-| Secret 名称 | 用途 | 在哪里用 |
-|-------------|------|---------|
-| `SSH_HOST` | VPS IP 地址 | deploy-backend.yml SSH 连接 |
-| `SSH_USERNAME` | VPS 登录用户名 | deploy-backend.yml SSH 连接 |
-| `SSH_PRIVATE_KEY` | SSH 私钥 | deploy-backend.yml SSH 连接 |
-| `VPS_GHCR_PAT` | GHCR 读取权限 Token | VPS 拉取镜像 |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API | deploy-admin.yml 部署到 Pages |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账号 ID | deploy-admin.yml 部署到 Pages |
-| `NEXT_PUBLIC_API_BASE_URL` | 前端 API 地址 | Next.js build 时注入 |
-| `TELEGRAM_TOKEN` | Telegram Bot Token | 部署通知 |
-| `TELEGRAM_CHAT_ID` | Telegram 频道 ID | 部署通知 |
+| Secret 名称                | 用途                | 在哪里用                      |
+| -------------------------- | ------------------- | ----------------------------- |
+| `SSH_HOST`                 | VPS IP 地址         | deploy-backend.yml SSH 连接   |
+| `SSH_USERNAME`             | VPS 登录用户名      | deploy-backend.yml SSH 连接   |
+| `SSH_PRIVATE_KEY`          | SSH 私钥            | deploy-backend.yml SSH 连接   |
+| `VPS_GHCR_PAT`             | GHCR 读取权限 Token | VPS 拉取镜像                  |
+| `CLOUDFLARE_API_TOKEN`     | Cloudflare API      | deploy-admin.yml 部署到 Pages |
+| `CLOUDFLARE_ACCOUNT_ID`    | Cloudflare 账号 ID  | deploy-admin.yml 部署到 Pages |
+| `NEXT_PUBLIC_API_BASE_URL` | 前端 API 地址       | Next.js build 时注入          |
+| `TELEGRAM_TOKEN`           | Telegram Bot Token  | 部署通知                      |
+| `TELEGRAM_CHAT_ID`         | Telegram 频道 ID    | 部署通知                      |
 
 ---
 
@@ -496,13 +497,13 @@ it('renders finance stats correctly', () => {
 **测什么**：完整的用户操作流程，真实浏览器 + 真实 API（或 Mock 服务）
 
 ```typescript
-test('正确登录后跳转到 Dashboard', async ({ page }) => {
-  await page.goto('/login/');
-  await page.getByLabel('Username').fill('admin');
-  await page.getByLabel('Password').fill('correct-password');
-  await page.getByRole('button', { name: /sign in/i }).click();
+test("正确登录后跳转到 Dashboard", async ({ page }) => {
+  await page.goto("/login/");
+  await page.getByLabel("Username").fill("admin");
+  await page.getByLabel("Password").fill("correct-password");
+  await page.getByRole("button", { name: /sign in/i }).click();
   // 等待页面跳转到 Dashboard
-  await expect(page.locator('h1')).toContainText('Dashboard');
+  await expect(page.locator("h1")).toContainText("Dashboard");
 });
 ```
 
@@ -514,18 +515,18 @@ test('正确登录后跳转到 Dashboard', async ({ page }) => {
 
 ### 覆盖的测试文件清单
 
-| 测试文件 | 覆盖内容 |
-|---------|---------|
-| `auth.spec.ts` | 登录/登出/未授权跳转 |
-| `dashboard.spec.ts` | Dashboard 数据展示 |
-| `users.spec.ts` | 用户列表/搜索/分页 |
-| `orders.spec.ts` | 订单管理 |
-| `products.spec.ts` | 商品管理 |
-| `categories.spec.ts` | 分类管理 |
-| `banners.spec.ts` | Banner 管理 |
-| `marketing.spec.ts` | 优惠券/营销 |
-| `finance.spec.ts` | 财务数据 |
-| `navigation.spec.ts` | 侧边栏导航 |
+| 测试文件             | 覆盖内容             |
+| -------------------- | -------------------- |
+| `auth.spec.ts`       | 登录/登出/未授权跳转 |
+| `dashboard.spec.ts`  | Dashboard 数据展示   |
+| `users.spec.ts`      | 用户列表/搜索/分页   |
+| `orders.spec.ts`     | 订单管理             |
+| `products.spec.ts`   | 商品管理             |
+| `categories.spec.ts` | 分类管理             |
+| `banners.spec.ts`    | Banner 管理          |
+| `marketing.spec.ts`  | 优惠券/营销          |
+| `finance.spec.ts`    | 财务数据             |
+| `navigation.spec.ts` | 侧边栏导航           |
 
 ---
 
@@ -537,18 +538,18 @@ test('正确登录后跳转到 Dashboard', async ({ page }) => {
 
 ### 方案对比
 
-| 方案 | 问题 |
-|------|------|
-| 硬编码默认账号（如 `admin/admin123`） | **安全漏洞**，生产环境密码容易泄漏 |
-| 直接写 SQL 插数据 | 密码需要手动 bcrypt 加密，步骤繁琐容易出错 |
-| 环境变量预设密码 | 密码明文存在 `.env` 文件，权限管理困难 |
-| **CLI 交互式创建** | ✅ 安全、简单、参考 Django `manage.py createsuperuser` 惯例 |
+| 方案                                  | 问题                                                        |
+| ------------------------------------- | ----------------------------------------------------------- |
+| 硬编码默认账号（如 `admin/admin123`） | **安全漏洞**，生产环境密码容易泄漏                          |
+| 直接写 SQL 插数据                     | 密码需要手动 bcrypt 加密，步骤繁琐容易出错                  |
+| 环境变量预设密码                      | 密码明文存在 `.env` 文件，权限管理困难                      |
+| **CLI 交互式创建**                    | ✅ 安全、简单、参考 Django `manage.py createsuperuser` 惯例 |
 
 ### 用法
 
 ```bash
 # 生产服务器（第一次部署后执行一次）
-docker exec -it lucky-backend-prod node apps/api/dist/cli/create-admin.js
+docker exec -it lucky-backend-prod node apps/api/dist/scripts/cli/create-admin.js
 
 # 本地开发
 yarn workspace @lucky/api create-admin
@@ -572,7 +573,7 @@ CLI 内部会检查用户名是否已存在，防止重复创建：
 ```typescript
 const existing = await db.adminUser.findUnique({ where: { username } });
 if (existing) {
-  console.log('❌ 该用户名已存在');
+  console.log("❌ 该用户名已存在");
   process.exit(1);
 }
 ```
@@ -753,22 +754,21 @@ A：这只是警告，不是错误。开发环境 Redis 没有密码，Docker Co
 
 ## 附录：核心技术栈
 
-| 层级 | 技术 | 选择原因 |
-|------|------|---------|
-| 前端框架 | Next.js 15 (App Router) | 文件路由、静态导出、Cloudflare 兼容 |
-| 前端状态 | Zustand | 轻量，支持组件外访问 |
-| HTTP 客户端 | Axios + 自定义封装 | 拦截器统一处理 token/错误 |
-| UI 组件 | Radix UI + Tailwind CSS | 可访问性好，样式灵活 |
-| 图表 | Recharts | React 生态，轻量 |
-| 后端框架 | NestJS | TypeScript 原生，模块化，适合中大型 API |
-| ORM | Prisma | 类型安全，迁移管理完善 |
-| 数据库 | PostgreSQL | 稳定，功能完整 |
-| 缓存 | Redis | Session/队列/限流 |
-| 容器化 | Docker + Docker Compose | 环境一致性，一键启动 |
-| CI/CD | GitHub Actions | 免费，与仓库集成 |
-| 前端部署 | Cloudflare Pages | 免费 CDN，全球加速 |
-| 后端部署 | VPS (1GB RAM) + GHCR | 成本低，镜像化部署 |
-| 单元测试 | Vitest + Testing Library | Vite 生态，速度快 |
-| E2E 测试 | Playwright | 跨浏览器，API 强大 |
-| Monorepo | Turborepo + Yarn 4 | 增量构建，包共享 |
-
+| 层级        | 技术                     | 选择原因                                |
+| ----------- | ------------------------ | --------------------------------------- |
+| 前端框架    | Next.js 15 (App Router)  | 文件路由、静态导出、Cloudflare 兼容     |
+| 前端状态    | Zustand                  | 轻量，支持组件外访问                    |
+| HTTP 客户端 | Axios + 自定义封装       | 拦截器统一处理 token/错误               |
+| UI 组件     | Radix UI + Tailwind CSS  | 可访问性好，样式灵活                    |
+| 图表        | Recharts                 | React 生态，轻量                        |
+| 后端框架    | NestJS                   | TypeScript 原生，模块化，适合中大型 API |
+| ORM         | Prisma                   | 类型安全，迁移管理完善                  |
+| 数据库      | PostgreSQL               | 稳定，功能完整                          |
+| 缓存        | Redis                    | Session/队列/限流                       |
+| 容器化      | Docker + Docker Compose  | 环境一致性，一键启动                    |
+| CI/CD       | GitHub Actions           | 免费，与仓库集成                        |
+| 前端部署    | Cloudflare Pages         | 免费 CDN，全球加速                      |
+| 后端部署    | VPS (1GB RAM) + GHCR     | 成本低，镜像化部署                      |
+| 单元测试    | Vitest + Testing Library | Vite 生态，速度快                       |
+| E2E 测试    | Playwright               | 跨浏览器，API 强大                      |
+| Monorepo    | Turborepo + Yarn 4       | 增量构建，包共享                        |
