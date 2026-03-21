@@ -35,10 +35,14 @@ export default {
     }),
 
   "*.{json,md,yml,yaml,mjs,cjs}": (files) => {
-    if (files.length === 0) {
+    const filtered = files.filter(
+      (file) => !file.startsWith("starter-template/"),
+    );
+
+    if (filtered.length === 0) {
       return [];
     }
 
-    return [`prettier --write ${files.map(quote).join(" ")}`];
+    return [`prettier --write ${filtered.map(quote).join(" ")}`];
   },
 };
