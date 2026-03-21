@@ -9,19 +9,19 @@ import { WalletService } from '@api/client/wallet/wallet.service';
 import { Prisma } from '@prisma/client';
 import { CheckoutDto } from '@api/client/orders/dto/checkout.dto';
 import {
+  BizPrefix,
+  COUPON_TYPE,
   GROUP_STATUS,
-  TREASURE_STATE,
-} from '@lucky/shared/dist/types/treasure';
-import {
   ORDER_STATUS,
+  OrderNoHelper,
   PAY_STATUS,
   REFUND_STATUS,
-} from '@lucky/shared/dist/types/order';
+  TREASURE_STATE,
+} from '@lucky/shared';
 import { GroupService } from '@api/common/group/group.service';
 import { ERROR_KEYS } from '@api/common/error-codes.gen';
 import { throwBiz } from '@api/common/exceptions/biz.exception';
 import { RefundApplyDto } from '@api/client/orders/dto/refund-apply.dto';
-import { BizPrefix, COUPON_TYPE, OrderNoHelper } from '@lucky/shared';
 import { LuckyDrawService } from '@api/common/lucky-draw/lucky-draw.service';
 
 const D = (n: number | string) => new Prisma.Decimal(n);
