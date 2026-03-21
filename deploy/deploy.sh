@@ -84,6 +84,7 @@ sync_configs() {
     scp deploy/.env.prod                    "$SSH_TARGET:$VPS_DIR/deploy/"
     scp deploy/init-db.sh                   "$SSH_TARGET:$VPS_DIR/deploy/"
     scp deploy/baseline-db.sh              "$SSH_TARGET:$VPS_DIR/deploy/"
+    scp deploy/install-turn.sh              "$SSH_TARGET:$VPS_DIR/deploy/"
     scp nginx/nginx.prod.conf               "$SSH_TARGET:$VPS_DIR/nginx/"
     scp nginx/whitelist.conf                "$SSH_TARGET:$VPS_DIR/nginx/"
     scp redis/redis.conf                    "$SSH_TARGET:$VPS_DIR/redis/"
