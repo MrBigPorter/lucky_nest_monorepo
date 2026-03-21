@@ -147,7 +147,15 @@ yarn deploy
 ### 3.3 首次 seed（只执行一次）
 
 ```bash
-docker exec -it lucky-backend-prod node apps/api/dist/scripts/seed/run-seed.js
+# 推荐：先停后端，避免与线上流量争抢数据库连接
+docker compose -f compose.prod.yml --env-file deploy/.env.prod stop backend
+
+# 可显式限制 seed 连接池，进一步降低连接峰值
+SEED_DB_CONNECTION_LIMIT=1 SEED_DB_POOL_TIMEOUT=60 \
+  docker exec -it lucky-backend-prod node /app/apps/api/dist/cli/seed/run-seed.js
+
+# seed 完成后恢复后端
+docker compose -f compose.prod.yml --env-file deploy/.env.prod up -d --no-build backend
 ```
 
 > ❌ 不要在容器里用 `yarn workspace @lucky/api seed`  
@@ -156,7 +164,7 @@ docker exec -it lucky-backend-prod node apps/api/dist/scripts/seed/run-seed.js
 ### 3.4 创建 / 重置管理员密码
 
 ```bash
-docker exec -it lucky-backend-prod node apps/api/dist/scripts/cli/create-admin.js
+docker exec -it lucky-backend-prod node /app/apps/api/dist/cli/cli/create-admin.js
 ```
 
 ---
@@ -400,8 +408,8 @@ Cannot find the root of your workspace
 **正确做法**：
 
 ```bash
-docker exec -it lucky-backend-prod node apps/api/dist/scripts/seed/run-seed.js
-docker exec -it lucky-backend-prod node apps/api/dist/scripts/cli/create-admin.js
+docker exec -it lucky-backend-prod node /app/apps/api/dist/cli/seed/run-seed.js
+docker exec -it lucky-backend-prod node /app/apps/api/dist/cli/cli/create-admin.js
 ```
 
 ### 8.2 发布后健康检查失败
