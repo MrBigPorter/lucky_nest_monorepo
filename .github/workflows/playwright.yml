@@ -12,6 +12,7 @@
 # Secrets 配置（在 GitHub 仓库 Settings → Secrets 添加）：
 #   E2E_ADMIN_USERNAME   登录用的管理员账号（默认 admin）
 #   E2E_ADMIN_PASSWORD   登录密码（必须配置，否则跳过）
+#   NEXT_PUBLIC_RECAPTCHA_SITE_KEY   （可选）注册申请页用；未配置时 E2E 走降级模式
 # ============================================================
 
 name: Playwright E2E
@@ -36,12 +37,22 @@ jobs:
         id: e2e_gate
         env:
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
         run: |
           if [ -n "$E2E_ADMIN_PASSWORD" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "E2E_ADMIN_PASSWORD is not set, skip Playwright workflow"
+          fi
+
+          if [ -n "$NEXT_PUBLIC_RECAPTCHA_SITE_KEY" ]; then
+            echo "recaptcha_configured=true" >> "$GITHUB_OUTPUT"
+            echo "recaptcha_mode=configured" >> "$GITHUB_OUTPUT"
+          else
+            echo "recaptcha_configured=false" >> "$GITHUB_OUTPUT"
+            echo "recaptcha_mode=degraded" >> "$GITHUB_OUTPUT"
+            echo "NEXT_PUBLIC_RECAPTCHA_SITE_KEY is empty, register-apply reCAPTCHA path runs in degraded mode"
           fi
 
       # Step 2 / 步骤 2: Checkout repository source code
@@ -93,6 +104,7 @@ jobs:
         env:
           NODE_ENV: production
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
+          NEXT_PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}
           NEXT_PUBLIC_APP_ENV: production
 
       # Step 11 / 步骤 11: Start local mock API server (no real backend required)
@@ -211,8 +223,14 @@ jobs:
           echo "| 浏览器 | Chromium |" >> $GITHUB_STEP_SUMMARY
           echo "| 触发 | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Ref | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| reCAPTCHA | \`${{ steps.e2e_gate.outputs.recaptcha_mode }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 产物 | playwright-html-report-${{ github.run_id }} |" >> $GITHUB_STEP_SUMMARY
           if [ "$STATUS" != "success" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "> 📎 失败截图和 trace 见 Artifacts: \`playwright-screenshots-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.e2e_gate.outputs.recaptcha_configured }}" != "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> ℹ️ NEXT_PUBLIC_RECAPTCHA_SITE_KEY 未配置：注册申请页的 reCAPTCHA 链路在 E2E 中为降级模式。" >> $GITHUB_STEP_SUMMARY
           fi
