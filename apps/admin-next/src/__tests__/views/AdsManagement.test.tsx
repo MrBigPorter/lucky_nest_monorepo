@@ -39,7 +39,7 @@ vi.mock('@/api', () => ({
 
 import { adsApi } from '@/api';
 import { ModalManager } from '@repo/ui';
-import { AdsManagement } from '@/views/AdsManagement';
+import { AdsManagement } from '@/components/ads/AdsManagementClient';
 
 const createAd = (overrides?: Record<string, unknown>) => ({
   id: 'ad1',

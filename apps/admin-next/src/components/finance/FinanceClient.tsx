@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FinancePage } from '@/views/FinancePage';
+import { FinancePage } from './FinancePageClient';
 
 export function FinanceClient() {
   const router = useRouter();

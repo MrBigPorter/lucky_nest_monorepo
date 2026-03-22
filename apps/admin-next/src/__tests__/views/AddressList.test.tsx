@@ -33,7 +33,7 @@ vi.mock('@/views/address/AddressEditModal', () => ({
 }));
 
 // ── subject ──────────────────────────────────────────────────────
-import { AddressList } from '@/views/AddressList';
+import { AddressList } from '@/components/address/AddressListClient';
 
 describe('AddressList', () => {
   beforeEach(() => vi.clearAllMocks());

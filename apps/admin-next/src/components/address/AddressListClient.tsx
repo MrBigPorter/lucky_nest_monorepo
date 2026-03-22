@@ -8,7 +8,7 @@ import {
   ActionType,
 } from '@/components/scaffold/SmartTable';
 import { addressApi } from '@/api'; // 假设你有这个 API 定义
-import { AddressEditModal } from './address/AddressEditModal';
+import { AddressEditModal } from '@/views/address/AddressEditModal';
 import { MapPin, Edit, Trash2 } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { Badge } from '@repo/ui';

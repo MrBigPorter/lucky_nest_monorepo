@@ -70,8 +70,16 @@
   - [x] 更新 `app/(dashboard)/finance/page.tsx`：双 Suspense 层（FinanceStatsServer + FinanceClient 并行流式）
   - [x] `views/FinancePage.tsx` 精简为纯 Tabs Client Component，移除所有 stats 相关逻辑
   - [x] 随堂测验答案：「手动刷新按钮调用 `router.refresh()`，Next.js 重新执行所有 async Server Component，无需整页跳转」
-- [ ] **Stage 5（当前关卡）** — Suspense 包裹剩余 9 个"裸页"（ads / flash-sale / settings / notifications / lucky-draw / categories / login-logs / support-channels / customer-service）
-- [ ] Stage 6 — `views/` 目录哲学收口：`views/` 只保留 Modal/Form，完整页面迁移到 `components/*Client.tsx`
+- [x] **Stage 5（已完成）** — Suspense 包裹剩余 9 个"裸页"（ads / flash-sale / settings / notifications / lucky-draw / categories / login-logs / support-channels / customer-service）
+  - [x] 新建 `components/ui/PageSkeleton.tsx`（Header + Filter + Table 三段通用骨架，`rows` 可配置）
+  - [x] 9 个页面全部加 `<Suspense fallback={<PageSkeleton />}>`：ads / flash-sale / settings / notifications / lucky-draw / categories / login-logs / support-channels / customer-service
+- [x] **Stage 6（已完成）** — `views/` 目录哲学收口：`views/` 只保留 Modal/Form，完整页面迁移到 `components/*Client.tsx`
+  - [x] 21 个全页面 view 迁移到 `components/*/XxxClient.tsx` / `components/*/XxxManagementClient.tsx`
+  - [x] 所有 page.tsx / \*Client.tsx 薄包装层 / 测试文件 import 路径同步更新
+  - [x] 修复 4 个相对路径断链（address / finance / kyc / payment），改为 `@/views/xxx` 绝对路径
+  - [x] 更新 Finance.test.tsx 测试覆盖范围（匹配 Stage 4 简化后的 Tabs-only FinancePage）
+  - [x] lint ✅ · check-types ✅ · 30 test files / 179 tests ✅
+  - ℹ️ `views/Dashboard.tsx` / `views/OrderManagement.tsx` / `views/UserManagement.tsx` 为死代码（无页面引用），留存供旧测试参考，后续可删除
 
 ---
 

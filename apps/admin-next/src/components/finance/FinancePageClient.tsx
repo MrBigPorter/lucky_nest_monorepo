@@ -6,9 +6,9 @@
  * 本组件只负责 Tab 切换 + 列表渲染，不再拉取 statistics。
  */
 import React, { useState, useEffect, useMemo } from 'react';
-import { TransactionList } from './finance/TransactionList';
-import { WithdrawalList } from './finance/WithdrawalList';
-import { DepositList } from './finance/DepositList';
+import { TransactionList } from '@/views/finance/TransactionList';
+import { WithdrawalList } from '@/views/finance/WithdrawalList';
+import { DepositList } from '@/views/finance/DepositList';
 import { FileText, ArrowRightLeft, TrendingUp } from 'lucide-react';
 
 interface FinancePageProps {

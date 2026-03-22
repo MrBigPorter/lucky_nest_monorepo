@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { OperationLogList } from '@/views/OperationLogList';
+import { OperationLogList } from './OperationLogListClient';
 
 export function OperationLogClient() {
   const router = useRouter();
