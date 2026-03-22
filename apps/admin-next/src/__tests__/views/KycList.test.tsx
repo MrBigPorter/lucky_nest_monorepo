@@ -72,7 +72,7 @@ vi.mock('@/views/kyc/KycFormModal', () => ({
 }));
 
 // ── subject ──────────────────────────────────────────────────────
-import { KycList } from '@/views/KycList';
+import { KycList } from '@/components/kyc/KycListClient';
 
 describe('KycList', () => {
   beforeEach(() => vi.clearAllMocks());

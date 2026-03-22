@@ -40,7 +40,7 @@ vi.mock('@repo/ui', () => ({
   },
 }));
 
-import { CustomerServiceDesk } from '@/views/CustomerServiceDesk';
+import { CustomerServiceDesk } from '@/components/customer-service/CustomerServiceClient';
 
 describe('CustomerServiceDesk', () => {
   beforeEach(() => {

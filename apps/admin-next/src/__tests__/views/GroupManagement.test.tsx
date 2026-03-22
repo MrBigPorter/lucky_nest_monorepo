@@ -41,7 +41,7 @@ vi.mock('@/store/useToastStore', () => ({
 }));
 
 // ── subject ──────────────────────────────────────────────────────
-import { GroupManagement } from '@/views/GroupManagement';
+import { GroupManagement } from '@/components/groups/GroupManagementClient';
 
 describe('GroupManagement', () => {
   beforeEach(() => {

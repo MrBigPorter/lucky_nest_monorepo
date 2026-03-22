@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ProductManagement } from '@/views/ProductManagement';
+import { ProductManagement } from './ProductManagementClient';
 
 export function ProductsClient() {
   const router = useRouter();
