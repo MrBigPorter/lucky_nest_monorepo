@@ -16,31 +16,48 @@
  * Why not in layout.tsx?
  *   layout.tsx 是 React 组件，只控制客户端渲染。
  *   instrumentation.ts 是服务器生命周期，可以初始化 Node.js 级别的工具。
+ *
+ * Cloudflare Workers 部署说明：
+ *   admin-next 部署到 Cloudflare Workers，所有 SSR 运行在 edge runtime（非 nodejs）。
+ *   动态 import 确保 Sentry edge bundle 按需加载，避免冷启动 bundle 膨胀。
  */
+
 export async function register() {
-  /**
-   * runtime 区分当前执行环境：
-   *   'nodejs'  → 服务器端（Server Component / API Route）
-   *   'edge'    → Edge Runtime（Middleware）
-   *
-   * runtime distinguishes execution environment:
-   *   'nodejs'  → server side (Server Components / API Routes)
-   *   'edge'    → Edge Runtime (Middleware)
-   */
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+  // Skip entirely when DSN is absent — avoids loading Sentry at all in CI / local dev.
+  if (!dsn) return;
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    /**
-     * 动态 import 确保服务端 Sentry 配置只在 Node.js 环境加载。
-     * Dynamic import ensures server Sentry config only loads in Node.js environment.
-     *
-     * 不能用顶层 import，因为 Edge Runtime 也会执行这个文件，
-     * 但 Edge 不支持完整 Node.js API，会报错。
-     * Cannot use top-level import because Edge Runtime also runs this file
-     * but doesn't support full Node.js APIs.
-     */
-    await import('../sentry.server.config');
+    // Standard Node.js runtime (local dev with `next dev --experimental-https`, etc.)
+    const { init } = await import('@sentry/nextjs');
+    init({
+      dsn,
+      enabled: process.env.NODE_ENV === 'production',
+      sendDefaultPii: false,
+    });
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('../sentry.edge.config');
+    // Cloudflare Workers edge runtime.
+    // Dynamic import ensures the edge-compatible bundle is loaded (no Node.js deps).
+    const { init } = await import('@sentry/nextjs');
+    init({
+      dsn,
+      enabled: process.env.NODE_ENV === 'production',
+      sendDefaultPii: false,
+    });
   }
 }
+
+/**
+ * SSR 错误捕获钩子 — Next.js 15 专属。
+ * SSR error capture hook — Next.js 15 exclusive.
+ *
+ * Next.js 在 Server Component / Route Handler / Middleware 抛错时自动调用此函数，
+ * 无需额外包裹 try/catch。对应 client 侧的 global-error.tsx。
+ *
+ * Next.js calls this automatically when a Server Component / Route Handler / Middleware throws.
+ * No extra try/catch needed. Counterpart to global-error.tsx on the client side.
+ */
+export { captureRequestError as onRequestError } from '@sentry/nextjs';
