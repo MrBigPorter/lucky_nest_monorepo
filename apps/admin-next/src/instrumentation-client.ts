@@ -5,10 +5,10 @@
  * Next.js 15 会在浏览器端自动执行这个文件（非 React 组件，纯 JS 入口）。
  * Next.js 15 auto-executes this file in the browser (not a React component, plain JS entry).
  *
- * onRouterTransitionStart hook 是 Next.js 15 专属，sentry.client.config.ts 不支持。
- * onRouterTransitionStart hook is Next.js 15 exclusive; sentry.client.config.ts doesn't support it.
+ * 当前策略：仅保留核心报错上报，关闭性能追踪和录屏，优先控制 Cloudflare 体积。
+ * Current strategy: keep core error reporting only; disable tracing/replay to reduce Cloudflare bundle cost.
  */
-import * as Sentry from '@sentry/nextjs';
+import * as Sentry from '@sentry/browser';
 
 Sentry.init({
   /**
@@ -18,25 +18,16 @@ Sentry.init({
    */
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Session Replay：录制用户操作，帮助复现 Bug / Records user interactions to reproduce bugs
-  integrations: [Sentry.replayIntegration()],
+  enabled: process.env.NODE_ENV === 'production',
 
-  // 性能追踪采样率：生产 10%，开发 100% / Perf trace sample rate: 10% prod, 100% dev
-  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+  // Error-only mode: do not attach user PII by default.
+  sendDefaultPii: false,
 
-  // 正常 Session 录制概率 10% / 10% chance of recording normal sessions
-  replaysSessionSampleRate: 0.1,
-
-  // 发生错误时录制概率 100% / 100% chance of recording when error occurs
-  replaysOnErrorSampleRate: 1.0,
-
-  // 允许发送用户标识（Admin 已登录用户，可追踪错误到操作人）
-  // Allow sending user PII (Admin users — trace errors to specific operators)
-  sendDefaultPii: true,
+  ignoreErrors: [
+    'ResizeObserver loop limit exceeded',
+    'ResizeObserver loop completed with undelivered notifications',
+    'Network Error',
+    'Failed to fetch',
+    /^AbortError/,
+  ],
 });
-
-/**
- * 路由切换性能追踪钩子 — 每次 Next.js 导航自动记录 trace
- * Router transition performance hook — auto-records trace on every navigation
- */
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

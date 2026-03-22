@@ -1,6 +1,11 @@
 import type { NextConfig } from 'next';
 import path from 'path';
-import { withSentryConfig } from '@sentry/nextjs';
+import BundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = BundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+});
 
 // admin-next is deployed exclusively to Cloudflare Workers via @opennextjs/cloudflare.
 // No standalone/Docker output needed.
@@ -38,6 +43,34 @@ const nextConfig: NextConfig = {
     resolveAlias: {
       'node:crypto': './src/lib/crypto-shim.ts',
     },
+  },
+
+  // Exclude build tools that bleed in via monorepo hoisting (e.g. @nestjs/cli → webpack).
+  // These packages are only needed in apps/api — never at admin-next runtime.
+  // Without this, Next.js file tracing picks up webpack + full toolchain (~4 MiB).
+  outputFileTracingExcludes: {
+    '*': [
+      './node_modules/webpack/**',
+      './node_modules/webpack-sources/**',
+      './node_modules/terser-webpack-plugin/**',
+      './node_modules/uglify-js/**',
+      './node_modules/acorn/**',
+      './node_modules/acorn-import-phases/**',
+      './node_modules/loader-runner/**',
+      './node_modules/neo-async/**',
+      './node_modules/tapable/**',
+      './node_modules/watchpack/**',
+      './node_modules/@webassemblyjs/**',
+      './node_modules/@xtuc/**',
+      './node_modules/@jridgewell/**',
+      './node_modules/chrome-trace-event/**',
+      './node_modules/esbuild/**',
+      './node_modules/@esbuild/**',
+      './node_modules/electron-to-chromium/**',
+      './node_modules/browserslist/**',
+      './node_modules/baseline-browser-mapping/**',
+      './node_modules/node-releases/**',
+    ],
   },
 
   experimental: {
@@ -97,34 +130,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
-
-  org: 'joymini',
-
-  project: 'javascript-nextjs',
-
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
-
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: '/monitoring',
-
-  webpack: {
-    // Tree-shaking options for reducing bundle size
-    treeshake: {
-      // Automatically tree-shake Sentry logger statements to reduce bundle size
-      removeDebugLogging: true,
-    },
-  },
-});
+export default withBundleAnalyzer(nextConfig);
