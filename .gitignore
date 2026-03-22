@@ -63,3 +63,5 @@ yarn-error.log*
 repomix-output*
 tsconfig.tsbuildinfo
 
+# Lighthouse reports
+apps/admin-next/reports/
