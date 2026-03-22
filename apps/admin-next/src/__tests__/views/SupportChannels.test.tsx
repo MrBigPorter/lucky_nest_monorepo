@@ -37,7 +37,7 @@ vi.mock('@/api', () => ({
   },
 }));
 
-import { SupportChannels } from '@/views/SupportChannels';
+import { SupportChannels } from '@/components/support-channels/SupportChannelsClient';
 
 describe('SupportChannels', () => {
   beforeEach(() => {
