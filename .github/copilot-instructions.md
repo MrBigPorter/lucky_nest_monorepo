@@ -62,12 +62,15 @@
 - [x] Stage 1 — Edge Middleware 路由鉴权：消灭 Auth Flashing（`middleware.ts` + `layout.tsx` 双层守卫）
 - [x] Stage 2 — async Server Component + Suspense Streaming（`DashboardStats` / `AnalyticsOverview`）
 - [x] Stage 3 — URL searchParams 驱动 filter + HydrationBoundary（10 个列表页已迁移）
-- [ ] **Stage 4（当前关卡）** — Client 边界最小化：Finance Stats SSR + 删除 console.log 生产泄漏
-  - [ ] 删除 `views/FinancePage.tsx` 第 56 行 `console.log('FinancePage statistics:', statistics)`（生产安全 🔴）
-  - [ ] 新建 `components/finance/FinanceStatsServer.tsx`（async Server Component，serverGet 直出统计数字）
-  - [ ] 更新 `app/(dashboard)/finance/page.tsx`：双 Suspense 层（FinanceStatsServer + FinanceClient 并行流式）
-  - [ ] 通过随堂测验：「手动刷新按钮如何让 Server Component 数据更新」
-- [ ] Stage 5 — Suspense 包裹剩余 9 个"裸页"（ads / flash-sale / settings / notifications / lucky-draw / categories / login-logs / support-channels / customer-service）
+- [x] **Stage 4（已完成）** — Client 边界最小化：Finance Stats SSR + 删除 console.log 生产泄漏
+  - [x] 删除 `views/FinancePage.tsx` 第 56 行 `console.log('FinancePage statistics:', statistics)`（生产安全 🔴）
+  - [x] 删除 `views/FinancePage.tsx` 内 `StatsCard` 子组件中的 `console.log('StatsCard trendValue:', ...)`
+  - [x] 新建 `components/finance/FinanceStatsServer.tsx`（async Server Component，serverGet 直出统计数字，`revalidate: false`）
+  - [x] 新建 `components/finance/FinanceRefreshButton.tsx`（Client Component，`router.refresh()` 触发 Server Component 重渲染）
+  - [x] 更新 `app/(dashboard)/finance/page.tsx`：双 Suspense 层（FinanceStatsServer + FinanceClient 并行流式）
+  - [x] `views/FinancePage.tsx` 精简为纯 Tabs Client Component，移除所有 stats 相关逻辑
+  - [x] 随堂测验答案：「手动刷新按钮调用 `router.refresh()`，Next.js 重新执行所有 async Server Component，无需整页跳转」
+- [ ] **Stage 5（当前关卡）** — Suspense 包裹剩余 9 个"裸页"（ads / flash-sale / settings / notifications / lucky-draw / categories / login-logs / support-channels / customer-service）
 - [ ] Stage 6 — `views/` 目录哲学收口：`views/` 只保留 Modal/Form，完整页面迁移到 `components/*Client.tsx`
 
 ---
