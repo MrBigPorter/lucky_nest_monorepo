@@ -34,11 +34,11 @@
 
 ### 1.2 当前系统存在的三层叠加缺陷
 
-| 层 | 缺陷 | 后果 |
-|----|------|------|
-| **Schema** | `businessId String? @unique` | 全库只能有 1 条 `official_platform_support_v1` 会话 |
-| **Service** | `ensureBusinessConversation` 按 businessId 查找后 upsert member | 所有用户被塞进同一个群 |
-| **Reply** | `senderId: null` + 直接 `eventsGateway.dispatch` | FCM 离线推送失效、Flutter 退后台收不到消息 |
+| 层          | 缺陷                                                            | 后果                                                |
+| ----------- | --------------------------------------------------------------- | --------------------------------------------------- |
+| **Schema**  | `businessId String? @unique`                                    | 全库只能有 1 条 `official_platform_support_v1` 会话 |
+| **Service** | `ensureBusinessConversation` 按 businessId 查找后 upsert member | 所有用户被塞进同一个群                              |
+| **Reply**   | `senderId: null` + 直接 `eventsGateway.dispatch`                | FCM 离线推送失效、Flutter 退后台收不到消息          |
 
 **结果**：任何客户打开客服，都能看到所有其他客户的聊天记录——群聊而非私聊。
 
@@ -51,10 +51,10 @@
 
 ### 2.1 排查发现的两个 Bug
 
-| # | 位置 | 问题 |
-|---|------|------|
-| 1 | `CustomerServiceDesk.tsx` | 会话列表查询 `type: 'SUPPORT'`，但 Flutter 创建的是 `BUSINESS` 类型，永远查不到 |
-| 2 | 后端 `ChatService` | Flutter 开启会话时（未发消息）不触发任何事件，Admin 只能靠 30s 轮询感知 |
+| #   | 位置                      | 问题                                                                            |
+| --- | ------------------------- | ------------------------------------------------------------------------------- |
+| 1   | `CustomerServiceDesk.tsx` | 会话列表查询 `type: 'SUPPORT'`，但 Flutter 创建的是 `BUSINESS` 类型，永远查不到 |
+| 2   | 后端 `ChatService`        | Flutter 开启会话时（未发消息）不触发任何事件，Admin 只能靠 30s 轮询感知         |
 
 ### 2.2 修复后的数据流
 
@@ -96,9 +96,10 @@ SocketListener.handleMessageCreated()
 ### 2.3 改动文件
 
 #### `src/common/chat/events/chat.events.ts`
+
 ```typescript
 // 新增事件常量
-SUPPORT_CONVERSATION_STARTED: 'chat.support.conversation.started'
+SUPPORT_CONVERSATION_STARTED: "chat.support.conversation.started";
 
 // 新增事件类
 class SupportConversationStartedEvent {
@@ -109,6 +110,7 @@ class SupportConversationStartedEvent {
 ```
 
 #### `src/common/chat/chat.service.ts`
+
 ```typescript
 async addMemberToBusinessGroup(businessId: string, userId: string) {
   const conversation = await this.ensureBusinessConversation(businessId);
@@ -125,6 +127,7 @@ async addMemberToBusinessGroup(businessId: string, userId: string) {
 ```
 
 #### `src/common/events/listeners/socket.listener.ts`
+
 ```typescript
 @OnEvent(CHAT_EVENTS.SUPPORT_CONVERSATION_STARTED)
 async handleSupportConversationStarted(event) {
@@ -145,12 +148,14 @@ async handleSupportConversationStarted(event) {
 > **说明**：admin 连接 Socket 时自动加入 `user_${adminId}` 私有房间（`EventsGateway.handleConnection` 已处理），无需手动 `join_chat`。
 
 #### `apps/admin-next/src/views/CustomerServiceDesk.tsx`
+
 ```diff
 - type: 'SUPPORT',
 + type: 'BUSINESS',
 ```
 
 #### `apps/admin-next/src/hooks/useChatSocket.ts`
+
 ```typescript
 case 'support_new_conversation':
   onConversationUpdatedRef.current?.(payload.data.conversationId);
@@ -159,10 +164,10 @@ case 'support_new_conversation':
 
 ### 2.4 两条实时通知路径
 
-| 场景 | 触发时机 | Socket 事件 | Admin 端响应 |
-|------|---------|-------------|-------------|
-| 用户开启客服（未发消息） | `GET /chat/business` 首次调用 | `support_new_conversation` | 会话列表刷新 |
-| 用户发消息 | `POST /chat/message` | `chat_message` | 收到消息 + 列表更新 |
+| 场景                     | 触发时机                      | Socket 事件                | Admin 端响应        |
+| ------------------------ | ----------------------------- | -------------------------- | ------------------- |
+| 用户开启客服（未发消息） | `GET /chat/business` 首次调用 | `support_new_conversation` | 会话列表刷新        |
+| 用户发消息               | `POST /chat/message`          | `chat_message`             | 收到消息 + 列表更新 |
 
 > **兜底**：Admin 客服台保留 30s 轮询（`pollingInterval: 30000`），Socket 断连时降级保障。
 
@@ -207,6 +212,7 @@ case 'support_new_conversation':
 虚拟客服账号由 Admin UI 新增渠道时自动创建（见 `3.8` 事务流程），不再依赖手动 SQL。
 
 **User 表关键字段无需改 Schema**：
+
 - `isRobot Boolean @default(false)` ✅ 已存在
 - `phone String @unique` → 后端自动生成 `sys:bot:<timestamp>` 唯一占位
 
@@ -228,21 +234,22 @@ where: {
 
 `SUPPORT` 会话在 Flutter 侧展示 `conv.name` / `conv.avatar`，因此建联时必须写入渠道名称与头像。
 
-| 端 | 显示逻辑 | 数据来源 |
-|----|---------|---------|
-| Flutter 会话列表 | 渠道英文名 + bot 头像 | `conv.name` + `conv.avatar` |
+| 端               | 显示逻辑              | 数据来源                            |
+| ---------------- | --------------------- | ----------------------------------- |
+| Flutter 会话列表 | 渠道英文名 + bot 头像 | `conv.name` + `conv.avatar`         |
 | Flutter 聊天窗口 | 渠道英文名 + bot 头像 | `sender.nickname` + `sender.avatar` |
-| Admin 客服台列表 | 客户昵称 + 客户头像 | `members[]` 中非 bot 成员 |
+| Admin 客服台列表 | 客户昵称 + 客户头像   | `members[]` 中非 bot 成员           |
 
 ### 3.4 选型决策：为何用 SUPPORT 类型
 
-| 选项 | 会话类型 | Schema 改动 | Admin 侧查询 | 结论 |
-|------|---------|------------|------------|------|
-| A | `DIRECT` | 无 | 需改查询类型 | 语义不准确 |
-| B | `BUSINESS`（修 @unique） | 需 migrate | 无需改 | 有迁移风险 |
-| **C** | **`SUPPORT`** | **无** | **改默认查询为 SUPPORT** | **最优** ✅ |
+| 选项  | 会话类型                 | Schema 改动 | Admin 侧查询             | 结论        |
+| ----- | ------------------------ | ----------- | ------------------------ | ----------- |
+| A     | `DIRECT`                 | 无          | 需改查询类型             | 语义不准确  |
+| B     | `BUSINESS`（修 @unique） | 需 migrate  | 无需改                   | 有迁移风险  |
+| **C** | **`SUPPORT`**            | **无**      | **改默认查询为 SUPPORT** | **最优** ✅ |
 
 选择 `SUPPORT` 的原因：
+
 - 与客服语义一致
 - 不与拼团/业务会话混用
 - 可直接承接多渠道方案（`businessId -> SupportChannel -> botUserId`）
@@ -272,7 +279,7 @@ where: {
 Flutter 点击「联系客服」
   └─ GET /api/v1/chat/business?businessId=official_platform_support_v1
        └─ 后端查 SupportChannel 表找到虚拟bot (official_lucky_support)
-       
+
   └─ 创建 1v1 SUPPORT 会话
        ├─ 会话类型：SUPPORT（不是共享群 BUSINESS）
        ├─ 成员列表：[用户 + bot] 只有这两个人
@@ -284,6 +291,7 @@ Flutter 点击「联系客服」
 ```
 
 **为什么这样设计**：
+
 - ✅ 每个用户独立 1v1 会话，数据完全隔离（不再所有人共享一个群）
 - ✅ Admin 一进来就能看到所有客户会话列表
 - ✅ 客户发消息前就通知 Admin（不用等消息才反应）
@@ -297,12 +305,12 @@ Flutter 点击「联系客服」
   └─ POST /api/v1/chat/message
        ├─ senderId = 用户ID（普通发送，和私聊一样）
        └─ 到达服务器 → 事件触发：MESSAGE_CREATED
-       
+
   └─ 后端自动分发
        ├─ 找到会话的两个成员：[用户, bot]
        ├─ 只发给 bot 的方向（跳过自推）
        └─ Socket dispatch 到 admin 的私有房间
-       
+
   └─ Admin 客服台收到 Socket 事件
        ├─ 刷新会话列表（显示最新消息）
        ├─ 如果已打开聊天窗口，实时显示客户消息
@@ -310,6 +318,7 @@ Flutter 点击「联系客服」
 ```
 
 **为什么这样设计**：
+
 - ✅ 消息走标准流程，不需要特殊黑科技
 - ✅ 所有在线 Admin 都能收到（多个客服可同时看）
 - ✅ 离线 Admin 后登录时自动同步消息历史
@@ -321,7 +330,7 @@ Flutter 点击「联系客服」
 ```
 Admin 在客服台回复
   └─ POST /admin/chat/conversations/:id/reply
-  
+
   └─ 后端不再直接发送，而是用虚拟 bot 代发
        ├─ sendMessage(botId='official_lucky_support', {
        │   conversationId,
@@ -330,13 +339,14 @@ Admin 在客服台回复
        │ })
        ├─ 消息看起来来自 'Lucky Support'（对用户而言）
        └─ 但后台记录了真实 Admin ID（管理追责）
-  
+
   └─ MESSAGE_CREATED 再次触发
        └─ Socket dispatch 到客户的私有房间
        └─ Flutter 收到 → 实时显示 Admin 消息 ✅
 ```
 
 **为什么这样设计**：
+
 - ✅ Admin 消息带有真实身份元数据（meta.realAdminId）
 - ✅ FCM 离线推送自动生效（bot 是真实用户，通知流程完整）
 - ✅ AI Agent 未来接入时零改动，和 Admin 回复用同一套代码
@@ -345,26 +355,26 @@ Admin 在客服台回复
 
 #### 完整效果对比
 
-| 场景 | 当前（群聊）❌ | 修复后（1v1）✅ |
-|------|---|---|
-| 用户 A 和 B 同时客服 | 都在同一个群，互相能看消息 | 各自独立会话，完全隔离 |
-| Admin 看客户列表 | 查询类型错误，看不到 | type:SUPPORT，一秒看全部 |
-| 用户发消息 | Admin 30s 后靠轮询才知道 | Socket 实时通知，0 延迟 |
-| Admin 回复 | senderId=null，FCM 推送失效 | senderId=bot，通知正常 |
-| 离线 Admin 登录 | 没有消息历史 | 自动同步全部聊天记录 |
-| AI 未来接入 | 需要重写代码 | 无缝替换，用户无感知 |
+| 场景                 | 当前（群聊）❌              | 修复后（1v1）✅          |
+| -------------------- | --------------------------- | ------------------------ |
+| 用户 A 和 B 同时客服 | 都在同一个群，互相能看消息  | 各自独立会话，完全隔离   |
+| Admin 看客户列表     | 查询类型错误，看不到        | type:SUPPORT，一秒看全部 |
+| 用户发消息           | Admin 30s 后靠轮询才知道    | Socket 实时通知，0 延迟  |
+| Admin 回复           | senderId=null，FCM 推送失效 | senderId=bot，通知正常   |
+| 离线 Admin 登录      | 没有消息历史                | 自动同步全部聊天记录     |
+| AI 未来接入          | 需要重写代码                | 无缝替换，用户无感知     |
 
 ### 3.7 注意事项
 
-| 要点 | 说明 |
-|------|------|
-| 英文名 | `nickname` 与 `conv.name` 均写英文，Flutter 两处显示统一 |
-| 防搜索 | `searchUsers` 加 `isRobot: false`，一行覆盖现在及未来所有 bot 账号 |
-| 消息 ID | `chatService.sendMessage` 需要唯一 UUID，`admin-chat.service` 已有 `uuidv4()`，改造时带上即可 |
-| Bot 成员检查 | 建联时虚拟账号已加入为 ChatMember，`sendMessage` 内部 `updateMany` 正常执行 |
-| FCM 自推过滤 | `NotificationService` 过滤 `senderId === memberId`，bot 不会给自己推通知 ✅ |
-| 审计追责 | `meta.realAdminId` 记录实际操作的 Admin ID，KPI 统计和追责依赖此字段 |
-| 数据迁移 | 存量的共享群会话无需强制迁移，老用户下次开启客服时自动获得新的 1v1 会话 |
+| 要点         | 说明                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| 英文名       | `nickname` 与 `conv.name` 均写英文，Flutter 两处显示统一                                      |
+| 防搜索       | `searchUsers` 加 `isRobot: false`，一行覆盖现在及未来所有 bot 账号                            |
+| 消息 ID      | `chatService.sendMessage` 需要唯一 UUID，`admin-chat.service` 已有 `uuidv4()`，改造时带上即可 |
+| Bot 成员检查 | 建联时虚拟账号已加入为 ChatMember，`sendMessage` 内部 `updateMany` 正常执行                   |
+| FCM 自推过滤 | `NotificationService` 过滤 `senderId === memberId`，bot 不会给自己推通知 ✅                   |
+| 审计追责     | `meta.realAdminId` 记录实际操作的 Admin ID，KPI 统计和追责依赖此字段                          |
+| 数据迁移     | 存量的共享群会话无需强制迁移，老用户下次开启客服时自动获得新的 1v1 会话                       |
 
 ### 3.8 架构决策：多客服渠道 + Admin UI
 
@@ -591,17 +601,17 @@ GET /api/v1/chat/business?businessId=vip_support_v1
 
 ## 四、文件索引
 
-| 文件 | 职责 | Phase |
-|------|------|-------|
-| `apps/api/prisma/schema.prisma` | 新增 SupportChannel 模型 | P2 新增 |
-| `apps/api/src/common/chat/events/chat.events.ts` | 事件常量 + 事件类 | P1 ✅ |
-| `apps/api/src/common/chat/chat.service.ts` | 客服会话建联 + 用户搜索（防 bot 被搜） | P1 ✅ → P2 重构 |
-| `apps/api/src/common/events/listeners/socket.listener.ts` | 事件监听，Socket 分发 | P1 ✅ → P2 精简 |
-| `apps/api/src/common/events/events.gateway.ts` | Socket.IO 网关，`dispatch()` 出口 | 不变 |
-| `apps/api/src/admin/support-channel/` | 渠道管理 CRUD（新增模块） | P2 新增 |
-| `apps/api/src/admin/chat/admin-chat.service.ts` | Admin 回复逻辑 | P2 重构 |
-| `apps/api/src/admin/chat/admin-chat.module.ts` | 模块注册，注入 ChatService | P2 改造 |
-| `apps/admin-next/src/app/(dashboard)/support-channels/` | 渠道管理 UI 页面（新增） | P2 新增 |
-| `apps/admin-next/src/hooks/useChatSocket.ts` | Admin Socket 连接 | P1 ✅ → P2 改类型 |
-| `apps/admin-next/src/views/CustomerServiceDesk.tsx` | 客服台 UI | P1 ✅ → P2 改类型 |
-| `apps/api/src/common/events/listeners/socket.listener.spec.ts` | 单测（76 tests ✅） | P1 ✅ |
+| 文件                                                           | 职责                                   | Phase             |
+| -------------------------------------------------------------- | -------------------------------------- | ----------------- |
+| `apps/api/prisma/schema.prisma`                                | 新增 SupportChannel 模型               | P2 新增           |
+| `apps/api/src/common/chat/events/chat.events.ts`               | 事件常量 + 事件类                      | P1 ✅             |
+| `apps/api/src/common/chat/chat.service.ts`                     | 客服会话建联 + 用户搜索（防 bot 被搜） | P1 ✅ → P2 重构   |
+| `apps/api/src/common/events/listeners/socket.listener.ts`      | 事件监听，Socket 分发                  | P1 ✅ → P2 精简   |
+| `apps/api/src/common/events/events.gateway.ts`                 | Socket.IO 网关，`dispatch()` 出口      | 不变              |
+| `apps/api/src/admin/support-channel/`                          | 渠道管理 CRUD（新增模块）              | P2 新增           |
+| `apps/api/src/admin/chat/admin-chat.service.ts`                | Admin 回复逻辑                         | P2 重构           |
+| `apps/api/src/admin/chat/admin-chat.module.ts`                 | 模块注册，注入 ChatService             | P2 改造           |
+| `apps/admin-next/src/app/(dashboard)/support-channels/`        | 渠道管理 UI 页面（新增）               | P2 新增           |
+| `apps/admin-next/src/hooks/useChatSocket.ts`                   | Admin Socket 连接                      | P1 ✅ → P2 改类型 |
+| `apps/admin-next/src/views/CustomerServiceDesk.tsx`            | 客服台 UI                              | P1 ✅ → P2 改类型 |
+| `apps/api/src/common/events/listeners/socket.listener.spec.ts` | 单测（76 tests ✅）                    | P1 ✅             |

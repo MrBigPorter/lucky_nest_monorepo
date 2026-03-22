@@ -13,11 +13,11 @@
 
 ## 二、注册方式决策
 
-| 方式 | 结论 |
-|------|------|
-| 手机短信 OTP | ❌ 有成本，内部低频场景不值得 |
-| Google/GitHub OAuth | ❌ 适合直接登录，不适合"申请→等审批"中间状态 |
-| **邮箱 + 密码** | ✅ **选用** — 简单直接，邮箱仅用于接收审批通知 |
+| 方式                | 结论                                           |
+| ------------------- | ---------------------------------------------- |
+| 手机短信 OTP        | ❌ 有成本，内部低频场景不值得                  |
+| Google/GitHub OAuth | ❌ 适合直接登录，不适合"申请→等审批"中间状态   |
+| **邮箱 + 密码**     | ✅ **选用** — 简单直接，邮箱仅用于接收审批通知 |
 
 **为什么邮箱不需要 OTP 验证码：**  
 超级管理员的手动审批本身就是人肉验证，比 OTP 更严格。邮件唯一作用是接收"审批通过/拒绝"通知。
@@ -39,14 +39,14 @@
 
 ### 各层详情
 
-| 层级 | 技术实现 | 参数 |
-|------|---------|------|
-| L1 reCAPTCHA v3 | `RecaptchaService` → Google API | score ≥ 0.5，action=`admin_apply` |
-| L2 IP 日限 | `RedisService` key=`apply:ip:{ip}` | 3次/24h，滑动窗口 |
-| L3 接口限流 | `@Throttle` | 5次/15min/IP |
-| L4 域名黑名单 | 硬编码 Set，30+ 一次性邮箱域名 | 可随时扩充 |
-| L5 用户名冲突 | `prisma.adminUser.findUnique` + `findFirst(pending)` | 双重检查 |
-| L6 邮箱去重 | `prisma.adminRegisterApplication.findFirst(pending + email)` | 防重复申请 |
+| 层级            | 技术实现                                                     | 参数                              |
+| --------------- | ------------------------------------------------------------ | --------------------------------- |
+| L1 reCAPTCHA v3 | `RecaptchaService` → Google API                              | score ≥ 0.5，action=`admin_apply` |
+| L2 IP 日限      | `RedisService` key=`apply:ip:{ip}`                           | 3次/24h，滑动窗口                 |
+| L3 接口限流     | `@Throttle`                                                  | 5次/15min/IP                      |
+| L4 域名黑名单   | 硬编码 Set，30+ 一次性邮箱域名                               | 可随时扩充                        |
+| L5 用户名冲突   | `prisma.adminUser.findUnique` + `findFirst(pending)`         | 双重检查                          |
+| L6 邮箱去重     | `prisma.adminRegisterApplication.findFirst(pending + email)` | 防重复申请                        |
 
 ---
 
@@ -77,6 +77,7 @@ model AdminRegisterApplication {
 ```
 
 **状态流转：**
+
 ```
 pending ──→ approved  →  自动创建 AdminUser(role=VIEWER, status=1)
         └─→ rejected  →  记录拒绝原因，发邮件通知
@@ -86,13 +87,13 @@ pending ──→ approved  →  自动创建 AdminUser(role=VIEWER, status=1)
 
 ## 五、API 接口
 
-| Method | Path | Guard | 说明 |
-|--------|------|-------|------|
-| `POST` | `/auth/admin/apply` | ❌ 公开 | 提交注册申请 |
-| `GET`  | `/admin/applications` | ✅ JWT | 申请列表（分页+过滤）|
-| `GET`  | `/admin/applications/pending-count` | ✅ JWT | 待审批数量（侧边栏红点）|
-| `PATCH`| `/admin/applications/:id/approve` | ✅ JWT (SUPER_ADMIN) | 审批通过 |
-| `PATCH`| `/admin/applications/:id/reject` | ✅ JWT (SUPER_ADMIN) | 审批拒绝 |
+| Method  | Path                                | Guard                | 说明                     |
+| ------- | ----------------------------------- | -------------------- | ------------------------ |
+| `POST`  | `/auth/admin/apply`                 | ❌ 公开              | 提交注册申请             |
+| `GET`   | `/admin/applications`               | ✅ JWT               | 申请列表（分页+过滤）    |
+| `GET`   | `/admin/applications/pending-count` | ✅ JWT               | 待审批数量（侧边栏红点） |
+| `PATCH` | `/admin/applications/:id/approve`   | ✅ JWT (SUPER_ADMIN) | 审批通过                 |
+| `PATCH` | `/admin/applications/:id/reject`    | ✅ JWT (SUPER_ADMIN) | 审批拒绝                 |
 
 ### 申请接口请求体
 
@@ -111,11 +112,11 @@ pending ──→ approved  →  自动创建 AdminUser(role=VIEWER, status=1)
 
 ## 六、邮件通知（Resend）
 
-| 场景 | 邮件主题 | 接收方 |
-|------|---------|--------|
-| 申请提交成功 | `[JoyMini Admin] Application Received — Pending Review` | 申请人 |
-| 审批通过 | `[JoyMini Admin] Application Approved — Welcome!` | 申请人 |
-| 审批拒绝 | `[JoyMini Admin] Application Update` | 申请人（含拒绝原因）|
+| 场景         | 邮件主题                                                | 接收方               |
+| ------------ | ------------------------------------------------------- | -------------------- |
+| 申请提交成功 | `[JoyMini Admin] Application Received — Pending Review` | 申请人               |
+| 审批通过     | `[JoyMini Admin] Application Approved — Welcome!`       | 申请人               |
+| 审批拒绝     | `[JoyMini Admin] Application Update`                    | 申请人（含拒绝原因） |
 
 **邮件服务**: [Resend](https://resend.com) — 免费 3000封/月，100封/天  
 **MVP 阶段**: `RESEND_API_KEY` 不配置时静默跳过，不影响核心流程
@@ -156,10 +157,10 @@ NEXT_PUBLIC_RECAPTCHA_SITE_KEY=6Le... # 前端用
 
 ## 九、前端页面
 
-| 路径 | 类型 | 组件 |
-|------|------|------|
-| `/register-apply` | **Public**（middleware 白名单）| `RegisterApply.tsx` |
-| `/users/applications` 或 AdminUserManagement Tab | **Protected** (SUPER_ADMIN) | `ApplicationsList` |
+| 路径                                             | 类型                            | 组件                |
+| ------------------------------------------------ | ------------------------------- | ------------------- |
+| `/register-apply`                                | **Public**（middleware 白名单） | `RegisterApply.tsx` |
+| `/users/applications` 或 AdminUserManagement Tab | **Protected** (SUPER_ADMIN)     | `ApplicationsList`  |
 
 ### 申请表单字段
 
@@ -188,6 +189,7 @@ Tab: 待审批(n) / 已通过 / 已拒绝
 ## 十、实现进度
 
 ### 后端
+
 - [x] `prisma/schema.prisma` — 新增 `AdminRegisterApplication` 模型
 - [x] `prisma migrate dev --name add_register_application` — 迁移已执行
 - [x] `src/common/email/email.service.ts` — Resend 邮件服务（含3种邮件模板）
@@ -205,6 +207,7 @@ Tab: 待审批(n) / 已通过 / 已拒绝
 - [x] `deploy/.env.example` — 新增 RESEND_API_KEY / EMAIL_FROM / RECAPTCHA_SECRET_KEY
 
 ### 前端
+
 - [x] `src/app/register-apply/page.tsx` — 公开申请页（含 GoogleReCaptchaProvider）
 - [x] `src/views/RegisterApply.tsx` — 表单视图（含 reCAPTCHA v3）
 - [x] `src/middleware.ts` — PUBLIC_PATHS 加 `/register-apply`
@@ -214,4 +217,3 @@ Tab: 待审批(n) / 已通过 / 已拒绝
 - [x] `src/views/AdminUserManagement.tsx` — 新增"Applications"Tab + pending count badge
 - [x] `src/views/admin/ApplicationsManagement.tsx` — 审批列表（approve/reject/分页）
 - [x] `src/components/layout/Sidebar.tsx` — /users 菜单项显示 pending 红点（60s 轮询）
-

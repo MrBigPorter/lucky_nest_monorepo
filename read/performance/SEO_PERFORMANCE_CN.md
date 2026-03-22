@@ -17,11 +17,11 @@
 
 Google 当前采纳三项 Core Web Vitals 作为排名信号：
 
-| 指标 | 全称 | 衡量维度 | 🟢 Good | 🟡 Needs Improvement | 🔴 Poor |
-|------|------|---------|---------|---------------------|---------|
-| **LCP** | Largest Contentful Paint | **加载性能** — 最大内容元素渲染时间 | ≤ 2.5s | 2.5s – 4.0s | > 4.0s |
-| **INP** | Interaction to Next Paint | **交互响应** — 从操作到下一帧渲染延迟（替代 FID） | ≤ 200ms | 200ms – 500ms | > 500ms |
-| **CLS** | Cumulative Layout Shift | **视觉稳定性** — 意外布局偏移累计分数 | ≤ 0.1 | 0.1 – 0.25 | > 0.25 |
+| 指标    | 全称                      | 衡量维度                                          | 🟢 Good | 🟡 Needs Improvement | 🔴 Poor |
+| ------- | ------------------------- | ------------------------------------------------- | ------- | -------------------- | ------- |
+| **LCP** | Largest Contentful Paint  | **加载性能** — 最大内容元素渲染时间               | ≤ 2.5s  | 2.5s – 4.0s          | > 4.0s  |
+| **INP** | Interaction to Next Paint | **交互响应** — 从操作到下一帧渲染延迟（替代 FID） | ≤ 200ms | 200ms – 500ms        | > 500ms |
+| **CLS** | Cumulative Layout Shift   | **视觉稳定性** — 意外布局偏移累计分数             | ≤ 0.1   | 0.1 – 0.25           | > 0.25  |
 
 > ⚠️ **FID 已于 2024 年 3 月被 INP 正式取代**，所有工具链需使用 INP。
 
@@ -29,13 +29,13 @@ Google 当前采纳三项 Core Web Vitals 作为排名信号：
 
 ## 三、辅助诊断指标（非直接排名信号，但影响 LCP/INP/CLS 根因）
 
-| 指标 | 全称 | 目标值 | 说明 |
-|------|------|--------|------|
-| **TTFB** | Time to First Byte | ≤ 800ms（理想 ≤ 200ms） | 服务器首字节响应时间；影响 LCP 上限 |
-| **FCP** | First Contentful Paint | ≤ 1.8s | 浏览器首次渲染任何内容的时间 |
-| **TBT** | Total Blocking Time | ≤ 200ms | FCP 到 TTI 之间主线程阻塞总时长；Lab 下替代 INP |
-| **TTI** | Time to Interactive | ≤ 3.8s | 页面可完全交互的时间 |
-| **Speed Index** | Speed Index | ≤ 3.4s | 页面内容视觉填充速度 |
+| 指标            | 全称                   | 目标值                  | 说明                                            |
+| --------------- | ---------------------- | ----------------------- | ----------------------------------------------- |
+| **TTFB**        | Time to First Byte     | ≤ 800ms（理想 ≤ 200ms） | 服务器首字节响应时间；影响 LCP 上限             |
+| **FCP**         | First Contentful Paint | ≤ 1.8s                  | 浏览器首次渲染任何内容的时间                    |
+| **TBT**         | Total Blocking Time    | ≤ 200ms                 | FCP 到 TTI 之间主线程阻塞总时长；Lab 下替代 INP |
+| **TTI**         | Time to Interactive    | ≤ 3.8s                  | 页面可完全交互的时间                            |
+| **Speed Index** | Speed Index            | ≤ 3.4s                  | 页面内容视觉填充速度                            |
 
 ---
 
@@ -46,6 +46,7 @@ Google 当前采纳三项 Core Web Vitals 作为排名信号：
 LCP 通常由英雄图（hero image）、大段文字块或视频封面触发。
 
 **优化清单：**
+
 ```
 ✅ 图片使用 WebP / AVIF 格式（比 JPEG 小 30-50%）
 ✅ 英雄图使用 <img fetchpriority="high"> 或 Next.js <Image priority>
@@ -58,6 +59,7 @@ LCP 通常由英雄图（hero image）、大段文字块或视频封面触发。
 ```
 
 **Next.js 专项：**
+
 - 使用 `next/image` 自动 WebP 转换 + `sizes` 属性适配响应式
 - 首屏以上的图片加 `priority` prop，跳过懒加载
 - Server Components 渲染关键内容，避免客户端 waterfall
@@ -69,6 +71,7 @@ LCP 通常由英雄图（hero image）、大段文字块或视频封面触发。
 INP 衡量整个会话中所有交互的第 98 百分位延迟。
 
 **优化清单：**
+
 ```
 ✅ 避免长任务（Long Tasks > 50ms）阻塞主线程
 ✅ 将耗时逻辑迁移到 Web Worker
@@ -80,6 +83,7 @@ INP 衡量整个会话中所有交互的第 98 百分位延迟。
 ```
 
 **Next.js 专项：**
+
 - 大型客户端组件拆分为更小单元，配合 `React.lazy` + `Suspense`
 - 避免在 `useEffect` 中连锁触发多次 setState
 
@@ -90,6 +94,7 @@ INP 衡量整个会话中所有交互的第 98 百分位延迟。
 CLS 常见原因：图片/广告/字体无尺寸声明、动态注入内容。
 
 **优化清单：**
+
 ```
 ✅ 所有 <img> / <video> 必须声明 width + height（或 aspect-ratio）
 ✅ Next.js <Image> 自动处理占位尺寸
@@ -116,24 +121,25 @@ CLS 常见原因：图片/广告/字体无尺寸声明、动态注入内容。
 
 ## 五、SEO 其他技术要素（非速度但同等重要）
 
-| 要素 | 状态 | 说明 |
-|------|------|------|
-| **HTTPS** | ✅ 已配置 | mkcert 本地 / Let's Encrypt 生产 |
-| **移动端适配** | 🔵 待验收 | Google 以移动端为主索引（Mobile-First） |
-| **Robots.txt** | ✅ Next.js 默认 | 确认 `/robots.txt` 不阻断关键页面 |
-| **Sitemap.xml** | ⚠️ 待实现 | 使用 `next-sitemap` 自动生成 |
-| **结构化数据** | ⚠️ 待实现 | JSON-LD（Product / BreadcrumbList / Organization） |
-| **Canonical URL** | ✅ Next.js metadata | 防止重复内容分散权重 |
-| **Meta Title/Desc** | ✅ Next.js metadata | 每页独立设置，不超过 60/160 字符 |
-| **Open Graph** | ⚠️ 待完善 | 社交分享预览图、标题 |
-| **图片 alt 属性** | 🔵 需审查 | 所有内容图必须有语义化 alt 文字 |
-| **核心链接结构** | ✅ 已有导航 | 确保关键页面在 3 次点击内可达 |
+| 要素                | 状态                | 说明                                               |
+| ------------------- | ------------------- | -------------------------------------------------- |
+| **HTTPS**           | ✅ 已配置           | mkcert 本地 / Let's Encrypt 生产                   |
+| **移动端适配**      | 🔵 待验收           | Google 以移动端为主索引（Mobile-First）            |
+| **Robots.txt**      | ✅ Next.js 默认     | 确认 `/robots.txt` 不阻断关键页面                  |
+| **Sitemap.xml**     | ⚠️ 待实现           | 使用 `next-sitemap` 自动生成                       |
+| **结构化数据**      | ⚠️ 待实现           | JSON-LD（Product / BreadcrumbList / Organization） |
+| **Canonical URL**   | ✅ Next.js metadata | 防止重复内容分散权重                               |
+| **Meta Title/Desc** | ✅ Next.js metadata | 每页独立设置，不超过 60/160 字符                   |
+| **Open Graph**      | ⚠️ 待完善           | 社交分享预览图、标题                               |
+| **图片 alt 属性**   | 🔵 需审查           | 所有内容图必须有语义化 alt 文字                    |
+| **核心链接结构**    | ✅ 已有导航         | 确保关键页面在 3 次点击内可达                      |
 
 ---
 
 ## 六、测量工具与方法
 
 ### 6.1 Lab 数据（可复现，用于开发调试）
+
 ```bash
 # 本地 Lighthouse CLI
 npx lighthouse http://localhost:3000 --view --preset=desktop
@@ -143,11 +149,13 @@ npx lighthouse http://localhost:3000 --view --preset=desktop
 ```
 
 ### 6.2 Field 数据（真实用户，用于 SEO 排名）
+
 - **Google Search Console** → 核心网页指标报告（按 URL 分类）
 - **PageSpeed Insights** → `https://pagespeed.web.dev/`（同时显示 Lab + Field）
 - **CrUX Dashboard** → `https://lookerstudio.google.com/c/u/0/reporting/bbc5698d-57bb-4969-9e07-68810b9fa348`
 
 ### 6.3 CI 自动化验收
+
 ```yaml
 # GitHub Actions 中集成 Lighthouse CI
 - name: Run Lighthouse CI
@@ -165,14 +173,14 @@ npx lighthouse http://localhost:3000 --view --preset=desktop
 
 > 参考 `copilot-instructions.md` Phase 6 — Lighthouse 性能验收：LCP < 500ms（Phase 2 遗留目标）
 
-| 指标 | 当前估算 | 目标值 | 优先级 |
-|------|---------|--------|--------|
-| LCP | 未测量 | **< 500ms**（内网直连优势） | 🔴 高 |
-| INP | 未测量 | ≤ 200ms | 🔴 高 |
-| CLS | 未测量 | ≤ 0.1 | 🟡 中 |
-| TTFB | 未测量 | ≤ 200ms（内网） | 🔴 高 |
-| FCP | 未测量 | ≤ 1.0s | 🟡 中 |
-| TBT | 未测量 | ≤ 150ms | 🟡 中 |
+| 指标 | 当前估算 | 目标值                      | 优先级 |
+| ---- | -------- | --------------------------- | ------ |
+| LCP  | 未测量   | **< 500ms**（内网直连优势） | 🔴 高  |
+| INP  | 未测量   | ≤ 200ms                     | 🔴 高  |
+| CLS  | 未测量   | ≤ 0.1                       | 🟡 中  |
+| TTFB | 未测量   | ≤ 200ms（内网）             | 🔴 高  |
+| FCP  | 未测量   | ≤ 1.0s                      | 🟡 中  |
+| TBT  | 未测量   | ≤ 150ms                     | 🟡 中  |
 
 > 💡 Admin 后台为内部系统，SEO 权重较低，但 Lighthouse 分数可作为**性能质量门禁**，防止 JS Bundle 膨胀和渲染阻塞问题影响用户效率。
 
@@ -225,4 +233,3 @@ npx lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-re
 - [INP 替代 FID 官方说明](https://web.dev/blog/inp-cwv-march-12)
 - [Next.js Performance 文档](https://nextjs.org/docs/app/building-your-application/optimizing)
 - [PageSpeed Insights](https://pagespeed.web.dev/)
-
