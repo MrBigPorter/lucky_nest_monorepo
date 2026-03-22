@@ -5,20 +5,41 @@
  * Next.js 15 会在浏览器端自动执行这个文件（非 React 组件，纯 JS 入口）。
  * Next.js 15 auto-executes this file in the browser (not a React component, plain JS entry).
  *
- * 当前策略：仅保留核心报错上报，关闭性能追踪和录屏，优先控制 Cloudflare 体积。
- * Current strategy: keep core error reporting only; disable tracing/replay to reduce Cloudflare bundle cost.
+ * 使用 @sentry/nextjs（而非 @sentry/browser）：
+ *   - 自动适配 App Router RSC 错误边界
+ *   - 支持 onRouterTransitionStart（Next.js 15 路由跳转 span）
+ *   - 客户端 bundle 与 @sentry/browser 体积相当，不影响 Cloudflare 限额
+ *
+ * NOTE: global-error.tsx 仍然 import @sentry/browser（避免被 Next.js 追踪进 server bundle 导致体积暴涨）。
+ * 两个包共享同一个 @sentry/core 单例，初始化在此处完成后 global-error.tsx 可直接调用 captureException。
  */
-import * as Sentry from '@sentry/browser';
+import * as Sentry from '@sentry/nextjs';
+
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+// Dev-time guard: warn when DSN is not configured so the issue is immediately visible.
+// In production this means Sentry is silently disabled (no events sent to sentry.io).
+// Fix: Set NEXT_PUBLIC_SENTRY_DSN in GitHub → Settings → Environments → production → Secrets.
+if (!dsn && process.env.NODE_ENV !== 'production') {
+  console.warn(
+    '[Sentry] NEXT_PUBLIC_SENTRY_DSN is not set. ' +
+      'Sentry will NOT collect errors. ' +
+      'Set the secret in GitHub → Settings → Environments → production → Secrets.',
+  );
+}
 
 Sentry.init({
   /**
    * DSN 通过环境变量注入，不硬编码。
    * DSN is injected via env var, not hardcoded.
-   * 设置：.env.production → NEXT_PUBLIC_SENTRY_DSN=https://xxx@yyy.ingest.sentry.io/zzz
+   * 设置方式（二选一）：
+   *   1. GitHub Secrets → NEXT_PUBLIC_SENTRY_DSN（推荐，CI/CD 自动注入）
+   *   2. apps/admin-next/.env.production.local（仅本地 production build 测试用）
    */
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn,
 
-  enabled: process.env.NODE_ENV === 'production',
+  // Only activate when both: running in production AND dsn is configured.
+  enabled: process.env.NODE_ENV === 'production' && Boolean(dsn),
 
   // Error-only mode: do not attach user PII by default.
   sendDefaultPii: false,
@@ -31,3 +52,15 @@ Sentry.init({
     /^AbortError/,
   ],
 });
+
+/**
+ * Next.js 15 App Router 路由跳转钩子。
+ * Next.js 15 App Router route transition hook.
+ *
+ * 每次客户端导航（Link / router.push）都会触发此函数，
+ * @sentry/nextjs 将其包装为一个 Sentry span，方便在 Tracing 里看到路由切换耗时。
+ * Each client-side navigation fires this function;
+ * @sentry/nextjs wraps it as a Sentry span so you can see route transition duration in Tracing.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Next.js convention export consumed by the framework, not imported by user code
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
