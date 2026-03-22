@@ -27,7 +27,7 @@ vi.mock('@/api', () => ({
 }));
 
 import { loginLogApi } from '@/api';
-import { LoginLogList } from '@/views/LoginLogList';
+import { LoginLogList } from '@/components/login-logs/LoginLogsClient';
 
 const createLoginLog = (overrides?: Record<string, unknown>) => ({
   id: 'log-1',

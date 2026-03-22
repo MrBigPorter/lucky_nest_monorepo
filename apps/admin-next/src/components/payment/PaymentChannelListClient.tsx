@@ -10,7 +10,7 @@ import { Card } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { paymentChannelApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
-import { PaymentChannelModal } from './payment-channel/PaymentChannelModal';
+import { PaymentChannelModal } from '@/views/payment-channel/PaymentChannelModal';
 import { useAntdTable } from 'ahooks';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { BaseTable } from '@/components/scaffold/BaseTable';

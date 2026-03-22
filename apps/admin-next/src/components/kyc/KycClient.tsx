@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { KycList } from '@/views/KycList';
+import { KycList } from './KycListClient';
 
 export function KycClient() {
   const router = useRouter();

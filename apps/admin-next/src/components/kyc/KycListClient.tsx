@@ -7,8 +7,8 @@ import {
   ProColumns,
   SmartTable,
 } from '@/components/scaffold/SmartTable';
-import { KycAuditModal } from './kyc/KycAuditModal';
-import { KycFormModal } from './kyc/KycFormModal'; // 👈 引入新组件
+import { KycAuditModal } from '@/views/kyc/KycAuditModal';
+import { KycFormModal } from '@/views/kyc/KycFormModal'; // 👈 引入新组件
 import { Eye, Shield, Edit2, Trash2, Ban, MoreHorizontal } from 'lucide-react';
 import { FormSchema } from '@/type/search';
 import { KycRecord, KycRecordListParams } from '@/type/types';
