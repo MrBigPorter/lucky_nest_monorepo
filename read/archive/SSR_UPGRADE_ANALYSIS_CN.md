@@ -44,16 +44,16 @@
 
 ### 1.2 关键代码现状总结
 
-| 文件 | 现状 | 制约原因 |
-|------|------|---------|
-| `next.config.ts` | `output: 'export'`（生产） | 无法用任何 Server 特性 |
-| `app/(dashboard)/layout.tsx` | `dynamic(..., { ssr: false })` | 整个 Dashboard 树禁用 SSR |
-| `store/useAuthStore.ts` | 直接操作 `localStorage` / `document.cookie` | 不能在 Server 运行 |
-| `store/useAppStore.ts` | `document.documentElement.classList` | 不能在 Server 运行 |
-| `api/http.ts` | `localStorage.getItem('auth_token')` | 不能在 Server 运行 |
-| `middleware.ts` | 注释写明生产不生效 | static export 不走 middleware |
-| 全部 views/* | `'use client'` 顶部声明 | 全部客户端组件 |
-| 全部 app/**/page.tsx | `'use client'` | 无一个服务端页面 |
+| 文件                         | 现状                                        | 制约原因                      |
+| ---------------------------- | ------------------------------------------- | ----------------------------- |
+| `next.config.ts`             | `output: 'export'`（生产）                  | 无法用任何 Server 特性        |
+| `app/(dashboard)/layout.tsx` | `dynamic(..., { ssr: false })`              | 整个 Dashboard 树禁用 SSR     |
+| `store/useAuthStore.ts`      | 直接操作 `localStorage` / `document.cookie` | 不能在 Server 运行            |
+| `store/useAppStore.ts`       | `document.documentElement.classList`        | 不能在 Server 运行            |
+| `api/http.ts`                | `localStorage.getItem('auth_token')`        | 不能在 Server 运行            |
+| `middleware.ts`              | 注释写明生产不生效                          | static export 不走 middleware |
+| 全部 views/\*                | `'use client'` 顶部声明                     | 全部客户端组件                |
+| 全部 app/\*\*/page.tsx       | `'use client'`                              | 无一个服务端页面              |
 
 ### 1.3 当前的问题
 
@@ -80,16 +80,16 @@
 
 很多人误以为 Admin 后台不需要 SSR（因为 SEO 不重要）。大企业的实际做法不同：
 
-| 维度 | 纯 CSR 现状 | 升级 SSR/RSC 后 |
-|------|------------|----------------|
-| **首屏速度** | ~1.3s 才有内容 | ~200ms 服务器返回带数据的 HTML |
-| **认证安全** | token 在 localStorage（XSS 可读） | HTTP-only Cookie（JS 无法读取）|
-| **权限控制** | 客户端 JS 判断（可绕过） | 服务器强制验证 |
-| **Bundle 体积** | 所有逻辑都在客户端 bundle | Server 代码不打包进 JS |
-| **数据安全** | API 密钥/逻辑暴露在客户端 | Server 组件代码不发送到浏览器 |
-| **错误追踪** | 只有客户端 Sentry | 服务端 + 客户端全链路 |
-| **SEO / OG** | 无法生成动态元数据 | 每页有完整 title/description |
-| **运维可观测性** | 纯前端黑盒 | 服务端日志、请求追踪 |
+| 维度             | 纯 CSR 现状                       | 升级 SSR/RSC 后                 |
+| ---------------- | --------------------------------- | ------------------------------- |
+| **首屏速度**     | ~1.3s 才有内容                    | ~200ms 服务器返回带数据的 HTML  |
+| **认证安全**     | token 在 localStorage（XSS 可读） | HTTP-only Cookie（JS 无法读取） |
+| **权限控制**     | 客户端 JS 判断（可绕过）          | 服务器强制验证                  |
+| **Bundle 体积**  | 所有逻辑都在客户端 bundle         | Server 代码不打包进 JS          |
+| **数据安全**     | API 密钥/逻辑暴露在客户端         | Server 组件代码不发送到浏览器   |
+| **错误追踪**     | 只有客户端 Sentry                 | 服务端 + 客户端全链路           |
+| **SEO / OG**     | 无法生成动态元数据                | 每页有完整 title/description    |
+| **运维可观测性** | 纯前端黑盒                        | 服务端日志、请求追踪            |
 
 ### 2.2 大企业（Vercel / Shopify / Linear / Notion）的做法
 
@@ -166,47 +166,49 @@
 
 ### 4.1 `/login` — 登录页
 
-| 部分 | 当前 | 目标 | 理由 |
-|------|------|------|------|
-| HTML 壳 | CSR（dynamic ssr:false） | **Static** | 不含用户数据，CDN 秒出 |
-| 表单（react-hook-form + zod） | CSR | **CSR** | 有 state，必须客户端 |
-| framer-motion 动画 | CSR | **CSR** | 浏览器 API |
-| 认证重定向 | 客户端 useEffect | **Middleware** | 服务端重定向，无闪烁 |
+| 部分                          | 当前                     | 目标           | 理由                   |
+| ----------------------------- | ------------------------ | -------------- | ---------------------- |
+| HTML 壳                       | CSR（dynamic ssr:false） | **Static**     | 不含用户数据，CDN 秒出 |
+| 表单（react-hook-form + zod） | CSR                      | **CSR**        | 有 state，必须客户端   |
+| framer-motion 动画            | CSR                      | **CSR**        | 浏览器 API             |
+| 认证重定向                    | 客户端 useEffect         | **Middleware** | 服务端重定向，无闪烁   |
 
-**变化**：  
-- `app/login/page.tsx` 去掉 `'use client'` 和 `dynamic`  
-- `LoginForm` 组件提取为独立 Client Component  
+**变化**：
+
+- `app/login/page.tsx` 去掉 `'use client'` 和 `dynamic`
+- `LoginForm` 组件提取为独立 Client Component
 - Middleware 读 Cookie，已登录直接 302 跳 `/`
 
 ---
 
 ### 4.2 `/(dashboard)/layout.tsx` — Dashboard 布局
 
-| 部分 | 当前 | 目标 | 理由 |
-|------|------|------|------|
-| 整体 Shell | `dynamic(ssr:false)` | **Server Component** | 骨架是纯静态结构 |
-| Sidebar 导航链接 | CSR | **Server Component** | 导航列表是静态配置 |
-| Sidebar 折叠状态 | CSR（useState） | **CSR（保留）** | 需要 useState |
-| Header（面包屑） | CSR（usePathname） | **CSR（保留）** | 需要 usePathname |
-| Auth Guard | 客户端 useEffect（有闪烁） | **Middleware + Server** | 服务端验证，无闪烁 |
-| Providers（Toast/Theme） | CSR | **CSR（保留）** | 需要浏览器 API |
+| 部分                     | 当前                       | 目标                    | 理由               |
+| ------------------------ | -------------------------- | ----------------------- | ------------------ |
+| 整体 Shell               | `dynamic(ssr:false)`       | **Server Component**    | 骨架是纯静态结构   |
+| Sidebar 导航链接         | CSR                        | **Server Component**    | 导航列表是静态配置 |
+| Sidebar 折叠状态         | CSR（useState）            | **CSR（保留）**         | 需要 useState      |
+| Header（面包屑）         | CSR（usePathname）         | **CSR（保留）**         | 需要 usePathname   |
+| Auth Guard               | 客户端 useEffect（有闪烁） | **Middleware + Server** | 服务端验证，无闪烁 |
+| Providers（Toast/Theme） | CSR                        | **CSR（保留）**         | 需要浏览器 API     |
 
 **改造后结构**：
+
 ```tsx
 // app/(dashboard)/layout.tsx — Server Component（无 'use client'）
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { SidebarServer } from './SidebarServer'; // RSC
-import { DashboardClientShell } from './DashboardClientShell'; // 'use client'
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { SidebarServer } from "./SidebarServer"; // RSC
+import { DashboardClientShell } from "./DashboardClientShell"; // 'use client'
 
 export default async function DashboardLayout({ children }) {
   // 服务端验证 token（无闪烁！）
-  const token = (await cookies()).get('auth_token')?.value;
-  if (!token) redirect('/login');
+  const token = (await cookies()).get("auth_token")?.value;
+  if (!token) redirect("/login");
 
   // 验证 token 有效性（可调用自己的 API）
   const user = await validateToken(token);
-  if (!user) redirect('/login');
+  if (!user) redirect("/login");
 
   return (
     <DashboardClientShell user={user}>
@@ -221,22 +223,23 @@ export default async function DashboardLayout({ children }) {
 
 ### 4.3 `/(dashboard)/page.tsx` — Dashboard 总览
 
-| 部分 | 当前 | 目标 | 理由 |
-|------|------|------|------|
-| 财务统计（总充值/提现） | CSR useRequest | **SSR** | 初始数据服务端 fetch |
-| 订单统计 | CSR useRequest | **SSR** | 同上 |
-| 用户统计 | CSR useRequest | **SSR** | 同上 |
-| 趋势图（recharts） | CSR | **CSR（保留）** | Canvas/SVG 需要浏览器 |
-| 刷新按钮 | CSR | **CSR（保留）** | 交互行为 |
-| StatCard 骨架屏 | CSS animate-pulse | **Suspense fallback** | Server Streaming |
+| 部分                    | 当前              | 目标                  | 理由                  |
+| ----------------------- | ----------------- | --------------------- | --------------------- |
+| 财务统计（总充值/提现） | CSR useRequest    | **SSR**               | 初始数据服务端 fetch  |
+| 订单统计                | CSR useRequest    | **SSR**               | 同上                  |
+| 用户统计                | CSR useRequest    | **SSR**               | 同上                  |
+| 趋势图（recharts）      | CSR               | **CSR（保留）**       | Canvas/SVG 需要浏览器 |
+| 刷新按钮                | CSR               | **CSR（保留）**       | 交互行为              |
+| StatCard 骨架屏         | CSS animate-pulse | **Suspense fallback** | Server Streaming      |
 
 **改造后**：
+
 ```tsx
 // app/(dashboard)/page.tsx — Server Component
-import { Suspense } from 'react';
-import { DashboardStats } from './DashboardStats'; // RSC
-import { DashboardCharts } from './DashboardCharts'; // 'use client'
-import { StatCardSkeleton } from './StatCardSkeleton';
+import { Suspense } from "react";
+import { DashboardStats } from "./DashboardStats"; // RSC
+import { DashboardCharts } from "./DashboardCharts"; // 'use client'
+import { StatCardSkeleton } from "./StatCardSkeleton";
 
 export default async function DashboardPage() {
   return (
@@ -266,16 +269,17 @@ async function DashboardStats() {
 
 ### 4.4 `/users` — 用户管理（典型列表页）
 
-| 部分 | 当前 | 目标 | 理由 |
-|------|------|------|------|
-| 第一页数据 | CSR（空白→请求→渲染） | **SSR** | 服务端预取第 1 页 |
-| 搜索表单 | CSR | **CSR（保留）** | useState/onChange |
-| 分页 / 排序 | CSR（useAntdTable） | **CSR（保留）** | 交互状态 |
-| 表格渲染 | CSR | **CSR（保留）** | 复杂表格有交互 |
-| 详情弹窗 | CSR（ModalManager） | **CSR（保留）** | DOM 弹窗 |
-| 封禁操作 | CSR（async API call） | **CSR + Server Action** | 可迁移到 Server Action |
+| 部分        | 当前                  | 目标                    | 理由                   |
+| ----------- | --------------------- | ----------------------- | ---------------------- |
+| 第一页数据  | CSR（空白→请求→渲染） | **SSR**                 | 服务端预取第 1 页      |
+| 搜索表单    | CSR                   | **CSR（保留）**         | useState/onChange      |
+| 分页 / 排序 | CSR（useAntdTable）   | **CSR（保留）**         | 交互状态               |
+| 表格渲染    | CSR                   | **CSR（保留）**         | 复杂表格有交互         |
+| 详情弹窗    | CSR（ModalManager）   | **CSR（保留）**         | DOM 弹窗               |
+| 封禁操作    | CSR（async API call） | **CSR + Server Action** | 可迁移到 Server Action |
 
 **改造模式（Hybrid Pattern）**：
+
 ```tsx
 // app/users/page.tsx — Server Component
 export default async function UsersPage({ searchParams }) {
@@ -300,19 +304,19 @@ export default async function UsersPage({ searchParams }) {
 
 ### 4.5 各模块渲染策略快速汇总
 
-| 路由 | 初始数据 | 交互层 | 特殊说明 |
-|------|---------|--------|---------|
-| `/` Dashboard | **SSR** 并发 fetch 3 API | CSR 刷新/图表 | Streaming 最有价值 |
-| `/users` | **SSR** 预取第 1 页 | CSR 搜索/分页/弹窗 | |
-| `/orders` | **SSR** 预取第 1 页 | CSR 搜索/状态筛选 | |
-| `/products` | **SSR** 预取第 1 页 | CSR 富文本编辑器 | react-quill 纯 CSR |
-| `/banners` | **SSR** 预取列表 | CSR 拖拽排序/表单 | 拖拽必须 CSR |
-| `/finance` | **SSR** 预取汇总 | CSR 日期范围选择 | |
-| `/kyc` | **SSR** 预取待审 | CSR 审核操作/图片查看 | |
-| `/categories` | **SSR** 全量（数据少） | CSR 树形编辑 | |
-| `/admin-users` | **SSR** 预取 | CSR 权限编辑弹窗 | |
-| `/login` | **Static** | CSR 表单 | |
-| `not-found` | **Static** | — | |
+| 路由           | 初始数据                 | 交互层                | 特殊说明           |
+| -------------- | ------------------------ | --------------------- | ------------------ |
+| `/` Dashboard  | **SSR** 并发 fetch 3 API | CSR 刷新/图表         | Streaming 最有价值 |
+| `/users`       | **SSR** 预取第 1 页      | CSR 搜索/分页/弹窗    |                    |
+| `/orders`      | **SSR** 预取第 1 页      | CSR 搜索/状态筛选     |                    |
+| `/products`    | **SSR** 预取第 1 页      | CSR 富文本编辑器      | react-quill 纯 CSR |
+| `/banners`     | **SSR** 预取列表         | CSR 拖拽排序/表单     | 拖拽必须 CSR       |
+| `/finance`     | **SSR** 预取汇总         | CSR 日期范围选择      |                    |
+| `/kyc`         | **SSR** 预取待审         | CSR 审核操作/图片查看 |                    |
+| `/categories`  | **SSR** 全量（数据少）   | CSR 树形编辑          |                    |
+| `/admin-users` | **SSR** 预取             | CSR 权限编辑弹窗      |                    |
+| `/login`       | **Static**               | CSR 表单              |                    |
+| `not-found`    | **Static**               | —                     |                    |
 
 ---
 
@@ -338,6 +342,7 @@ export default async function UsersPage({ searchParams }) {
 ```
 
 **涉及改动**：
+
 - `useAuthStore.ts`：`login()` 改为调用 Server Action（设 HTTP-only Cookie）
 - `middleware.ts`：去掉注释，真正生效（需要切换到 Node.js 部署）
 - `api/http.ts`：服务端版本使用 `cookies()` 而非 `localStorage`
@@ -351,14 +356,14 @@ export default async function UsersPage({ searchParams }) {
 
 ```typescript
 // lib/server-http.ts — 服务端专用（Server Components / Server Actions）
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
 export async function serverFetch<T>(path: string, options?: RequestInit) {
-  const token = (await cookies()).get('auth_token')?.value;
+  const token = (await cookies()).get("auth_token")?.value;
   const res = await fetch(`${process.env.API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
@@ -384,26 +389,33 @@ export async function serverFetch<T>(path: string, options?: RequestInit) {
 
 ```typescript
 // app/actions/user.ts
-'use server';
-import { cookies } from 'next/headers';
-import { revalidateTag } from 'next/cache';
+"use server";
+import { cookies } from "next/headers";
+import { revalidateTag } from "next/cache";
 
 export async function banUser(userId: string, remark: string) {
-  const token = (await cookies()).get('auth_token')?.value;
+  const token = (await cookies()).get("auth_token")?.value;
   // 直接调用后端 API（内网，更快）
-  const res = await fetch(`${process.env.API_BASE_URL}/v1/admin/users/${userId}`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 0, remark }),
-  });
-  if (!res.ok) throw new Error('Failed to ban user');
+  const res = await fetch(
+    `${process.env.API_BASE_URL}/v1/admin/users/${userId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: 0, remark }),
+    },
+  );
+  if (!res.ok) throw new Error("Failed to ban user");
   // 精确失效缓存
-  revalidateTag('users');
+  revalidateTag("users");
   return res.json();
 }
 ```
 
 **优势**：
+
 - Token 不暴露在客户端网络请求中
 - 可以直接访问内网 API（不经过 nginx 转发）
 - 自动处理 CSRF 防护
@@ -416,8 +428,8 @@ export async function banUser(userId: string, remark: string) {
 ```typescript
 // app/(dashboard)/users/page.tsx
 export const metadata: Metadata = {
-  title: 'User Management — Lucky Admin',
-  description: 'Manage client user accounts',
+  title: "User Management — Lucky Admin",
+  description: "Manage client user accounts",
 };
 
 // 动态 metadata（基于 URL 参数）
@@ -434,23 +446,23 @@ export async function generateMetadata({ params }): Promise<Metadata> {
 
 ```typescript
 // 使用 zustand/middleware 的 persist 中间件（安全方式）
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      theme: 'dark',
-      lang: 'en',
+      theme: "dark",
+      lang: "en",
       // ...
       // 注意：toggleTheme 中的 document 操作移到 useEffect 中
     }),
     {
-      name: 'app-store',
+      name: "app-store",
       storage: createJSONStorage(() => localStorage),
       // 只持久化部分字段，避免 SSR 不一致
       partialize: (state) => ({ theme: state.theme, lang: state.lang }),
-    }
-  )
+    },
+  ),
 );
 ```
 
@@ -626,12 +638,14 @@ async function UsersPage() {
 // ✅ 正确：props 桥接
 // Server Component（page.tsx）
 async function UsersPage() {
-  const initialData = await serverFetch('/v1/admin/user/list?page=1&pageSize=20');
+  const initialData = await serverFetch(
+    "/v1/admin/user/list?page=1&pageSize=20",
+  );
   return <UserManagementClient initialData={initialData} />;
 }
 
 // Client Component（UserManagementClient.tsx）
-'use client';
+("use client");
 function UserManagementClient({ initialData }) {
   // useAntdTable 从 initialData 开始，后续交互走客户端
   const { tableProps, search } = useAntdTable(fetchFn, {
@@ -649,6 +663,7 @@ function UserManagementClient({ initialData }) {
 **问题**：`motion.div` 组件在 SSR 时生成服务端 HTML，客户端 hydrate 后动画状态可能不一致。
 
 **解法**：
+
 ```tsx
 // 对于 Layout 动画（Sidebar 折叠/展开），必须是 CSR
 // → 将 Sidebar 保持为 Client Component（已经是了）✅
@@ -684,6 +699,7 @@ export default async function UsersPage() {
 **问题**：react-quill-new 直接操作 DOM，完全不支持 SSR，且依赖 `document`。
 
 **解法（现有代码基本已处理）**：
+
 ```tsx
 // 产品编辑表单已经是 Client Component，没问题
 // 但要注意：import 'react-quill-new/dist/quill.snow.css' 在 layout.tsx 根级
@@ -691,7 +707,7 @@ export default async function UsersPage() {
 
 // 推荐：移到具体使用 quill 的 Client Component 文件内
 // 或使用 next/dynamic 延迟加载
-const QuillEditor = dynamic(() => import('@/components/QuillEditor'), {
+const QuillEditor = dynamic(() => import("@/components/QuillEditor"), {
   ssr: false,
   loading: () => <div className="h-40 bg-gray-100 animate-pulse" />,
 });
@@ -706,6 +722,7 @@ const QuillEditor = dynamic(() => import('@/components/QuillEditor'), {
 **现状**：已经是 Client Component，问题不大。
 
 **注意点**：Server Actions 的结果需要触发 Modal 时，需要通过状态回传：
+
 ```tsx
 // Server Action 不能直接调用 ModalManager.open()
 // 需要在 Client Component 中接收 Server Action 结果后触发弹窗
@@ -727,13 +744,13 @@ useEffect(() => {
 
 **选项对比**：
 
-| 方案 | 费用 | 全球延迟 | 运维成本 | 适合场景 |
-|------|------|---------|---------|---------|
-| 当前 Cloudflare Pages（static） | 免费 | 极低（CDN边缘） | 极低 | 纯静态，当前方案 |
-| Cloudflare Workers（Edge Runtime） | 低 | 极低 | 中 | 受限（无 Node.js 全部 API） |
-| Vercel | 中（按使用量） | 低 | 低 | 推荐，Next.js 原生 |
-| Docker + 自建 VPS（已有） | 低 | 中（单机房） | 高 | 已有基础设施 |
-| Cloudflare Tunnel + Docker | 低 | 中 | 中 | 自建+CDN组合 |
+| 方案                               | 费用           | 全球延迟        | 运维成本 | 适合场景                    |
+| ---------------------------------- | -------------- | --------------- | -------- | --------------------------- |
+| 当前 Cloudflare Pages（static）    | 免费           | 极低（CDN边缘） | 极低     | 纯静态，当前方案            |
+| Cloudflare Workers（Edge Runtime） | 低             | 极低            | 中       | 受限（无 Node.js 全部 API） |
+| Vercel                             | 中（按使用量） | 低              | 低       | 推荐，Next.js 原生          |
+| Docker + 自建 VPS（已有）          | 低             | 中（单机房）    | 高       | 已有基础设施                |
+| Cloudflare Tunnel + Docker         | 低             | 中              | 中       | 自建+CDN组合                |
 
 **建议**：Admin 系统用户全在菲律宾（公司内部），延迟不是首要问题 → **Docker + 自建 VPS** 最合适，成本最低，改动最小。
 
@@ -744,10 +761,12 @@ useEffect(() => {
 **问题**：当前测试体系（Vitest + @testing-library/react）主要针对 Client Components。Server Components 是 async 函数，测试方式不同。
 
 **影响**：
+
 - Server Component 返回 JSX，但不能用 `render()` 直接测
 - 需要引入 `react-server` 渲染器或 mock `next/headers`、`next/cache`
 
 **解法**：
+
 ```typescript
 // 方案 A：E2E 测试覆盖（Playwright 已有，扩展 spec 文件）
 // Server Component 的正确性通过 E2E 验证，不写单元测试
@@ -756,8 +775,8 @@ useEffect(() => {
 
 // 方案 C：为 Server Component 写集成测试
 // 直接调用 async 函数，mock next/headers
-vi.mock('next/headers', () => ({
-  cookies: () => ({ get: vi.fn().mockReturnValue({ value: 'test-token' }) }),
+vi.mock("next/headers", () => ({
+  cookies: () => ({ get: vi.fn().mockReturnValue({ value: "test-token" }) }),
 }));
 
 const result = await DashboardPage({});
@@ -771,10 +790,12 @@ const result = await DashboardPage({});
 ### 风险 1：认证迁移期双系统并存导致 Token 不同步 🔴 高风险
 
 **风险描述**：
+
 - 过渡期同时存在 `localStorage` token 和 Cookie token
 - 如果两者不一致（如 localStorage 已过期但 Cookie 未过期），会导致奇怪的认证状态
 
 **防控措施**：
+
 ```
 □ 明确迁移顺序：先同时写两处 → 测试稳定 → 删除 localStorage 逻辑
 □ 在 middleware 中，如果 Cookie 验证失败，同时清除 Cookie
@@ -788,10 +809,12 @@ const result = await DashboardPage({});
 ### 风险 2：Hydration Mismatch 导致页面闪烁/崩溃 🔴 高风险
 
 **风险描述**：
+
 - 服务端渲染的 HTML 与客户端初次渲染结果不一致时，React 会抛出 hydration error
 - 常见原因：主题（dark/light class）、时间格式化（服务端时区 vs 客户端时区）、随机数
 
 **防控措施**：
+
 ```
 □ 主题：使用内联 script（见难点 2 的方案 B）
 □ 时间：服务端和客户端统一使用 UTC，格式化只在客户端做
@@ -805,11 +828,13 @@ const result = await DashboardPage({});
 ### 风险 3：Server Component 中意外引入客户端代码 🟡 中等风险
 
 **风险描述**：
+
 - 在 Server Component 中 import 了包含 `useState`/`useEffect` 的模块
 - 构建时报错："You're importing a component that needs useState..."
 - 常见场景：从 `@repo/ui` 导入的组件、从 `@/components/UIComponents` 导入
 
 **防控措施**：
+
 ```
 □ 建立明确的文件命名约定：
   - *.server.tsx → 只能是 Server Component
@@ -826,10 +851,12 @@ const result = await DashboardPage({});
 ### 风险 4：Server Actions 的安全性问题 🟡 中等风险
 
 **风险描述**：
+
 - Server Actions 的 URL 是公开的（虽然不可预测），理论上可以被枚举调用
 - 如果缺乏 Server-side 权限验证，可能被绕过
 
 **防控措施**：
+
 ```
 □ 每个 Server Action 内部必须重新验证 token（不信任客户端传来的数据）
 □ 建立统一的 Server Action wrapper，自动注入权限检查：
@@ -850,10 +877,12 @@ const result = await DashboardPage({});
 ### 风险 5：首次加载变慢（服务器冷启动）🟡 中等风险
 
 **风险描述**：
+
 - SSR 需要等待服务端 API 请求完成才能返回 HTML
 - 如果后端 API 慢（如数据库查询慢），会导致首屏比纯 CSR 更慢
 
 **防控措施**：
+
 ```
 □ 使用 Suspense + Streaming，先返回 Layout 骨架，数据异步填充
 □ 设置合理的 fetch 超时（建议 3 秒），超时后 fallback 到 loading 状态
@@ -868,10 +897,12 @@ const result = await DashboardPage({});
 ### 风险 6：已有测试体系的破坏 🟡 中等风险
 
 **风险描述**：
+
 - 将 page.tsx 从 `'use client'` 改为 Server Component 后，现有 Vitest 单元测试可能失效
 - `vi.mock('next/headers')` 等 mock 需要补充
 
 **防控措施**：
+
 ```
 □ 迁移前：确保现有测试 100% 通过（作为基准）
 □ 每个页面迁移后：立即补充对应的 Server Component 测试
@@ -885,6 +916,7 @@ const result = await DashboardPage({});
 ### 风险 7：构建体积和构建时间回归 🟢 低风险
 
 **防控措施**：
+
 ```
 □ `next build --debug` 分析各路由的 bundle 大小
 □ 使用 @next/bundle-analyzer 可视化
@@ -933,7 +965,7 @@ CMD ["node", "server.js"]
 // next.config.ts 变化
 const nextConfig: NextConfig = {
   // 从 output: 'export' → output: 'standalone'（生产 Docker 优化）
-  output: 'standalone',
+  output: "standalone",
   // 其余配置基本不变...
 };
 ```
@@ -1002,11 +1034,13 @@ location / {
 4. **未来扩展**：需要发送邮件通知、生成 PDF 报表等服务端能力时，已有基础
 
 **不应该追求的**：
+
 - 不要为了 SSR 而 SSR，把所有组件强行改成 Server Component
 - 复杂的交互表格（useAntdTable）、弹窗、动画，继续保持 CSR
 - 不要牺牲开发体验和测试可维护性换取理论上的性能提升
 
 **最小有效改造（MVP）——预计 2 周，可观测的最大收益**：
+
 ```
 1. output: 'standalone' 替换 output: 'export'
 2. 部署迁移到 Docker（nginx + next.js server）
@@ -1048,8 +1082,8 @@ Zustand 的 `set` 是纯状态更新函数，里面做 DOM side effect 是反模
 ```typescript
 // components/Providers.tsx — 当前代码
 useEffect(() => {
-  document.documentElement.classList.remove('light', 'dark');
-  document.documentElement.classList.add(theme);  // ← 和 action 里做的同一件事
+  document.documentElement.classList.remove("light", "dark");
+  document.documentElement.classList.add(theme); // ← 和 action 里做的同一件事
 }, [theme]);
 ```
 
@@ -1060,8 +1094,8 @@ useEffect(() => {
 ```typescript
 // 当前 useAppStore 用的是最基础的 create，没有 persist 中间件
 export const useAppStore = create<AppState>((set) => ({
-  theme: 'dark',   // ← 每次刷新回到这个硬编码值
-  lang: 'en',
+  theme: "dark", // ← 每次刷新回到这个硬编码值
+  lang: "en",
 }));
 ```
 
@@ -1090,16 +1124,16 @@ npm install next-themes
 
 ```tsx
 // app/layout.tsx — 根布局加 ThemeProvider（Server Component，无需 'use client'）
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from "next-themes";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider
-          attribute="class"        // 用 .dark / .light class（配合 Tailwind）
-          defaultTheme="dark"      // 默认暗色
-          enableSystem={false}     // 不跟随系统（admin 后台不需要）
+          attribute="class" // 用 .dark / .light class（配合 Tailwind）
+          defaultTheme="dark" // 默认暗色
+          enableSystem={false} // 不跟随系统（admin 后台不需要）
           storageKey="admin-theme" // localStorage key
         >
           {children}
@@ -1116,23 +1150,24 @@ export default function RootLayout({ children }) {
 export const useAppStore = create<AppState>((set) => ({
   // ❌ 删除：theme: 'dark',
   // ❌ 删除：toggleTheme()
-  lang: 'en',
+  lang: "en",
   isSidebarCollapsed: false,
-  toggleLang: () => set((s) => ({ lang: s.lang === 'en' ? 'zh' : 'en' })),
-  toggleSidebar: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
+  toggleLang: () => set((s) => ({ lang: s.lang === "en" ? "zh" : "en" })),
+  toggleSidebar: () =>
+    set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
 }));
 ```
 
 ```tsx
 // components/layout/Header.tsx — 用 next-themes 替换 useAppStore 的主题
-import { useTheme } from 'next-themes';
+import { useTheme } from "next-themes";
 
 // ❌ 删除：const { theme, toggleTheme } = useAppStore();
 const { resolvedTheme, setTheme } = useTheme();
 
-<button onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
-  {resolvedTheme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
-</button>
+<button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+  {resolvedTheme === "dark" ? <Moon size={20} /> : <Sun size={20} />}
+</button>;
 ```
 
 ```tsx
@@ -1152,15 +1187,15 @@ export const Providers = ({ children }) => {
 
 **改造前后对比**：
 
-| 问题 | 当前 | 使用 next-themes 后 |
-|------|------|-------------------|
-| action 里 DOM 操作 | ✗ 反模式 | ✅ 已删除 |
-| 逻辑重复（action + useEffect） | ✗ 两处 | ✅ 统一一处 |
-| 刷新后主题重置 Bug | ✗ 存在 | ✅ 自动持久化 |
-| SSR FOUC 闪烁 | ✗ 严重 | ✅ 零闪烁 |
-| 跟随系统主题 | ✗ 不支持 | ✅ 可选开启 |
-| 代码量 | 多 | 少（删代码更少） |
-| 安装成本 | — | `npm i next-themes`，1行配置 |
+| 问题                           | 当前     | 使用 next-themes 后          |
+| ------------------------------ | -------- | ---------------------------- |
+| action 里 DOM 操作             | ✗ 反模式 | ✅ 已删除                    |
+| 逻辑重复（action + useEffect） | ✗ 两处   | ✅ 统一一处                  |
+| 刷新后主题重置 Bug             | ✗ 存在   | ✅ 自动持久化                |
+| SSR FOUC 闪烁                  | ✗ 严重   | ✅ 零闪烁                    |
+| 跟随系统主题                   | ✗ 不支持 | ✅ 可选开启                  |
+| 代码量                         | 多       | 少（删代码更少）             |
+| 安装成本                       | —        | `npm i next-themes`，1行配置 |
 
 ---
 
@@ -1181,15 +1216,16 @@ export const TRANSLATIONS = {
 
 ```tsx
 // 真实 View 组件（UserManagement.tsx，347行）— 零处使用 TRANSLATIONS
-'User Comprehensive Profile'           // 弹窗标题 → 硬编码
-'Freeze User Account'                  // 操作名 → 硬编码
-'Please enter the reason...'          // placeholder → 硬编码
-'Remark is required for freezing'     // 错误提示 → 硬编码
-'Admin manual ban'                    // 默认备注 → 硬编码
+"User Comprehensive Profile"; // 弹窗标题 → 硬编码
+"Freeze User Account"; // 操作名 → 硬编码
+"Please enter the reason..."; // placeholder → 硬编码
+"Remark is required for freezing"; // 错误提示 → 硬编码
+"Admin manual ban"; // 默认备注 → 硬编码
 // 整个文件几十处英文文字，无一处翻译
 ```
 
 `useAppStore.lang` 实际上只被 **4 个 Layout 组件**消费：
+
 - `DashboardLayout.tsx` → 面包屑路由名
 - `Sidebar.tsx` → 菜单名
 
@@ -1207,7 +1243,7 @@ toggleLang: () => set((state) => ({ lang: state.lang === 'en' ? 'zh' : 'en' })),
 ```tsx
 // Header.tsx — 二元切换按钮，语义不清晰
 <button onClick={toggleLang}>
-  <span>{lang === 'en' ? 'EN' : '中'}</span>
+  <span>{lang === "en" ? "EN" : "中"}</span>
 </button>
 ```
 
@@ -1215,7 +1251,7 @@ toggleLang: () => set((state) => ({ lang: state.lang === 'en' ? 'zh' : 'en' })),
 
 ```typescript
 // DashboardLayout.tsx — 用 as 强制类型转换绕过检查
-t[currentRoute.name as keyof typeof t] || currentRoute.name
+t[currentRoute.name as keyof typeof t] || currentRoute.name;
 // 如果 route.name 不在 TRANSLATIONS 里 → 运行时 undefined → 降级显示 name
 // 编译时无任何报错，问题只在运行时发现
 ```
@@ -1234,12 +1270,12 @@ t[currentRoute.name as keyof typeof t] || currentRoute.name
 
 #### 方案选型
 
-| 方案 | 适合场景 | 关键优势 | 关键劣势 |
-|------|---------|---------|---------|
-| **当前自制** | 演示级别 | 零依赖 | 所有上述问题 |
-| **`next-intl`** ⭐推荐 | Next.js App Router | RSC 原生支持，类型安全，插值/复数 | 需要重构现有用法 |
-| **`i18next` + `react-i18next`** | 通用 React | 生态最大，最成熟 | 未针对 RSC 优化 |
-| **`lingui`** | 性能优先团队 | 编译时优化，极小 bundle | 社区较小 |
+| 方案                            | 适合场景           | 关键优势                          | 关键劣势         |
+| ------------------------------- | ------------------ | --------------------------------- | ---------------- |
+| **当前自制**                    | 演示级别           | 零依赖                            | 所有上述问题     |
+| **`next-intl`** ⭐推荐          | Next.js App Router | RSC 原生支持，类型安全，插值/复数 | 需要重构现有用法 |
+| **`i18next` + `react-i18next`** | 通用 React         | 生态最大，最成熟                  | 未针对 RSC 优化  |
+| **`lingui`**                    | 性能优先团队       | 编译时优化，极小 bundle           | 社区较小         |
 
 **推荐 `next-intl`**：Next.js App Router 生态事实标准，Server Component 里可直接用，Client Component 同样支持，类型系统自动从 JSON 文件推导 key 类型。
 
@@ -1249,22 +1285,23 @@ t[currentRoute.name as keyof typeof t] || currentRoute.name
 
 ```typescript
 // store/useAppStore.ts
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      lang: 'en',
+      lang: "en",
       isSidebarCollapsed: false,
-      toggleLang: () => set((s) => ({ lang: s.lang === 'en' ? 'zh' : 'en' })),
-      toggleSidebar: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
+      toggleLang: () => set((s) => ({ lang: s.lang === "en" ? "zh" : "en" })),
+      toggleSidebar: () =>
+        set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
     }),
     {
-      name: 'admin-app-store',
+      name: "admin-app-store",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ lang: state.lang }), // 只持久化 lang
-    }
-  )
+    },
+  ),
 );
 ```
 
@@ -1338,25 +1375,25 @@ export default async function RootLayout({ children }) {
 
 ```tsx
 // Server Component 里使用（RSC 原生支持！）
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 async function UsersPage() {
-  const t = await getTranslations('user');
-  return <h1>{t('pageTitle')}</h1>; // ← TypeScript 自动补全，编译时检查 key
+  const t = await getTranslations("user");
+  return <h1>{t("pageTitle")}</h1>; // ← TypeScript 自动补全，编译时检查 key
 }
 
 // Client Component 里使用
-'use client';
-import { useTranslations } from 'next-intl';
+("use client");
+import { useTranslations } from "next-intl";
 
 function UserManagementClient() {
-  const tCommon = useTranslations('common');
-  const tUser = useTranslations('user');
+  const tCommon = useTranslations("common");
+  const tUser = useTranslations("user");
   return (
     <>
-      <h1>{tUser('pageTitle')}</h1>
-      <Button>{tCommon('add')}</Button>
-      <p>{tCommon('itemCount', { count: 42 })}</p> {/* "42 items" */}
+      <h1>{tUser("pageTitle")}</h1>
+      <Button>{tCommon("add")}</Button>
+      <p>{tCommon("itemCount", { count: 42 })}</p> {/* "42 items" */}
     </>
   );
 }
@@ -1366,25 +1403,25 @@ function UserManagementClient() {
 
 ```typescript
 // app/actions/locale.ts
-'use server';
-import { cookies } from 'next/headers';
+"use server";
+import { cookies } from "next/headers";
 
-export async function setLocale(locale: 'en' | 'zh') {
-  (await cookies()).set('NEXT_LOCALE', locale, {
+export async function setLocale(locale: "en" | "zh") {
+  (await cookies()).set("NEXT_LOCALE", locale, {
     maxAge: 365 * 24 * 60 * 60, // 1年
-    path: '/',
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
   });
 }
 ```
 
 ```tsx
 // Header.tsx — 语言切换使用 Server Action + useTransition
-'use client';
-import { useLocale } from 'next-intl';
-import { setLocale } from '@/app/actions/locale';
-import { useTransition } from 'react';
+"use client";
+import { useLocale } from "next-intl";
+import { setLocale } from "@/app/actions/locale";
+import { useTransition } from "react";
 
 export function LangToggle() {
   const locale = useLocale();
@@ -1392,17 +1429,20 @@ export function LangToggle() {
 
   return (
     <button
-      onClick={() => startTransition(() => setLocale(locale === 'en' ? 'zh' : 'en'))}
+      onClick={() =>
+        startTransition(() => setLocale(locale === "en" ? "zh" : "en"))
+      }
       disabled={isPending}
       className="..."
     >
-      {isPending ? '...' : locale === 'en' ? 'EN' : '中'}
+      {isPending ? "..." : locale === "en" ? "EN" : "中"}
     </button>
   );
 }
 ```
 
 **改造后收益**：
+
 - Cookie 存储 → 刷新保留语言
 - 服务端可读 → SSR 时渲染正确语言（不产生闪烁）
 - `useTransition` → 切换有 pending 反馈，不阻塞 UI
@@ -1441,11 +1481,13 @@ export function LangToggle() {
 > 技术方案文档在这里给出客观的 ROI 分析。
 
 **全量中文支持的实际成本**：
+
 - 翻译所有 View 层文字：2-4 周
 - 每次新增功能维护两套 JSON：持续成本
 - 双语 UI 布局测试（中文字符宽度 ≠ 英文）：额外 QA 成本
 
 **建议**：
+
 1. **修 Bug**：加 persist，让现有功能正常（1小时，无条件做）
 2. **建架构**：引入 next-intl 基础设施，为将来做准备（2天）
 3. **评估需求**：确认实际有多少管理员用中文，再决定全量翻译的 ROI
@@ -1453,6 +1495,5 @@ export function LangToggle() {
 
 ---
 
-*文档版本 v1.1 — 2026-03-16（新增第十一节：主题与多语言分析）*  
-*适用项目：lucky_nest_monorepo / apps/admin-next*
-
+_文档版本 v1.1 — 2026-03-16（新增第十一节：主题与多语言分析）_  
+_适用项目：lucky_nest_monorepo / apps/admin-next_

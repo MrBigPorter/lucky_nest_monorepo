@@ -32,14 +32,14 @@
 
 ### 核心分层说明
 
-| 层级 | 技术 | 职责 |
-|------|------|------|
-| **传输层** | Socket.IO over WebSocket | 实时消息收发、事件分发 |
-| **服务层** | `SocketService` (Singleton + Mixin) | 连接管理、Token 刷新、消息路由 |
-| **业务逻辑层** | `ChatEventHandler`, `ChatActionService`, `ChatSyncManager` | 房间管理、发送逻辑、消息同步 |
-| **状态管理层** | Riverpod (`ConversationListProvider`, `ChatViewModel`) | UI 响应式状态 |
-| **持久化层** | `LocalDatabaseService` (Sembast) | 离线消息缓存、未读计数 |
-| **API 层** | REST HTTP | 历史消息拉取、会话详情、已读上报 |
+| 层级           | 技术                                                       | 职责                             |
+| -------------- | ---------------------------------------------------------- | -------------------------------- |
+| **传输层**     | Socket.IO over WebSocket                                   | 实时消息收发、事件分发           |
+| **服务层**     | `SocketService` (Singleton + Mixin)                        | 连接管理、Token 刷新、消息路由   |
+| **业务逻辑层** | `ChatEventHandler`, `ChatActionService`, `ChatSyncManager` | 房间管理、发送逻辑、消息同步     |
+| **状态管理层** | Riverpod (`ConversationListProvider`, `ChatViewModel`)     | UI 响应式状态                    |
+| **持久化层**   | `LocalDatabaseService` (Sembast)                           | 离线消息缓存、未读计数           |
+| **API 层**     | REST HTTP                                                  | 历史消息拉取、会话详情、已读上报 |
 
 ---
 
@@ -59,28 +59,28 @@ SUPPORT   —— 客服会话（核心！）
 
 ## 三、消息类型（MessageType）
 
-| 值 | 枚举名 | 描述 |
-|----|--------|------|
-| 0 | `text` | 文本消息 |
-| 1 | `image` | 图片消息 |
-| 2 | `audio` | 语音消息 |
-| 3 | `video` | 视频消息 |
-| 4 | `recalled` | 已撤回消息（本地展示用） |
-| 5 | `file` | 文件消息 |
-| 6 | `location` | 位置消息 |
-| 99 | `system` | 系统消息（不触发已读上报） |
+| 值  | 枚举名     | 描述                       |
+| --- | ---------- | -------------------------- |
+| 0   | `text`     | 文本消息                   |
+| 1   | `image`    | 图片消息                   |
+| 2   | `audio`    | 语音消息                   |
+| 3   | `video`    | 视频消息                   |
+| 4   | `recalled` | 已撤回消息（本地展示用）   |
+| 5   | `file`     | 文件消息                   |
+| 6   | `location` | 位置消息                   |
+| 99  | `system`   | 系统消息（不触发已读上报） |
 
 ---
 
 ## 四、消息状态（MessageStatus）
 
-| 枚举 | 含义 |
-|------|------|
-| `sending` | 发送中（本地乐观写入） |
-| `success` | 服务端已确认 |
-| `failed` | 发送失败（进入离线队列） |
-| `read` | 对方已读 |
-| `pending` | 等待重试 |
+| 枚举      | 含义                     |
+| --------- | ------------------------ |
+| `sending` | 发送中（本地乐观写入）   |
+| `success` | 服务端已确认             |
+| `failed`  | 发送失败（进入离线队列） |
+| `read`    | 对方已读                 |
+| `pending` | 等待重试                 |
 
 ---
 
@@ -110,55 +110,55 @@ URL:    {API_BASE_URL}/events
 
 #### 聊天类事件
 
-| `type` 字段 | 触发场景 | `data` 关键字段 |
-|-------------|----------|-----------------|
-| `chat_message` | 收到新消息 | `id`, `conversationId`, `senderId`, `content`, `type`, `createdAt`, `seqId`, `meta`, `tempId` |
-| `conversation_read` | 对方已读 | `conversationId`, `readerId`, `lastReadSeqId` |
-| `message_recalled` | 消息被撤回 | `conversationId`, `messageId`, `tip`, `isSelf`, `operatorId`, `seqId` |
-| `conversation_updated` | 会话信息变更（头像/名称） | `conversationId`, `updates: {}` |
-| `conversation_added` | 被拉入新会话（群） | `conversationId` |
+| `type` 字段            | 触发场景                  | `data` 关键字段                                                                               |
+| ---------------------- | ------------------------- | --------------------------------------------------------------------------------------------- |
+| `chat_message`         | 收到新消息                | `id`, `conversationId`, `senderId`, `content`, `type`, `createdAt`, `seqId`, `meta`, `tempId` |
+| `conversation_read`    | 对方已读                  | `conversationId`, `readerId`, `lastReadSeqId`                                                 |
+| `message_recalled`     | 消息被撤回                | `conversationId`, `messageId`, `tip`, `isSelf`, `operatorId`, `seqId`                         |
+| `conversation_updated` | 会话信息变更（头像/名称） | `conversationId`, `updates: {}`                                                               |
+| `conversation_added`   | 被拉入新会话（群）        | `conversationId`                                                                              |
 
 #### 联系人类事件
 
-| `type` 字段 | 触发场景 |
-|-------------|----------|
-| `contact_apply` | 收到好友申请 |
+| `type` 字段      | 触发场景       |
+| ---------------- | -------------- |
+| `contact_apply`  | 收到好友申请   |
 | `contact_accept` | 好友申请被接受 |
 
 #### 群组类事件
 
-| `type` 字段 | 触发场景 |
-|-------------|----------|
-| `member_kicked` | 成员被踢出 |
-| `member_muted` | 成员被禁言 |
-| `owner_transferred` | 群主转让 |
-| `member_role_updated` | 成员角色变更 |
-| `member_joined` | 新成员加入 |
-| `member_left` | 成员离开 |
-| `group_disbanded` | 群解散 |
-| `group_info_updated` | 群信息更新 |
-| `group_apply_new` | 新的入群申请 |
-| `group_apply_result` | 入群申请结果 |
+| `type` 字段             | 触发场景         |
+| ----------------------- | ---------------- |
+| `member_kicked`         | 成员被踢出       |
+| `member_muted`          | 成员被禁言       |
+| `owner_transferred`     | 群主转让         |
+| `member_role_updated`   | 成员角色变更     |
+| `member_joined`         | 新成员加入       |
+| `member_left`           | 成员离开         |
+| `group_disbanded`       | 群解散           |
+| `group_info_updated`    | 群信息更新       |
+| `group_apply_new`       | 新的入群申请     |
+| `group_apply_result`    | 入群申请结果     |
 | `group_request_handled` | 管理员处理了申请 |
 
 #### 业务/系统类事件
 
-| `type` 字段 | 触发场景 |
-|-------------|----------|
-| `group_success` / `group_failed` | 群操作结果通知 |
-| `group_update` | 群业务数据变更 |
-| `wallet_change` | 钱包余额变动 |
-| `force_logout` | 强制下线（踢号） |
+| `type` 字段                      | 触发场景         |
+| -------------------------------- | ---------------- |
+| `group_success` / `group_failed` | 群操作结果通知   |
+| `group_update`                   | 群业务数据变更   |
+| `wallet_change`                  | 钱包余额变动     |
+| `force_logout`                   | 强制下线（踢号） |
 
 ### 5.4 客户端主动发出的事件
 
-| 事件名 | 描述 | Payload |
-|--------|------|---------|
-| `join_chat` | 进入聊天室（开始监听该会话消息） | `{ conversationId }` |
-| `leave_chat` | 离开聊天室 | `{ conversationId }` |
-| `send_message` | 发送消息（带 ACK） | `{ conversationId, content, type, tempId }` |
-| `join_lobby` | 加入大厅（全局状态监听） | 无 |
-| `leave_lobby` | 离开大厅 | 无 |
+| 事件名         | 描述                             | Payload                                     |
+| -------------- | -------------------------------- | ------------------------------------------- |
+| `join_chat`    | 进入聊天室（开始监听该会话消息） | `{ conversationId }`                        |
+| `leave_chat`   | 离开聊天室                       | `{ conversationId }`                        |
+| `send_message` | 发送消息（带 ACK）               | `{ conversationId, content, type, tempId }` |
+| `join_lobby`   | 加入大厅（全局状态监听）         | 无                                          |
+| `leave_lobby`  | 离开大厅                         | 无                                          |
 
 ### 5.5 `send_message` ACK 响应格式
 
@@ -176,33 +176,33 @@ URL:    {API_BASE_URL}/events
 
 ```json
 {
-  "id":             "msg_uuid",
+  "id": "msg_uuid",
   "conversationId": "conv_uuid",
-  "senderId":       "user_uuid",
-  "content":        "Hello!",
-  "type":           0,
-  "createdAt":      1710000000000,
-  "seqId":          42,
-  "tempId":         "local_temp_id",
-  "isSelf":         false,
-  "isRecalled":     false,
-  "meta":           {},
+  "senderId": "user_uuid",
+  "content": "Hello!",
+  "type": 0,
+  "createdAt": 1710000000000,
+  "seqId": 42,
+  "tempId": "local_temp_id",
+  "isSelf": false,
+  "isRecalled": false,
+  "meta": {},
   "sender": {
-    "id":       "user_uuid",
+    "id": "user_uuid",
     "nickname": "Alice",
-    "avatar":   "https://..."
+    "avatar": "https://..."
   }
 }
 ```
 
 ### `meta` 字段说明（根据 type 不同）
 
-| 消息类型 | meta 字段 |
-|----------|-----------|
-| image (1) | `fileExt`, `fileName` |
-| video (3) | `blurHash`, `w`(width), `h`(height) |
-| file (5)  | `fileName`, `fileSize`, `fileExt` |
-| audio (2) | `duration`(ms) |
+| 消息类型     | meta 字段                                                         |
+| ------------ | ----------------------------------------------------------------- |
+| image (1)    | `fileExt`, `fileName`                                             |
+| video (3)    | `blurHash`, `w`(width), `h`(height)                               |
+| file (5)     | `fileName`, `fileSize`, `fileExt`                                 |
+| audio (2)    | `duration`(ms)                                                    |
 | location (6) | `latitude`, `longitude`, `address`, `title`, `thumb`(静态地图URL) |
 
 ---
@@ -307,6 +307,7 @@ SocketChatMixin._onChatMessage()
 ### 8.3 增量同步算法（Gap Detection）
 
 进入聊天室时执行：
+
 1. 查本地最大 `seqId`（`localMaxSeqId`）
 2. 从服务端拉最新一页消息
 3. 若 `serverMaxSeqId > localMaxSeqId` → 存在消息空洞 → 向前递归补全
@@ -320,6 +321,7 @@ SocketChatMixin._onChatMessage()
 ### 8.5 离线队列
 
 `OfflineQueueManager` 监听以下时机自动 flush：
+
 - 网络恢复（`connectivity_plus`）
 - App 从后台切回前台（`AppLifecycleState.resumed`）
 - 消息 Pipeline 失败时主动触发
@@ -332,27 +334,27 @@ SocketChatMixin._onChatMessage()
 
 ### 9.1 需要实现的功能模块
 
-| 模块 | 描述 |
-|------|------|
-| **登录鉴权** | Admin JWT 认证，携带 token 连接 Socket.IO |
-| **会话列表** | 拉取所有 SUPPORT 类型会话，实时更新未读数 |
-| **聊天室** | `join_chat` 进房，收发消息，历史记录分页加载 |
-| **已读管理** | 进入会话后自动上报已读，气泡显示已读标记 |
-| **消息撤回** | 客服可在 2 分钟内撤回自己的消息 |
-| **多媒体支持** | 图片/文件预览，上传后发送 CDN URL |
-| **快捷回复** | 预设客服话术，一键填入输入框 |
-| **会话转接** | 将会话分配给其他客服人员（可选） |
-| **监控大屏** | 实时在线会话数、待回复数、平均响应时长 |
+| 模块           | 描述                                         |
+| -------------- | -------------------------------------------- |
+| **登录鉴权**   | Admin JWT 认证，携带 token 连接 Socket.IO    |
+| **会话列表**   | 拉取所有 SUPPORT 类型会话，实时更新未读数    |
+| **聊天室**     | `join_chat` 进房，收发消息，历史记录分页加载 |
+| **已读管理**   | 进入会话后自动上报已读，气泡显示已读标记     |
+| **消息撤回**   | 客服可在 2 分钟内撤回自己的消息              |
+| **多媒体支持** | 图片/文件预览，上传后发送 CDN URL            |
+| **快捷回复**   | 预设客服话术，一键填入输入框                 |
+| **会话转接**   | 将会话分配给其他客服人员（可选）             |
+| **监控大屏**   | 实时在线会话数、待回复数、平均响应时长       |
 
 ---
 
 ### 9.2 Socket.IO 接入（TypeScript 示例）
 
 ```typescript
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
-const socket: Socket = io('https://api.yourdomain.com/events', {
-  transports: ['websocket'],
+const socket: Socket = io("https://api.yourdomain.com/events", {
+  transports: ["websocket"],
   auth: { token: ADMIN_JWT },
   query: { token: ADMIN_JWT },
   reconnectionAttempts: 5,
@@ -362,15 +364,15 @@ const socket: Socket = io('https://api.yourdomain.com/events', {
 socket.connect();
 
 // 统一分发事件监听
-socket.on('dispatch', (payload: { type: string; data: any }) => {
+socket.on("dispatch", (payload: { type: string; data: any }) => {
   switch (payload.type) {
-    case 'chat_message':
+    case "chat_message":
       handleIncomingMessage(payload.data);
       break;
-    case 'conversation_read':
+    case "conversation_read":
       handleReadReceipt(payload.data);
       break;
-    case 'message_recalled':
+    case "message_recalled":
       handleRecall(payload.data);
       break;
   }
@@ -378,22 +380,22 @@ socket.on('dispatch', (payload: { type: string; data: any }) => {
 
 // 进入会话房间
 function joinRoom(conversationId: string) {
-  socket.emit('join_chat', { conversationId });
+  socket.emit("join_chat", { conversationId });
 }
 
 // 发送消息（带 ACK，10s 超时）
 function sendMessage(conversationId: string, content: string, type = 0) {
   const tempId = `admin_${Date.now()}`;
   socket.emit(
-    'send_message',
+    "send_message",
     { conversationId, content, type, tempId },
     (ack: { status: string; data?: any; message?: string }) => {
-      if (ack.status === 'ok') {
-        console.log('Sent, seqId:', ack.data.seqId);
+      if (ack.status === "ok") {
+        console.log("Sent, seqId:", ack.data.seqId);
       } else {
-        console.error('Send failed:', ack.message);
+        console.error("Send failed:", ack.message);
       }
-    }
+    },
   );
 }
 ```
@@ -405,16 +407,16 @@ function sendMessage(conversationId: string, content: string, type = 0) {
 ```typescript
 interface Conversation {
   id: string;
-  type: 'DIRECT' | 'GROUP' | 'BUSINESS' | 'SUPPORT';
+  type: "DIRECT" | "GROUP" | "BUSINESS" | "SUPPORT";
   name: string;
   avatar?: string;
   lastMsgContent?: string;
-  lastMsgTime: number;       // Unix ms
+  lastMsgTime: number; // Unix ms
   unreadCount: number;
   isPinned: boolean;
   isMuted: boolean;
   lastMsgSeqId: number;
-  lastMsgStatus: 'sending' | 'success' | 'failed' | 'read' | 'pending';
+  lastMsgStatus: "sending" | "success" | "failed" | "read" | "pending";
 }
 ```
 
@@ -427,24 +429,30 @@ interface ChatMessage {
   id: string;
   conversationId: string;
   senderId: string;
-  content: string;           // 文本内容 或 媒体 CDN URL
+  content: string; // 文本内容 或 媒体 CDN URL
   type: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 99;
-  createdAt: number;         // Unix ms
+  createdAt: number; // Unix ms
   seqId?: number;
   isRecalled?: boolean;
   isSelf: boolean;
   meta?: {
     // image
-    fileExt?: string; fileName?: string;
+    fileExt?: string;
+    fileName?: string;
     // video
-    blurHash?: string; w?: number; h?: number;
+    blurHash?: string;
+    w?: number;
+    h?: number;
     // file
     fileSize?: number;
     // audio
     duration?: number;
     // location
-    latitude?: number; longitude?: number;
-    address?: string; title?: string; thumb?: string;
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+    title?: string;
+    thumb?: string;
   };
   sender?: { id: string; nickname: string; avatar?: string };
 }
@@ -456,11 +464,11 @@ interface ChatMessage {
 
 ```typescript
 async function loadMessages(conversationId: string, cursor?: number) {
-  const params = new URLSearchParams({ conversationId, pageSize: '20' });
-  if (cursor) params.set('cursor', String(cursor));
+  const params = new URLSearchParams({ conversationId, pageSize: "20" });
+  if (cursor) params.set("cursor", String(cursor));
 
   const res = await fetch(`/api/chat/messages?${params}`, {
-    headers: { Authorization: `Bearer ${ADMIN_JWT}` }
+    headers: { Authorization: `Bearer ${ADMIN_JWT}` },
   });
   // 返回: { list: ChatMessage[], nextCursor: number | null, partnerLastReadSeqId: number }
   return res.json();
@@ -473,16 +481,16 @@ async function loadMessages(conversationId: string, cursor?: number) {
 
 > 图片、视频、音频有完整的媒体处理规范，详见 **第十一章**。下表为快速参考。
 
-| 消息类型 | content 内容 | 渲染方式 | 详细规范 |
-|----------|-------------|----------|---------|
-| text (0) | 文本字符串 | 直接展示，支持 Emoji | — |
-| image (1) | 图片 CDN 相对/绝对 URL | BlurHash 占位 → CDN 缩放图（240px） → 点击全屏 | 见 §10.1 |
-| audio (2) | 音频 CDN URL | 静态波形 + 时长 + 点击播放，`meta.duration`(ms) | 见 §10.3 |
-| video (3) | 视频 CDN URL | `meta.remote_thumb` 封面 + BlurHash 占位 + 时长标签 + 播放按钮 | 见 §10.2 |
-| file (5)  | 文件 CDN URL | `meta.fileName` + `meta.fileSize` + 下载/打开按钮 | — |
-| location (6) | `"[Location]"` 占位字符 | `meta.thumb` 静态地图图片，点击打开地图 | — |
-| system (99) | 系统提示文本 | 居中灰色小字，**不触发已读上报** | — |
-| recalled (4) | `"[Message Recalled]"` | 斜体灰色提示文字 | — |
+| 消息类型     | content 内容            | 渲染方式                                                       | 详细规范 |
+| ------------ | ----------------------- | -------------------------------------------------------------- | -------- |
+| text (0)     | 文本字符串              | 直接展示，支持 Emoji                                           | —        |
+| image (1)    | 图片 CDN 相对/绝对 URL  | BlurHash 占位 → CDN 缩放图（240px） → 点击全屏                 | 见 §10.1 |
+| audio (2)    | 音频 CDN URL            | 静态波形 + 时长 + 点击播放，`meta.duration`(ms)                | 见 §10.3 |
+| video (3)    | 视频 CDN URL            | `meta.remote_thumb` 封面 + BlurHash 占位 + 时长标签 + 播放按钮 | 见 §10.2 |
+| file (5)     | 文件 CDN URL            | `meta.fileName` + `meta.fileSize` + 下载/打开按钮              | —        |
+| location (6) | `"[Location]"` 占位字符 | `meta.thumb` 静态地图图片，点击打开地图                        | —        |
+| system (99)  | 系统提示文本            | 居中灰色小字，**不触发已读上报**                               | —        |
+| recalled (4) | `"[Message Recalled]"`  | 斜体灰色提示文字                                               | —        |
 
 ---
 
@@ -569,16 +577,16 @@ Admin 端过滤 `type == 'SUPPORT'` 即可识别所有客服会话。
 
 #### Admin 端渲染规范
 
-| 步骤 | 说明 |
-|------|------|
-| **1. 占位图** | 优先用 `previewBytes`（base64/bytes）渲染模糊缩略图；若无则用 `meta.blurHash` 渲染 BlurHash 占位 |
-| **2. 宽高比** | `meta.w / meta.h`，建议 clamp 到 `[0.5, 2.0]`，气泡固定宽度 240px |
-| **3. 图片 URL 构建** | `content` 若为相对路径（`uploads/...`）须拼上图片 CDN 域名 |
-| **4. CDN 缩放参数** | 列表缩略图：`width=240,quality=75,fit=cover,f=auto`；预览大图：`width=1200,quality=85,f=auto` |
-| **5. CDN URL 格式** | `https://{IMG_BASE_URL}/cdn-cgi/image/{params}/{relative_path}` |
-| **6. 点击行为** | 打开全屏图片预览，建议支持双指缩放 |
-| **7. 发送中状态** | 在图片气泡上叠加半透明蒙层 + loading 圆圈 |
-| **8. 发送失败状态** | 叠加红色 error 图标，点击可重试 |
+| 步骤                 | 说明                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| **1. 占位图**        | 优先用 `previewBytes`（base64/bytes）渲染模糊缩略图；若无则用 `meta.blurHash` 渲染 BlurHash 占位 |
+| **2. 宽高比**        | `meta.w / meta.h`，建议 clamp 到 `[0.5, 2.0]`，气泡固定宽度 240px                                |
+| **3. 图片 URL 构建** | `content` 若为相对路径（`uploads/...`）须拼上图片 CDN 域名                                       |
+| **4. CDN 缩放参数**  | 列表缩略图：`width=240,quality=75,fit=cover,f=auto`；预览大图：`width=1200,quality=85,f=auto`    |
+| **5. CDN URL 格式**  | `https://{IMG_BASE_URL}/cdn-cgi/image/{params}/{relative_path}`                                  |
+| **6. 点击行为**      | 打开全屏图片预览，建议支持双指缩放                                                               |
+| **7. 发送中状态**    | 在图片气泡上叠加半透明蒙层 + loading 圆圈                                                        |
+| **8. 发送失败状态**  | 叠加红色 error 图标，点击可重试                                                                  |
 
 #### CDN URL 示例
 
@@ -638,16 +646,16 @@ https://img.yourdomain.com/cdn-cgi/image/width=1200,quality=85,f=auto/uploads/ch
 
 #### Admin 端渲染规范
 
-| 步骤 | 说明 |
-|------|------|
-| **1. 封面图** | 读取 `meta.remote_thumb`（或 `meta.thumb`），拼接 CDN 域名后显示为封面 |
-| **2. 封面占位** | 若封面未加载完，用 `meta.blurHash` 渲染 BlurHash 占位 |
-| **3. 宽高比** | 同图片，使用 `meta.w / meta.h`，clamp `[0.5, 2.0]` |
-| **4. 时长标签** | `meta.duration / 1000` 秒，格式化为 `MM:SS`，显示在封面右下角 |
-| **5. 播放按钮** | 封面中心叠加播放图标，点击触发播放 |
-| **6. 视频 URL** | `content` 拼接 CDN 域名，直接用 `<video>` 标签或播放器 SDK 播放 |
-| **7. 互斥播放** | 同一页面同时只能有一个视频播放，切换时暂停上一个 |
-| **8. Web 端** | 直接 `<video src="{fullUrl}" controls />` 即可；无需额外处理 |
+| 步骤            | 说明                                                                   |
+| --------------- | ---------------------------------------------------------------------- |
+| **1. 封面图**   | 读取 `meta.remote_thumb`（或 `meta.thumb`），拼接 CDN 域名后显示为封面 |
+| **2. 封面占位** | 若封面未加载完，用 `meta.blurHash` 渲染 BlurHash 占位                  |
+| **3. 宽高比**   | 同图片，使用 `meta.w / meta.h`，clamp `[0.5, 2.0]`                     |
+| **4. 时长标签** | `meta.duration / 1000` 秒，格式化为 `MM:SS`，显示在封面右下角          |
+| **5. 播放按钮** | 封面中心叠加播放图标，点击触发播放                                     |
+| **6. 视频 URL** | `content` 拼接 CDN 域名，直接用 `<video>` 标签或播放器 SDK 播放        |
+| **7. 互斥播放** | 同一页面同时只能有一个视频播放，切换时暂停上一个                       |
+| **8. Web 端**   | 直接 `<video src="{fullUrl}" controls />` 即可；无需额外处理           |
 
 #### 视频缩略图 CDN URL
 
@@ -696,15 +704,15 @@ https://img.yourdomain.com/uploads/chat/video_abc.mp4
 
 #### Admin 端渲染规范
 
-| 步骤 | 说明 |
-|------|------|
-| **1. 时长显示** | `meta.duration / 1000` 取整（秒），格式如 `"8''"` 或 `"00:08"` |
-| **2. 气泡宽度** | 动态：`min_width + duration_sec * 5px`，建议约束在 `[140px, 65vw]` |
-| **3. 波形图** | 显示静态随机波形（12根柱），用 `messageId` 作为随机种子（保证同一消息波形一致） |
-| **4. 播放状态** | 播放中动画波形高亮；暂停/停止恢复静态 |
-| **5. 音频 URL** | `content` 拼接 CDN 域名，使用 `<audio>` 标签或 Web Audio API |
-| **6. 互斥播放** | 同一页面同时只能播放一条语音，切换时停止上一条 |
-| **7. 进度展示** | 播放时可在波形柱上叠加进度颜色 |
+| 步骤            | 说明                                                                            |
+| --------------- | ------------------------------------------------------------------------------- |
+| **1. 时长显示** | `meta.duration / 1000` 取整（秒），格式如 `"8''"` 或 `"00:08"`                  |
+| **2. 气泡宽度** | 动态：`min_width + duration_sec * 5px`，建议约束在 `[140px, 65vw]`              |
+| **3. 波形图**   | 显示静态随机波形（12根柱），用 `messageId` 作为随机种子（保证同一消息波形一致） |
+| **4. 播放状态** | 播放中动画波形高亮；暂停/停止恢复静态                                           |
+| **5. 音频 URL** | `content` 拼接 CDN 域名，使用 `<audio>` 标签或 Web Audio API                    |
+| **6. 互斥播放** | 同一页面同时只能播放一条语音，切换时停止上一条                                  |
+| **7. 进度展示** | 播放时可在波形柱上叠加进度颜色                                                  |
 
 #### 波形柱高度生成算法（保证与客户端一致）
 
@@ -720,7 +728,7 @@ function generateWaveform(messageId: string, barCount = 12): number[] {
   const heights: number[] = [];
   for (let i = 0; i < barCount; i++) {
     seed = (Math.imul(1664525, seed) + 1013904223) | 0;
-    const rand = (seed >>> 0) / 0xFFFFFFFF; // [0, 1)
+    const rand = (seed >>> 0) / 0xffffffff; // [0, 1)
     heights.push(0.3 + rand * 0.7); // [0.3, 1.0)
   }
   return heights;
@@ -742,33 +750,33 @@ https://img.yourdomain.com/uploads/chat/voice_abc.m4a
 Admin 端在渲染所有媒体消息时，对 `content` 字段的处理统一按以下规则：
 
 ```typescript
-const IMG_BASE_URL = 'https://img.yourdomain.com'; // 图片/媒体 CDN 域名
-const API_BASE_URL = 'https://api.yourdomain.com';  // 接口域名
+const IMG_BASE_URL = "https://img.yourdomain.com"; // 图片/媒体 CDN 域名
+const API_BASE_URL = "https://api.yourdomain.com"; // 接口域名
 
 function resolveMediaUrl(content: string): string {
-  if (!content) return '';
+  if (!content) return "";
 
   // 1. 已是完整 https URL → 直接使用
-  if (content.startsWith('https://') || content.startsWith('http://')) {
+  if (content.startsWith("https://") || content.startsWith("http://")) {
     return content;
   }
 
   // 2. 相对路径（uploads/...）→ 拼接图片 CDN 域名
-  if (content.startsWith('uploads/')) {
+  if (content.startsWith("uploads/")) {
     return `${IMG_BASE_URL}/${content}`;
   }
 
   // 3. 其他情况（旧格式兼容）→ 拼接并尝试
-  return `${IMG_BASE_URL}/${content.replace(/^\//, '')}`;
+  return `${IMG_BASE_URL}/${content.replace(/^\//, "")}`;
 }
 
 // 图片专用：带 CDN 缩放参数
 function resolveImageUrl(content: string, width = 240): string {
   const base = resolveMediaUrl(content);
-  if (!base || !base.includes('uploads/')) return base;
+  if (!base || !base.includes("uploads/")) return base;
 
   // 提取 uploads/ 之后的路径
-  const key = base.substring(base.indexOf('uploads/'));
+  const key = base.substring(base.indexOf("uploads/"));
   return `${IMG_BASE_URL}/cdn-cgi/image/width=${width},quality=75,fit=cover,f=auto/${key}`;
 }
 ```
@@ -777,34 +785,33 @@ function resolveImageUrl(content: string, width = 240): string {
 
 ### 10.5 各媒体类型字段速查表
 
-| 字段 | image(1) | video(3) | audio(2) | file(5) |
-|------|----------|----------|----------|---------|
-| `content` | 图片 CDN URL | 视频 CDN URL | 音频 CDN URL | 文件 CDN URL |
-| `meta.w` | ✅ 图片宽度(px) | ✅ 视频宽度(px) | ❌ | ❌ |
-| `meta.h` | ✅ 图片高度(px) | ✅ 视频高度(px) | ❌ | ❌ |
-| `meta.blurHash` | ✅ | ✅ | ❌ | ❌ |
-| `meta.duration` | ❌ | ✅ 时长(ms) | ✅ 时长(ms) | ❌ |
-| `meta.remote_thumb` | ❌ | ✅ 封面图 URL | ❌ | ❌ |
-| `meta.thumb` | ❌ | ✅（备用封面）| ❌ | ❌ |
-| `meta.fileName` | ✅（原始名） | ❌ | ❌ | ✅ |
-| `meta.fileSize` | ❌ | ❌ | ❌ | ✅ bytes |
-| `meta.fileExt` | ✅ `jpg`/`png` | ❌ | ❌ | ✅ `pdf`/`zip`… |
+| 字段                | image(1)        | video(3)        | audio(2)     | file(5)         |
+| ------------------- | --------------- | --------------- | ------------ | --------------- |
+| `content`           | 图片 CDN URL    | 视频 CDN URL    | 音频 CDN URL | 文件 CDN URL    |
+| `meta.w`            | ✅ 图片宽度(px) | ✅ 视频宽度(px) | ❌           | ❌              |
+| `meta.h`            | ✅ 图片高度(px) | ✅ 视频高度(px) | ❌           | ❌              |
+| `meta.blurHash`     | ✅              | ✅              | ❌           | ❌              |
+| `meta.duration`     | ❌              | ✅ 时长(ms)     | ✅ 时长(ms)  | ❌              |
+| `meta.remote_thumb` | ❌              | ✅ 封面图 URL   | ❌           | ❌              |
+| `meta.thumb`        | ❌              | ✅（备用封面）  | ❌           | ❌              |
+| `meta.fileName`     | ✅（原始名）    | ❌              | ❌           | ✅              |
+| `meta.fileSize`     | ❌              | ❌              | ❌           | ✅ bytes        |
+| `meta.fileExt`      | ✅ `jpg`/`png`  | ❌              | ❌           | ✅ `pdf`/`zip`… |
 
 ---
 
 ## 十一、扩展事件（未来规划）
 
-| 事件 | 描述 |
-|------|------|
-| `typing` | 正在输入指示器 |
-| `call_invite` | 音视频通话邀请 |
-| `call_accept` | 接受通话 |
-| `call_end` | 结束通话 |
-| `call_ice` | WebRTC ICE 候选交换 |
+| 事件          | 描述                |
+| ------------- | ------------------- |
+| `typing`      | 正在输入指示器      |
+| `call_invite` | 音视频通话邀请      |
+| `call_accept` | 接受通话            |
+| `call_end`    | 结束通话            |
+| `call_ice`    | WebRTC ICE 候选交换 |
 
 > 当前客服端建议暂不实现音视频通话，仅支持文字 / 图片 / 文件消息即可。
 
 ---
 
-*EOF*
-
+_EOF_

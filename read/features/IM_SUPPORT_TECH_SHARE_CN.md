@@ -38,6 +38,7 @@
 ```
 
 **关键特征**：
+
 - ✅ 每个用户都和**同一个虚拟客服身份**通话（对用户无感知）
 - ✅ 但每个会话都是**独立的 1v1 私聊**（用户互不可见）
 - ✅ Admin 在后台看到所有用户的**独立会话列表**，点进去处理各自的客户
@@ -49,11 +50,11 @@
 
 当前系统采用群聊模式，存在**从数据库到应用层递进的三个设计缺陷**：
 
-| **缺陷层级** | **根本原因** | **直接后果** | **用户体验** |
-|-----------|-----------|----------|-----------|
-| **1. Schema 层** | `Conversation.businessId @unique` 约束 | 同一 businessId 全库只能有 1 条会话 | ❌ 所有用户被强行 JOIN 同一个群 |
-| **2. Service 层** | `ensureBusinessConversation()` 按 businessId 查单条后 upsert member | 并发用户全部聚合到同一会话 | ❌ 用户 A 能看到用户 B 的聊天记录（严重隐私泄露）|
-| **3. Reply 层** | Admin 回复设置 `senderId: null`，直接调 `eventsGateway.dispatch()` | 缺少合法发送者身份，FCM 推送链路断裂 | ❌ 用户后台退出后永远收不到 Admin 的通知 |
+| **缺陷层级**      | **根本原因**                                                        | **直接后果**                         | **用户体验**                                      |
+| ----------------- | ------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- |
+| **1. Schema 层**  | `Conversation.businessId @unique` 约束                              | 同一 businessId 全库只能有 1 条会话  | ❌ 所有用户被强行 JOIN 同一个群                   |
+| **2. Service 层** | `ensureBusinessConversation()` 按 businessId 查单条后 upsert member | 并发用户全部聚合到同一会话           | ❌ 用户 A 能看到用户 B 的聊天记录（严重隐私泄露） |
+| **3. Reply 层**   | Admin 回复设置 `senderId: null`，直接调 `eventsGateway.dispatch()`  | 缺少合法发送者身份，FCM 推送链路断裂 | ❌ 用户后台退出后永远收不到 Admin 的通知          |
 
 **完整问题链路**：
 
@@ -86,15 +87,17 @@
 #### Bug #1：Admin 客服台查不到用户会话
 
 **症状**：
+
 ```
 Flutter 侧：POST /chat/business  → 创建 type: BUSINESS 会话
 Admin 侧：  GET /conversations?type=SUPPORT  → 永远为空 ❌
 ```
 
 **根因分析**：
+
 ```typescript
 // Frontend 硬编码
-const response = await getConversations({ 
+const response = await getConversations({
   type: 'SUPPORT'    ← Admin 期望查 SUPPORT
 });
 
@@ -105,6 +108,7 @@ ChatService.addMemberToBusinessGroup()
 ```
 
 **一行修复**：
+
 ```diff
 - type: 'SUPPORT'
 + type: 'BUSINESS'
@@ -113,10 +117,12 @@ ChatService.addMemberToBusinessGroup()
 #### Bug #2：用户打开客服 Admin 靠轮询才感知
 
 **症状**：
+
 - 用户点「联系客服」
 - Admin 需要等 30 秒轮询周期才能看到新会话
 
 **根因分析**：
+
 ```
 用户 GET /chat/business
   ├─ ChatService.addMemberToBusinessGroup()
@@ -140,7 +146,7 @@ Admin 定时轮询 getConversations() → 查数据库 → 看到新会话
 async addMemberToBusinessGroup(businessId: string, userId: string) {
   const conversation = await ensureBusinessConversation(businessId);
   const existingMember = await findMember(userId, conversationId);
-  
+
   if (!existingMember) {
     // 首次加入才发事件
     this.eventEmitter.emit(
@@ -156,7 +162,7 @@ async handleSupportConversationStarted(event) {
   const admins = await prisma.adminUser.findMany({
     where: { status: 1, deletedAt: null }
   });
-  
+
   admins.forEach(admin => {
     this.eventsGateway.dispatch(
       `user_${admin.id}`,  // ← Admin 私有房间
@@ -176,6 +182,7 @@ useChatSocket(...
 ```
 
 **时间对比**：
+
 - **Before**：30 秒（轮询周期）
 - **After**：<100ms（事件驱动）
 - **提升**：300 倍 ⚡
@@ -214,6 +221,7 @@ eventsGateway.dispatch(
 ```
 
 **优势**：
+
 - ✅ 多 Admin 并行处理，各自收到各自的事件
 - ✅ 事件隔离，A 的客户信息不会漂到 B 的客户端
 - ✅ Socket 断开时自动释放房间资源
@@ -236,6 +244,7 @@ handleMessageCreated()
 ```
 
 **优势**：
+
 - ✅ 业务逻辑与 Socket 分离，易于单测
 - ✅ 事件可灵活扩展（如未来接入 SMS/钉钉通知）
 - ✅ ChatService 无需 mock Socket，纯业务测试
@@ -248,14 +257,15 @@ const pollingInterval = 30 * 1000;
 
 useEffect(() => {
   const timer = setInterval(() => {
-    refreshConversations();  // Socket 异常时的容错
+    refreshConversations(); // Socket 异常时的容错
   }, pollingInterval);
-  
+
   return () => clearInterval(timer);
 }, []);
 ```
 
 **优势**：
+
 - ✅ 网络波动时的自动降级
 - ✅ 不依赖 Socket 完全可靠
 - ✅ 老版本客户端的自动兼容
@@ -264,14 +274,14 @@ useEffect(() => {
 
 ### 2.4 Phase 1 改造清单
 
-| **改动点** | **文件** | **行数** | **风险** |
-|-----------|--------|--------|--------|
-| 事件类声明 | `chat.events.ts` | +5 | 🟢 极低 |
-| 事件发射 | `chat.service.ts` | +3 | 🟢 极低 |
-| 事件监听 | `socket.listener.ts` | +8 | 🟡 中低 |
-| 前端响应 | `useChatSocket.ts` | +4 | 🟢 极低 |
-| 查询类型 | `CustomerServiceDesk.tsx` | -1 | 🟢 极低 |
-| **总计** | 5 个文件 | **19 行** | **🟢 可立即上线** |
+| **改动点** | **文件**                  | **行数**  | **风险**          |
+| ---------- | ------------------------- | --------- | ----------------- |
+| 事件类声明 | `chat.events.ts`          | +5        | 🟢 极低           |
+| 事件发射   | `chat.service.ts`         | +3        | 🟢 极低           |
+| 事件监听   | `socket.listener.ts`      | +8        | 🟡 中低           |
+| 前端响应   | `useChatSocket.ts`        | +4        | 🟢 极低           |
+| 查询类型   | `CustomerServiceDesk.tsx` | -1        | 🟢 极低           |
+| **总计**   | 5 个文件                  | **19 行** | **🟢 可立即上线** |
 
 ---
 
@@ -350,19 +360,19 @@ where: {
 model SupportChannel {
   id          String   @id @default(cuid())
   /// id 直接等于 Flutter 传入的 businessId，无转换成本
-  
+
   name        String   @db.VarChar(100)
   description String?  @db.VarChar(255)
   avatar      String?
-  
+
   botUserId   String   @unique         // 1-1 映射到 Bot User
   botUser     User     @relation(fields: [botUserId], references: [id])
-  
+
   isActive    Boolean  @default(true)  // 软停用，保护消息 FK
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@map("support_channels")
 }
 ```
@@ -380,7 +390,7 @@ async addMemberToBusinessGroup(businessId: string, userId: string) {
     where: { id: businessId },
     include: { botUser: true }
   });
-  
+
   if (!channel || !channel.isActive) {
     throw new NotFoundException('Support channel not found');
   }
@@ -395,7 +405,7 @@ async addMemberToBusinessGroup(businessId: string, userId: string) {
       ]
     }
   });
-  
+
   if (existing) return existing.members[0];
 
   // 3. 事务建联：创建 SUPPORT 会话 + 两个成员
@@ -438,12 +448,13 @@ async replyToConversation(conversationId, content) {
     conversationId,
     content
   });
-  
+
   eventsGateway.dispatch(conversationId, 'message_created', ...);
 }
 ```
 
 **问题**：
+
 - ❌ senderId = null，FCM 推送系统无法识别合法发送者
 - ❌ 用户后台时收不到通知
 - ❌ 消息历史里看不到谁在回复
@@ -470,6 +481,7 @@ async replyToConversation(conversationId, content, adminId) {
 ```
 
 **改造收益**：
+
 - ✅ 消息走 MESSAGE_CREATED 事件 → Socket 分发 → FCM 推送 ✅
 - ✅ 用户后台时能收到通知（botUserId 是真实 User）
 - ✅ 消息历史保留 realAdminId，支持 KPI 统计与法务追责
@@ -492,12 +504,12 @@ async replyToConversation(conversationId, content, adminId) {
 └─────────┴──────────────┴──────────┴─────────────────┘
 ```
 
-| 操作 | 后端行为 | 客户端影响 |
-|------|--------|---------|
+| 操作       | 后端行为                           | 客户端影响                         |
+| ---------- | ---------------------------------- | ---------------------------------- |
 | **Create** | 事务内创建 Bot User + Channel 记录 | 新渠道立即对客户端可用（无需部署） |
-| **Edit** | 更新 Channel.name 和 User.avatar | 后续建联时生效 |
-| **Pause** | 设置 isActive = false | 调用该 businessId 返回 404 |
-| **Delete** | 禁用（无 Delete 按钮） | 保护消息 FK 完整性 |
+| **Edit**   | 更新 Channel.name 和 User.avatar   | 后续建联时生效                     |
+| **Pause**  | 设置 isActive = false              | 调用该 businessId 返回 404         |
+| **Delete** | 禁用（无 Delete 按钮）             | 保护消息 FK 完整性                 |
 
 ---
 
@@ -524,20 +536,20 @@ async replyToConversation(conversationId, content, adminId) {
 
 ### 4.1 三个最聪明的决策
 
-| 排名 | 决策 | 工程价值 |
-|------|------|--------|
-| 🥇 | **虚拟 Bot 用真实 User 账号** | 自动复用 IM 全链路；FCM 推送零改动；搜索自动隔离 |
-| 🥈 | **SupportChannel.id = businessId** | 后端查表替换硬编码；Flutter 端零改动；运营可自助新增 |
-| 🥉 | **meta.realAdminId 审计链** | 为 AI Agent 替换、KPI 统计、法务追责打好基础 |
+| 排名 | 决策                               | 工程价值                                             |
+| ---- | ---------------------------------- | ---------------------------------------------------- |
+| 🥇   | **虚拟 Bot 用真实 User 账号**      | 自动复用 IM 全链路；FCM 推送零改动；搜索自动隔离     |
+| 🥈   | **SupportChannel.id = businessId** | 后端查表替换硬编码；Flutter 端零改动；运营可自助新增 |
+| 🥉   | **meta.realAdminId 审计链**        | 为 AI Agent 替换、KPI 统计、法务追责打好基础         |
 
 ### 4.2 避坑指南
 
-| 陷阱 | 表现 | 防护 |
-|------|------|------|
-| Bot 被用户搜到 | 用户绕过官方入口私信 Bot | `searchUsers` 加 `isRobot: false` 过滤 |
-| 渠道硬删除 | 历史消息 FK 约束错误 | 只软停用 (`isActive: false`) |
-| Admin 回复无推送 | 用户离线收不到消息 | 必须用 Bot User 代发（senderId = botUserId） |
-| 并发 Admin 冲突 | 两个 Admin 同时回复会乱序 | 加乐观锁或排他锁（Phase 3 考虑） |
+| 陷阱                            | 表现                                                                                                     | 防护                                                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Bot 被用户搜到                  | 用户绕过官方入口私信 Bot                                                                                 | `searchUsers` 加 `isRobot: false` 过滤                                                                                     |
+| 渠道硬删除                      | 历史消息 FK 约束错误                                                                                     | 只软停用 (`isActive: false`)                                                                                               |
+| Admin 回复无推送                | 用户离线收不到消息                                                                                       | 必须用 Bot User 代发（senderId = botUserId）                                                                               |
+| 并发 Admin 冲突                 | 两个 Admin 同时回复会乱序                                                                                | 加乐观锁或排他锁（Phase 3 考虑）                                                                                           |
 | **Close 后用户无法重新发起** 🔴 | Admin 关闭会话后用户再点「联系客服」，`findFirst` 找到已 CLOSED 的旧会话并返回，用户卡在无法继续的对话里 | `addMemberToBusinessGroup` 的 `findFirst` 查询必须加 `status: ConversationStatus.NORMAL` 过滤，CLOSED 会话不复用，自动新建 |
 
 **关键 Fix（已落地）**：
@@ -568,6 +580,7 @@ const existingConversation = await this.prisma.conversation.findFirst({
 ```
 
 **用户视角**（修复后完整闭环）：
+
 ```
 用户第一次发起    → 创建新 SUPPORT 会话
 Admin close 会话  → status 设为 2(CLOSED)，推送系统消息
@@ -583,12 +596,12 @@ Admin close 会话  → status 设为 2(CLOSED)，推送系统消息
 
 ### 5.1 实时延迟指标
 
-| 场景 | Phase 1 前 | Phase 1 后 | Phase 2 后 |
-|------|-----------|----------|----------|
-| 用户打开客服 → Admin 感知 | 30s | <100ms | <100ms |
-| 用户发消息 → Admin 收到 | 1-2s | 200-500ms | 200-500ms |
-| Admin 回复 → 用户收到 | N/A | 2-5s | 2-5s |
-| 离线用户 → 收到消息 | ❌ 无 | ❌ 无 | ✅ 自动同步 |
+| 场景                      | Phase 1 前 | Phase 1 后 | Phase 2 后  |
+| ------------------------- | ---------- | ---------- | ----------- |
+| 用户打开客服 → Admin 感知 | 30s        | <100ms     | <100ms      |
+| 用户发消息 → Admin 收到   | 1-2s       | 200-500ms  | 200-500ms   |
+| Admin 回复 → 用户收到     | N/A        | 2-5s       | 2-5s        |
+| 离线用户 → 收到消息       | ❌ 无      | ❌ 无      | ✅ 自动同步 |
 
 ### 5.2 可靠性多层防护
 
@@ -608,14 +621,14 @@ Admin close 会话  → status 设为 2(CLOSED)，推送系统消息
 
 ```typescript
 // 旧模式
-const channel = 'official_platform_support_v1';  // 硬编码
-const botUserId = 'bot_official_support';        // 硬编码
+const channel = "official_platform_support_v1"; // 硬编码
+const botUserId = "bot_official_support"; // 硬编码
 
 // 新模式
 const channel = await prisma.supportChannel.findUnique({
-  where: { id: businessId }
+  where: { id: businessId },
 });
-const botUserId = channel.botUserId;  // 动态查询
+const botUserId = channel.botUserId; // 动态查询
 ```
 
 ### 代码模式 2：事件驱动分发
@@ -643,7 +656,7 @@ case 'event_type':
 await this.chatService.sendMessage(botUserId, {
   conversationId,
   content,
-  meta: { realAdminId, agentName }  // ← 审计元数据
+  meta: { realAdminId, agentName }, // ← 审计元数据
 });
 
 // 自动触发：MESSAGE_CREATED → Socket 分发 → FCM 推送
@@ -653,20 +666,21 @@ await this.chatService.sendMessage(botUserId, {
 
 ## 业界对标分析
 
-| 维度 | Lucky Nest | Zendesk | Intercom |
-|-----|-----------|---------|---------|
-| 数据隔离 | 1v1 私聊 ✅ | 共享队列 ⚠️ | 1v1 私聊 ✅ |
-| 审计链 | meta + realAdminId ✅ | 内置但不开放 ⚠️ | 基础审计 ⚠️ |
-| 虚拟身份 | User 账号 ✅ | 托管 ✅ | Assistant ✅ |
-| AI 可替换性 | 代码路径设计 ✅ | API 形式 ⚠️ | Plugin 形式 ⚠️ |
-| 多渠道支持 | Admin UI 待 P2 ⚠️ | 原生 ✅ | 原生 ✅ |
-| 成本 | 开源（免费）✅ | $49/user/月 | $39/user/月 |
+| 维度        | Lucky Nest            | Zendesk         | Intercom       |
+| ----------- | --------------------- | --------------- | -------------- |
+| 数据隔离    | 1v1 私聊 ✅           | 共享队列 ⚠️     | 1v1 私聊 ✅    |
+| 审计链      | meta + realAdminId ✅ | 内置但不开放 ⚠️ | 基础审计 ⚠️    |
+| 虚拟身份    | User 账号 ✅          | 托管 ✅         | Assistant ✅   |
+| AI 可替换性 | 代码路径设计 ✅       | API 形式 ⚠️     | Plugin 形式 ⚠️ |
+| 多渠道支持  | Admin UI 待 P2 ⚠️     | 原生 ✅         | 原生 ✅        |
+| 成本        | 开源（免费）✅        | $49/user/月     | $39/user/月    |
 
 ---
 
 ## 后续演进方向
 
 ### Phase 3：运营优化层
+
 ```
 ├─ 客服分流：技能标签 + 智能路由
 ├─ 质量控制：消息加签、敏感词审核、满意度评分
@@ -674,6 +688,7 @@ await this.chatService.sendMessage(botUserId, {
 ```
 
 ### Phase 4：可靠性强化
+
 ```
 ├─ 消息重试：失败自动重发
 ├─ 宕机恢复：消息备份 + 秒级恢复
@@ -695,6 +710,3 @@ await this.chatService.sendMessage(botUserId, {
 3. **在数据库层面做决策**：SupportChannel 表设计决定了整个渠道管理的灵活性
 
 ---
-
-
-

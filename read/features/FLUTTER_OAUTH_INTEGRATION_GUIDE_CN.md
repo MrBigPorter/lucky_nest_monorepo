@@ -34,13 +34,13 @@
 
 ### 2.1 登录接口
 
-| 接口 | 方法 | 请求体 |
-|------|------|--------|
-| `/api/v1/auth/oauth/google` | POST | `{ idToken, inviteCode? }`（兼容 `{ credential }`） |
-| `/api/v1/auth/oauth/facebook` | POST | `{ accessToken, userId, inviteCode? }`（兼容 `userID`） |
-| `/api/v1/auth/oauth/apple` | POST | `{ idToken, code?, inviteCode? }` |
-| `/api/v1/auth/email/send-code` | POST | `{ email }` |
-| `/api/v1/auth/email/login` | POST | `{ email, code }` |
+| 接口                           | 方法 | 请求体                                                  |
+| ------------------------------ | ---- | ------------------------------------------------------- |
+| `/api/v1/auth/oauth/google`    | POST | `{ idToken, inviteCode? }`（兼容 `{ credential }`）     |
+| `/api/v1/auth/oauth/facebook`  | POST | `{ accessToken, userId, inviteCode? }`（兼容 `userID`） |
+| `/api/v1/auth/oauth/apple`     | POST | `{ idToken, code?, inviteCode? }`                       |
+| `/api/v1/auth/email/send-code` | POST | `{ email }`                                             |
+| `/api/v1/auth/email/login`     | POST | `{ email, code }`                                       |
 
 ### 2.4 后端已做的 H5 兼容（2026-03-19）
 
@@ -89,10 +89,10 @@ Facebook（H5 兼容写法）
 
 ### 2.2 会话接口
 
-| 接口 | 方法 | 请求体 |
-|------|------|--------|
+| 接口                   | 方法 | 请求体             |
+| ---------------------- | ---- | ------------------ |
 | `/api/v1/auth/refresh` | POST | `{ refreshToken }` |
-| `/api/v1/auth/profile` | GET | Bearer Token |
+| `/api/v1/auth/profile` | GET  | Bearer Token       |
 
 ### 2.3 返回关键字段
 
@@ -207,6 +207,7 @@ cd /Volumes/MySSD/work/dev/flutter_happy_app
 ```
 
 重点覆盖：
+
 - OAuth/Email 模型解析
 - 登录页按钮分支与模式切换
 - 商业链路回归（防连带破坏）
@@ -222,25 +223,24 @@ cd /Volumes/MySSD/work/dev/flutter_happy_app
 
 ## 10. 联调错误速查（Flutter H5）
 
-| 现象 | 常见原因 | 处理动作 |
-|------|----------|----------|
-| 浏览器报 CORS blocked | `CORS_ORIGIN` 缺少当前域名/端口 | 把 Flutter Web 实际 origin 加到 `deploy/.env.dev` 的 `CORS_ORIGIN`，重启后端 |
-| Google 登录 400（idToken/credential required） | 前端请求体字段名不匹配 | 发送 `idToken` 或 `credential` 任一字段 |
-| Google 401 / audience mismatch | 前端 `GOOGLE_WEB_CLIENT_ID` 与后端 `GOOGLE_CLIENT_ID` 不一致 | 对齐 client id（同一个 Google OAuth App） |
-| Facebook 400（userId required） | 前端发了 `userID` 但被中间层改掉，或字段为空 | 确保 `userId`/`userID` 至少一个有值 |
-| Facebook 授权成功但后端拒绝 | `userId` 与 token 对应用户不一致 | 确保请求体中的用户 ID 来自同一次授权返回 |
-| Email OTP 总是失败 | 超频、验证码过期、拿错环境 code | 先看 `send-code` 返回，开发环境优先用 `devCode` 联调 |
+| 现象                                           | 常见原因                                                     | 处理动作                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| 浏览器报 CORS blocked                          | `CORS_ORIGIN` 缺少当前域名/端口                              | 把 Flutter Web 实际 origin 加到 `deploy/.env.dev` 的 `CORS_ORIGIN`，重启后端 |
+| Google 登录 400（idToken/credential required） | 前端请求体字段名不匹配                                       | 发送 `idToken` 或 `credential` 任一字段                                      |
+| Google 401 / audience mismatch                 | 前端 `GOOGLE_WEB_CLIENT_ID` 与后端 `GOOGLE_CLIENT_ID` 不一致 | 对齐 client id（同一个 Google OAuth App）                                    |
+| Facebook 400（userId required）                | 前端发了 `userID` 但被中间层改掉，或字段为空                 | 确保 `userId`/`userID` 至少一个有值                                          |
+| Facebook 授权成功但后端拒绝                    | `userId` 与 token 对应用户不一致                             | 确保请求体中的用户 ID 来自同一次授权返回                                     |
+| Email OTP 总是失败                             | 超频、验证码过期、拿错环境 code                              | 先看 `send-code` 返回，开发环境优先用 `devCode` 联调                         |
 
 后端排查日志点（优先看这些）：
 
-1. `apps/api/src/client/auth/auth.controller.ts`：是否命中 OAuth 路由、字段归一化是否生效。  
-2. `apps/api/src/client/auth/providers/*.provider.ts`：token 校验失败具体在哪一步。  
-3. `apps/api/src/client/auth/auth.service.ts`：是否走到 `loginWithOauth()` / `loginWithEmailCode()`。  
-4. `apps/api/src/main.ts`：CORS 白名单是否按预期加载。  
+1. `apps/api/src/client/auth/auth.controller.ts`：是否命中 OAuth 路由、字段归一化是否生效。
+2. `apps/api/src/client/auth/providers/*.provider.ts`：token 校验失败具体在哪一步。
+3. `apps/api/src/client/auth/auth.service.ts`：是否走到 `loginWithOauth()` / `loginWithEmailCode()`。
+4. `apps/api/src/main.ts`：CORS 白名单是否按预期加载。
 
 建议联调顺序：
 
-1. 先用 Postman/HTTP 客户端验证接口（排除 Flutter SDK 干扰）。  
-2. 再接 Flutter H5，确认字段和 CORS。  
+1. 先用 Postman/HTTP 客户端验证接口（排除 Flutter SDK 干扰）。
+2. 再接 Flutter H5，确认字段和 CORS。
 3. 最后做端到端回归（登录 -> profile -> 页面跳转）。
-
