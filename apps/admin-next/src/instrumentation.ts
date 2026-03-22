@@ -37,10 +37,10 @@ export async function register() {
      * Cannot use top-level import because Edge Runtime also runs this file
      * but doesn't support full Node.js APIs.
      */
-    await import('./sentry.server.config');
+    await import('../sentry.server.config');
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.edge.config');
+    await import('../sentry.edge.config');
   }
 }
