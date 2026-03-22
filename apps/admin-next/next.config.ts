@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import path from 'path';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const isCloudflareBuild = process.env.NEXT_BUILD_TARGET === 'cloudflare';
 
@@ -16,9 +17,15 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   trailingSlash: true,
-  // standalone 模式下仍保留 unoptimized，后续可配置 remotePatterns 启用优化
+  // 启用 Next.js 图片优化：remotePatterns 白名单 + 允许任意 https 域（admin 内部工具，信任场景）
+  // img.joyminis.com: 主 CDN；https://** 覆盖 OAuth 头像（Google/Facebook）等未知来源
+  // 注意：SmartImage 用 @unpic/react 自行处理 CDN，不受此配置影响；
+  //       此配置仅作用于代码中直接使用 next/image 的少数场景（如 GroupManagementClient 用户头像）
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: 'img.joyminis.com' },
+      { protocol: 'https', hostname: '**' }, // admin panel — 信任所有 https 图片来源
+    ],
   },
   // @lucky/shared: lightweight utils (dayjs/decimal/numbro), no heavy deps.
   // Keep in transpilePackages so Turbopack handles it natively (avoids CJS interop).
@@ -94,4 +101,40 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // For all available options, see:
+  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+
+  org: 'joymini',
+
+  project: 'javascript-nextjs',
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+
+  // For all available options, see:
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  widenClientFileUpload: true,
+
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  // This can increase your server load as well as your hosting bill.
+  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+  // side errors will fail.
+  tunnelRoute: '/monitoring',
+
+  webpack: {
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true,
+
+    // Tree-shaking options for reducing bundle size
+    treeshake: {
+      // Automatically tree-shake Sentry logger statements to reduce bundle size
+      removeDebugLogging: true,
+    },
+  },
+});
