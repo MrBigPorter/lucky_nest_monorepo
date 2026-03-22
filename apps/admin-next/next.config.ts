@@ -1,13 +1,8 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
-const isCloudflareBuild = process.env.NEXT_BUILD_TARGET === 'cloudflare';
-
 const nextConfig: NextConfig = {
-  // standalone 模式 — 生产用 Node.js 服务器运行 (支持 SSR / Middleware / Server Components)
-  // 产物: .next/standalone/ — 包含完整 server.js，通过 Docker 部署到 VPS
-  // 旧: output: 'export' (静态导出 → Cloudflare Pages) — 已迁移到 VPS 自托管
-  output: isCloudflareBuild ? undefined : 'standalone',
+  // Cloudflare worker build path: keep default output (do not force standalone).
   // Skip type errors caused by @types/react version mismatch across monorepo packages
   typescript: {
     ignoreBuildErrors: true,
@@ -35,6 +30,33 @@ const nextConfig: NextConfig = {
     resolveAlias: {
       'node:crypto': './src/lib/crypto-shim.ts',
     },
+  },
+
+  // Prevent monorepo-hoisted build toolchains (e.g. @nestjs/cli -> webpack)
+  // from being traced into the Cloudflare server function.
+  outputFileTracingExcludes: {
+    '*': [
+      './node_modules/webpack/**',
+      './node_modules/webpack-sources/**',
+      './node_modules/terser-webpack-plugin/**',
+      './node_modules/uglify-js/**',
+      './node_modules/acorn/**',
+      './node_modules/acorn-import-phases/**',
+      './node_modules/loader-runner/**',
+      './node_modules/neo-async/**',
+      './node_modules/tapable/**',
+      './node_modules/watchpack/**',
+      './node_modules/@webassemblyjs/**',
+      './node_modules/@xtuc/**',
+      './node_modules/@jridgewell/**',
+      './node_modules/chrome-trace-event/**',
+      './node_modules/esbuild/**',
+      './node_modules/@esbuild/**',
+      './node_modules/electron-to-chromium/**',
+      './node_modules/browserslist/**',
+      './node_modules/baseline-browser-mapping/**',
+      './node_modules/node-releases/**',
+    ],
   },
 
   experimental: {
