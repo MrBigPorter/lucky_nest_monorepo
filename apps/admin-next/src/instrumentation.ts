@@ -18,29 +18,6 @@
  *   instrumentation.ts 是服务器生命周期，可以初始化 Node.js 级别的工具。
  */
 export async function register() {
-  /**
-   * runtime 区分当前执行环境：
-   *   'nodejs'  → 服务器端（Server Component / API Route）
-   *   'edge'    → Edge Runtime（Middleware）
-   *
-   * runtime distinguishes execution environment:
-   *   'nodejs'  → server side (Server Components / API Routes)
-   *   'edge'    → Edge Runtime (Middleware)
-   */
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    /**
-     * 动态 import 确保服务端 Sentry 配置只在 Node.js 环境加载。
-     * Dynamic import ensures server Sentry config only loads in Node.js environment.
-     *
-     * 不能用顶层 import，因为 Edge Runtime 也会执行这个文件，
-     * 但 Edge 不支持完整 Node.js API，会报错。
-     * Cannot use top-level import because Edge Runtime also runs this file
-     * but doesn't support full Node.js APIs.
-     */
-    await import('../sentry.server.config');
-  }
-
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('../sentry.edge.config');
-  }
+  // Cloudflare Free Worker has strict script size limits.
+  // Keep only browser-side Sentry (`src/instrumentation-client.ts`) for now.
 }
