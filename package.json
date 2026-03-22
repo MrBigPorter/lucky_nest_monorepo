@@ -50,7 +50,8 @@
     "db:seed:dev": "docker exec -it lucky-backend-dev sh -lc \"yarn workspace @lucky/api seed\"",
     "db:reset:dev": "docker exec -it lucky-backend-dev sh -lc \"yarn workspace @lucky/api prisma migrate reset --force && yarn workspace @lucky/api prisma generate\"",
     "perf:lighthouse": "yarn workspace @lucky/admin-next lighthouse:audit",
-    "perf:lighthouse:strict": "yarn workspace @lucky/admin-next lighthouse:audit:strict"
+    "perf:lighthouse:strict": "yarn workspace @lucky/admin-next lighthouse:audit:strict",
+    "perf:lhci": "yarn workspace @lucky/admin-next lhci"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
