@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 import BundleAnalyzer from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -130,4 +131,34 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBundleAnalyzer(nextConfig);
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+  /**
+   * Sentry 构建时插件配置。
+   * Sentry build-time plugin options.
+   *
+   * org / project: 填入你的 Sentry 组织和项目 slug（Source Map 上传时需要）。
+   * 当 SENTRY_AUTH_TOKEN 未设置时，source map 上传会被自动跳过，不影响构建。
+   *
+   * org / project: fill in your Sentry org and project slugs (needed for source map upload).
+   * When SENTRY_AUTH_TOKEN is absent, source map upload is silently skipped — build still succeeds.
+   */
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // 静默构建日志，避免 CI 日志污染
+  // Suppress verbose build output to keep CI logs clean
+  silent: !process.env.CI,
+
+  // 仅在提供 auth token 时上传 source map（避免无 token 时构建报错）
+  // Only upload source maps when auth token is available (no-op otherwise)
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+
+  // 关闭 Sentry 隧道路由（减少 Cloudflare Worker bundle + 路由复杂度）
+  // Disable Sentry tunnel route (reduces Cloudflare Worker bundle size + routing complexity)
+  tunnelRoute: undefined,
+
+  // 关闭自动 tree-shaking 日志（已在 Sentry.init 的 enabled 字段控制）
+  disableLogger: true,
+});
