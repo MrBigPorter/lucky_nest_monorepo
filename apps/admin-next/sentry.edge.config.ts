@@ -1,31 +1,16 @@
-/**
- * Sentry Edge Runtime 配置 — Middleware 层
- * Sentry edge config — runs in Edge Runtime (middleware)
- *
- * 这个文件在 Next.js middleware（Edge Runtime）里执行。
- * Edge Runtime 是轻量级 V8 环境，不是完整 Node.js，
- * 因此 SDK 功能受限（无 Session Replay / 无 Profiling）。
- *
- * This file runs in Next.js middleware (Edge Runtime).
- * Edge Runtime is a lightweight V8 environment, not full Node.js,
- * so SDK features are limited.
- *
- * 主要捕获：middleware.ts 里的路由鉴权异常。
- * Primarily captures: auth exceptions in middleware.ts routing guard.
- */
+// This file configures the initialization of Sentry for edge features (middleware, edge routes, and so on).
+// The config you add here will be used whenever one of the edge features is loaded.
+// Note that this config is unrelated to the Vercel Edge Runtime and is also required when running locally.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
 import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  environment: process.env.NODE_ENV,
+  dsn: 'https://bbd591cc9662cf872cbf51c3a88fd304@o4511086990524416.ingest.us.sentry.io/4511086997274624',
 
-  /**
-   * Edge 层事务采样率设为 0 — middleware 是每个请求都会跑的，
-   * 采样太高会快速消耗额度。
-   * Edge transaction sample rate = 0 — middleware runs on every request,
-   * sampling too high burns quota fast.
-   */
-  tracesSampleRate: 0,
-
-  enabled: process.env.NODE_ENV === 'production',
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: 1,
+  // Enable sending user PII (Personally Identifiable Information)
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
+  sendDefaultPii: true,
 });
