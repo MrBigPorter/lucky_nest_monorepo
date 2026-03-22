@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AdminUserManagement } from '@/views/AdminUserManagement';
+import { AdminUserManagement } from './AdminUserManagementClient';
 
 export function AdminUsersClient() {
   const router = useRouter();

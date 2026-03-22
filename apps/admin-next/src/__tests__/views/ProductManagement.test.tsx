@@ -50,7 +50,7 @@ vi.mock('@/store/useToastStore', () => ({
 }));
 
 // ── subject ──────────────────────────────────────────────────────
-import { ProductManagement } from '@/views/ProductManagement';
+import { ProductManagement } from '@/components/products/ProductManagementClient';
 
 describe('ProductManagement', () => {
   beforeEach(() => {
