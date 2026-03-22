@@ -35,9 +35,11 @@
 - [x] 前端修复：`apps/admin-next/src/views/act-section/ActSectionBindProductModal.tsx` 修复 `ColumnDef` 类型报错 + `Cancel` 关闭行为 + 解绑按钮 loading 状态
 - [x] 前端修复：`apps/admin-next/src/components/ui/SmartImage.tsx` 修复 `ImageProps` 合并导致的 TS2322 类型报错（保持现有渲染行为）
 - [x] 后端收口：`apps/api/src/common/jwt/option-jwt.guard.ts` 清理 `OptionalJwtAuthGuard` lint 阻塞（scoped ESLint 通过）
+- [x] Sentry 适配 SSR：`instrumentation-client.ts` 改用 `@sentry/nextjs` + 导出 `onRouterTransitionStart`；`instrumentation.ts` 支持 nodejs/edge runtime + 导出 `onRequestError`；`next.config.ts` 集成 `withSentryConfig` build 插件
+- [x] Lighthouse CI 工作流修复：Step 5 加 Secrets 检查，缺失时以 warning 跳过而非失败；新增 LIGHTHOUSE_CI_SETUP_CN.md 指南
 
-> 最后对齐时间：2026-03-22。6-Stage 闯关式重构路线图全部完成。`read/architecture/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md` 已同步更新。  
-> Lighthouse 验收完成，Sentry + LHCI 已集成（`read/devops/LHCI_SENTRY_SETUP_CN.md`）。  
+> 最后对齐时间：2026-03-23。Sentry SSR 追踪 + Lighthouse CI 均已启用，待 GitHub Secrets 补充。  
+> 下一步：GitHub → Settings → Environments → production 添加 `LIGHTHOUSE_ADMIN_USERNAME` + `LIGHTHOUSE_ADMIN_PASSWORD`，部署后自动触发 Lighthouse CI。  
 > 下一步：补充 GitHub Secrets（`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_AUTH_TOKEN`）并 push dev → PR → main 触发全量部署验证。
 
 ---
@@ -45,6 +47,13 @@
 ## 🔬 Lighthouse 性能验收（Phase 6 下一步，进行中）
 
 **目标**：量化 Stage 1~5 的优化成果，验证 LCP < 500ms 目标，找到剩余瓶颈。
+
+**⚠️ 先决条件**：必须先在 GitHub → Settings → Environments → production 添加两个 Secrets：
+
+- `LIGHTHOUSE_ADMIN_USERNAME` — 超管账号用户名
+- `LIGHTHOUSE_ADMIN_PASSWORD` — 超管账号密码
+
+详细步骤见 `read/devops/LIGHTHOUSE_CI_SETUP_CN.md`。不配置则工作流会跳过。
 
 **待验收页面（按优先级）**：
 

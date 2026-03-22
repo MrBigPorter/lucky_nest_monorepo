@@ -50,18 +50,27 @@ jobs:
       - name: 5. Get auth token from production API
         id: auth
         run: |
+          # Check if Secrets are configured
+          if [ -z "${{ secrets.LIGHTHOUSE_ADMIN_USERNAME }}" ] || [ -z "${{ secrets.LIGHTHOUSE_ADMIN_PASSWORD }}" ]; then
+            echo "::warning::LIGHTHOUSE_ADMIN_USERNAME or LIGHTHOUSE_ADMIN_PASSWORD not set. Skipping Lighthouse CI."
+            echo "See read/devops/LIGHTHOUSE_CI_SETUP_CN.md for setup instructions."
+            echo "token=SKIP" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           RESPONSE=$(curl -s -w "\n%{http_code}" -X POST https://api.joyminis.com/api/v1/auth/admin/login \
             -H 'Content-Type: application/json' \
             -d "{\"username\":\"${{ secrets.LIGHTHOUSE_ADMIN_USERNAME }}\",\"password\":\"${{ secrets.LIGHTHOUSE_ADMIN_PASSWORD }}\"}")
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
           BODY=$(echo "$RESPONSE" | head -n -1)
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "Login failed with HTTP $HTTP_CODE: $BODY"
+            echo "::error::Login failed with HTTP $HTTP_CODE: $BODY"
+            echo "See read/devops/LIGHTHOUSE_CI_SETUP_CN.md for troubleshooting."
             exit 1
           fi
           TOKEN=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['tokens']['accessToken'])")
           if [ -z "$TOKEN" ]; then
-            echo "Failed to extract token"
+            echo "::error::Failed to extract token from response"
             exit 1
           fi
           # Mask token so it does not appear in logs
@@ -72,6 +81,7 @@ jobs:
       # lhci autorun = collect (Chrome) + upload (temp storage) + assert (thresholds)
       # LHCI_COOKIE is read by lighthouserc.mjs and injected as Cookie header
       - name: 6. Run Lighthouse CI
+        if: steps.auth.outputs.token != 'SKIP'
         env:
           LHCI_COOKIE: auth_token=${{ steps.auth.outputs.token }}
         run: |
@@ -80,6 +90,11 @@ jobs:
             --collect.numberOfRuns=${{ inputs.runs_per_page || '1' }} && \
           echo "LHCI_EXIT=0" >> "$GITHUB_ENV" || \
           echo "LHCI_EXIT=1" >> "$GITHUB_ENV"
+
+      - name: 6b. Lighthouse CI Skipped (Secrets Not Configured)
+        if: steps.auth.outputs.token == 'SKIP'
+        run: |
+          echo "::notice::Lighthouse CI skipped — setup required. See read/devops/LIGHTHOUSE_CI_SETUP_CN.md"
 
       # ── Step 7: 上传原始报告（30 天保留）────────────────────
       # Upload raw HTML/JSON reports as artifacts (kept for 30 days)
