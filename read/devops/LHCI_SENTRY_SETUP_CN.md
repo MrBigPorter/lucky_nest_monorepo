@@ -164,20 +164,31 @@ tracesSampleRate: 0.1   ← 10% 采样
 
 ### 3.5 需要在 GitHub Secrets 里配置
 
+**最小必配（当前仓库建议）**
+
+```bash
+NEXT_PUBLIC_SENTRY_DSN=你的 Sentry 项目 DSN（公开值，前端可见）
+SENTRY_AUTH_TOKEN=你的 Sentry API Token（用于 source map 上传，私密）
 ```
-SENTRY_DSN              你的 Sentry 项目 DSN（公开值，前端可见）
-SENTRY_AUTH_TOKEN       Sentry API Token（用于 source map 上传，私密）
-SENTRY_ORG              你的 Sentry 组织 slug
-SENTRY_PROJECT          你的 Sentry 项目 slug
+
+**可选（仅当你把 org/project 改为环境变量时才需要）**
+
+```bash
+SENTRY_ORG=你的 Sentry 组织 slug
+SENTRY_PROJECT=你的 Sentry 项目 slug
 ```
+
+> 当前仓库的 `apps/admin-next/next.config.ts` 已写死 `org` / `project`，
+> 所以默认不需要单独配置 `SENTRY_ORG` / `SENTRY_PROJECT`。
 
 同时加入 `apps/admin-next/.env.production`（本地 production build 用）：
 
 ```bash
 NEXT_PUBLIC_SENTRY_DSN=https://xxx@ooo.ingest.sentry.io/yyy
 SENTRY_AUTH_TOKEN=sntrys_xxx
-SENTRY_ORG=你的组织
-SENTRY_PROJECT=admin-next
+# 可选（仅当 next.config.ts 改为读环境变量时）
+# SENTRY_ORG=your-org
+# SENTRY_PROJECT=your-project
 ```
 
 ### 3.6 如何注册免费 Sentry 账号
@@ -200,7 +211,7 @@ SENTRY_PROJECT=admin-next
   apps/admin-next/sentry.edge.config.ts     Sentry Edge
   apps/admin-next/src/instrumentation.ts    Next.js 初始化钩子
   .github/workflows/lighthouse-ci.yml       LHCI CI 工作流
-  read/LHCI_SENTRY_SETUP_CN.md             （本文件）
+  read/devops/LHCI_SENTRY_SETUP_CN.md       （本文件）
 
 修改文件：
   apps/admin-next/next.config.ts            加 withSentryConfig 包裹
@@ -224,9 +235,19 @@ SENTRY_PROJECT=admin-next
 
 1. 打开 `https://admin.joyminis.com`，登录
 2. 打开浏览器 DevTools Network 标签
-3. 刷新页面，看有没有发到 `sentry.io` 的请求（或经 `/api/monitoring` 隧道）
+3. 刷新页面，看有没有发到 `sentry.io` 的请求（或经 `/monitoring` 隧道）
 4. 在代码里临时扔一个 `throw new Error('Sentry test')`，看 Sentry 后台能不能收到
 5. 删掉测试代码
+
+### Sentry 错误去哪里看（线上排障入口）
+
+1. 打开 Sentry 项目 → `Issues`
+2. 筛选 `environment:production`
+3. 点进某条 Issue，重点看：
+   - `Stack Trace`（是否还原到源码行）
+   - `Breadcrumbs`（报错前用户操作）
+   - `Tags`（release / browser / url）
+4. 修复后把 Issue 标记 `Resolved`，观察是否 `Regressed`
 
 ---
 
