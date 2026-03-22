@@ -28,7 +28,7 @@ vi.mock('@/api', () => ({
 }));
 
 import { systemConfigApi } from '@/api';
-import { SystemConfig } from '@/views/SystemConfig';
+import { SystemConfig } from '@/components/settings/SettingsClient';
 
 const createConfig = (key: string, value: string) => ({ key, value });
 

@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BannerManagement } from '@/views/BannerManagement';
+import { BannerManagement } from './BannerManagementClient';
 
 export function BannersClient() {
   const router = useRouter();

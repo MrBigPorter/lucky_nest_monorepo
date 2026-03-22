@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Middleware — 在 dev 和 production 均生效（output: 'standalone' 模式支持 Node.js middleware）。
+ * Middleware — 在 dev 和 production 均生效（Cloudflare Workers Edge Runtime 支持 Next.js middleware）。
  * 职责: 服务端路由守卫，读取 Cookie 中的 auth_token 判断是否已登录。
  *   - 未登录访问受保护页面 → 302 跳转 /login
  *   - 已登录访问 /login → 302 跳转 /（防止重复登录）
