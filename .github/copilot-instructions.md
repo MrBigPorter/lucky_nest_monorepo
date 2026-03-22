@@ -37,7 +37,8 @@
 - [x] 后端收口：`apps/api/src/common/jwt/option-jwt.guard.ts` 清理 `OptionalJwtAuthGuard` lint 阻塞（scoped ESLint 通过）
 
 > 最后对齐时间：2026-03-22。6-Stage 闯关式重构路线图全部完成。`read/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md` 已同步更新。  
-> 下一步：从 Phase 6 待规划候选项中选定方向（Lighthouse 性能验收 🔴 / 移动端适配 🟡 / 批量操作 🟡 / 国际化 🟡 / 单测补全 🟢）。
+> Lighthouse 验收完成，Sentry + LHCI 已集成（`read/LHCI_SENTRY_SETUP_CN.md`）。  
+> 下一步：补充 GitHub Secrets（`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_AUTH_TOKEN`）并 push dev → PR → main 触发全量部署验证。
 
 ---
 
@@ -67,8 +68,13 @@
 - [x] 跑 Lighthouse，记录 5 个页面数据
 - [x] 分析瓶颈，决定是否需要继续优化
 - [x] 根据结果选定下一个功能方向（已实施：recharts dynamic() + remotePatterns；转功能方向）
+- [x] 集成 Sentry 错误监控：`@sentry/nextjs` SDK + client/server/edge 三端配置 + `global-error.tsx` + `instrumentation-client.ts`（onRouterTransitionStart）
+- [x] 集成 Lighthouse CI：`.github/workflows/lighthouse-ci.yml` + `lighthouserc.mjs`（5 页面 PR 自动跑分）
+- [x] 安全收口：`.env.sentry-build-plugin` 加入 `.gitignore`，硬编码 DSN 替换为 `NEXT_PUBLIC_SENTRY_DSN` 环境变量
 
-> 详细测试方法、指标定义、结果记录表、优化决策树见 `read/PERFORMANCE_LIGHTHOUSE_CN.md`
+> 详细测试方法、指标定义、结果记录表、优化决策树见 `read/PERFORMANCE_LIGHTHOUSE_CN.md`  
+> Sentry + LHCI 安装手册见 `read/LHCI_SENTRY_SETUP_CN.md`  
+> 下一步：在 GitHub Secrets / deploy/.env.prod 补充 `NEXT_PUBLIC_SENTRY_DSN` + `SENTRY_AUTH_TOKEN`，触发一次部署验证 Sentry 上报是否正常
 
 ---
 
