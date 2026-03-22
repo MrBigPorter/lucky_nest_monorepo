@@ -1,8 +1,15 @@
 import type { NextConfig } from 'next';
 import path from 'path';
+import BundleAnalyzer from '@next/bundle-analyzer';
 
+const withBundleAnalyzer = BundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+});
+
+// admin-next is deployed exclusively to Cloudflare Workers via @opennextjs/cloudflare.
+// No standalone/Docker output needed.
 const nextConfig: NextConfig = {
-  // Cloudflare worker build path: keep default output (do not force standalone).
   // Skip type errors caused by @types/react version mismatch across monorepo packages
   typescript: {
     ignoreBuildErrors: true,
@@ -11,9 +18,15 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   trailingSlash: true,
-  // standalone 模式下仍保留 unoptimized，后续可配置 remotePatterns 启用优化
+  // 启用 Next.js 图片优化：remotePatterns 白名单 + 允许任意 https 域（admin 内部工具，信任场景）
+  // img.joyminis.com: 主 CDN；https://** 覆盖 OAuth 头像（Google/Facebook）等未知来源
+  // 注意：SmartImage 用 @unpic/react 自行处理 CDN，不受此配置影响；
+  //       此配置仅作用于代码中直接使用 next/image 的少数场景（如 GroupManagementClient 用户头像）
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: 'img.joyminis.com' },
+      { protocol: 'https', hostname: '**' }, // admin panel — 信任所有 https 图片来源
+    ],
   },
   // @lucky/shared: lightweight utils (dayjs/decimal/numbro), no heavy deps.
   // Keep in transpilePackages so Turbopack handles it natively (avoids CJS interop).
@@ -32,8 +45,9 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // Prevent monorepo-hoisted build toolchains (e.g. @nestjs/cli -> webpack)
-  // from being traced into the Cloudflare server function.
+  // Exclude build tools that bleed in via monorepo hoisting (e.g. @nestjs/cli → webpack).
+  // These packages are only needed in apps/api — never at admin-next runtime.
+  // Without this, Next.js file tracing picks up webpack + full toolchain (~4 MiB).
   outputFileTracingExcludes: {
     '*': [
       './node_modules/webpack/**',
@@ -116,4 +130,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

@@ -53,7 +53,7 @@ vi.mock('@/store/useToastStore', () => ({
   ) => sel({ addToast: vi.fn() }),
 }));
 
-import { AdminUserManagement } from '@/views/AdminUserManagement';
+import { AdminUserManagement } from '@/components/admin-users/AdminUserManagementClient';
 
 describe('AdminUserManagement', () => {
   beforeEach(() => {

@@ -29,7 +29,7 @@ vi.mock('@/api', () => ({
   },
 }));
 
-import { LuckyDrawManagement } from '@/views/LuckyDrawManagement';
+import { LuckyDrawManagement } from '@/components/lucky-draw/LuckyDrawClient';
 
 const createActivity = (id: string, title: string) => ({
   id,
