@@ -16,9 +16,15 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   trailingSlash: true,
-  // standalone 模式下仍保留 unoptimized，后续可配置 remotePatterns 启用优化
+  // 启用 Next.js 图片优化：remotePatterns 白名单 + 允许任意 https 域（admin 内部工具，信任场景）
+  // img.joyminis.com: 主 CDN；https://** 覆盖 OAuth 头像（Google/Facebook）等未知来源
+  // 注意：SmartImage 用 @unpic/react 自行处理 CDN，不受此配置影响；
+  //       此配置仅作用于代码中直接使用 next/image 的少数场景（如 GroupManagementClient 用户头像）
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: 'img.joyminis.com' },
+      { protocol: 'https', hostname: '**' }, // admin panel — 信任所有 https 图片来源
+    ],
   },
   // @lucky/shared: lightweight utils (dayjs/decimal/numbro), no heavy deps.
   // Keep in transpilePackages so Turbopack handles it natively (avoids CJS interop).
