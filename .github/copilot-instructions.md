@@ -41,6 +41,37 @@
 
 ---
 
+## 🔬 Lighthouse 性能验收（Phase 6 下一步，进行中）
+
+**目标**：量化 Stage 1~5 的优化成果，验证 LCP < 500ms 目标，找到剩余瓶颈。
+
+**待验收页面（按优先级）**：
+
+| 页面      | URL          | 重点指标        | 为什么                           |
+| --------- | ------------ | --------------- | -------------------------------- |
+| Dashboard | `/`          | LCP / FCP / TBT | Stage 2：DashboardStats SSR 直出 |
+| Analytics | `/analytics` | LCP / FCP       | Stage 2：AnalyticsOverview SSR   |
+| Finance   | `/finance`   | FCP / LCP       | Stage 4：FinanceStatsServer SSR  |
+| Orders    | `/orders`    | TBT / FCP       | 纯 Client，对比基准              |
+| Login     | `/login`     | LCP             | 关键转化页                       |
+
+**验收标准（Google Core Web Vitals）**：
+
+| 指标                | 目标                            | 当前估计                        |
+| ------------------- | ------------------------------- | ------------------------------- |
+| LCP（最大内容绘制） | < 500ms（内网）/ < 2.5s（外网） | 待测                            |
+| FCP（首次内容绘制） | < 200ms（内网）/ < 1.8s（外网） | 待测                            |
+| TBT（总阻塞时间）   | < 200ms                         | 待测                            |
+| CLS（布局偏移）     | < 0.1                           | 待测（Suspense 骨架屏应有改善） |
+
+- [ ] 跑 Lighthouse，记录 5 个页面数据
+- [ ] 分析瓶颈，决定是否需要继续优化
+- [ ] 根据结果选定下一个功能方向
+
+> 详细测试方法、指标定义、结果记录表、优化决策树见 `read/PERFORMANCE_LIGHTHOUSE_CN.md`
+
+---
+
 ## 🧹 Admin Next 路由 & 侧边栏清理（Phase 6 插入任务）
 
 **背景**：路由目录/routes.ts/Sidebar 分组三处不对齐，积累了重复路由、无实体 hidden 占位、分组臃肿等问题，趁 Phase 2 完成后一次性整理。
