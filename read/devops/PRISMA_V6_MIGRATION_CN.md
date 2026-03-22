@@ -36,6 +36,7 @@ error TS2305: Module '@prisma/client' has no exported member 'ConversationType'.
 Debian Bullseye（`node:20-bullseye-slim`）的 OpenSSL 版本是 **1.1.x**，不是 3.0.x。
 
 **原来的配置**：
+
 ```prisma
 binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 ```
@@ -51,10 +52,10 @@ binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 
 Prisma v6 做了两个破坏性变更：
 
-| 代码 | v5 | v6 |
-|------|----|----|
-| `satisfies Prisma.LogDefinition[]` | ✅ | ❌ `LogDefinition` 从生成客户端的 `Prisma` namespace 移除 |
-| `$queryRawUnsafe<any[]>(...)` | ✅ | ❌ 不再接受泛型参数 |
+| 代码                               | v5  | v6                                                        |
+| ---------------------------------- | --- | --------------------------------------------------------- |
+| `satisfies Prisma.LogDefinition[]` | ✅  | ❌ `LogDefinition` 从生成客户端的 `Prisma` namespace 移除 |
+| `$queryRawUnsafe<any[]>(...)`      | ✅  | ❌ 不再接受泛型参数                                       |
 
 这两处错误**不影响运行**（NestJS `start:dev` 默认使用 SWC 编译器，SWC 完全忽略
 TypeScript 类型错误，只做语法转译），所以之前应用一直在跑，只是 TS watch 日志里
@@ -144,21 +145,21 @@ docker exec lucky-backend-dev openssl version
 # Bookworm/Ubuntu 22+ → OpenSSL 3.0.x → 用 debian-openssl-3.0.x
 ```
 
-| Base Image | OpenSSL | binaryTarget |
-|------------|---------|--------------|
-| `node:20-bullseye-slim` | 1.1.x | `linux-arm64-openssl-1.1.x` |
-| `node:20-bookworm-slim` | 3.0.x | `debian-openssl-3.0.x` |
-| Alpine | musl | `linux-musl-openssl-3.0.x` |
+| Base Image              | OpenSSL | binaryTarget                |
+| ----------------------- | ------- | --------------------------- |
+| `node:20-bullseye-slim` | 1.1.x   | `linux-arm64-openssl-1.1.x` |
+| `node:20-bookworm-slim` | 3.0.x   | `debian-openssl-3.0.x`      |
+| Alpine                  | musl    | `linux-musl-openssl-3.0.x`  |
 
 ---
 
 ## 六、Prisma v6 已知 Breaking Changes（与本项目相关）
 
-| 变更 | v5 写法 | v6 写法 |
-|------|---------|---------|
-| `LogDefinition` 类型 | `Prisma.LogDefinition` | 本地定义或不用类型约束 |
-| `$queryRawUnsafe` 泛型 | `$queryRawUnsafe<T>(...)` | `$queryRawUnsafe(...)` 后 `as T` |
-| `PrismaClientKnownRequestError` | `Prisma.PrismaClientKnownRequestError` | 直接从 `@prisma/client` import |
+| 变更                            | v5 写法                                | v6 写法                          |
+| ------------------------------- | -------------------------------------- | -------------------------------- |
+| `LogDefinition` 类型            | `Prisma.LogDefinition`                 | 本地定义或不用类型约束           |
+| `$queryRawUnsafe` 泛型          | `$queryRawUnsafe<T>(...)`              | `$queryRawUnsafe(...)` 后 `as T` |
+| `PrismaClientKnownRequestError` | `Prisma.PrismaClientKnownRequestError` | 直接从 `@prisma/client` import   |
 
 ```typescript
 // v6 正确写法：直接 import 错误类
@@ -167,4 +168,3 @@ import { PrismaClient, PrismaClientKnownRequestError } from '@prisma/client';
 // catch 块里：
 if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') { ... }
 ```
-

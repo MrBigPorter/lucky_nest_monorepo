@@ -191,13 +191,13 @@ SystemConfig → ProductCategory → Address → KycIdType
 
 ## 九、支付渠道 `PaymentChannel` × 5
 
-| code | type | name | 金额限制 |
-| ---- | ---- | ---- | -------- |
-| `PH_GCASH` | 充值 | GCash | ₱50 ~ ₱50,000 |
-| `PH_PAYMAYA` | 充值 | PayMaya | ₱50 ~ ₱50,000 |
-| `PH_BDO` | 充值 | BDO Online | ₱100 ~ ₱80,000 |
-| `PH_BANK_WITHDRAW` | 提现 | Bank Transfer | ₱200 ~ ₱100,000 |
-| `PH_GCASH_WITHDRAW` | 提现 | GCash Withdraw | ₱100 ~ ₱50,000 |
+| code                | type | name           | 金额限制        |
+| ------------------- | ---- | -------------- | --------------- |
+| `PH_GCASH`          | 充值 | GCash          | ₱50 ~ ₱50,000   |
+| `PH_PAYMAYA`        | 充值 | PayMaya        | ₱50 ~ ₱50,000   |
+| `PH_BDO`            | 充值 | BDO Online     | ₱100 ~ ₱80,000  |
+| `PH_BANK_WITHDRAW`  | 提现 | Bank Transfer  | ₱200 ~ ₱100,000 |
+| `PH_GCASH_WITHDRAW` | 提现 | GCash Withdraw | ₱100 ~ ₱50,000  |
 
 **幂等**: 按 `code` 查重，存在则更新配置。
 
@@ -210,6 +210,7 @@ SystemConfig → ProductCategory → Address → KycIdType
 - 每个城市内置 4 个高频 Barangay
 
 **幂等**:
+
 - Province 按 `provinceName` upsert
 - City 按 `(provinceId, cityName)` 查重
 - Barangay 按 `(cityId, barangayName)` 查重

@@ -293,7 +293,7 @@ images: {
 
 ```tsx
 // analytics/page.tsx — 直接 import，不是 dynamic()
-import { AnalyticsTrendSection } from '@/components/analytics/AnalyticsTrendSection';
+import { AnalyticsTrendSection } from "@/components/analytics/AnalyticsTrendSection";
 // AnalyticsTrendSection 内部 import recharts (~90KB gzipped)
 ```
 
@@ -306,7 +306,7 @@ import { AnalyticsTrendSection } from '@/components/analytics/AnalyticsTrendSect
 ```tsx
 // 改为懒加载
 const AnalyticsTrendSection = dynamic(
-  () => import('@/components/analytics/AnalyticsTrendSection'),
+  () => import("@/components/analytics/AnalyticsTrendSection"),
   { ssr: false, loading: () => <ChartSkeleton /> },
 );
 ```
@@ -317,7 +317,7 @@ const AnalyticsTrendSection = dynamic(
 
 ```tsx
 // DashboardLayout.tsx
-'use client'; // ← Sidebar + Header + MainContent 全部需要 JS hydration
+"use client"; // ← Sidebar + Header + MainContent 全部需要 JS hydration
 ```
 
 **影响**：用户看到页面结构（侧边栏/顶栏）之前，必须等待 JS hydration 完成。  

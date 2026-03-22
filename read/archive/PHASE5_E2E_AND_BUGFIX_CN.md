@@ -27,11 +27,11 @@
 
 ## 一、今日完成内容总览
 
-| 类别 | 内容 | 状态 |
-|------|------|------|
-| E2E 测试 | 为 Phase 5 所有新页面补齐 E2E spec 文件（9 个） | ✅ 完成 |
-| E2E 测试 | `auth.setup.ts` 路由预热列表新增 9 条 Phase 5 路由 | ✅ 完成 |
-| E2E 测试 | `navigation.spec.ts` 导航冒烟测试新增 9 条路由 | ✅ 完成 |
+| 类别     | 内容                                                      | 状态    |
+| -------- | --------------------------------------------------------- | ------- |
+| E2E 测试 | 为 Phase 5 所有新页面补齐 E2E spec 文件（9 个）           | ✅ 完成 |
+| E2E 测试 | `auth.setup.ts` 路由预热列表新增 9 条 Phase 5 路由        | ✅ 完成 |
+| E2E 测试 | `navigation.spec.ts` 导航冒烟测试新增 9 条路由            | ✅ 完成 |
 | Bug 修复 | `OperationLogList.tsx` — `RangeError: Invalid time value` | ✅ 完成 |
 
 ---
@@ -79,92 +79,92 @@ apps/admin-next/src/__e2e__/
 
 #### `/ads/` — 广告管理
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 页面加载 | `body` 不含 `Application error` |
-| 标题 | `getByText(/advertisements/i)` 可见 |
-| 表格列头 | `Preview` / `Title` / `Position` 三列头可见 |
-| 过滤器 | 至少 2 个 `<select>` — 状态 + 位置；位置 select 含 `All Positions` |
-| New Ad 按钮 | 按钮可见，点击后 `.fixed.inset-0` 弹层出现 |
-| 弹窗字段 | `Ad Position` 文字可见 |
+| 测试用例    | 关键断言                                                           |
+| ----------- | ------------------------------------------------------------------ |
+| 页面加载    | `body` 不含 `Application error`                                    |
+| 标题        | `getByText(/advertisements/i)` 可见                                |
+| 表格列头    | `Preview` / `Title` / `Position` 三列头可见                        |
+| 过滤器      | 至少 2 个 `<select>` — 状态 + 位置；位置 select 含 `All Positions` |
+| New Ad 按钮 | 按钮可见，点击后 `.fixed.inset-0` 弹层出现                         |
+| 弹窗字段    | `Ad Position` 文字可见                                             |
 
 #### `/flash-sale/` — 秒杀活动
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 标题 | `Flash Sale` 可见 |
-| 场次计数 | `session(s)` 文字可见 |
-| New Session 按钮 | 点击后弹层出现 |
-| 弹窗字段 | `Start Time` / `End Time` 可见 |
-| 关闭弹窗 | `Escape` 键关闭后列表仍正常显示 |
+| 测试用例         | 关键断言                        |
+| ---------------- | ------------------------------- |
+| 标题             | `Flash Sale` 可见               |
+| 场次计数         | `session(s)` 文字可见           |
+| New Session 按钮 | 点击后弹层出现                  |
+| 弹窗字段         | `Start Time` / `End Time` 可见  |
+| 关闭弹窗         | `Escape` 键关闭后列表仍正常显示 |
 
 #### `/settings/` — 系统配置
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 标题 | `System Config` 可见 |
-| config 计数 | `config item(s)` 可见（API 返回后填充） |
-| 数据行 | `exchange_rate` 相关条目可见（Seed 数据） |
-| 编辑按钮 | 至少 1 个含 `svg` 的按钮可见 |
-| 页脚提示 | `Press … Enter … to save` 文字可见 |
+| 测试用例    | 关键断言                                  |
+| ----------- | ----------------------------------------- |
+| 标题        | `System Config` 可见                      |
+| config 计数 | `config item(s)` 可见（API 返回后填充）   |
+| 数据行      | `exchange_rate` 相关条目可见（Seed 数据） |
+| 编辑按钮    | 至少 1 个含 `svg` 的按钮可见              |
+| 页脚提示    | `Press … Enter … to save` 文字可见        |
 
 #### `/im/` — 客服接待台
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 双栏布局 | `conversation` 相关文字可见 |
-| 右侧空态 | `Select a conversation` 占位文字可见（未选中会话时） |
-| Socket 状态 | `Live` / `Connecting` / `Polling` 三者其一可见 |
-| 点击会话 | 若有会话条目，点击后空态消失（聊天窗口出现） |
+| 测试用例    | 关键断言                                             |
+| ----------- | ---------------------------------------------------- |
+| 双栏布局    | `conversation` 相关文字可见                          |
+| 右侧空态    | `Select a conversation` 占位文字可见（未选中会话时） |
+| Socket 状态 | `Live` / `Connecting` / `Polling` 三者其一可见       |
+| 点击会话    | 若有会话条目，点击后空态消失（聊天窗口出现）         |
 
 > **说明**：IM 页面状态依赖实时数据，测试均有 `catch` 非致命降级——如果没有会话数据，仅验证空态。
 
 #### `/login-logs/` — 登录日志
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 表格列头 | `User` / `Time` / `IP` 可见 |
-| User ID 输入框 | placeholder `/user id/i` 可见，可输入 |
-| IP 输入框 | placeholder `/ip/i` 可见，可输入 |
-| 状态 select | 含 `All` 选项 |
-| Search / Reset | 按钮可点击 |
-| 状态徽章 | 若有数据，`Success` / `Failed` 徽章可见 |
+| 测试用例       | 关键断言                                |
+| -------------- | --------------------------------------- |
+| 表格列头       | `User` / `Time` / `IP` 可见             |
+| User ID 输入框 | placeholder `/user id/i` 可见，可输入   |
+| IP 输入框      | placeholder `/ip/i` 可见，可输入        |
+| 状态 select    | 含 `All` 选项                           |
+| Search / Reset | 按钮可点击                              |
+| 状态徽章       | 若有数据，`Success` / `Failed` 徽章可见 |
 
 #### `/analytics/` — 数据分析
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 标题 | `Data Analytics` 可见（SSR 服务端渲染，秒出） |
-| 统计卡片 | `users` 相关文字可见 |
+| 测试用例 | 关键断言                                       |
+| -------- | ---------------------------------------------- |
+| 标题     | `Data Analytics` 可见（SSR 服务端渲染，秒出）  |
+| 统计卡片 | `users` 相关文字可见                           |
 | 趋势图表 | `trend` / `revenue` 相关文字可见（客户端渲染） |
 
 #### `/notifications/` — 推送通知
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 标题 | `notification` / `push` 可见 |
-| 设备卡片 | `Android` / `iOS` / `device` 可见 |
+| 测试用例 | 关键断言                                           |
+| -------- | -------------------------------------------------- |
+| 标题     | `notification` / `push` 可见                       |
+| 设备卡片 | `Android` / `iOS` / `device` 可见                  |
 | 广播表单 | `Broadcast` 标签、`Title` label、`Body` label 可见 |
-| 发送按钮 | `Send Broadcast` / `Broadcast` 按钮可见 |
-| 日志区域 | `push log` / `history` / `log` 可见 |
+| 发送按钮 | `Send Broadcast` / `Broadcast` 按钮可见            |
+| 日志区域 | `push log` / `history` / `log` 可见                |
 
 #### `/roles/` — RBAC 角色管理
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 标题 | `Roles` 可见 |
-| 角色卡片 | `SUPER_ADMIN` / `ADMIN` 可见 |
-| 用户计数 | `users?$` 正则匹配（如 `3 users`） |
+| 测试用例 | 关键断言                                         |
+| -------- | ------------------------------------------------ |
+| 标题     | `Roles` 可见                                     |
+| 角色卡片 | `SUPER_ADMIN` / `ADMIN` 可见                     |
+| 用户计数 | `users?$` 正则匹配（如 `3 users`）               |
 | 内联面板 | 点击角色卡后 `members` / `users in` 相关文字出现 |
 
 #### `/operation-logs/` — 操作日志
 
-| 测试用例 | 关键断言 |
-|---------|---------|
-| 标题 | `Operation Log` 可见 |
-| 表格列头 | `admin` / `action` 可见 |
-| 类型过滤 | `<select>` 存在 |
-| Search / Reset | 按钮可点击 |
+| 测试用例       | 关键断言                |
+| -------------- | ----------------------- |
+| 标题           | `Operation Log` 可见    |
+| 表格列头       | `admin` / `action` 可见 |
+| 类型过滤       | `<select>` 存在         |
+| Search / Reset | 按钮可点击              |
 
 ### 2.4 auth.setup.ts 路由预热更新
 
@@ -179,25 +179,34 @@ apps/admin-next/src/__e2e__/
 ```typescript
 // Before（仅预热旧页面）
 const WARMUP_ROUTES = [
-  '/', '/orders/', '/users/', '/products/',
-  '/categories/', '/banners/', '/finance/',
-  '/marketing/', '/kyc/', '/groups/',
-  '/admin-users/', '/address/',
-  '/act/section/', '/payment/channels/',
+  "/",
+  "/orders/",
+  "/users/",
+  "/products/",
+  "/categories/",
+  "/banners/",
+  "/finance/",
+  "/marketing/",
+  "/kyc/",
+  "/groups/",
+  "/admin-users/",
+  "/address/",
+  "/act/section/",
+  "/payment/channels/",
 ];
 
 // After（新增 Phase 5 页面）
 const WARMUP_ROUTES = [
   // ... 以上所有旧路由
-  '/ads/',
-  '/flash-sale/',
-  '/settings/',
-  '/im/',
-  '/login-logs/',
-  '/analytics/',
-  '/notifications/',
-  '/roles/',
-  '/operation-logs/',
+  "/ads/",
+  "/flash-sale/",
+  "/settings/",
+  "/im/",
+  "/login-logs/",
+  "/analytics/",
+  "/notifications/",
+  "/roles/",
+  "/operation-logs/",
 ];
 ```
 
@@ -271,19 +280,19 @@ case 'dateTime':
 export type ProColumns<T = any> = {
   // ...
   render?: (
-    dom: ReactNode,   // ← 第 1 个参数：已渲染的 DOM（ReactNode）
-    entity: T,        // ← 第 2 个参数：完整的原始数据行对象
+    dom: ReactNode, // ← 第 1 个参数：已渲染的 DOM（ReactNode）
+    entity: T, // ← 第 2 个参数：完整的原始数据行对象
     index: number,
     action?: ActionType,
   ) => ReactNode;
 };
 ```
 
-| 参数 | 类型 | 含义 |
-|------|------|------|
-| `dom` | `ReactNode` | SmartTable 按 `valueType` 规则预先渲染好的单元格内容（`renderSmartCell` 的返回值） |
-| `entity` | `T`（行数据）| `dataSource` 里的原始对象，即数据库返回的 JSON |
-| `index` | `number` | 当前行索引 |
+| 参数     | 类型          | 含义                                                                               |
+| -------- | ------------- | ---------------------------------------------------------------------------------- |
+| `dom`    | `ReactNode`   | SmartTable 按 `valueType` 规则预先渲染好的单元格内容（`renderSmartCell` 的返回值） |
+| `entity` | `T`（行数据） | `dataSource` 里的原始对象，即数据库返回的 JSON                                     |
+| `index`  | `number`      | 当前行索引                                                                         |
 
 这与 Ant Design ProTable 的 `render` API 完全一致，属于约定俗成的模式。
 
@@ -341,25 +350,25 @@ col.render(dom, row, index)
 因此引入了一个简单的防御函数：
 
 ```typescript
-import { format, isValid, parseISO } from 'date-fns';
+import { format, isValid, parseISO } from "date-fns";
 
 /** Safe date formatter — returns '—' for null, undefined, or invalid dates */
 function safeFormat(val: string | null | undefined, fmt: string): string {
-  if (!val) return '—';          // 空值直接返回占位符
-  const d = parseISO(val);       // date-fns 的 ISO 解析（比 new Date() 更严格）
-  return isValid(d) ? format(d, fmt) : '—';  // 无效日期返回占位符，不抛错
+  if (!val) return "—"; // 空值直接返回占位符
+  const d = parseISO(val); // date-fns 的 ISO 解析（比 new Date() 更严格）
+  return isValid(d) ? format(d, fmt) : "—"; // 无效日期返回占位符，不抛错
 }
 ```
 
 **为什么用 `parseISO` 而不是 `new Date()`？**
 
-| | `new Date(str)` | `parseISO(str)` |
-|-|-----------------|-----------------|
-| 对 `"invalid"` | 返回 `Invalid Date` | 返回 `Invalid Date` |
-| 对 `""` | 返回 `Invalid Date` | 返回 `Invalid Date` |
+|                    | `new Date(str)`             | `parseISO(str)`                 |
+| ------------------ | --------------------------- | ------------------------------- |
+| 对 `"invalid"`     | 返回 `Invalid Date`         | 返回 `Invalid Date`             |
+| 对 `""`            | 返回 `Invalid Date`         | 返回 `Invalid Date`             |
 | 对 ISO 8601 字符串 | ✅ 有效（但行为与环境有关） | ✅ 有效（行为确定，跨时区一致） |
-| 对 `"2026-03-17"` | ⚠️ 某些环境解析为 UTC 00:00 | ✅ 始终解析为本地 00:00 |
-| 异常处理 | 不抛错，返回 Invalid Date | 不抛错，返回 Invalid Date |
+| 对 `"2026-03-17"`  | ⚠️ 某些环境解析为 UTC 00:00 | ✅ 始终解析为本地 00:00         |
+| 异常处理           | 不抛错，返回 Invalid Date   | 不抛错，返回 Invalid Date       |
 
 **结论**：`parseISO` + `isValid` 的组合是 date-fns 生态中处理任意来源日期字符串的最佳实践。
 
@@ -369,29 +378,29 @@ function safeFormat(val: string | null | undefined, fmt: string): string {
 
 ### E2E 新增文件
 
-| 文件 | 行数 | 用途 |
-|------|------|------|
-| `src/__e2e__/ads.spec.ts` | ~90 | 广告管理页 E2E |
-| `src/__e2e__/flash-sale.spec.ts` | ~90 | 秒杀活动页 E2E |
-| `src/__e2e__/settings.spec.ts` | ~58 | 系统配置页 E2E |
-| `src/__e2e__/im.spec.ts` | ~88 | 客服接待台 E2E |
-| `src/__e2e__/login-logs.spec.ts` | ~87 | 登录日志页 E2E |
-| `src/__e2e__/analytics.spec.ts` | ~50 | 数据分析页 E2E |
-| `src/__e2e__/notifications.spec.ts` | ~65 | 推送通知页 E2E |
-| `src/__e2e__/roles.spec.ts` | ~63 | 角色管理页 E2E |
-| `src/__e2e__/operation-logs.spec.ts` | ~70 | 操作日志页 E2E |
+| 文件                                 | 行数 | 用途           |
+| ------------------------------------ | ---- | -------------- |
+| `src/__e2e__/ads.spec.ts`            | ~90  | 广告管理页 E2E |
+| `src/__e2e__/flash-sale.spec.ts`     | ~90  | 秒杀活动页 E2E |
+| `src/__e2e__/settings.spec.ts`       | ~58  | 系统配置页 E2E |
+| `src/__e2e__/im.spec.ts`             | ~88  | 客服接待台 E2E |
+| `src/__e2e__/login-logs.spec.ts`     | ~87  | 登录日志页 E2E |
+| `src/__e2e__/analytics.spec.ts`      | ~50  | 数据分析页 E2E |
+| `src/__e2e__/notifications.spec.ts`  | ~65  | 推送通知页 E2E |
+| `src/__e2e__/roles.spec.ts`          | ~63  | 角色管理页 E2E |
+| `src/__e2e__/operation-logs.spec.ts` | ~70  | 操作日志页 E2E |
 
 ### E2E 更新文件
 
-| 文件 | 变更内容 |
-|------|---------|
-| `src/__e2e__/auth.setup.ts` | `WARMUP_ROUTES` 新增 9 条 Phase 5 路由 |
-| `src/__e2e__/navigation.spec.ts` | `routes` 数组新增 9 条路由冒烟测试 |
+| 文件                             | 变更内容                               |
+| -------------------------------- | -------------------------------------- |
+| `src/__e2e__/auth.setup.ts`      | `WARMUP_ROUTES` 新增 9 条 Phase 5 路由 |
+| `src/__e2e__/navigation.spec.ts` | `routes` 数组新增 9 条路由冒烟测试     |
 
 ### Bug 修复文件
 
-| 文件 | 变更内容 |
-|------|---------|
+| 文件                             | 变更内容                                                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `src/views/OperationLogList.tsx` | 新增 `safeFormat` 工具函数；Time 列 `render(date)` → `render(_dom, row)`；import 增加 `isValid, parseISO` |
 
 ---
@@ -447,5 +456,4 @@ await expectNoError(page);
 
 ---
 
-*文档作者：GitHub Copilot Agent | 记录日期：2026-03-17*
-
+_文档作者：GitHub Copilot Agent | 记录日期：2026-03-17_

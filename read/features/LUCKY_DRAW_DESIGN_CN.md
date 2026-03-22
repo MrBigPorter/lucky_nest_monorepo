@@ -13,14 +13,14 @@
 
 抽奖是**平台福利性激励功能**，与 Treasure 主商品购买完全独立：
 
-| 维度 | 说明 |
-|------|------|
-| 用户费用 | **零成本**，用户不需要付任何额外的钱 |
+| 维度             | 说明                                                                 |
+| ---------------- | -------------------------------------------------------------------- |
+| 用户费用         | **零成本**，用户不需要付任何额外的钱                                 |
 | 触发条件（团购） | **团成功（GROUP_STATUS = SUCCESS）** 后，该团所有真人成员各得 1 张券 |
-| 触发条件（单买） | 单独购买（isGroup=false）订单支付成功后，得 1 张券 |
-| 参与方式 | 用户**主动点击「抽一下」**才消耗券，不点就永久保留 |
-| 奖品范围 | 优惠券 / 金币 / 余额充值 / 谢谢参与（保底） |
-| 没抽中 | 无任何损失，商品该得到照拿 |
+| 触发条件（单买） | 单独购买（isGroup=false）订单支付成功后，得 1 张券                   |
+| 参与方式         | 用户**主动点击「抽一下」**才消耗券，不点就永久保留                   |
+| 奖品范围         | 优惠券 / 金币 / 余额充值 / 谢谢参与（保底）                          |
+| 没抽中           | 无任何损失，商品该得到照拿                                           |
 
 ### 1.2 不是什么
 
@@ -56,53 +56,53 @@ LuckyDrawActivity  (活动配置，admin 创建)
 
 #### `lucky_draw_activities` — 抽奖活动
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | String (cuid) | PK |
-| `title` | String | 活动名称（如"购买后得好礼"） |
-| `description` | String? | 活动说明 |
-| `treasure_id` | String? | 绑定商品ID，**为空=全平台任意订单触发** |
-| `status` | Int | 0=禁用 1=启用 |
-| `start_at` | DateTime? | 活动开始时间（空=立即生效） |
-| `end_at` | DateTime? | 活动结束时间（空=永久） |
+| 字段          | 类型          | 说明                                    |
+| ------------- | ------------- | --------------------------------------- |
+| `id`          | String (cuid) | PK                                      |
+| `title`       | String        | 活动名称（如"购买后得好礼"）            |
+| `description` | String?       | 活动说明                                |
+| `treasure_id` | String?       | 绑定商品ID，**为空=全平台任意订单触发** |
+| `status`      | Int           | 0=禁用 1=启用                           |
+| `start_at`    | DateTime?     | 活动开始时间（空=立即生效）             |
+| `end_at`      | DateTime?     | 活动结束时间（空=永久）                 |
 
 > `treasure_id` 可为空，设计支持"买JM-001才能抽"和"任何订单都能抽"两种场景。
 
 #### `lucky_draw_prizes` — 奖品配置
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | String (cuid) | PK |
-| `activity_id` | String | FK → LuckyDrawActivity |
-| `prize_type` | Int | **1=优惠券 2=金币 3=余额 4=谢谢参与** |
-| `prize_name` | String | 展示名（如"₱50 优惠券"、"100金币"） |
-| `coupon_id` | String? | 关联 Coupon 模板ID（type=1时必填） |
-| `prize_value` | Decimal? | 金币数量或余额金额（type=2/3时必填） |
-| `probability` | Decimal | 中奖权重 0-100，**同一活动所有奖品权重之和=100** |
-| `stock` | Int | 剩余数量（-1=不限） |
-| `sort_order` | Int | 展示排序 |
+| 字段          | 类型          | 说明                                             |
+| ------------- | ------------- | ------------------------------------------------ |
+| `id`          | String (cuid) | PK                                               |
+| `activity_id` | String        | FK → LuckyDrawActivity                           |
+| `prize_type`  | Int           | **1=优惠券 2=金币 3=余额 4=谢谢参与**            |
+| `prize_name`  | String        | 展示名（如"₱50 优惠券"、"100金币"）              |
+| `coupon_id`   | String?       | 关联 Coupon 模板ID（type=1时必填）               |
+| `prize_value` | Decimal?      | 金币数量或余额金额（type=2/3时必填）             |
+| `probability` | Decimal       | 中奖权重 0-100，**同一活动所有奖品权重之和=100** |
+| `stock`       | Int           | 剩余数量（-1=不限）                              |
+| `sort_order`  | Int           | 展示排序                                         |
 
 #### `lucky_draw_tickets` — 抽奖券
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | String (cuid) | PK |
-| `user_id` | String | FK → User |
-| `activity_id` | String | FK → LuckyDrawActivity |
-| `order_id` | String | 来源订单ID（幂等用，一个订单只发一张） |
-| `used` | Boolean | false=未使用 true=已使用 |
-| `used_at` | DateTime? | 使用时间 |
-| `expire_at` | DateTime? | 券过期时间（空=永不过期） |
+| 字段          | 类型          | 说明                                   |
+| ------------- | ------------- | -------------------------------------- |
+| `id`          | String (cuid) | PK                                     |
+| `user_id`     | String        | FK → User                              |
+| `activity_id` | String        | FK → LuckyDrawActivity                 |
+| `order_id`    | String        | 来源订单ID（幂等用，一个订单只发一张） |
+| `used`        | Boolean       | false=未使用 true=已使用               |
+| `used_at`     | DateTime?     | 使用时间                               |
+| `expire_at`   | DateTime?     | 券过期时间（空=永不过期）              |
 
 #### `lucky_draw_results` — 抽奖结果
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | String (cuid) | PK |
-| `ticket_id` | String @unique | FK → LuckyDrawTicket（1:1，保证一票只能用一次） |
-| `user_id` | String | FK → User（冗余，方便查询） |
-| `prize_id` | String | FK → LuckyDrawPrize（抽中的奖品） |
-| `prize_snapshot` | Json | 抽奖时奖品的快照（防止奖品被改后对账出问题） |
+| 字段             | 类型           | 说明                                            |
+| ---------------- | -------------- | ----------------------------------------------- |
+| `id`             | String (cuid)  | PK                                              |
+| `ticket_id`      | String @unique | FK → LuckyDrawTicket（1:1，保证一票只能用一次） |
+| `user_id`        | String         | FK → User（冗余，方便查询）                     |
+| `prize_id`       | String         | FK → LuckyDrawPrize（抽中的奖品）               |
+| `prize_snapshot` | Json           | 抽奖时奖品的快照（防止奖品被改后对账出问题）    |
 
 ---
 
@@ -205,12 +205,12 @@ return fallbackPrize; // 兜底谢谢参与
 
 ### 3.4 奖品下发逻辑
 
-| prize_type | 下发方式 | 依赖 |
-|------------|---------|------|
-| 1 = 优惠券 | 复用 `ClientCouponService.claimCoupon(userId, prize.couponId)` | 已有 |
-| 2 = 金币 | 调用 `WalletService.creditCoin(userId, prize.prizeValue)` | 已有 |
-| 3 = 余额 | 调用 `WalletService.creditCash(userId, prize.prizeValue)` | 已有 |
-| 4 = 谢谢参与 | 无操作，仅记录 result | — |
+| prize_type   | 下发方式                                                       | 依赖 |
+| ------------ | -------------------------------------------------------------- | ---- |
+| 1 = 优惠券   | 复用 `ClientCouponService.claimCoupon(userId, prize.couponId)` | 已有 |
+| 2 = 金币     | 调用 `WalletService.creditCoin(userId, prize.prizeValue)`      | 已有 |
+| 3 = 余额     | 调用 `WalletService.creditCash(userId, prize.prizeValue)`      | 已有 |
+| 4 = 谢谢参与 | 无操作，仅记录 result                                          | —    |
 
 > 奖品下发失败（如优惠券库存为0）**不应抛出异常让整个事务回滚**，而是降级为"谢谢参与"并记录降级原因到 `prize_snapshot`。
 
@@ -220,16 +220,16 @@ return fallbackPrize; // 兜底谢谢参与
 
 ### 4.1 Client 端接口
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/client/lucky-draw/my-tickets` | 查询我的抽奖券列表（带分页） |
-| `POST` | `/client/lucky-draw/draw/:ticketId` | 执行一次抽奖（消耗券） |
-| `GET` | `/client/lucky-draw/my-results` | 查询我的抽奖历史 |
+| 方法   | 路径                                | 说明                         |
+| ------ | ----------------------------------- | ---------------------------- |
+| `GET`  | `/client/lucky-draw/my-tickets`     | 查询我的抽奖券列表（带分页） |
+| `POST` | `/client/lucky-draw/draw/:ticketId` | 执行一次抽奖（消耗券）       |
+| `GET`  | `/client/lucky-draw/my-results`     | 查询我的抽奖历史             |
 
 #### 实时事件（Socket / `dispatch`）
 
-| 事件 type | 说明 | 触发时机 |
-|-----------|------|----------|
+| 事件 type                  | 说明                   | 触发时机                       |
+| -------------------------- | ---------------------- | ------------------------------ |
 | `lucky_draw_ticket_issued` | 通知用户有新抽奖券可用 | 团成功后发券成功（逐用户推送） |
 
 事件 payload（当前实现）
@@ -258,7 +258,8 @@ return fallbackPrize; // 兜底谢谢参与
     orderId: string;
     expireAt: string | null;
     createdAt: string;
-  }[];
+  }
+  [];
 }
 ```
 
@@ -284,11 +285,12 @@ return fallbackPrize; // 兜底谢谢参与
   pageSize: number;
   list: {
     id: string;
-    prizeName: string;      // "₱50 优惠券" / "100金币" / "谢谢参与"
+    prizeName: string; // "₱50 优惠券" / "100金币" / "谢谢参与"
     prizeType: 1 | 2 | 3 | 4;
-    isWin: boolean;         // prizeType != 4
-    createdAt: string;      // ISO8601（抽奖时间）
-  }[];
+    isWin: boolean; // prizeType != 4
+    createdAt: string; // ISO8601（抽奖时间）
+  }
+  [];
 }
 ```
 
@@ -297,21 +299,22 @@ return fallbackPrize; // 兜底谢谢参与
 
 ### 4.2 Admin 端接口
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `GET` | `/admin/lucky-draw/activities` | 活动列表（含 `treasureName` / `prizeCount` / `ticketCount` JOIN） |
-| `POST` | `/admin/lucky-draw/activities` | 创建活动 |
-| `PATCH` | `/admin/lucky-draw/activities/:id` | 更新活动（改时间/状态/绑商品） |
-| `DELETE` | `/admin/lucky-draw/activities/:id` | 删除活动 |
-| `GET` | `/admin/lucky-draw/activities/:id/prizes` | 查活动奖品列表（含 `couponName` JOIN） |
-| `POST` | `/admin/lucky-draw/activities/:id/prizes` | 添加奖品 |
-| `PATCH` | `/admin/lucky-draw/prizes/:prizeId` | 更新奖品（改概率/库存） |
-| `DELETE` | `/admin/lucky-draw/prizes/:prizeId` | 删除奖品 |
-| `GET` | `/admin/lucky-draw/results` | 抽奖结果记录（带 `userId` / `activityId` / `page` 过滤） |
+| 方法     | 路径                                      | 说明                                                              |
+| -------- | ----------------------------------------- | ----------------------------------------------------------------- |
+| `GET`    | `/admin/lucky-draw/activities`            | 活动列表（含 `treasureName` / `prizeCount` / `ticketCount` JOIN） |
+| `POST`   | `/admin/lucky-draw/activities`            | 创建活动                                                          |
+| `PATCH`  | `/admin/lucky-draw/activities/:id`        | 更新活动（改时间/状态/绑商品）                                    |
+| `DELETE` | `/admin/lucky-draw/activities/:id`        | 删除活动                                                          |
+| `GET`    | `/admin/lucky-draw/activities/:id/prizes` | 查活动奖品列表（含 `couponName` JOIN）                            |
+| `POST`   | `/admin/lucky-draw/activities/:id/prizes` | 添加奖品                                                          |
+| `PATCH`  | `/admin/lucky-draw/prizes/:prizeId`       | 更新奖品（改概率/库存）                                           |
+| `DELETE` | `/admin/lucky-draw/prizes/:prizeId`       | 删除奖品                                                          |
+| `GET`    | `/admin/lucky-draw/results`               | 抽奖结果记录（带 `userId` / `activityId` / `page` 过滤）          |
 
 #### `GET /admin/lucky-draw/activities` 响应（后端需做 JOIN + COUNT）
 
 后端 Service 必须：
+
 1. **JOIN** `Treasure` → 返回 `treasureName`（`treasure.productName`）
 2. **COUNT** `_count.prizes` → 返回 `prizeCount`
 3. **COUNT** `_count.tickets` → 返回 `ticketCount`（已发券总数）
@@ -324,13 +327,14 @@ return fallbackPrize; // 兜底谢谢参与
     title: string;
     description: string | null;
     treasureId: string | null;
-    treasureName: string | null;   // JOIN 后填充
+    treasureName: string | null; // JOIN 后填充
     status: number;
-    startAt: number | null;        // Unix timestamp ms（null = 立即生效）
-    endAt: number | null;          // null = 永久
-    prizeCount: number;            // 该活动下奖品数量
-    ticketCount: number;           // 已发券总数
-  }[];
+    startAt: number | null; // Unix timestamp ms（null = 立即生效）
+    endAt: number | null; // null = 永久
+    prizeCount: number; // 该活动下奖品数量
+    ticketCount: number; // 已发券总数
+  }
+  [];
 }
 ```
 
@@ -554,23 +558,24 @@ luckyDrawResults     LuckyDrawResult[]
 ```
 
 > ⚠️ **注意命名区分**：User 模型上同时会有：
+>
 > - `luckyDrawResults LuckyDrawResult[]` ← 本文档（福利抽奖结果）
-> - `lotteryResults   LotteryResult[]`   ← `LOTTERY_AND_FLASHSALE_IMPL_CN.md`（商品开奖结果）
-> 
+> - `lotteryResults   LotteryResult[]` ← `LOTTERY_AND_FLASHSALE_IMPL_CN.md`（商品开奖结果）
+>
 > 两张表用途完全不同，**绝对不能混用字段名**。  
 > 同理，`TreasureGroup` 模型需追加 `lotteryResults LotteryResult[]`（见 `LOTTERY_AND_FLASHSALE_IMPL_CN.md §2.4`），
 > 这两次 migrate 建议合并成一次执行，避免遗漏。
 
 > ⚠️ **关于 Admin 前端已有的旧类型**（`apps/admin-next/src/type/types.ts`）：
-> 
-> | 旧类型名 | 含义 | 处理建议 |
-> |---------|------|---------|
-> | `LotteryDraw` | 旧占位（团购开奖 UI 展示） | 标记 `@deprecated`，实现后用 `LotteryResult` 替代 |
+>
+> | 旧类型名          | 含义                                             | 处理建议                                                       |
+> | ----------------- | ------------------------------------------------ | -------------------------------------------------------------- |
+> | `LotteryDraw`     | 旧占位（团购开奖 UI 展示）                       | 标记 `@deprecated`，实现后用 `LotteryResult` 替代              |
 > | `LotteryActivity` | 旧占位（付费转盘/礼盒模板，有 `wheel/box/grid`） | 标记 `@deprecated`，功能完全不同于本文档的 `LuckyDrawActivity` |
-> | `ActivityPrize` | `LotteryActivity` 的子类型 | 标记 `@deprecated` |
-> | `ActivityRule` | `LotteryActivity` 的子类型 | 标记 `@deprecated` |
-> 
-> 新增本文档类型（`LuckyDrawActivity` 等）时，**在旧类型上方加 `/** @deprecated */` 注释**，防止后来开发者误用。
+> | `ActivityPrize`   | `LotteryActivity` 的子类型                       | 标记 `@deprecated`                                             |
+> | `ActivityRule`    | `LotteryActivity` 的子类型                       | 标记 `@deprecated`                                             |
+>
+> 新增本文档类型（`LuckyDrawActivity` 等）时，**在旧类型上方加 `/** @deprecated \*/` 注释\*\*，防止后来开发者误用。
 
 ## 八、后端实现规范补充
 
@@ -590,11 +595,11 @@ export class AdminLuckyDrawController { ... }
 
 在 `LuckyDrawService` 实现中必须遵守：
 
-| 禁止写法 ❌ | 正确写法 ✅ |
-|-----------|-----------|
-| `catch (e: any)` + `e.message` | `catch (e: unknown)` + `e instanceof Error ? e.message : String(e)` |
-| `$queryRawUnsafe<T>(...)` | `await $queryRawUnsafe(...)` 后再 `as T` |
-| JSON 字段写 `null` | `Prisma.JsonNull`（prizeSnapshot 字段不存在此问题，但 future-proof） |
+| 禁止写法 ❌                    | 正确写法 ✅                                                          |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `catch (e: any)` + `e.message` | `catch (e: unknown)` + `e instanceof Error ? e.message : String(e)`  |
+| `$queryRawUnsafe<T>(...)`      | `await $queryRawUnsafe(...)` 后再 `as T`                             |
+| JSON 字段写 `null`             | `Prisma.JsonNull`（prizeSnapshot 字段不存在此问题，但 future-proof） |
 
 ### 8.3 DTO class-validator（NestJS 规范）
 
@@ -602,7 +607,14 @@ export class AdminLuckyDrawController { ... }
 
 ```typescript
 // dto/create-activity.dto.ts
-import { IsString, IsOptional, IsInt, IsDateString, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  IsDateString,
+  Min,
+  Max,
+} from "class-validator";
 
 export class CreateLuckyDrawActivityDto {
   @IsString()
@@ -614,10 +626,11 @@ export class CreateLuckyDrawActivityDto {
 
   @IsString()
   @IsOptional()
-  treasureId?: string;          // 空 = 全平台
+  treasureId?: string; // 空 = 全平台
 
   @IsInt()
-  @Min(0) @Max(1)
+  @Min(0)
+  @Max(1)
   @IsOptional()
   status?: number;
 
@@ -633,7 +646,8 @@ export class CreateLuckyDrawActivityDto {
 // dto/create-prize.dto.ts
 export class CreateLuckyDrawPrizeDto {
   @IsInt()
-  @Min(1) @Max(4)
+  @Min(1)
+  @Max(4)
   prizeType!: number;
 
   @IsString()
@@ -645,14 +659,14 @@ export class CreateLuckyDrawPrizeDto {
 
   @IsString()
   @IsOptional()
-  prizeValue?: string;          // Decimal as string
+  prizeValue?: string; // Decimal as string
 
   @IsString()
-  probability!: string;         // "20.00"，后端用 parseFloat 转换
+  probability!: string; // "20.00"，后端用 parseFloat 转换
 
   @IsInt()
   @IsOptional()
-  stock?: number;               // -1 = 不限
+  stock?: number; // -1 = 不限
 
   @IsInt()
   @IsOptional()
@@ -664,15 +678,15 @@ export class CreateLuckyDrawPrizeDto {
 
 ## 九、关键风险点速查
 
-| 风险 | 预防措施 |
-|------|---------|
-| 同一订单重复发券 | `(order_id, activity_id)` 联合唯一索引 |
-| 用户重复点击导致抽两次 | `ticket.used` + `result.ticket_id @unique` + 事务内先 `UPDATE WHERE used=false` |
-| 奖品库存超发 | `$executeRaw UPDATE SET stock=stock-1 WHERE id=? AND stock > 0`，影响行数=0则降级 |
-| 下发优惠券失败炸事务 | try/catch 降级到"谢谢参与"，记录 `prize_snapshot.fallback=true` |
-| 概率设置不合法 | 后端 create/update prize 时校验同活动概率之和 = 100 |
-| Admin 接口未鉴权 | controller 加 `@UseGuards(AdminJwtAuthGuard, RolesGuard)` |
-| Prisma v6 TS 错误 | catch 用 `e: unknown`，JSON 字段用 `Prisma.JsonNull` |
+| 风险                   | 预防措施                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| 同一订单重复发券       | `(order_id, activity_id)` 联合唯一索引                                            |
+| 用户重复点击导致抽两次 | `ticket.used` + `result.ticket_id @unique` + 事务内先 `UPDATE WHERE used=false`   |
+| 奖品库存超发           | `$executeRaw UPDATE SET stock=stock-1 WHERE id=? AND stock > 0`，影响行数=0则降级 |
+| 下发优惠券失败炸事务   | try/catch 降级到"谢谢参与"，记录 `prize_snapshot.fallback=true`                   |
+| 概率设置不合法         | 后端 create/update prize 时校验同活动概率之和 = 100                               |
+| Admin 接口未鉴权       | controller 加 `@UseGuards(AdminJwtAuthGuard, RolesGuard)`                         |
+| Prisma v6 TS 错误      | catch 用 `e: unknown`，JSON 字段用 `Prisma.JsonNull`                              |
 
 ---
 
@@ -683,6 +697,7 @@ export class CreateLuckyDrawPrizeDto {
 ### 10.1 Admin 后台（Next.js）
 
 > 所有实现必须严格遵守 `copilot-instructions.md` 技术规范：
+>
 > - 表单：`react-hook-form` + `zod` + `@hookform/resolvers@5`
 > - **禁止** Zod schema 用 `.default()` → 改用 `useForm({ defaultValues: {...} })`
 > - **禁止** Zod schema 用 `.transform()` → 在 submit handler 里手动转换
@@ -766,23 +781,23 @@ export interface LuckyDrawActivity {
   title: string;
   description: string | null;
   treasureId: string | null;
-  treasureName: string | null;  // 后端 JOIN 后返回
-  status: number;               // 0=禁用 1=启用
-  startAt: number | null;       // Unix timestamp ms
+  treasureName: string | null; // 后端 JOIN 后返回
+  status: number; // 0=禁用 1=启用
+  startAt: number | null; // Unix timestamp ms
   endAt: number | null;
   prizeCount: number;
-  ticketCount: number;          // 已发券总数
+  ticketCount: number; // 已发券总数
 }
 
 export interface LuckyDrawPrize {
   id: string;
-  prizeType: 1 | 2 | 3 | 4;   // 1=优惠券 2=金币 3=余额 4=谢谢参与
+  prizeType: 1 | 2 | 3 | 4; // 1=优惠券 2=金币 3=余额 4=谢谢参与
   prizeName: string;
   couponId: string | null;
-  couponName: string | null;    // 后端 JOIN 后返回
-  prizeValue: string | null;    // Decimal → string（type=2/3 时有值）
-  probability: string;          // Decimal → string，如 "20.00"
-  stock: number;                // -1=不限
+  couponName: string | null; // 后端 JOIN 后返回
+  prizeValue: string | null; // Decimal → string（type=2/3 时有值）
+  probability: string; // Decimal → string，如 "20.00"
+  stock: number; // -1=不限
   sortOrder: number;
 }
 
@@ -793,19 +808,20 @@ export interface LuckyDrawResult {
   prizeName: string;
   prizeType: number;
   isWin: boolean;
-  createdAt: number;            // Unix timestamp ms
+  createdAt: number; // Unix timestamp ms
 }
 
 export interface CreateLuckyDrawActivityPayload {
   title: string;
   description?: string;
-  treasureId?: string;          // 空 = 全平台
+  treasureId?: string; // 空 = 全平台
   status?: number;
-  startAt?: string;             // ISO8601
+  startAt?: string; // ISO8601
   endAt?: string;
 }
 
-export type UpdateLuckyDrawActivityPayload = Partial<CreateLuckyDrawActivityPayload>;
+export type UpdateLuckyDrawActivityPayload =
+  Partial<CreateLuckyDrawActivityPayload>;
 
 export interface CreateLuckyDrawPrizePayload {
   prizeType: 1 | 2 | 3 | 4;
@@ -835,13 +851,16 @@ export interface LuckyDrawResultQueryParams {
 export const luckyDrawApi = {
   // ── 活动 ──────────────────────────────────────────────────────
   getActivities: () =>
-    http.get<{ list: LuckyDrawActivity[] }>('/v1/admin/lucky-draw/activities'),
+    http.get<{ list: LuckyDrawActivity[] }>("/v1/admin/lucky-draw/activities"),
 
   createActivity: (data: CreateLuckyDrawActivityPayload) =>
-    http.post<LuckyDrawActivity>('/v1/admin/lucky-draw/activities', data),
+    http.post<LuckyDrawActivity>("/v1/admin/lucky-draw/activities", data),
 
   updateActivity: (id: string, data: UpdateLuckyDrawActivityPayload) =>
-    http.patch<LuckyDrawActivity>(`/v1/admin/lucky-draw/activities/${id}`, data),
+    http.patch<LuckyDrawActivity>(
+      `/v1/admin/lucky-draw/activities/${id}`,
+      data,
+    ),
 
   deleteActivity: (id: string) =>
     http.delete(`/v1/admin/lucky-draw/activities/${id}`),
@@ -867,7 +886,7 @@ export const luckyDrawApi = {
   // ── 结果记录 ──────────────────────────────────────────────────
   getResults: (params: LuckyDrawResultQueryParams) =>
     http.get<PaginatedResponse<LuckyDrawResult>>(
-      '/v1/admin/lucky-draw/results',
+      "/v1/admin/lucky-draw/results",
       params,
     ),
 };
@@ -878,49 +897,54 @@ export const luckyDrawApi = {
 #### 10.1.7 Zod Schema 设计（⚠️ 禁止 `.default()` / `.transform()`）
 
 > **必须**引入 `zodResolver`，表单验证才能生效：
+>
 > ```typescript
-> import { zodResolver } from '@hookform/resolvers/zod';
+> import { zodResolver } from "@hookform/resolvers/zod";
 > ```
 
 ```typescript
 // 活动表单 schema — 无 .default()，用 useForm defaultValues 代替
 const activitySchema = z.object({
-  title:       z.string().min(1, 'Required'),
+  title: z.string().min(1, "Required"),
   description: z.string(),
-  treasureId:  z.string(),   // 空字符串 = 全平台（submit 时手动转 undefined）
-  status:      z.number(),
-  startAt:     z.string(),   // datetime-local string，submit 时手动转 ISO
-  endAt:       z.string(),
+  treasureId: z.string(), // 空字符串 = 全平台（submit 时手动转 undefined）
+  status: z.number(),
+  startAt: z.string(), // datetime-local string，submit 时手动转 ISO
+  endAt: z.string(),
 });
 type ActivityForm = z.infer<typeof activitySchema>;
 
 // ✅ 正确：resolver + defaultValues 配合使用
-const { register, handleSubmit, watch, formState: { errors } } =
-  useForm<ActivityForm>({
-    resolver: zodResolver(activitySchema),   // ← 必须加
-    defaultValues: {
-      title:       activity?.title       ?? '',
-      description: activity?.description ?? '',
-      treasureId:  activity?.treasureId  ?? '',
-      status:      activity?.status      ?? 1,
-      startAt:     activity?.startAt
-        ? format(new Date(activity.startAt), "yyyy-MM-dd'T'HH:mm")
-        : '',
-      endAt:       activity?.endAt
-        ? format(new Date(activity.endAt), "yyyy-MM-dd'T'HH:mm")
-        : '',
-    },
-  });
+const {
+  register,
+  handleSubmit,
+  watch,
+  formState: { errors },
+} = useForm<ActivityForm>({
+  resolver: zodResolver(activitySchema), // ← 必须加
+  defaultValues: {
+    title: activity?.title ?? "",
+    description: activity?.description ?? "",
+    treasureId: activity?.treasureId ?? "",
+    status: activity?.status ?? 1,
+    startAt: activity?.startAt
+      ? format(new Date(activity.startAt), "yyyy-MM-dd'T'HH:mm")
+      : "",
+    endAt: activity?.endAt
+      ? format(new Date(activity.endAt), "yyyy-MM-dd'T'HH:mm")
+      : "",
+  },
+});
 
 // ✅ 正确：submit handler 里手动转换（替代 .transform()）
 const onSubmit = async (values: ActivityForm) => {
   const payload: CreateLuckyDrawActivityPayload = {
-    title:       values.title,
+    title: values.title,
     description: values.description || undefined,
-    treasureId:  values.treasureId  || undefined,  // 空字符串 → undefined（全平台）
-    status:      values.status,
-    startAt:     values.startAt || undefined,
-    endAt:       values.endAt   || undefined,
+    treasureId: values.treasureId || undefined, // 空字符串 → undefined（全平台）
+    status: values.status,
+    startAt: values.startAt || undefined,
+    endAt: values.endAt || undefined,
   };
   // ...调用 API
 };
@@ -929,37 +953,37 @@ const onSubmit = async (values: ActivityForm) => {
 ```typescript
 // 奖品表单 schema
 const prizeSchema = z.object({
-  prizeType:   z.number(),
-  prizeName:   z.string().min(1, 'Required'),
-  couponId:    z.string(),
-  prizeValue:  z.string(),
-  probability: z.string().min(1, 'Required'),
-  stock:       z.number(),
-  sortOrder:   z.number(),
+  prizeType: z.number(),
+  prizeName: z.string().min(1, "Required"),
+  couponId: z.string(),
+  prizeValue: z.string(),
+  probability: z.string().min(1, "Required"),
+  stock: z.number(),
+  sortOrder: z.number(),
 });
 type PrizeForm = z.infer<typeof prizeSchema>;
 
 const { register, handleSubmit, watch } = useForm<PrizeForm>({
-  resolver: zodResolver(prizeSchema),   // ← 必须加
+  resolver: zodResolver(prizeSchema), // ← 必须加
   defaultValues: {
-    prizeType:   prize?.prizeType   ?? 4,   // 默认"谢谢参与"
-    prizeName:   prize?.prizeName   ?? '',
-    couponId:    prize?.couponId    ?? '',
-    prizeValue:  prize?.prizeValue  ?? '',
-    probability: prize?.probability ?? '',
-    stock:       prize?.stock       ?? -1,
-    sortOrder:   prize?.sortOrder   ?? 0,
+    prizeType: prize?.prizeType ?? 4, // 默认"谢谢参与"
+    prizeName: prize?.prizeName ?? "",
+    couponId: prize?.couponId ?? "",
+    prizeValue: prize?.prizeValue ?? "",
+    probability: prize?.probability ?? "",
+    stock: prize?.stock ?? -1,
+    sortOrder: prize?.sortOrder ?? 0,
   },
 });
 
 // submit 时手动处理条件字段
 const onSubmit = async (values: PrizeForm) => {
   const payload: CreateLuckyDrawPrizePayload = {
-    prizeType:   values.prizeType,
-    prizeName:   values.prizeName,
+    prizeType: values.prizeType,
+    prizeName: values.prizeName,
     probability: values.probability,
-    stock:       values.stock,
-    sortOrder:   values.sortOrder,
+    stock: values.stock,
+    sortOrder: values.sortOrder,
     // type=1 才传 couponId
     ...(values.prizeType === 1 ? { couponId: values.couponId } : {}),
     // type=2/3 才传 prizeValue
@@ -979,24 +1003,34 @@ const onSubmit = async (values: PrizeForm) => {
 
 ```typescript
 // 活动列表
-const { data, loading, run: refreshActivities } =
-  useRequest(() => luckyDrawApi.getActivities());
+const {
+  data,
+  loading,
+  run: refreshActivities,
+} = useRequest(() => luckyDrawApi.getActivities());
 const activities = data?.list ?? [];
 
 // 奖品列表（依赖选中的 activityId）
-const { data: prizeData, loading: prizeLoading, run: refreshPrizes } =
-  useRequest(
-    () => luckyDrawApi.getPrizes(selectedActivity!.id),
-    { refreshDeps: [selectedActivity?.id], ready: !!selectedActivity },
-  );
+const {
+  data: prizeData,
+  loading: prizeLoading,
+  run: refreshPrizes,
+} = useRequest(() => luckyDrawApi.getPrizes(selectedActivity!.id), {
+  refreshDeps: [selectedActivity?.id],
+  ready: !!selectedActivity,
+});
 const prizes = prizeData?.list ?? [];
 
 // 结果记录（分页）
-const { data: resultData, run: refreshResults } =
-  useRequest(
-    () => luckyDrawApi.getResults({ activityId: selectedActivity?.id, page, pageSize: 10 }),
-    { refreshDeps: [selectedActivity?.id, page] },
-  );
+const { data: resultData, run: refreshResults } = useRequest(
+  () =>
+    luckyDrawApi.getResults({
+      activityId: selectedActivity?.id,
+      page,
+      pageSize: 10,
+    }),
+  { refreshDeps: [selectedActivity?.id, page] },
+);
 ```
 
 > **Mutation 操作**（新建/删除）不用 `useRequest`，直接 `await` API，catch 错误后 `refresh()`，
@@ -1110,11 +1144,11 @@ const prizeType = watch('prizeType');
 
 抽奖功能的入口有**三处**，覆盖不同场景下的用户触达：
 
-| 入口 | 位置 | 触发条件 |
-|------|------|---------|
-| 入口 A | 订单成功页 → 底部 Banner / 卡片 | 购买成功 / 团成功后跳转到此页时展示 |
-| 入口 B | 首页 Tab / 个人中心 → "我的抽奖券" | 用户主动查看 |
-| 入口 C | Push 通知 / Socket 推送 | 团成功时后端推送，点击通知直达抽奖页 |
+| 入口   | 位置                               | 触发条件                             |
+| ------ | ---------------------------------- | ------------------------------------ |
+| 入口 A | 订单成功页 → 底部 Banner / 卡片    | 购买成功 / 团成功后跳转到此页时展示  |
+| 入口 B | 首页 Tab / 个人中心 → "我的抽奖券" | 用户主动查看                         |
+| 入口 C | Push 通知 / Socket 推送            | 团成功时后端推送，点击通知直达抽奖页 |
 
 ---
 
@@ -1131,22 +1165,26 @@ LuckyDrawHistoryPage       // 抽奖历史记录
 #### 10.2.3 LuckyDrawTicketListPage（我的抽奖券）
 
 **数据来源**
+
 ```
 GET /v1/client/lucky-draw/my-tickets
 ```
 
 **页面状态**
+
 ```
 loading | empty | list
 ```
 
 **展示内容（每张券卡片）**
+
 - 活动名称（如"购买后得好礼"）
 - 来源订单号（截断展示后6位）
 - 过期时间（如有）；若过期用灰色 + 已过期标签
 - **「立即抽奖」按钮**（used=false 且未过期才可点）
 
 **交互逻辑**
+
 - 点击「立即抽奖」→ 带 `ticketId` 跳转到 `LuckyDrawPage`
 - 列表按 `used + expireAt` 排序：未使用未过期在前，已使用/过期在后
 
@@ -1157,23 +1195,26 @@ loading | empty | list
 这是用户体验最关键的页面，UX 设计决定激励效果。
 
 **入参**
+
 ```dart
 ticketId: String
 activityTitle: String   // 展示用
 ```
 
 **页面状态机**
+
 ```
 idle → animating → revealed → (navigating away)
 ```
 
-| 状态 | 展示内容 |
-|------|---------|
-| `idle` | 抽奖按钮可点，显示转盘/礼盒 UI |
+| 状态        | 展示内容                                             |
+| ----------- | ---------------------------------------------------- |
+| `idle`      | 抽奖按钮可点，显示转盘/礼盒 UI                       |
 | `animating` | 播放转动/拆礼盒动画（建议 1.5~2s），期间禁止重复点击 |
-| `revealed` | 停止动画，展示中奖结果弹层（见下） |
+| `revealed`  | 停止动画，展示中奖结果弹层（见下）                   |
 
 **调用 API 时机**
+
 ```
 用户点击「抽一下」
   → 立即进入 animating 状态（锁定按钮）
@@ -1186,14 +1227,15 @@ idle → animating → revealed → (navigating away)
 
 **结果弹层内容（prizeType 决定展示）**
 
-| prizeType | 标题 | 图标 | 描述 | CTA 按钮 |
-|-----------|------|------|------|---------|
-| 1 = 优惠券 | 🎉 恭喜获得！ | 券图标 | "₱50 优惠券已存入钱包" | 「去使用」→ 跳转到我的优惠券页 |
-| 2 = 金币 | 🪙 获得金币！ | 金币图标 | "100 金币已到账" | 「查看钱包」→ 跳转到钱包页 |
-| 3 = 余额 | 💰 获得余额！ | 钱包图标 | "₱30 已充入余额" | 「查看钱包」→ 跳转到钱包页 |
-| 4 = 谢谢参与 | 😊 谢谢参与 | 礼盒图标 | "下次好运！" | 「关闭」 |
+| prizeType    | 标题          | 图标     | 描述                   | CTA 按钮                       |
+| ------------ | ------------- | -------- | ---------------------- | ------------------------------ |
+| 1 = 优惠券   | 🎉 恭喜获得！ | 券图标   | "₱50 优惠券已存入钱包" | 「去使用」→ 跳转到我的优惠券页 |
+| 2 = 金币     | 🪙 获得金币！ | 金币图标 | "100 金币已到账"       | 「查看钱包」→ 跳转到钱包页     |
+| 3 = 余额     | 💰 获得余额！ | 钱包图标 | "₱30 已充入余额"       | 「查看钱包」→ 跳转到钱包页     |
+| 4 = 谢谢参与 | 😊 谢谢参与   | 礼盒图标 | "下次好运！"           | 「关闭」                       |
 
 **错误处理**
+
 - 网络失败 → 动画停止 → Toast 提示"抽奖失败，请重试"，**不消耗 ticket**（因为后端事务未完成）
 - 409 Conflict（票已被用）→ 提示"该券已使用"，返回券列表
 
@@ -1202,11 +1244,13 @@ idle → animating → revealed → (navigating away)
 #### 10.2.5 LuckyDrawHistoryPage（抽奖历史）
 
 **数据来源**
+
 ```
 GET /v1/client/lucky-draw/my-results?page=1&pageSize=20
 ```
 
 **展示内容（每条记录）**
+
 - 奖品名称 + 类型图标
 - 抽奖时间
 - 是否中奖（type != 4 显示绿色"已获得"，type=4 显示灰色"未中奖"）
@@ -1218,10 +1262,12 @@ GET /v1/client/lucky-draw/my-results?page=1&pageSize=20
 **场景：团成功并完成发券 → 用户获得抽奖券**
 
 后端在 `GroupService.notifyMembersOfResult(groupId, true)` 中已有：
+
 - Socket 推送（`PushEventType.GROUP_SUCCESS`）
 - FCM 推送
 
 后端在 `LuckyDrawService.issueTicketsForGroup(groupId)` 中新增：
+
 - 逐用户 Socket 推送 `SocketEvents.LUCKY_DRAW_TICKET_ISSUED`
 - 推送房间：`user_{userId}`（私有房间，不走大厅广播）
 
@@ -1246,6 +1292,7 @@ GET /v1/client/lucky-draw/my-results?page=1&pageSize=20
 ```
 
 FCM 通知点击（App 在后台/被杀死）：
+
 ```
 点击通知 → cold start / resume → 解析 payload.type == 'lucky_draw'
   → 直接跳转到 LuckyDrawTicketListPage
@@ -1260,6 +1307,7 @@ FCM 通知点击（App 在后台/被杀死）：
 **获取方式**：`GET /v1/client/lucky-draw/my-tickets` 响应中 `total` 字段（只查 `used=false`）。
 
 **刷新时机**：
+
 - App 启动时初始化
 - 收到 `GROUP_SUCCESS` Socket 事件时 +1
 - 用户完成一次抽奖后 -1（本地即时更新，无需重新请求）
@@ -1275,7 +1323,7 @@ LuckyDrawNotifier / LuckyDrawCubit
     unreadCount: int                    // badge 数
     isDrawing: bool                     // 防止重复点击
     lastResult: LuckyDrawDrawResult?    // 最新一次抽奖结果
-  
+
   actions:
     loadTickets()                       // 初始化拉取
     draw(ticketId)                      // 执行抽奖
@@ -1287,11 +1335,11 @@ LuckyDrawNotifier / LuckyDrawCubit
 
 #### 10.2.9 客户端 API 接口汇总
 
-| 接口 | 调用时机 |
-|------|---------|
-| `GET /v1/client/lucky-draw/my-tickets` | 进入券列表页 / App 启动初始化 |
-| `POST /v1/client/lucky-draw/draw/:ticketId` | 用户点击「抽一下」 |
-| `GET /v1/client/lucky-draw/my-results` | 进入历史记录页 |
+| 接口                                        | 调用时机                      |
+| ------------------------------------------- | ----------------------------- |
+| `GET /v1/client/lucky-draw/my-tickets`      | 进入券列表页 / App 启动初始化 |
+| `POST /v1/client/lucky-draw/draw/:ticketId` | 用户点击「抽一下」            |
+| `GET /v1/client/lucky-draw/my-results`      | 进入历史记录页                |
 
 **请求/响应类型（Dart 侧 Model 对应）**
 
@@ -1358,6 +1406,7 @@ LuckyDrawNotifier / LuckyDrawCubit
 > 本节用于复盘与追溯，不作为当前开发待办入口。
 
 ### Phase A — 数据库（历史已完成）
+
 - [x] `schema.prisma` 添加四张新表（`LuckyDrawActivity / Prize / Ticket / Result`）
 - [x] `schema.prisma` 在 `Treasure / Coupon / User` 现有模型追加反向关联字段（见 7.2）
 - [x] 宿主机执行：`node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`
@@ -1365,6 +1414,7 @@ LuckyDrawNotifier / LuckyDrawCubit
 - [x] 重启 backend 容器：`docker compose --env-file deploy/.env.dev up -d backend`
 
 ### Phase B — 后端 Common（核心服务，历史已完成）
+
 - [x] `common/lucky-draw/lucky-draw.service.ts`
   - `issueTicketsForGroup(groupId)` — 团成功时给所有真人成员发券
   - 发券成功后 `dispatchToUser(userId, lucky_draw_ticket_issued, payload)` 实时通知
@@ -1384,21 +1434,24 @@ LuckyDrawNotifier / LuckyDrawCubit
   ```typescript
   // 在 LotteryService.drawWinner(groupId, tx) 调用完成后（事务外）
   setImmediate(() => {
-    this.luckyDrawService.issueTicketsForGroup(groupId).catch(e =>
-      this.logger.error(`LuckyDraw issue failed: ${String(e)}`),
-    );
+    this.luckyDrawService
+      .issueTicketsForGroup(groupId)
+      .catch((e) => this.logger.error(`LuckyDraw issue failed: ${String(e)}`));
   });
   ```
 
 ### Phase D — 后端 OrderService 接入（触发点 B，历史已完成）
+
 - [x] `client/orders/order.service.ts` — checkOut 成功后（事务外）追加 fire-and-forget 发券：
   ```typescript
   if (!isSoloBuy) return result; // 团购由团成功时触发，这里跳过
-  this.luckyDrawService.issueTicketForOrder(userId, treasureId, order.orderId)
-    .catch(e => this.logger.warn(`LuckyDraw issue skipped: ${String(e)}`));
+  this.luckyDrawService
+    .issueTicketForOrder(userId, treasureId, order.orderId)
+    .catch((e) => this.logger.warn(`LuckyDraw issue skipped: ${String(e)}`));
   ```
 
 ### Phase E — 后端 Admin 模块（历史已完成）
+
 - [x] `admin/lucky-draw/dto/create-activity.dto.ts` — class-validator 装饰器（见 8.3）
 - [x] `admin/lucky-draw/dto/create-prize.dto.ts` — class-validator 装饰器（见 8.3）
 - [x] `admin/lucky-draw/lucky-draw.service.ts` — 活动/奖品 CRUD + 结果分页查询
@@ -1407,16 +1460,19 @@ LuckyDrawNotifier / LuckyDrawCubit
 - [x] `admin/admin.module.ts` — imports `AdminLuckyDrawModule`
 
 ### Phase F — 后端 Client 模块（历史已完成）
+
 - [x] `client/lucky-draw/dto/query-tickets.dto.ts`
 - [x] `client/lucky-draw/lucky-draw.controller.ts` — `my-tickets / draw / my-results`（加 `JwtAuthGuard`）
 - [x] `client/lucky-draw/lucky-draw.module.ts` — imports `LuckyDrawModule(common)` + `WalletModule` + `CouponModule`
 - [x] `client/client.module.ts` — imports `ClientLuckyDrawModule`
 
 ### Phase G — Seed（本地演示，可选，历史已完成）
+
 - [x] `scripts/seed/seed-lucky-draw.ts` — 1 个全平台活动 + 4 个奖品（优惠券 20% / 金币 30% / 余额 10% / 谢谢参与 40%）
 - [x] `scripts/seed/index.ts` — 引入并在 `[8] seedCoupons` 后调用
 
 ### Phase H — Admin Next.js 前端（历史已完成）
+
 - [x] `routes/index.ts` — `flashSale` 后追加 `luckyDraw`（`Sparkles` 图标，`Operations` 分组）
 - [x] `constants.ts` — en `luckyDraw: 'Lucky Draw'`、zh `luckyDraw: '抽奖活动'`
 - [x] `type/types.ts` — 追加 Lucky Draw 相关类型（见 10.1.5）
@@ -1430,6 +1486,7 @@ LuckyDrawNotifier / LuckyDrawCubit
   - 路由注册：`icon: Sparkles`（`import { Sparkles } from 'lucide-react'`，**不用 `Gift`**）
 
 ### Phase I — Flutter 客户端（交由 Flutter 团队实现，外部待办）
+
 - [ ] `LuckyDrawTicketListPage` — 券列表 + badge
 - [ ] `LuckyDrawPage` — 状态机（idle → animating → revealed）+ `Future.wait` 并发
 - [ ] `LuckyDrawHistoryPage` — 历史记录分页

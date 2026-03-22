@@ -11,12 +11,14 @@
 在 `admin-next` 里，`serverFetch.ts` 解决的是“服务端渲染阶段如何安全、稳定、低成本地取数”。
 
 如果没有它，页面很容易出现以下问题：
+
 - Server Component 里误用客户端 Axios / localStorage（直接报错）
 - SSR 阶段拿不到登录态，导致服务端请求 401
 - 重复写 baseURL、headers、code 判断，逻辑分散
 - 缓存策略不统一，性能与数据新鲜度不可控
 
 所以它的重要性是：
+
 - 统一 Server 侧 API 调用入口
 - 统一 Cookie 鉴权头注入
 - 统一 API 响应码校验
@@ -29,7 +31,9 @@
 ## 2. 它做了什么（按代码结构看）
 
 ### 2.1 `getBase()`：环境优先级
+
 按顺序选 API 基地址：
+
 1. `INTERNAL_API_URL`（容器内网优先）
 2. `NEXT_PUBLIC_API_BASE_URL`
 3. 默认 `http://localhost:3000`
@@ -37,16 +41,21 @@
 这让同一套代码在 Docker / 本地都能工作。
 
 ### 2.2 `buildHeaders()`：服务端读取 Cookie token
+
 通过 `cookies()` 读取 `auth_token`，构造：
+
 - `Content-Type: application/json`
 - `Authorization: Bearer <token>`（有 token 时）
 
 这是 Server Component 场景下的关键：
+
 - 不依赖 localStorage
 - 与 middleware 的 Cookie 认证链路一致
 
 ### 2.3 `serverGet<T>()`：统一 GET 调用
+
 `serverGet` 封装了：
+
 - query 参数拼接
 - `fetch(..., { next: { revalidate } })`
 - HTTP 状态校验（非 2xx 抛错）
@@ -59,19 +68,21 @@
 ## 3. 与 Axios 的边界（非常关键）
 
 项目同时有：
+
 - `apps/admin-next/src/api/http.ts`（Axios）
 - `apps/admin-next/src/lib/serverFetch.ts`
 
 不是重复，而是职责分离：
 
-| 场景 | 推荐 |
-|---|---|
-| Server Component / SSR | `serverGet` |
-| Client Component 交互（按钮、表单、轮询） | Axios API（`api/index.ts`） |
-| 需要拦截器、toast、请求去重、refresh token | Axios |
-| 需要首屏服务端渲染数据 | `serverGet` |
+| 场景                                       | 推荐                        |
+| ------------------------------------------ | --------------------------- |
+| Server Component / SSR                     | `serverGet`                 |
+| Client Component 交互（按钮、表单、轮询）  | Axios API（`api/index.ts`） |
+| 需要拦截器、toast、请求去重、refresh token | Axios                       |
+| 需要首屏服务端渲染数据                     | `serverGet`                 |
 
 经验法则：
+
 - 在 `app/(dashboard)/**/page.tsx` 和 server component 中优先考虑 `serverGet`
 - 在 `views/**` 的客户端交互里用 Axios 封装 API
 
@@ -80,10 +91,12 @@
 ## 4. 对 Next.js 渲染模式的影响
 
 `serverFetch.ts` 内部使用了 `cookies()`，这件事很重要：
+
 - 它会让调用它的取数链路具备“请求时上下文”（用户 Cookie）
 - 配合 `revalidate` 形成“动态上下文 + 可控缓存”策略
 
 实践上，这让 `admin-next` 可以做：
+
 - Dashboard/Analytics 的 SSR 首屏
 - 客户端组件继续做高交互更新（Hybrid）
 
@@ -94,27 +107,30 @@
 ## 5. 正确用法示例
 
 ### 5.1 Server Component（推荐）
-```ts
-import { serverGet } from '@/lib/serverFetch';
 
-const stats = await serverGet<StatsOverview>('/v1/admin/stats/overview');
+```ts
+import { serverGet } from "@/lib/serverFetch";
+
+const stats = await serverGet<StatsOverview>("/v1/admin/stats/overview");
 ```
 
 ### 5.2 带查询参数
+
 ```ts
-const orders = await serverGet('/v1/admin/order/list', {
+const orders = await serverGet("/v1/admin/order/list", {
   page: 1,
   pageSize: 5,
 });
 ```
 
 ### 5.3 控制缓存
+
 ```ts
 // 30s 默认
-await serverGet('/v1/admin/finance/statistics');
+await serverGet("/v1/admin/finance/statistics");
 
 // 禁用缓存（等同 no-store 语义）
-await serverGet('/v1/admin/finance/statistics', undefined, {
+await serverGet("/v1/admin/finance/statistics", undefined, {
   revalidate: false,
 });
 ```
@@ -124,12 +140,14 @@ await serverGet('/v1/admin/finance/statistics', undefined, {
 ## 6. Do / Don’t
 
 ### Do
+
 - 在 Server Component 中统一使用 `serverGet`
 - 明确传入泛型，保证类型可读性
 - 对关键页面设置合适 `revalidate`
 - 在业务层 catch 后做可视化降级（空态/重试）
 
 ### Don’t
+
 - 不要在 Server Component 里用 `localStorage`
 - 不要在服务端直接复用客户端 Axios 实例
 - 不要每个页面自己拼 Authorization 头
@@ -146,6 +164,7 @@ await serverGet('/v1/admin/finance/statistics', undefined, {
 ## 8. 你现在可以怎么判断“该不该用它”
 
 满足以下任一条件，就优先 `serverGet`：
+
 - 页面是 Server Component
 - 需要首屏 SSR 数据
 - 需要在服务端携带当前登录态（Cookie token）
@@ -194,17 +213,19 @@ await serverGet('/v1/admin/finance/statistics', undefined, {
 # SSR 学习复盘（admin-next）
 
 ## 我确认掌握
+
 - serverFetch 的职责边界：
 - middleware 的职责边界：
 - serverGet vs Axios 选择标准：
 
 ## 我对 1 个真实页面的判断
+
 - 页面：
 - 渲染模式（SSR/CSR/Hybrid）：
 - 理由（至少 3 条）：
 
 ## 下一步实践
+
 - 我准备先改造/优化的页面：
 - 验证方式（首屏、交互、错误处理）：
 ```
-
