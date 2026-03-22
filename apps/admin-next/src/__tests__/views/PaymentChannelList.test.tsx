@@ -43,7 +43,7 @@ vi.mock('@/views/payment-channel/PaymentChannelModal', () => ({
 }));
 
 // ── subject ──────────────────────────────────────────────────────
-import { PaymentChannelList } from '@/views/PaymentChannelList';
+import { PaymentChannelList } from '@/components/payment/PaymentChannelListClient';
 
 describe('PaymentChannelList', () => {
   beforeEach(() => {

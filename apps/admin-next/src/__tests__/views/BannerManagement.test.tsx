@@ -70,7 +70,7 @@ const BANNERS_MOCK = [
 ];
 
 // ── subject ──────────────────────────────────────────────────────
-import { BannerManagement } from '@/views/BannerManagement';
+import { BannerManagement } from '@/components/banners/BannerManagementClient';
 
 describe('BannerManagement', () => {
   beforeEach(() => {

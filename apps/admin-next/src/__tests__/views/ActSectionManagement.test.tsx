@@ -55,7 +55,7 @@ vi.mock('@/store/useToastStore', () => ({
 }));
 
 // ── subject ──────────────────────────────────────────────────────
-import { ActSectionManagement } from '@/views/ActSectionManagement';
+import { ActSectionManagement } from '@/components/act/ActSectionManagementClient';
 
 describe('ActSectionManagement', () => {
   beforeEach(() => {
