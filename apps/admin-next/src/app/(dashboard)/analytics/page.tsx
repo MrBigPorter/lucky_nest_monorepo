@@ -35,56 +35,18 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Analytics' };
 
 import React, { Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import { AnalyticsOverview } from '@/components/analytics/AnalyticsOverview';
 import { AnalyticsOverviewSkeleton } from '@/components/analytics/AnalyticsOverviewSkeleton';
+import { AnalyticsTrendSectionLazy } from '@/components/analytics/AnalyticsTrendSectionLazy';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 
 /**
- * 【dynamic() 是什么？为什么要用它？】
+ * 【为什么不在这个 Server Component 里直接写 dynamic({ ssr: false })？】
+ *   Next.js App Router 里，`page.tsx` 默认是 Server Component，
+ *   在这里使用 `ssr: false` 会触发构建错误。
  *
- *   问题背景：
- *     recharts（图表库）打包后约 90KB（gzip），
- *     如果正常 import，它会被打进首屏 JS bundle，
- *     浏览器必须先下载 + 解析这 90KB，才能渲染页面。
- *     这会让 TBT（总阻塞时间）飙高，用户感觉页面"卡"。
- *
- *   解决方案 — dynamic() 延迟加载：
- *     dynamic() 是 Next.js 对 React.lazy() 的封装。
- *     它告诉打包器："这个组件单独打成一个 chunk，
- *     不要放进首屏 bundle，等需要渲染时再异步下载。"
- *
- *   两个关键配置：
- *     ssr: false
- *       → 服务端不预渲染这个组件。
- *       → 原因：recharts 依赖浏览器 DOM API（window/document），
- *         在 Node.js 环境里运行会报错。
- *
- *     loading: () => <骨架占位 />
- *       → 组件下载期间显示的占位内容。
- *       → 避免布局跳动（CLS），让用户知道内容在加载。
- *
- *   效果：
- *     首屏 JS bundle 减少 ~90KB
- *     → FCP / LCP 更快（更少 JS 需要解析）
- *     → TBT 更低（主线程阻塞减少）
+ *   正确做法：把 dynamic() 下沉到 Client Component 文件中。
  */
-const AnalyticsTrendSection = dynamic(
-  () =>
-    import('@/components/analytics/AnalyticsTrendSection').then(
-      // .then() 的作用：这个文件导出了多个内容，
-      // 这里精确取出 AnalyticsTrendSection 这一个命名导出，
-      // 避免整个模块都被加载。
-      (mod) => mod.AnalyticsTrendSection,
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      // 高度固定为 320px — 和真实图表一样高，防止 CLS（布局偏移）
-      <div className="h-[320px] rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-    ),
-  },
-);
 
 /**
  * 【页面主体结构说明】
@@ -124,14 +86,13 @@ export default function AnalyticsPage() {
         <AnalyticsOverview />
       </Suspense>
 
-      {/*
-       * 趋势图表区 — dynamic() 客户端延迟加载
+      {/**
+       * 趋势图表区 — Client 包装组件内部 dynamic() 延迟加载
        *
-       * 这里写 <AnalyticsTrendSection /> 就够了，
-       * dynamic() 已经配好了 loading 占位和 ssr: false，
-       * Next.js 会自动处理懒加载逻辑。
+       * Server 页面只渲染客户端边界，
+       * 真正的 recharts 组件在浏览器侧按需下载。
        */}
-      <AnalyticsTrendSection />
+      <AnalyticsTrendSectionLazy />
     </div>
   );
 }
