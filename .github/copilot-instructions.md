@@ -64,9 +64,9 @@
 | TBT（总阻塞时间）   | < 200ms                         | 待测                            |
 | CLS（布局偏移）     | < 0.1                           | 待测（Suspense 骨架屏应有改善） |
 
-- [ ] 跑 Lighthouse，记录 5 个页面数据
-- [ ] 分析瓶颈，决定是否需要继续优化
-- [ ] 根据结果选定下一个功能方向
+- [x] 跑 Lighthouse，记录 5 个页面数据
+- [x] 分析瓶颈，决定是否需要继续优化
+- [x] 根据结果选定下一个功能方向（已实施：recharts dynamic() + remotePatterns；转功能方向）
 
 > 详细测试方法、指标定义、结果记录表、优化决策树见 `read/PERFORMANCE_LIGHTHOUSE_CN.md`
 
