@@ -36,7 +36,8 @@
 - [x] 前端修复：`apps/admin-next/src/components/ui/SmartImage.tsx` 修复 `ImageProps` 合并导致的 TS2322 类型报错（保持现有渲染行为）
 - [x] 后端收口：`apps/api/src/common/jwt/option-jwt.guard.ts` 清理 `OptionalJwtAuthGuard` lint 阻塞（scoped ESLint 通过）
 
-> 最后对齐时间：2026-03-20（深夜同步）。Phase 6 OAuth/Email OTP 全部项已完成（Flutter SDK 联调 + 频控安全 + 登录策略 + 定向验收）。`deploy/.env.prod` 已补充 `GOOGLE_CLIENT_ID`（audience 强校验）。
+> 最后对齐时间：2026-03-22。6-Stage 闯关式重构路线图全部完成。`read/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md` 已同步更新。  
+> 下一步：从 Phase 6 待规划候选项中选定方向（Lighthouse 性能验收 🔴 / 移动端适配 🟡 / 批量操作 🟡 / 国际化 🟡 / 单测补全 🟢）。
 
 ---
 
