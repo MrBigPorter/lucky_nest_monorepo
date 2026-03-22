@@ -1,9 +1,13 @@
 name: Deploy Admin (Cloudflare)
 
 on:
-  # Cloudflare Workers free plan has 3 MiB script size limit.
-  # Keep this workflow as manual fallback only.
-  # Cloudflare 免费版 Worker 大小限制 3 MiB，此流程改为手动兜底。
+  push:
+    branches: [main, test]
+    paths:
+      - "apps/admin-next/**"
+      - "packages/shared/**"
+      - "packages/ui/**"
+      - ".github/workflows/deploy-admin-cloudflare.yml"
   workflow_dispatch:
     inputs:
       runner:
