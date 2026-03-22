@@ -8,10 +8,6 @@ on:
         type: choice
         options: [ubuntu-latest, self-hosted]
         default: ubuntu-latest
-      deploy_admin:
-        description: "🌐 Deploy Admin Frontend (VPS — rollback channel)"
-        type: boolean
-        default: false
       deploy_admin_cloudflare:
         description: "☁️ Deploy Admin Frontend (Cloudflare Workers — default)"
         type: boolean
@@ -26,16 +22,7 @@ permissions:
   packages: write # Required for GHCR (Docker) pushing
 
 jobs:
-  # Job 1 / 任务 1: Call the Admin VPS rollback deployment workflow
-  run-admin-deploy:
-    name: 🌐 Trigger Admin Deploy
-    if: ${{ inputs.deploy_admin == true }}
-    uses: ./.github/workflows/deploy-admin.yml
-    with:
-      runner: ${{ inputs.runner }}
-    secrets: inherit
-
-  # Job 2 / 任务 2: Call the Admin Cloudflare primary deployment workflow
+  # Job 1 / 任务 1: Call the Admin Cloudflare primary deployment workflow
   run-admin-cloudflare-deploy:
     name: ☁️ Trigger Admin Cloudflare Deploy
     if: ${{ inputs.deploy_admin_cloudflare == true }}
@@ -44,7 +31,7 @@ jobs:
       runner: ${{ inputs.runner }}
     secrets: inherit
 
-  # Job 3 / 任务 3: Call the Backend VPS deployment workflow
+  # Job 2 / 任务 2: Call the Backend VPS deployment workflow
   run-backend-deploy:
     name: ⚙️ Trigger Backend Deploy
     if: ${{ inputs.deploy_api == true }}

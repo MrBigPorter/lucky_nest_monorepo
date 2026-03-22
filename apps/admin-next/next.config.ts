@@ -2,13 +2,9 @@ import type { NextConfig } from 'next';
 import path from 'path';
 import { withSentryConfig } from '@sentry/nextjs';
 
-const isCloudflareBuild = process.env.NEXT_BUILD_TARGET === 'cloudflare';
-
+// admin-next is deployed exclusively to Cloudflare Workers via @opennextjs/cloudflare.
+// No standalone/Docker output needed.
 const nextConfig: NextConfig = {
-  // standalone 模式 — 生产用 Node.js 服务器运行 (支持 SSR / Middleware / Server Components)
-  // 产物: .next/standalone/ — 包含完整 server.js，通过 Docker 部署到 VPS
-  // 旧: output: 'export' (静态导出 → Cloudflare Pages) — 已迁移到 VPS 自托管
-  output: isCloudflareBuild ? undefined : 'standalone',
   // Skip type errors caused by @types/react version mismatch across monorepo packages
   typescript: {
     ignoreBuildErrors: true,
@@ -125,12 +121,6 @@ export default withSentryConfig(nextConfig, {
   tunnelRoute: '/monitoring',
 
   webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-
     // Tree-shaking options for reducing bundle size
     treeshake: {
       // Automatically tree-shake Sentry logger statements to reduce bundle size
