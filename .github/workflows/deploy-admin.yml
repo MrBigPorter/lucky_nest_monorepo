@@ -7,17 +7,8 @@
 name: Deploy Admin
 
 on:
-  # VPS 是当前主渠道：main 分支相关改动自动部署。
-  # VPS is the primary deployment channel now.
-  push:
-    branches: [main]
-    paths:
-      - "apps/admin-next/**"
-      - "packages/shared/**"
-      - "packages/ui/**"
-      - ".github/workflows/deploy-admin.yml"
-      - "apps/admin-next/Dockerfile.prod"
-      - "compose.prod.yml"
+  # VPS 仅保留手动兜底通道，不自动触发。
+  # VPS is kept as manual fallback only.
   workflow_dispatch:
     inputs:
       runner:
@@ -200,7 +191,7 @@ jobs:
             STATUS_EMOJI="❌ Failed"
           fi
 
-          MESSAGE="🌐 *Admin Next Deployment Report (VPS Primary Channel)*
+          MESSAGE="🌐 *Admin Next Deployment Report (VPS Rollback Channel)*
           📌 *Status*: $STATUS_EMOJI
           🏷️ *Environment*: Production (VPS)
           🔗 *Admin URL*: [admin.joyminis.com](https://admin.joyminis.com)
