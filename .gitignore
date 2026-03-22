@@ -52,6 +52,10 @@ build
 dist
 **/generated/
 
+# Admin local artifacts
+apps/admin-next/reports/
+apps/admin-next/.env.sentry-build-plugin
+
 
 # Debug
 npm-debug.log*
