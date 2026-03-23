@@ -8,18 +8,18 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — KYC 缓存契约（单页面）  
-**上次停留**: Users 缓存契约完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Products 缓存契约（单页面）  
+**上次停留**: KYC 缓存契约完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：KYC**
+**当前页面：Products**
 
-- [x] 读侧契约定义：新增 `kyc` 的 URL 参数解析 / queryKey / request params helper
-- [x] 页面级数据预取：`kyc/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
-- [x] 列表消费对齐：`KycListClient` 接入 `enableHydration` + `hydrationQueryKey`
+- [x] 读侧契约定义：新增 `products` 的 URL 参数解析 / queryKey / request params helper
+- [x] 页面级数据预取：`products/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
+- [x] 列表消费对齐：`ProductManagementClient` 接入 `enableHydration` + `hydrationQueryKey`
 - [x] 边界确认：不改 `SmartTable` 全局模型，不改后端接口，只做单页可回退优化
-- [x] 回归验证：`KycList` Vitest 通过
-- [x] 文档沉淀：新增「KYC 缓存契约」问题与答案 + 心智模型提问
+- [x] 回归验证：`ProductManagement` Vitest 通过
+- [x] 文档沉淀：新增「Products 缓存契约」问题与答案 + 心智模型提问
 
 > 下一步：继续按「单页面、可回退」推进下一个 SmartTable 读侧页面。
 
