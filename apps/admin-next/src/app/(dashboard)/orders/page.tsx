@@ -7,7 +7,22 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Orders' };
 
 import React, { Suspense } from 'react';
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from '@tanstack/react-query';
 import { OrdersClient } from '@/components/orders/OrdersClient';
+import { serverGet } from '@/lib/serverFetch';
+import type { PaginatedResponse } from '@/api/types';
+import type { Order } from '@/type/types';
+import {
+  buildOrdersListParams,
+  ordersListQueryKey,
+  parseOrdersSearchParams,
+  type NextSearchParams,
+  ORDERS_LIST_TAG,
+} from '@/lib/cache/orders-cache';
 
 function OrdersPageSkeleton() {
   return (
@@ -24,10 +39,36 @@ function OrdersPageSkeleton() {
   );
 }
 
-export default function OrdersPage() {
+interface OrdersPageProps {
+  searchParams?: Promise<NextSearchParams>;
+}
+
+export default async function OrdersPage({ searchParams }: OrdersPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const queryInput = parseOrdersSearchParams(resolvedSearchParams);
+
+  const queryClient = new QueryClient();
+  await queryClient.prefetchQuery({
+    queryKey: ordersListQueryKey(queryInput),
+    queryFn: () =>
+      serverGet<PaginatedResponse<Order>>(
+        '/v1/admin/order/list',
+        buildOrdersListParams(queryInput) as Record<
+          string,
+          string | number | boolean | undefined | null
+        >,
+        {
+          revalidate: 30,
+          tags: [ORDERS_LIST_TAG, 'dashboard:orders'],
+        },
+      ),
+  });
+
   return (
     <Suspense fallback={<OrdersPageSkeleton />}>
-      <OrdersClient />
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <OrdersClient />
+      </HydrationBoundary>
     </Suspense>
   );
 }

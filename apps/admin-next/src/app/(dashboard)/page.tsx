@@ -19,6 +19,7 @@ import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { DashboardStatsSkeleton } from '@/components/dashboard/DashboardStatsSkeleton';
 import { DashboardOrdersClient } from '@/components/dashboard/DashboardOrdersClient';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { ORDERS_LIST_TAG } from '@/lib/cache/orders-cache';
 import { serverGet } from '@/lib/serverFetch';
 import type { PaginatedResponse } from '@/api/types';
 import type { Order } from '@/type/types';
@@ -36,7 +37,7 @@ export default async function DashboardPage() {
           page: 1,
           pageSize: 5,
         },
-        { revalidate: 30, tags: ['dashboard:orders'] },
+        { revalidate: 30, tags: ['dashboard:orders', ORDERS_LIST_TAG] },
       ),
   });
 
