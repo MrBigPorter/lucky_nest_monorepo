@@ -43,7 +43,7 @@ export const Login: React.FC = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  const { loading } = useRequest(signIn, {
+  const { loading, runAsync } = useRequest(signIn, {
     manual: true,
     onSuccess: async (result) => {
       if (result.tokens.accessToken) {
@@ -64,16 +64,12 @@ export const Login: React.FC = () => {
     },
     onError: (error) => {
       console.error('Login request failed:', error);
+      addToast('error', 'Login failed. Please try again.');
     },
   });
 
   const onSubmit = async (data: LoginFormInputs) => {
-    try {
-      await (signIn as (data: LoginFormInputs) => Promise<LoginResponse>)(data);
-    } catch (error) {
-      console.error('Login error:', error);
-      addToast('error', 'Login failed. Please try again.');
-    }
+    await runAsync(data);
   };
 
   return (
