@@ -13,7 +13,7 @@ import {
   FormTextareaField,
 } from '@repo/ui';
 import { financeApi } from '@/api';
-import { revalidateDashboardStats } from '@/lib/actions/dashboard-revalidate';
+import { revalidateFinanceAfterAdjust } from '@/lib/actions/finance-revalidate';
 import { DIRECTION, BALANCE_TYPE } from '@lucky/shared';
 
 // Zod Schema 定义
@@ -51,7 +51,7 @@ export const ManualAdjustModal: React.FC<Props> = ({ close, confirm }) => {
   const { run, loading } = useRequest(financeApi.adjust, {
     manual: true,
     onSuccess: () => {
-      void revalidateDashboardStats();
+      void revalidateFinanceAfterAdjust();
       confirm();
     },
   });

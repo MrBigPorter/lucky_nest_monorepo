@@ -8,20 +8,20 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Orders 架构级缓存协同（Server 预取 + Hydration）  
-**上次停留**: Dashboard 缓存+安全隔离试点完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Finance Stats 缓存契约统一 + 写后失效  
+**上次停留**: Orders Server 预取 + Hydration + Tag 失效完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Orders**
+**当前页面：Finance**
 
-- [x] 关键 fetch 梳理：确认 Orders 页读写 API 与一致性等级（强/秒级）
-- [x] 架构改造：`src/app/(dashboard)/orders/page.tsx` 接入 Server 预取 + `HydrationBoundary`
-- [x] 跨页缓存协同：引入 `revalidateTag('orders:list')` 并联动 `dashboard:orders`
-- [x] 查询契约统一：新增 `src/lib/cache/orders-cache.ts`（queryKey/参数解析/构建）
+- [x] 关键 fetch / 写操作梳理：确认 stats + 3 个列表 + 3 个写接口的一致性等级（强/秒级）
+- [x] Stats 契约统一：`FinanceStatsServer` 与 `DashboardStats` 共享 `finance` / `finance:stats` tag
+- [x] 写后失效统一：新增 `src/lib/actions/finance-revalidate.ts` 并接入 `adjust` / `withdrawalsAudit` / `syncRecharge`
+- [x] 安全补齐：`src/components/finance/FinanceStatsServer.tsx` 添加 `import 'server-only'`
 - [x] 回归验证：`check-types` / `lint` / `vitest`（31 files / 183 tests）通过
-- [x] 文档沉淀：记录「Orders Server 预取 + Hydration + Tag 失效」问题与答案（`read/architecture/ORDERS_CACHE_HYDRATION_CN.md`）
+- [x] 文档沉淀：记录「Finance Stats 缓存契约统一 + 写后失效」问题与答案（`read/architecture/FINANCE_STATS_CACHE_INVALIDATION_CN.md`）
 
-> 下一步：Finance 页（预定计划排序：dashboard → orders → finance）；暂不并行其他页面或全局 ESLint 规则，以稳定性优先。
+> 下一步：按 tab 逐个推进 Finance 列表缓存契约（transactions → deposits → withdrawals）；暂不并行三个 tab 或整页 Hydration 重构，以稳定性优先。
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
