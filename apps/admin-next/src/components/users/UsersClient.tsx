@@ -27,6 +27,10 @@ import { clientUserApi } from '@/api';
 import { Card } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { UserDetailModal } from '@/views/user-management/UserDetailModal';
+import {
+  parseUsersSearchParams,
+  usersListQueryKey,
+} from '@/lib/cache/users-cache';
 
 export function UsersClient() {
   const router = useRouter();
@@ -47,16 +51,47 @@ export function UsersClient() {
     return params;
   }, [searchParams]);
 
+  const normalizedInitialQueryInput = useMemo(() => {
+    return parseUsersSearchParams(urlFilterParams);
+  }, [urlFilterParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => usersListQueryKey(normalizedInitialQueryInput),
+    [normalizedInitialQueryInput],
+  );
+
   // ── filter 变化 → 更新 URL ──────────────────────────────────
   // SmartTable 搜索/重置时调用，把新 filter 写进 URL
   const handleParamsChange = useCallback(
     (params: Record<string, unknown>) => {
       const qs = new URLSearchParams();
+
+      const dateRange = params.dateRange as
+        | { from?: string; to?: string }
+        | undefined;
+      const startTime =
+        typeof params.startTime === 'string'
+          ? params.startTime
+          : dateRange?.from;
+      const endTime =
+        typeof params.endTime === 'string' ? params.endTime : dateRange?.to;
+
       Object.entries(params).forEach(([k, v]) => {
+        if (k === 'dateRange' || k === 'startTime' || k === 'endTime') {
+          return;
+        }
         if (v !== undefined && v !== null && v !== '') {
           qs.set(k, String(v));
         }
       });
+
+      if (startTime) {
+        qs.set('startTime', startTime);
+      }
+      if (endTime) {
+        qs.set('endTime', endTime);
+      }
+
       const newUrl = qs.toString() ? `/users?${qs.toString()}` : '/users';
       // replace（不是 push）：filter 变化不产生历史记录，避免"后退"时循环
       router.replace(newUrl, { scroll: false });
@@ -352,16 +387,25 @@ export function UsersClient() {
 
   // ── 数据请求 ────────────────────────────────────────────────
   const requestUsers = useCallback(async (params: QueryClientUserParams) => {
-    const queryParams: QueryClientUserParams = {
-      ...params,
-      status: params.status !== undefined ? Number(params.status) : undefined,
-    };
-    if (params.dateRange) {
-      queryParams.startTime = params.dateRange.from;
-      queryParams.endTime = params.dateRange.to;
-      delete queryParams.dateRange;
-    }
-    const res = await clientUserApi.getUsers(queryParams);
+    const dateRange = params.dateRange as
+      | { from?: string; to?: string }
+      | undefined;
+
+    const normalizeToString = (value: string | number | undefined) =>
+      value === undefined ? undefined : String(value);
+
+    const queryInput = parseUsersSearchParams({
+      page: String(params.page ?? 1),
+      pageSize: String(params.pageSize ?? 10),
+      userId: params.userId,
+      phone: params.phone,
+      status: normalizeToString(params.status),
+      kycStatus: normalizeToString(params.kycStatus),
+      startTime: params.startTime ?? dateRange?.from,
+      endTime: params.endTime ?? dateRange?.to,
+    });
+
+    const res = await clientUserApi.getUsers(queryInput);
     return { data: res.list, total: res.total, success: true };
   }, []);
 
@@ -384,6 +428,8 @@ export function UsersClient() {
         // Phase 3: URL 驱动 filter
         initialFormParams={urlFilterParams}
         onParamsChange={handleParamsChange}
+        enableHydration={true}
+        hydrationQueryKey={hydrationQueryKey}
       />
     </Card>
   );
