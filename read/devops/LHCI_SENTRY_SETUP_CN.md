@@ -74,7 +74,8 @@ Step 5：在 PR 评论发布汇总表（LCP / TBT / CLS + 通过/失败）
 
 ```
 apps/admin-next/
-  lighthouserc.mjs              ← LHCI 配置（页面 URL、阈值、上传目标）
+  lighthouserc.js               ← LHCI 配置（页面 URL、阈值、上传目标，CI 主入口）
+  lighthouserc.mjs              ← 兼容层（仅为旧引用保留）
 
 .github/workflows/
   lighthouse-ci.yml             ← GitHub Actions 工作流（触发 + 登录 + 跑 LHCI）
@@ -205,7 +206,8 @@ SENTRY_AUTH_TOKEN=sntrys_xxx
 
 ```
 新增文件：
-  apps/admin-next/lighthouserc.mjs          LHCI 配置
+  apps/admin-next/lighthouserc.js           LHCI 配置（CI 主入口）
+  apps/admin-next/lighthouserc.mjs          兼容层（旧引用）
   apps/admin-next/sentry.client.config.ts   Sentry 客户端
   apps/admin-next/sentry.server.config.ts   Sentry 服务端
   apps/admin-next/sentry.edge.config.ts     Sentry Edge
