@@ -130,3 +130,42 @@
 **为什么不直接给三个 tab 都做 Server 预取？**
 
 > 答：Finance 是 tab 结构，三 tab 全量 Server 预取会放大首屏请求和 hydration payload；按需 Client Prefetch 能在“切 tab 体感”与“首屏成本”之间取得更稳的平衡。
+
+---
+
+## 9. 2026-03-23 增量：deposits + withdrawals 一次性推进（方案 B）
+
+### Q4：这次为什么允许 `deposits` 与 `withdrawals` 一次性推进？
+
+**答案：两者已共享同一套 `SmartTable + hydrationQueryKey` 模型，且改动边界都在 Finance 页面内，可控并且可回退。**
+
+本次落地：
+
+- `apps/admin-next/src/app/(dashboard)/finance/page.tsx`
+  - 根据 `tab` 分支补齐 `deposits` / `withdrawals` 的 Server 预取
+  - 使用各自 query key + tag（`finance:deposits` / `finance:withdrawals`）
+- `apps/admin-next/src/components/finance/FinancePageClient.tsx`
+  - 保留 hover/focus prefetch
+  - 新增 idle warm-up：页面空闲时顺序预热非激活 tab
+  - 继续保留“tab 同步不覆盖筛选参数”的保护逻辑
+
+### Q5：更激进 prefetch 会不会带来额外风险？
+
+**答案：会有可控的带宽与请求增加，因此采用了“短 staleTime + 去重 + 空闲触发”的节流边界。**
+
+关键保护：
+
+- 预取前检查 query 是否正在 `fetching`
+- 命中 `dataUpdatedAt` 且未过 `PREFETCH_STALE_TIME` 时跳过
+- idle warm-up 顺序触发（避免瞬时并发尖峰）
+
+### 回归结果（本次最小集）
+
+- `apps/admin-next/src/__tests__/views/Finance.test.tsx`：6 tests passed
+- 覆盖点：tab 切换、默认渲染、回调 identity 变化不触发 tab-only 覆盖
+
+### 心智模型提问（本次）
+
+**当“首屏性能”与“首次交互延迟”冲突时，应该优先优化哪个指标？**
+
+> 答：按用户任务路径决策。Finance 场景核心动作是“进入后切 tab 查看列表”，因此优先降低首次切换延迟；但通过 idle + 去重避免把首屏成本推高到不可控。
