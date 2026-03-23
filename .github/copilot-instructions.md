@@ -8,20 +8,20 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Finance Stats 缓存契约统一 + 写后失效  
-**上次停留**: Orders Server 预取 + Hydration + Tag 失效完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Finance transactions 缓存契约（tab 1）  
+**上次停留**: Finance Stats 缓存契约统一 + 写后失效完成（2026-03-23）  
 **立即执行**:
 
 **当前页面：Finance**
 
-- [x] 关键 fetch / 写操作梳理：确认 stats + 3 个列表 + 3 个写接口的一致性等级（强/秒级）
-- [x] Stats 契约统一：`FinanceStatsServer` 与 `DashboardStats` 共享 `finance` / `finance:stats` tag
-- [x] 写后失效统一：新增 `src/lib/actions/finance-revalidate.ts` 并接入 `adjust` / `withdrawalsAudit` / `syncRecharge`
-- [x] 安全补齐：`src/components/finance/FinanceStatsServer.tsx` 添加 `import 'server-only'`
+- [x] 关键 fetch / 写操作梳理：确认 `transactions` 读接口与 3 个写操作的影响关系
+- [x] 参数契约补齐：`src/components/finance/FinancePageClient.tsx` 为 `TransactionList` 透传 `initialFormParams` / `onParamsChange`
+- [x] 失效语义确认：`finance:transactions` 作为统一写后失效 tag 保持不变
+- [x] 边界结论：本轮不做 `transactions` Server 预取 + Hydration，避免波及 `SmartTable` 全局模型
 - [x] 回归验证：`check-types` / `lint` / `vitest`（31 files / 183 tests）通过
-- [x] 文档沉淀：记录「Finance Stats 缓存契约统一 + 写后失效」问题与答案（`read/architecture/FINANCE_STATS_CACHE_INVALIDATION_CN.md`）
+- [x] 文档沉淀：记录「Finance transactions 缓存契约」问题与答案（`read/architecture/FINANCE_TRANSACTIONS_CACHE_CONTRACT_CN.md`）
 
-> 下一步：按 tab 逐个推进 Finance 列表缓存契约（transactions → deposits → withdrawals）；暂不并行三个 tab 或整页 Hydration 重构，以稳定性优先。
+> 下一步：继续按 tab 推进 `deposits` → `withdrawals`；暂不并行三个 tab 或整页 Hydration 重构，以稳定性优先。
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
