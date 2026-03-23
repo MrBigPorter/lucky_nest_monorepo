@@ -9,21 +9,21 @@
 ## 🎯 当前任务（每次对话从这里开始）
 
 **阶段**: Phase 6 P0 推进中 — SmartTable 读侧缓存契约（单页面优化）  
-**上次停留**: Orders 缓存契约完成（2026-03-23）  
+**上次停留**: Users 缓存契约完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Users（用户管理）**
+**当前页面：Products（商品管理）**
 
-- [ ] 读侧契约定义：新增 `users` 的 URL 参数解析 / queryKey / request params helper
-- [ ] 页面级数据预取：`users/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
-- [ ] 列表消费对齐：`UsersClient` / `UserListClient` 与缓存契约对齐
+- [ ] 读侧契约定义：新增 `products` 的 URL 参数解析 / queryKey / request params helper
+- [ ] 页面级数据预取：`products/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
+- [ ] 列表消费对齐：`ProductsClient` / `ProductListClient` 与缓存契约对齐
 - [ ] 边界确认：不改 `BaseTable` 全局模型，不改后端接口，只做单页可回退优化
-- [ ] 回归验证：`Users` 相关 Vitest 通过
-- [ ] 文档沉淀：新增「Users 缓存契约」问题与答案 + 心智模型提问
+- [ ] 回归验证：`Products` 相关 Vitest 通过
+- [ ] 文档沉淀：新增「Products 缓存契约」问题与答案 + 心智模型提问
 
 > 下一步：继续按「单页面、可回退」推进下一个 SmartTable 读侧页面。
 >
-> **参考模板**：`read/features/ORDERS_CACHE_CONTRACT_CN.md`、`read/features/PAYMENT_CHANNELS_CACHE_CONTRACT_CN.md`
+> **参考模板**：`read/features/USERS_CACHE_CONTRACT_CN.md`、`read/features/ORDERS_CACHE_CONTRACT_CN.md`、`read/features/PAYMENT_CHANNELS_CACHE_CONTRACT_CN.md`
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
