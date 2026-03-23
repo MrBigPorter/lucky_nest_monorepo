@@ -78,7 +78,14 @@ export const FinancePage: React.FC<FinancePageProps> = ({
             }
           />
         )}
-        {activeTab === 'transactions' && <TransactionList />}
+        {activeTab === 'transactions' && (
+          <TransactionList
+            initialFormParams={listInitialParams}
+            onParamsChange={(params) =>
+              onParamsChange?.({ ...params, tab: 'transactions' })
+            }
+          />
+        )}
         {activeTab === 'withdrawals' && (
           <WithdrawalList
             initialFormParams={listInitialParams}
