@@ -6005,6 +6005,7 @@ __metadata:
     react-hook-form: "npm:^7.71.2"
     react-is: "npm:^19.0.0"
     recharts: "npm:^3.5.1"
+    server-only: "npm:^0.0.1"
     socket.io-client: "npm:^4.8.3"
     tailwindcss: "npm:^4.1.17"
     typescript: "npm:~5.8.2"
@@ -25216,6 +25217,13 @@ __metadata:
     parseurl: "npm:~1.3.3"
     send: "npm:~0.19.1"
   checksum: 10c0/36320397a073c71bedf58af48a4a100fe6d93f07459af4d6f08b9a7217c04ce2a4939e0effd842dc7bece93ffcd59eb52f58c4fff2a8e002dc29ae6b219cd42b
+  languageName: node
+  linkType: hard
+
+"server-only@npm:^0.0.1":
+  version: 0.0.1
+  resolution: "server-only@npm:0.0.1"
+  checksum: 10c0/4704f0ef85da0be981af6d4ed8e739d39bcfd265b9c246a684060acda5642d0fdc6daffc2308e71e2682c5f508090978802eae0a77623c9b90a49f9ae68048d6
   languageName: node
   linkType: hard
 
