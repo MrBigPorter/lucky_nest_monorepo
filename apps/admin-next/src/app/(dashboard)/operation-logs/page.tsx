@@ -12,7 +12,7 @@ import {
   QueryClient,
   dehydrate,
 } from '@tanstack/react-query';
-import { OperationLogClient } from '@/components/operation-logs/OperationLogClient';
+import { OperationLogsClient } from '@/components/operation-logs/OperationLogClient';
 import { serverGet } from '@/lib/serverFetch';
 import type { PaginatedResponse } from '@/api/types';
 import type { AdminOperationLog } from '@/type/types';
@@ -71,7 +71,7 @@ export default async function OperationLogsPage({
   return (
     <Suspense fallback={<OperationLogPageSkeleton />}>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <OperationLogClient />
+        <OperationLogsClient />
       </HydrationBoundary>
     </Suspense>
   );
