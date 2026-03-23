@@ -5,6 +5,7 @@
 
 import http from './http';
 import type { PaginatedResponse, PaginationParams } from './types';
+import type { RequestConfig } from './types';
 import {
   Product,
   Category,
@@ -681,20 +682,26 @@ export const notificationApi = {
  */
 export const chatApi = {
   /** GET /v1/admin/chat/conversations — 会话列表 */
-  getConversations: (params: import('@/type/types').QueryConversationsParams) =>
+  getConversations: (
+    params: import('@/type/types').QueryConversationsParams,
+    config?: RequestConfig,
+  ) =>
     http.get<PaginatedResponse<import('@/type/types').ChatConversation>>(
       '/v1/admin/chat/conversations',
       params,
+      config,
     ),
 
   /** GET /v1/admin/chat/conversations/:id/messages — 消息历史 */
   getMessages: (
     conversationId: string,
     params: import('@/type/types').QueryMessagesParams,
+    config?: RequestConfig,
   ) =>
     http.get<import('@/type/types').ChatMessagesResult>(
       `/v1/admin/chat/conversations/${conversationId}/messages`,
       params,
+      config,
     ),
 
   /** POST /v1/admin/chat/conversations/:id/reply — 客服回复 */
@@ -881,7 +888,13 @@ export const applicationApi = {
 
   /** 待审批数量（侧边栏红点）*/
   pendingCount: () =>
-    http.get<{ count: number }>('/v1/admin/applications/pending-count'),
+    http.get<{ count: number }>(
+      '/v1/admin/applications/pending-count',
+      undefined,
+      {
+        trace: false,
+      },
+    ),
 
   /** 审批通过 */
   approve: (id: string) =>

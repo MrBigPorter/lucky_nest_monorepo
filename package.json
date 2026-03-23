@@ -71,7 +71,8 @@
     "@types/react-dom": "^19.0.0",
     "react-hook-form": "^7.71.2",
     "@hookform/resolvers": "^5.2.2",
-    "@opentelemetry/instrumentation@npm:^0.212.0": "0.213.0"
+    "@opentelemetry/instrumentation@npm:^0.212.0": "0.213.0",
+    "import-in-the-middle": "3.0.0"
   },
   "packageManager": "yarn@4.9.2",
   "workspaces": [
