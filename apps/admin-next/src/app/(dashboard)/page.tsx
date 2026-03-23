@@ -30,10 +30,14 @@ export default async function DashboardPage() {
   await queryClient.prefetchQuery({
     queryKey: ['dashboard-orders'],
     queryFn: () =>
-      serverGet<PaginatedResponse<Order>>('/v1/admin/order/list', {
-        page: 1,
-        pageSize: 5,
-      }),
+      serverGet<PaginatedResponse<Order>>(
+        '/v1/admin/order/list',
+        {
+          page: 1,
+          pageSize: 5,
+        },
+        { revalidate: 30, tags: ['dashboard:orders'] },
+      ),
   });
 
   return (
