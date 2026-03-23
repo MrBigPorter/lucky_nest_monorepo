@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useRequest } from 'ahooks';
 import { Button, ModalManager } from '@repo/ui';
 import { financeApi } from '@/api';
-import { revalidateDashboardStats } from '@/lib/actions/dashboard-revalidate';
+import { revalidateFinanceAfterWithdrawAudit } from '@/lib/actions/finance-revalidate';
 import {
   User,
   CreditCard,
@@ -46,7 +46,7 @@ export const WithdrawAuditModal: React.FC<Props> = ({ data, confirm }) => {
   const submitAudit = async (status: WithdrawStatus) => {
     try {
       await runAsync({ withdrawId: data.withdrawId, status, remark });
-      void revalidateDashboardStats();
+      void revalidateFinanceAfterWithdrawAudit();
       confirm();
     } catch (e) {
       console.error(e);
