@@ -37,8 +37,9 @@ export const Login: React.FC = () => {
 
   const {
     register,
-    handleSubmit,
     formState: { errors },
+    getValues,
+    trigger,
   } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
   });
@@ -84,17 +85,24 @@ export const Login: React.FC = () => {
     },
   });
 
-  const onSubmit = async (data: LoginFormInputs) => {
+  const handleLoginClick = async () => {
+    // 先验证表单
+    const isValid = await trigger();
+    if (!isValid) {
+      return;
+    }
+
+    // 获取表单数据
+    const data = getValues();
+
+    // 调用登录
     try {
-      // 显式调用 runAsync，错误已通过 onError 回调处理
       const result = await runAsync(data);
-      // 如果没有异常但也没有返回结果，说明某个环节出错了
       if (!result) {
         console.warn('Login returned no result');
       }
     } catch (error) {
-      // 这个 catch 可能不会执行，因为 ahooks useRequest 可能不会抛出异常
-      console.error('Unexpected error in onSubmit:', error);
+      console.error('Unexpected error in login:', error);
     }
   };
 
@@ -137,7 +145,7 @@ export const Login: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <div className="space-y-5">
             <div className="space-y-4">
               <div className="relative group">
                 <User
@@ -171,10 +179,11 @@ export const Login: React.FC = () => {
               </div>
             </div>
             <Button
-              type="submit"
+              type="button"
               className="w-full py-3 text-lg shadow-xl shadow-primary-500/20"
               isLoading={loading || isPending}
               disabled={loading || isPending}
+              onClick={handleLoginClick}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
                 Sign In <ArrowRight size={18} />
@@ -190,7 +199,7 @@ export const Login: React.FC = () => {
                 Apply for access
               </Link>
             </div>
-          </form>
+          </div>
         </motion.div>
 
         <motion.div
