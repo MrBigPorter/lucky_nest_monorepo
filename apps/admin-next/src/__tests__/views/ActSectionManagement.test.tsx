@@ -42,12 +42,22 @@ vi.mock('@/api', () => ({
 vi.mock('@lucky/shared', () => ({
   getActSectionTypeLabel: (v: number) => `Type${v}`,
 }));
-vi.mock('@/views/act-section/ActSectionBindProductModal', () => ({
-  ActSectionBindProductModal: () => <div data-testid="bind-product-modal" />,
-}));
-vi.mock('@/views/act-section/ProductSelectorModal', () => ({
-  ProductSelectorModal: () => <div data-testid="product-selector-modal" />,
-}));
+vi.mock('@/views/act-section/ActSectionBindProductModal', () => {
+  const ActSectionBindProductModal = () => (
+    <div data-testid="bind-product-modal" />
+  );
+  ActSectionBindProductModal.displayName = 'ActSectionBindProductModal';
+  return { ActSectionBindProductModal };
+});
+
+vi.mock('@/views/act-section/ProductSelectorModal', () => {
+  const ProductSelectorModal = () => (
+    <div data-testid="product-selector-modal" />
+  );
+  ProductSelectorModal.displayName = 'ProductSelectorModal';
+  return { ProductSelectorModal };
+});
+
 vi.mock('@/store/useToastStore', () => ({
   useToastStore: (
     sel: (s: { addToast: ReturnType<typeof vi.fn> }) => unknown,

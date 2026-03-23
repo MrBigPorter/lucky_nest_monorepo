@@ -64,7 +64,7 @@ export const Login: React.FC = () => {
   });
 
   const onSubmit = (data: LoginFormInputs) => {
-    runAsync(data);
+    data;
   };
 
   return (
