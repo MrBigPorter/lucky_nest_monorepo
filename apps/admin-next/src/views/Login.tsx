@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -30,7 +30,8 @@ async function signIn(data: LoginFormInputs): Promise<LoginResponse> {
 }
 
 export const Login: React.FC = () => {
-  const router = useRouter(); // ← useRouter instead of useNavigate
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const loginAction = useAuthStore((state) => state.login);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -42,7 +43,7 @@ export const Login: React.FC = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  const { loading, runAsync } = useRequest(signIn, {
+  const { loading } = useRequest(signIn, {
     manual: true,
     onSuccess: async (result) => {
       if (result.tokens.accessToken) {
@@ -53,7 +54,10 @@ export const Login: React.FC = () => {
           result.tokens.refreshToken ?? null,
         );
         addToast('success', 'Welcome back, Admin!');
-        router.push('/');
+        // 使用 startTransition 优化路由转换性能
+        startTransition(() => {
+          router.push('/');
+        });
       } else {
         addToast('error', 'Login failed: No access token received.');
       }
@@ -63,8 +67,13 @@ export const Login: React.FC = () => {
     },
   });
 
-  const onSubmit = (data: LoginFormInputs) => {
-    data;
+  const onSubmit = async (data: LoginFormInputs) => {
+    try {
+      await (signIn as (data: LoginFormInputs) => Promise<LoginResponse>)(data);
+    } catch (error) {
+      console.error('Login error:', error);
+      addToast('error', 'Login failed. Please try again.');
+    }
   };
 
   return (
@@ -142,7 +151,8 @@ export const Login: React.FC = () => {
             <Button
               type="submit"
               className="w-full py-3 text-lg shadow-xl shadow-primary-500/20"
-              isLoading={loading}
+              isLoading={loading || isPending}
+              disabled={loading || isPending}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
                 Sign In <ArrowRight size={18} />
