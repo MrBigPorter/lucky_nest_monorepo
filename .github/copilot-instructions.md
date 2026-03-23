@@ -8,26 +8,20 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Finance deposits/withdrawals 缓存契约（tab 2/3）  
-**上次停留**: Finance transactions 缓存契约 + 参数回写修复完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Operation Logs 缓存契约（单页面）  
+**上次停留**: Finance 三 tab 缓存契约收敛 + prefetch 体验优化完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Finance**
+**当前页面：Operation Logs**
 
-- [x] 关键 fetch / 写操作梳理：确认 `transactions` 读接口与 3 个写操作的影响关系
-- [x] 参数契约补齐：`src/components/finance/FinancePageClient.tsx` 为 `TransactionList` 透传 `initialFormParams` / `onParamsChange`
-- [x] 失效语义确认：`finance:transactions` 作为统一写后失效 tag 保持不变
-- [x] 边界结论：本轮不做 `transactions` Server 预取 + Hydration，避免波及 `SmartTable` 全局模型
-- [x] 回归验证：`check-types` / `lint` / `vitest`（31 files / 183 tests）通过
-- [x] 文档沉淀：记录「Finance transactions 缓存契约」问题与答案（`read/architecture/FINANCE_TRANSACTIONS_CACHE_CONTRACT_CN.md`）
+- [x] 读侧契约定义：新增 `operation-logs` 的 URL 参数解析 / queryKey / request params helper
+- [x] 页面级数据预取：`operation-logs/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
+- [x] 列表消费对齐：`OperationLogListClient` 接入 `enableHydration` + `hydrationQueryKey`
+- [x] 边界确认：不改 `SmartTable` 全局模型，不改后端接口，只做单页可回退优化
+- [ ] 回归验证：`OperationLogList` Vitest + 手工验证 URL 筛选/刷新保持
+- [ ] 文档沉淀：新增「Operation Logs 缓存契约」问题与答案 + 心智模型提问
 
-- [x] `deposits` 读侧契约对齐：URL 参数解析、queryKey、Server 预取 + Hydration 命中
-- [x] `withdrawals` 读侧契约对齐：URL 参数解析、queryKey、Server 预取 + Hydration 命中
-- [x] 体验优化：tab hover/focus + idle warm-up 双通道 prefetch（避免首切 tab 冷启动）
-- [x] 回归修复：Finance 搜索后 URL 不再被 tab-only 回写覆盖；刷新后参数保持
-- [x] 文档沉淀：补充 deposits/withdrawals 一次性推进的问题与答案 + 心智模型提问
-
-> 下一步：按「单页面、可回退」继续推进 Phase 6 其余模块；如无明确收益，暂不做 Finance 全页重构。
+> 下一步：完成回归与文档后，再按「单页面、可回退」推进下一个模块。
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 

@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   useImperativeHandle,
   forwardRef,
 } from 'react';
@@ -218,6 +219,7 @@ const SmartTableInner = <T extends Record<string, any>>(
 
   const [formParams, setFormParams] =
     useState<Record<string, unknown>>(initialFormParams);
+  const hydrationConsumedRef = useRef(false);
 
   // ── Hydration 支持：若启用，优先消费 hydrated 数据 ──
   const hydrationQuery = useQuery<{ data: T[]; total: number }>({
@@ -313,8 +315,10 @@ const SmartTableInner = <T extends Record<string, any>>(
   );
 
   useEffect(() => {
-    // 若启用 hydration 且已有预取数据，不再主动 fetchData
-    if (hasHydratedRows) {
+    // Skip fetch only once when hydrated rows exist.
+    // After first render, pagination/search must always drive normal requests.
+    if (hasHydratedRows && !hydrationConsumedRef.current) {
+      hydrationConsumedRef.current = true;
       return;
     }
     // 否则走原有逻辑
@@ -413,8 +417,28 @@ const SmartTableInner = <T extends Record<string, any>>(
   }, [onParamsChange]);
 
   const handleRefresh = useCallback(() => {
-    fetchData().catch();
-  }, [fetchData]);
+    const resetPage = { page: 1, pageSize: pagination.pageSize };
+    const isAlreadyReset =
+      pagination.page === 1 && Object.keys(formParams).length === 0;
+
+    setPagination((p) => {
+      if (p.page === 1) return p;
+      return { ...p, page: 1 };
+    });
+    setFormParams({});
+    onParamsChange?.({});
+
+    // If state is already reset, effects won't re-fire; force one fetch.
+    if (isAlreadyReset) {
+      fetchData(resetPage, {}).catch();
+    }
+  }, [
+    fetchData,
+    formParams,
+    onParamsChange,
+    pagination.page,
+    pagination.pageSize,
+  ]);
 
   return (
     <div className="space-y-4">

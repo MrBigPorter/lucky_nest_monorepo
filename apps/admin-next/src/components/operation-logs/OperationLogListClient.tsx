@@ -14,6 +14,11 @@ import { Card } from '@/components/UIComponents';
 import { adminOperationLogApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { format, isValid, parseISO } from 'date-fns';
+import {
+  buildOperationLogsListParams,
+  operationLogsListQueryKey,
+  parseOperationLogsSearchParams,
+} from '@/lib/cache/operation-logs-cache';
 
 /** Safe date formatter — returns '—' for null, undefined, or invalid dates */
 function safeFormat(val: string | null | undefined, fmt: string): string {
@@ -33,6 +38,25 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
 }) => {
   const actionRef = useRef<ActionType>(null);
 
+  const hydrationInput = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseOperationLogsSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      adminId: typeof input.adminId === 'string' ? input.adminId : undefined,
+      action: typeof input.action === 'string' ? input.action : undefined,
+      keyword: typeof input.keyword === 'string' ? input.keyword : undefined,
+      startDate:
+        typeof input.startDate === 'string' ? input.startDate : undefined,
+      endDate: typeof input.endDate === 'string' ? input.endDate : undefined,
+    });
+  }, [initialFormParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => operationLogsListQueryKey(hydrationInput),
+    [hydrationInput],
+  );
+
   // ── SmartTable request（唯一的数据获取入口）────────────────────
   const requestLogs = useCallback(
     async (params: {
@@ -40,16 +64,29 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
       pageSize: number;
       [key: string]: unknown;
     }) => {
-      const apiParams: AdminOperationLogListParams = {
-        page: params.page,
-        pageSize: params.pageSize,
-      };
-      if (params.adminId) apiParams.adminId = String(params.adminId);
-      if (params.action && params.action !== 'ALL')
-        apiParams.action = String(params.action);
-      if (params.keyword) apiParams.keyword = String(params.keyword);
-      if (params.startDate) apiParams.startDate = String(params.startDate);
-      if (params.endDate) apiParams.endDate = String(params.endDate);
+      const dateRange = params.dateRange as
+        | { from?: string; to?: string }
+        | undefined;
+
+      const queryInput = parseOperationLogsSearchParams({
+        page: String(params.page ?? 1),
+        pageSize: String(params.pageSize ?? 10),
+        adminId:
+          typeof params.adminId === 'string' ? params.adminId : undefined,
+        action: typeof params.action === 'string' ? params.action : undefined,
+        keyword:
+          typeof params.keyword === 'string' ? params.keyword : undefined,
+        startDate:
+          typeof params.startDate === 'string'
+            ? params.startDate
+            : dateRange?.from,
+        endDate:
+          typeof params.endDate === 'string' ? params.endDate : dateRange?.to,
+      });
+
+      const apiParams = buildOperationLogsListParams(
+        queryInput,
+      ) as AdminOperationLogListParams;
 
       const res = await adminOperationLogApi.getList(apiParams);
       return { data: res.list, total: res.total };
@@ -249,6 +286,8 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
             initialFormParams={initialFormParams}
             onParamsChange={onParamsChange}
             request={requestLogs}
+            enableHydration={true}
+            hydrationQueryKey={hydrationQueryKey}
           />
         </div>
       </Card>
