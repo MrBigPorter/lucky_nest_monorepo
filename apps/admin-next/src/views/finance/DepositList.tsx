@@ -8,6 +8,7 @@ import {
   ActionType,
 } from '@/components/scaffold/SmartTable';
 import { financeApi } from '@/api';
+import { revalidateDashboardStats } from '@/lib/actions/dashboard-revalidate';
 import { RechargeListParams, RechargeOrder } from '@/type/types';
 import { DepositDetailModal } from './DepositDetailModal';
 import { DEPOSIT_STATUS_CONFIG, CHANNEL_OPTIONS } from './type';
@@ -51,6 +52,7 @@ export const DepositList: React.FC<DepositListProps> = ({
       onSuccess: (res) => {
         if (res.status === 'SYNCED_SUCCESS') {
           addToast('success', 'Order synced successfully! User credited.');
+          void revalidateDashboardStats();
         } else if (res.status === 'SYNCED_EXPIRED') {
           addToast('info', 'Order expired on Xendit.');
           actionRef.current?.reload();
