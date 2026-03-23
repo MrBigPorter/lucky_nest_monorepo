@@ -57,9 +57,11 @@ function StatCard({
 }
 
 export async function AnalyticsOverview() {
-  const data = await serverGet<StatsOverview>('/v1/admin/stats/overview').catch(
-    () => null,
-  );
+  const data = await serverGet<StatsOverview>(
+    '/v1/admin/stats/overview',
+    undefined,
+    { revalidate: 120 },
+  ).catch(() => null);
 
   if (!data) {
     return (

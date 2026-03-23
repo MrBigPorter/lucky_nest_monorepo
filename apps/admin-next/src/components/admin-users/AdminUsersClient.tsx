@@ -16,7 +16,7 @@ export function AdminUsersClient() {
   const urlFilterParams = useMemo(() => {
     const params: Record<string, string> = {};
     searchParams.forEach((value, key) => {
-      if (key !== 'page' && key !== 'pageSize' && value) {
+      if (value) {
         params[key] = value;
       }
     });

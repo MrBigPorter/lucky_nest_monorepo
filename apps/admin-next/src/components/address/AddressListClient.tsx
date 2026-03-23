@@ -19,6 +19,11 @@ import {
   UpdateAddress,
 } from '@/type/types';
 import { Card } from '@/components/UIComponents';
+import {
+  addressListQueryKey,
+  buildAddressListParams,
+  parseAddressSearchParams,
+} from '@/lib/cache/address-cache';
 
 interface AddressListProps {
   initialFormParams?: Record<string, unknown>;
@@ -31,6 +36,23 @@ export const AddressList: React.FC<AddressListProps> = ({
 }) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
+
+  const normalizedInitialFormParams = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseAddressSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      keyword: typeof input.keyword === 'string' ? input.keyword : undefined,
+      userId: typeof input.userId === 'string' ? input.userId : undefined,
+      province: typeof input.province === 'string' ? input.province : undefined,
+      phone: typeof input.phone === 'string' ? input.phone : undefined,
+    });
+  }, [initialFormParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => addressListQueryKey(normalizedInitialFormParams),
+    [normalizedInitialFormParams],
+  );
 
   // 打开编辑/新增弹窗
   const handleEdit = useCallback((record?: UpdateAddress) => {
@@ -183,7 +205,19 @@ export const AddressList: React.FC<AddressListProps> = ({
   );
 
   const requestAddress = useCallback(async (params: QueryListAddressParams) => {
-    const res = await addressApi.list(params);
+    const input = params as Record<string, unknown>;
+    const queryInput = parseAddressSearchParams({
+      page: String(params.page ?? 1),
+      pageSize: String(params.pageSize ?? 10),
+      keyword: typeof input.keyword === 'string' ? input.keyword : undefined,
+      userId: typeof input.userId === 'string' ? input.userId : undefined,
+      province: typeof input.province === 'string' ? input.province : undefined,
+      phone: typeof input.phone === 'string' ? input.phone : undefined,
+    });
+
+    const res = await addressApi.list(
+      buildAddressListParams(queryInput) as QueryListAddressParams,
+    );
     return {
       data: res.list,
       total: res.total,
@@ -206,8 +240,10 @@ export const AddressList: React.FC<AddressListProps> = ({
           columns={columns}
           searchSchema={searchSchema}
           request={requestAddress}
-          initialFormParams={initialFormParams}
+          initialFormParams={normalizedInitialFormParams}
           onParamsChange={onParamsChange}
+          enableHydration={true}
+          hydrationQueryKey={hydrationQueryKey}
         />
       </div>
     </Card>

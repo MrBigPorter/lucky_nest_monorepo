@@ -3,7 +3,9 @@
  * Stage 4：统计数字在服务端直出，不占用客户端 JS bundle，无网络瀑布。
  * 配合 finance/page.tsx 的 <Suspense> 实现流式渲染。
  */
+import 'server-only';
 import { serverGet } from '@/lib/serverFetch';
+import { FINANCE_STATS_TAG, FINANCE_TAG } from '@/lib/cache/finance-cache';
 import type { FinanceStatistics } from '@/type/types';
 import { NumHelper } from '@lucky/shared';
 import { Clock, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
@@ -13,7 +15,10 @@ export async function FinanceStatsServer() {
   const statistics = await serverGet<FinanceStatistics>(
     '/v1/admin/finance/statistics',
     undefined,
-    { revalidate: false }, // no-store：每次请求都是最新数据
+    {
+      revalidate: 30,
+      tags: [FINANCE_TAG, FINANCE_STATS_TAG],
+    },
   );
 
   return (

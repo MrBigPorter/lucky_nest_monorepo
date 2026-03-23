@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
-import { useAntdTable, useRequest } from 'ahooks';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useRequest } from 'ahooks';
 import { bannerApi } from '@/api';
 import { Button, ModalManager } from '@repo/ui';
 import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
@@ -18,11 +19,16 @@ import { Badge, Card } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { BannerFormModal } from '@/views/banner/BannerFormModal';
 import { JUMP_CATE } from '@lucky/shared';
-import { Banner, BannerListParams } from '@/type/types';
+import { Banner } from '@/type/types';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { SmartImage } from '@/components/ui/SmartImage';
+import {
+  bannersListQueryKey,
+  buildBannersListParams,
+  parseBannersSearchParams,
+} from '@/lib/cache/banners-cache';
 
 type BannerSearchForm = {
   title: string;
@@ -39,92 +45,85 @@ export const BannerManagement: React.FC<BannerManagementProps> = ({
   onParamsChange,
 }) => {
   const addToast = useToastStore((s) => s.addToast);
+  const normalizedInitialQuery = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseBannersSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      title: typeof input.title === 'string' ? input.title : undefined,
+      bannerCate:
+        typeof input.bannerCate === 'string' ? input.bannerCate : undefined,
+    });
+  }, [initialFormParams]);
 
-  const getTableData = async (
-    {
-      current,
-      pageSize,
-    }: {
-      current: number;
-      pageSize: number;
-    },
-    formData: BannerSearchForm,
-  ) => {
-    const params: BannerListParams = {
-      page: current,
-      pageSize,
-    };
-    if (formData?.bannerCate && formData?.bannerCate !== 'ALL') {
-      params.bannerCate = Number(formData.bannerCate);
-    }
-    if (formData?.title) {
-      params.title = formData.title;
-    }
-    const res = await bannerApi.getList(params);
-    return { list: res.list, total: res.total };
-  };
+  const [pagination, setPagination] = useState({
+    page: normalizedInitialQuery.page,
+    pageSize: normalizedInitialQuery.pageSize,
+  });
+  const [filters, setFilters] = useState<BannerSearchForm>({
+    title: normalizedInitialQuery.title ?? '',
+    bannerCate:
+      normalizedInitialQuery.bannerCate !== undefined
+        ? String(normalizedInitialQuery.bannerCate)
+        : 'ALL',
+  });
+
+  const bannersQueryInput = useMemo(
+    () =>
+      parseBannersSearchParams({
+        page: String(pagination.page),
+        pageSize: String(pagination.pageSize),
+        title: filters.title,
+        bannerCate: filters.bannerCate,
+      }),
+    [filters.bannerCate, filters.title, pagination.page, pagination.pageSize],
+  );
 
   const {
-    tableProps,
-    refresh,
-    run,
-    search: { reset },
-    mutate,
-  } = useAntdTable(getTableData, {
-    defaultPageSize: 10,
-    defaultParams: [
-      { current: 1, pageSize: 10 },
-      {
-        title: (initialFormParams?.title as string) || '',
-        bannerCate: (initialFormParams?.bannerCate as string) || 'ALL',
-      },
-    ],
+    data: bannersData,
+    isFetching: bannersLoading,
+    refetch: refresh,
+  } = useQuery({
+    queryKey: bannersListQueryKey(bannersQueryInput),
+    queryFn: () => bannerApi.getList(buildBannersListParams(bannersQueryInput)),
+    staleTime: 30_000,
   });
 
   // 搜索回调：直接拿到所有值
   const handleSearch = (values: BannerSearchForm) => {
-    // 自动重置到第一页，并带上所有条件
-    run({ current: 1, pageSize: 10 }, values);
+    setFilters(values);
+    setPagination((prev) => ({ ...prev, page: 1 }));
     onParamsChange?.(values);
   };
 
   const handleReset = () => {
-    reset();
+    setFilters({ title: '', bannerCate: 'ALL' });
+    setPagination((prev) => ({ ...prev, page: 1 }));
     onParamsChange?.({ title: '', bannerCate: 'ALL' });
   };
 
   const dataSource = useMemo(
-    () => tableProps.dataSource || [],
-    [tableProps.dataSource],
+    () => bannersData?.list || [],
+    [bannersData?.list],
   );
   // --- Actions ---
   const { run: deleteBanner } = useRequest(bannerApi.delete, {
     manual: true,
     onSuccess: () => {
       addToast('success', 'Deleted');
-      refresh();
+      void refresh();
     },
   });
 
   const { run: updateStatus } = useRequest(bannerApi.updateState, {
     manual: true,
-    onBefore: ([id, state]) => {
-      mutate((old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          list: old.list.map((item) =>
-            item.id === id ? { ...item, state } : item,
-          ),
-        };
-      });
-    },
     onSuccess: () => {
       addToast('success', 'Status updated');
+      void refresh();
     },
     onError: () => {
       // Revert on error
-      refresh();
+      void refresh();
     },
   });
 
@@ -139,7 +138,7 @@ export const BannerManagement: React.FC<BannerManagementProps> = ({
             close={close}
             confirm={() => {
               confirm();
-              refresh();
+              void refresh();
             }}
             editingData={record}
           />
@@ -311,23 +310,27 @@ export const BannerManagement: React.FC<BannerManagementProps> = ({
               },
             ]}
             initialValues={{
-              title: (initialFormParams?.title as string) || '',
-              bannerCate: (initialFormParams?.bannerCate as string) || 'ALL',
+              title: filters.title,
+              bannerCate: filters.bannerCate,
             }}
             onSearch={handleSearch}
             onReset={handleReset}
+            loading={bannersLoading}
           />
         </div>
         <BaseTable
           data={dataSource}
+          loading={bannersLoading}
           rowKey="id"
           columns={columns}
           pagination={{
-            ...tableProps.pagination,
+            current: pagination.page,
+            pageSize: pagination.pageSize,
+            total: bannersData?.total ?? 0,
             onChange: (page, pageSize) => {
-              tableProps.onChange?.({
-                current: page,
-                pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+              setPagination({
+                page,
+                pageSize: pageSize || pagination.pageSize || 10,
               });
             },
           }}

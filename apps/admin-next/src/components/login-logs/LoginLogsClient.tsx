@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRequest } from 'ahooks';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import {
   LogIn,
   Search,
@@ -18,6 +19,11 @@ import { PageHeader } from '@/components/scaffold/PageHeader';
 import { loginLogApi } from '@/api';
 import type { QueryLoginLogParams, UserLoginLog } from '@/type/types';
 import { format } from 'date-fns';
+import {
+  buildLoginLogsListParams,
+  loginLogsListQueryKey,
+  parseLoginLogsSearchParams,
+} from '@/lib/cache/login-logs-cache';
 
 const LOGIN_METHODS: Record<string, string> = {
   password: 'Password',
@@ -116,19 +122,91 @@ function LogRow({ log }: { log: UserLoginLog }) {
 }
 
 export function LoginLogList() {
-  const [params, setParams] = useState<QueryLoginLogParams>({
-    page: 1,
-    pageSize: 20,
-  });
-  const [userId, setUserId] = useState('');
-  const [loginIp, setLoginIp] = useState('');
-  const [loginStatus, setLoginStatus] = useState<number | undefined>(undefined);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const {
-    data,
-    loading,
-    run: refresh,
-  } = useRequest(() => loginLogApi.getList(params), { refreshDeps: [params] });
+  const initialQueryInput = useMemo(() => {
+    const params: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+    return parseLoginLogsSearchParams(params);
+  }, [searchParams]);
+
+  const [params, setParams] = useState<QueryLoginLogParams>(initialQueryInput);
+  const [userId, setUserId] = useState(initialQueryInput.userId ?? '');
+  const [loginIp, setLoginIp] = useState(initialQueryInput.loginIp ?? '');
+  const [loginStatus, setLoginStatus] = useState<number | undefined>(
+    initialQueryInput.loginStatus,
+  );
+
+  const syncUrl = useCallback(
+    (nextParams: QueryLoginLogParams) => {
+      const qs = new URLSearchParams();
+      const serialized = buildLoginLogsListParams(
+        parseLoginLogsSearchParams({
+          page: String(nextParams.page ?? 1),
+          pageSize: String(nextParams.pageSize ?? 20),
+          userId: nextParams.userId,
+          loginIp: nextParams.loginIp,
+          loginMethod: nextParams.loginMethod,
+          loginStatus:
+            nextParams.loginStatus !== undefined
+              ? String(nextParams.loginStatus)
+              : undefined,
+          startDate: nextParams.startDate,
+          endDate: nextParams.endDate,
+        }),
+      );
+
+      Object.entries(serialized).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') {
+          return;
+        }
+        if (key === 'page' && Number(value) === 1) {
+          return;
+        }
+        if (key === 'pageSize' && Number(value) === 20) {
+          return;
+        }
+        qs.set(key, String(value));
+      });
+
+      const nextUrl = qs.toString()
+        ? `/login-logs?${qs.toString()}`
+        : '/login-logs';
+      router.replace(nextUrl, { scroll: false });
+    },
+    [router],
+  );
+
+  const { data, isFetching, refetch } = useQuery<{
+    list: UserLoginLog[];
+    total: number;
+  }>({
+    queryKey: loginLogsListQueryKey(
+      parseLoginLogsSearchParams({
+        page: String(params.page ?? 1),
+        pageSize: String(params.pageSize ?? 20),
+        userId: params.userId,
+        loginIp: params.loginIp,
+        loginMethod: params.loginMethod,
+        loginStatus:
+          params.loginStatus !== undefined
+            ? String(params.loginStatus)
+            : undefined,
+        startDate: params.startDate,
+        endDate: params.endDate,
+      }),
+    ),
+    queryFn: async () => {
+      const res = await loginLogApi.getList(params);
+      return { list: res.list, total: res.total };
+    },
+    staleTime: 30_000,
+  });
+
+  const loading = isFetching;
 
   const logs = data?.list ?? [];
   const total = data?.total ?? 0;
@@ -136,15 +214,19 @@ export function LoginLogList() {
   const pageSize = params.pageSize ?? 20;
   const totalPages = Math.ceil(total / pageSize);
 
-  const applyFilters = () => {
-    setParams((p) => ({
-      ...p,
-      page: 1,
-      userId: userId || undefined,
-      loginIp: loginIp || undefined,
-      loginStatus,
-    }));
-  };
+  const applyFilters = useCallback(() => {
+    setParams((p) => {
+      const nextParams = {
+        ...p,
+        page: 1,
+        userId: userId || undefined,
+        loginIp: loginIp || undefined,
+        loginStatus,
+      };
+      syncUrl(nextParams);
+      return nextParams;
+    });
+  }, [loginIp, loginStatus, syncUrl, userId]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -209,7 +291,7 @@ export function LoginLogList() {
             Search
           </button>
           <button
-            onClick={() => refresh()}
+            onClick={() => void refetch()}
             disabled={loading}
             className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
           >
@@ -283,9 +365,13 @@ export function LoginLogList() {
             <div className="flex items-center gap-2">
               <button
                 disabled={page <= 1}
-                onClick={() =>
-                  setParams((p) => ({ ...p, page: (p.page ?? 1) - 1 }))
-                }
+                onClick={() => {
+                  setParams((p) => {
+                    const nextParams = { ...p, page: (p.page ?? 1) - 1 };
+                    syncUrl(nextParams);
+                    return nextParams;
+                  });
+                }}
                 className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
               >
                 <ChevronLeft size={14} />
@@ -295,9 +381,13 @@ export function LoginLogList() {
               </span>
               <button
                 disabled={page >= totalPages}
-                onClick={() =>
-                  setParams((p) => ({ ...p, page: (p.page ?? 1) + 1 }))
-                }
+                onClick={() => {
+                  setParams((p) => {
+                    const nextParams = { ...p, page: (p.page ?? 1) + 1 };
+                    syncUrl(nextParams);
+                    return nextParams;
+                  });
+                }}
                 className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
               >
                 <ChevronRight size={14} />
