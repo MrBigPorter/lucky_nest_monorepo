@@ -1,3 +1,5 @@
+import type { QueryClientUserParams } from '@/type/types';
+
 export const USERS_LIST_TAG = 'users:list';
 
 export interface UsersListQueryInput {
@@ -25,7 +27,7 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
 }
 
 function parseOptionalInt(value: string | undefined): number | undefined {
-  if (!value) return undefined;
+  if (!value || value === 'ALL' || value === 'All') return undefined;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return undefined;
   return Math.floor(parsed);
@@ -57,7 +59,7 @@ export function parseUsersSearchParams(
 
 export function buildUsersListParams(
   input: UsersListQueryInput,
-): Record<string, string | number | undefined> {
+): QueryClientUserParams {
   return {
     page: input.page,
     pageSize: input.pageSize,

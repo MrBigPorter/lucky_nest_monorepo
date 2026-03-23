@@ -3,46 +3,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { repoUiMock } from '../mocks/view-helpers';
 
-const smartTablePropsSpy = vi.hoisted(() => vi.fn());
+const userListClientPropsSpy = vi.hoisted(() => vi.fn());
 const mockReplace = vi.hoisted(() => vi.fn());
 
 vi.mock('@repo/ui', () => repoUiMock);
-vi.mock('@/components/scaffold/SmartTable', () => ({
-  SmartTable: Object.assign(
-    React.forwardRef(function SmartTableMock(
-      props: { headerTitle?: React.ReactNode },
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      _ref: React.ForwardedRef<unknown>,
-    ) {
-      smartTablePropsSpy(props);
-      return <div data-testid="smart-table">{props.headerTitle}</div>;
-    }),
-    { displayName: 'SmartTableMock' },
-  ),
-}));
-vi.mock('@/components/UIComponents', () => ({
-  Card: ({ children }: React.PropsWithChildren) => <div>{children}</div>,
-}));
-vi.mock('next/image', () => ({
-  default: () => <div data-testid="next-image" />,
+vi.mock('@/components/users/UserListClient', () => ({
+  UserListClient: (props: Record<string, unknown>) => {
+    userListClientPropsSpy(props);
+    return <div data-testid="user-list-client" />;
+  },
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mockReplace }),
-  useSearchParams: () => new URLSearchParams('userId=u-1&status=1'),
-}));
-vi.mock('@/store/useToastStore', () => ({
-  useToastStore: (
-    sel: (s: { addToast: (t: string, m: string) => void }) => unknown,
-  ) => sel({ addToast: vi.fn() }),
-}));
-vi.mock('@/api', () => ({
-  clientUserApi: {
-    getUsers: vi.fn().mockResolvedValue({ list: [], total: 0 }),
-    updateUser: vi.fn().mockResolvedValue({}),
-  },
-}));
-vi.mock('@/views/user-management/UserDetailModal', () => ({
-  UserDetailModal: () => <div data-testid="user-detail-modal" />,
+  useSearchParams: () =>
+    new URLSearchParams(
+      'userId=u-1&status=1&page=2&pageSize=20&startTime=2026-03-01',
+    ),
 }));
 
 import { UsersClient } from '@/components/users/UsersClient';
@@ -57,19 +33,24 @@ describe('UsersClient', () => {
     expect(container.firstChild).not.toBeNull();
   });
 
-  it('renders SmartTable', () => {
+  it('renders UserListClient', () => {
     render(<UsersClient />);
-    expect(screen.getByTestId('smart-table')).toBeInTheDocument();
+    expect(screen.getByTestId('user-list-client')).toBeInTheDocument();
   });
 
-  it('passes hydration props and URL params to SmartTable', () => {
+  it('passes URL params to UserListClient', () => {
     render(<UsersClient />);
 
-    expect(smartTablePropsSpy).toHaveBeenCalledWith(
+    expect(userListClientPropsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialFormParams: { userId: 'u-1', status: '1' },
-        enableHydration: true,
-        hydrationQueryKey: ['users', 1, 10, 'u-1', '', 1, 'all', '', ''],
+        initialFormParams: {
+          userId: 'u-1',
+          status: '1',
+          page: '2',
+          pageSize: '20',
+          startTime: '2026-03-01',
+        },
+        onParamsChange: expect.any(Function),
       }),
     );
   });
