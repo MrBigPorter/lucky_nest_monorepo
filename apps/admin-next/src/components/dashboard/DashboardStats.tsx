@@ -14,6 +14,11 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/UIComponents';
 import { serverGet } from '@/lib/serverFetch';
+import {
+  SENTRY_SPAN_ATTR_KEY,
+  SENTRY_SPAN_NAME,
+} from '@/lib/sentry-span-constants';
+import { withSsrSpan } from '@/lib/sentry-span';
 import type { FinanceStatistics, ClientUserListItem } from '@/type/types';
 import type { PaginatedResponse } from '@/api/types';
 
@@ -75,16 +80,24 @@ function StatCard({
 
 // ── 主组件（async Server Component）─────────────────────────
 export async function DashboardStats() {
-  // 并行请求，任一失败则 fallback 为 null
-  const [finance, usersRes] = await Promise.all([
-    serverGet<FinanceStatistics>('/v1/admin/finance/statistics').catch(
-      () => null,
-    ),
-    serverGet<PaginatedResponse<ClientUserListItem>>(
-      '/v1/admin/client-user/list',
-      { page: 1, pageSize: 1 },
-    ).catch(() => null),
-  ]);
+  const [finance, usersRes] = await withSsrSpan(
+    SENTRY_SPAN_NAME.DASHBOARD_STATS_FETCH,
+    {
+      [SENTRY_SPAN_ATTR_KEY.APP_SECTION]: 'dashboard',
+    },
+    async () => {
+      // 并行请求，任一失败则 fallback 为 null
+      return Promise.all([
+        serverGet<FinanceStatistics>('/v1/admin/finance/statistics').catch(
+          () => null,
+        ),
+        serverGet<PaginatedResponse<ClientUserListItem>>(
+          '/v1/admin/client-user/list',
+          { page: 1, pageSize: 1 },
+        ).catch(() => null),
+      ]);
+    },
+  );
 
   const totalUsers = usersRes?.total ?? 0;
 
