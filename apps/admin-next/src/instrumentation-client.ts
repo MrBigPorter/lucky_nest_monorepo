@@ -73,6 +73,10 @@ Sentry.init({
   tracesSampleRate,
   profilesSampleRate,
 
+  // Browser profiling: must be explicitly registered as an integration (Sentry v8+).
+  // profilesSampleRate alone is not enough — the integration activates the sampling hooks.
+  integrations: [Sentry.browserProfilingIntegration()],
+
   // Error-only mode: do not attach user PII by default.
   sendDefaultPii: false,
 

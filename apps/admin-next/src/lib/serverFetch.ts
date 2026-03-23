@@ -8,6 +8,12 @@
 
 import { cookies } from 'next/headers';
 import type { ApiResponse } from '@/api/types';
+import {
+  SENTRY_SPAN_ATTR_KEY,
+  SENTRY_SPAN_NAME,
+  SENTRY_SPAN_OP,
+} from '@/lib/sentry-span-constants';
+import { withAppSpan } from '@/lib/sentry-span';
 
 function getBase(): string {
   return (
@@ -46,32 +52,47 @@ export async function serverGet<T>(
   params?: ServerFetchParams,
   options?: ServerFetchOptions,
 ): Promise<T> {
-  const base = getBase();
-  const url = new URL(`${base}${path}`);
-
-  if (params) {
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-    });
-  }
-
   const revalidate =
     options?.revalidate === false ? 0 : (options?.revalidate ?? 30);
 
-  const res = await fetch(url.toString(), {
-    headers: await buildHeaders(),
-    next: { revalidate },
-  } as RequestInit & { next?: { revalidate?: number } });
+  return withAppSpan(
+    {
+      name: SENTRY_SPAN_NAME.SERVER_FETCH_REQUEST,
+      op: SENTRY_SPAN_OP.HTTP_CLIENT,
+      attributes: {
+        [SENTRY_SPAN_ATTR_KEY.HTTP_METHOD]: 'GET',
+        [SENTRY_SPAN_ATTR_KEY.HTTP_ROUTE]: path,
+        [SENTRY_SPAN_ATTR_KEY.FETCH_REVALIDATE]: revalidate,
+      },
+    },
+    async () => {
+      const base = getBase();
+      const url = new URL(`${base}${path}`);
 
-  if (!res.ok) {
-    throw new Error(`[serverFetch] ${path} → HTTP ${res.status}`);
-  }
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+        });
+      }
 
-  const json: ApiResponse<T> = await res.json();
+      const res = await fetch(url.toString(), {
+        headers: await buildHeaders(),
+        next: { revalidate },
+      } as RequestInit & { next?: { revalidate?: number } });
 
-  if (json.code !== 10000 && json.code !== 200) {
-    throw new Error(`[serverFetch] ${path} → ${json.message ?? 'API error'}`);
-  }
+      if (!res.ok) {
+        throw new Error(`[serverFetch] ${path} → HTTP ${res.status}`);
+      }
 
-  return json.data;
+      const json: ApiResponse<T> = await res.json();
+
+      if (json.code !== 10000 && json.code !== 200) {
+        throw new Error(
+          `[serverFetch] ${path} → ${json.message ?? 'API error'}`,
+        );
+      }
+
+      return json.data;
+    },
+  );
 }

@@ -22,29 +22,59 @@
  *   动态 import 确保 Sentry edge bundle 按需加载，避免冷启动 bundle 膨胀。
  */
 
+const parseRate = (value: string | undefined, fallback: number) => {
+  if (!value) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : fallback;
+};
+
 export async function register() {
   const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
   // Skip entirely when DSN is absent — avoids loading Sentry at all in CI / local dev.
   if (!dsn) return;
 
+  const isProdRuntime = process.env.NODE_ENV === 'production';
+  const enableNonProd = process.env.NEXT_PUBLIC_SENTRY_ENABLE_DEV === 'true';
+  const enabled = Boolean(dsn) && (isProdRuntime || enableNonProd);
+
+  const appEnv =
+    process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'development';
+  const sentryDebug = process.env.NEXT_PUBLIC_SENTRY_DEBUG === 'true';
+
+  const previewTraceFallback = appEnv === 'preview' ? 0.1 : 0;
+  const tracesSampleRate = parseRate(
+    process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+    previewTraceFallback,
+  );
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Standard Node.js runtime (local dev with `next dev --experimental-https`, etc.)
+    // Standard Node.js runtime (local dev + self-hosted Docker).
+    // Keep server tracing/error monitoring only; Node CPU profiling package is intentionally excluded.
     const { init } = await import('@sentry/nextjs');
+
     init({
       dsn,
-      enabled: process.env.NODE_ENV === 'production',
+      enabled,
+      environment: appEnv,
+      debug: sentryDebug,
+      tracesSampleRate,
       sendDefaultPii: false,
     });
+    return;
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
     // Cloudflare Workers edge runtime.
     // Dynamic import ensures the edge-compatible bundle is loaded (no Node.js deps).
+    // NOTE: Cloudflare Workers edge runtime does not support Node native profilers.
     const { init } = await import('@sentry/nextjs');
     init({
       dsn,
-      enabled: process.env.NODE_ENV === 'production',
+      enabled,
+      environment: appEnv,
+      debug: sentryDebug,
+      tracesSampleRate,
       sendDefaultPii: false,
     });
   }

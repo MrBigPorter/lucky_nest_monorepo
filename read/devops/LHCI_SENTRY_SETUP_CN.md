@@ -163,6 +163,39 @@ tracesSampleRate: 0.1   ← 10% 采样
 10,000 个免费额度 / 5 次/天 = 2000 天不会超额。  
 同时保留了足够数据来定位偶发慢请求。
 
+### 3.4.1 哪些请求应该 `trace: false`
+
+`apps/admin-next/src/api/http.ts` 现在默认会给客户端请求自动加 tracing，但**不是所有请求都值得上报**。
+
+**建议关闭 tracing 的场景：**
+
+- 角标计数 / badge count（例如待审批数量）
+- fallback polling（例如 10s / 30s 轮询拉消息、拉会话）
+- socket 失败后的兜底刷新
+- 页面隐藏后仍可能发生的低价值后台刷新
+
+**建议保留 tracing 的场景：**
+
+- 首屏加载慢查询
+- 创建 / 编辑 / 审核 / 支付 / 导出 / 上传
+- 客服回复、会话切换、关键业务动作
+- 你怀疑“这里慢”的请求
+
+示例：
+
+```ts
+http.get("/v1/admin/applications/pending-count", undefined, {
+  trace: false,
+});
+
+http.get("/v1/admin/settings/detail", undefined, {
+  trace: {
+    name: "admin.http.settings_load",
+    attributes: { feature: "settings" },
+  },
+});
+```
+
 ### 3.5 需要在 GitHub Secrets 里配置
 
 **最小必配（当前仓库建议）**

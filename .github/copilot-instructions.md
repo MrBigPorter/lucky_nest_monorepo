@@ -36,9 +36,13 @@
 - [x] 前端修复：`apps/admin-next/src/components/ui/SmartImage.tsx` 修复 `ImageProps` 合并导致的 TS2322 类型报错（保持现有渲染行为）
 - [x] 后端收口：`apps/api/src/common/jwt/option-jwt.guard.ts` 清理 `OptionalJwtAuthGuard` lint 阻塞（scoped ESLint 通过）
 - [x] Sentry 适配 SSR：`instrumentation-client.ts` 改用 `@sentry/nextjs` + 导出 `onRouterTransitionStart`；`instrumentation.ts` 支持 nodejs/edge runtime + 导出 `onRequestError`；`next.config.ts` 集成 `withSentryConfig` build 插件
+- [x] Sentry tracing 延伸：`apps/admin-next/src/lib/serverFetch.ts` + `apps/admin-next/src/api/http.ts` 接入 SSR / Client HTTP 自动 span，统一记录 `http.method` / `http.route` / `fetch.revalidate`
+- [x] Sentry tracing 控制面：`apps/admin-next/src/api/types.ts` 新增 `RequestTraceConfig`，支持 `trace: false`、自定义 span 名称与 attributes 的单请求覆盖
+- [x] Sentry 噪音收口：`apps/admin-next/src/api/index.ts` 待审批角标 + `apps/admin-next/src/components/customer-service/CustomerServiceClient.tsx` 10s/30s polling 请求显式 `trace: false`
+- [x] 定向验收：`apps/admin-next/src/__tests__/api/http.test.ts`、`apps/admin-next/src/__tests__/lib/serverFetch.test.ts`、`apps/admin-next/src/__tests__/views/CustomerServiceDesk.test.tsx` 覆盖通过；scoped ESLint / check-types / Vitest 通过
 - [x] Lighthouse CI 工作流修复：Step 5 加 Secrets 检查，缺失时以 warning 跳过而非失败；新增 LIGHTHOUSE_CI_SETUP_CN.md 指南
 
-> 最后对齐时间：2026-03-23。Sentry SSR 追踪 + Lighthouse CI 均已启用，待 GitHub Secrets 补充。  
+> 最后对齐时间：2026-03-23。Sentry SSR + 自动 tracing/降噪链路已打通；Lighthouse CI 已启用，待 GitHub Secrets 补充。  
 > 下一步：GitHub → Settings → Environments → production 添加 `LIGHTHOUSE_ADMIN_USERNAME` + `LIGHTHOUSE_ADMIN_PASSWORD`，部署后自动触发 Lighthouse CI。  
 > 下一步：补充 GitHub Secrets（`NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_AUTH_TOKEN`）并 push dev → PR → main 触发全量部署验证。
 
@@ -78,7 +82,7 @@
 - [x] 分析瓶颈，决定是否需要继续优化
 - [x] 根据结果选定下一个功能方向（已实施：recharts dynamic() + remotePatterns；转功能方向）
 - [x] 集成 Sentry 错误监控：`@sentry/nextjs` SDK + client/server/edge 三端配置 + `global-error.tsx` + `instrumentation-client.ts`（onRouterTransitionStart）
-- [x] 集成 Lighthouse CI：`.github/workflows/lighthouse-ci.yml` + `lighthouserc.mjs`（5 页面 PR 自动跑分）
+- [x] 集成 Lighthouse CI：`.github/workflows/lighthouse-ci.yml` + `lighthouserc.js`（CI 主入口；5 页面 PR 自动跑分）
 - [x] 安全收口：`.env.sentry-build-plugin` 加入 `.gitignore`，硬编码 DSN 替换为 `NEXT_PUBLIC_SENTRY_DSN` 环境变量
 
 > 详细测试方法、指标定义、结果记录表、优化决策树见 `read/performance/PERFORMANCE_LIGHTHOUSE_CN.md`  

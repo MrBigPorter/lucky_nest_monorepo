@@ -15,6 +15,17 @@ export interface ApiError {
   details?: unknown;
 }
 
+export type TraceAttributeValue = string | number | boolean | null | undefined;
+
+export interface RequestTraceConfig {
+  /** false = disable tracing for this request */
+  enabled?: boolean;
+  /** Optional custom span name */
+  name?: string;
+  /** Optional extra attributes merged with default http.method/http.route */
+  attributes?: Record<string, TraceAttributeValue>;
+}
+
 export interface PaginationParams {
   page?: number;
   pageSize?: number;
@@ -34,4 +45,5 @@ export interface RequestConfig {
   showLoading?: boolean;
   showError?: boolean;
   customErrorHandler?: (error: ApiError) => void;
+  trace?: boolean | RequestTraceConfig;
 }
