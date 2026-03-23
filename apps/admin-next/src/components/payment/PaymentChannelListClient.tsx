@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button, ModalManager, cn } from '@repo/ui';
 import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { Edit, CreditCard, ArrowRightLeft, Power } from 'lucide-react';
@@ -11,10 +12,14 @@ import { useToastStore } from '@/store/useToastStore';
 import { paymentChannelApi } from '@/api';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { PaymentChannelModal } from '@/views/payment-channel/PaymentChannelModal';
-import { useAntdTable } from 'ahooks';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SmartImage } from '@/components/ui/SmartImage';
+import {
+  paymentChannelsListQueryKey,
+  buildPaymentChannelsListParams,
+  parsePaymentChannelsSearchParams,
+} from '@/lib/cache/payment-channels-cache';
 
 // --- 辅助组件：状态标签 ---
 const StatusBadge = ({ status }: { status: number }) => {
@@ -29,7 +34,7 @@ const StatusBadge = ({ status }: { status: number }) => {
         return {
           label: 'Maintenance',
           className: 'bg-amber-100 text-amber-700 border-amber-200',
-        }; // 用 Amber 醒目一点
+        };
       case 0:
       default:
         return {
@@ -87,68 +92,84 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
 }) => {
   const addToast = useToastStore((s) => s.addToast);
 
-  const getTableData = async (
-    {
-      current,
-      pageSize,
-    }: {
-      current: number;
-      pageSize: number;
-    },
-    formData: PaymentChannelSearchForm,
-  ) => {
-    const params: PaymentChannelListParams = {
-      page: current,
-      pageSize,
-    };
-    if (formData?.status && formData?.status !== 'ALL') {
-      params.status = Number(formData.status);
-    }
-    if (formData?.type && formData?.type !== 'ALL') {
-      params.type = Number(formData.type);
-    }
-    if (formData?.name) {
-      params.name = formData.name;
-    }
-    const res = await paymentChannelApi.getList(params);
-    return { list: res.list, total: res.total };
-  };
+  const normalizedInitialQuery = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parsePaymentChannelsSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      name: typeof input.name === 'string' ? input.name : undefined,
+      type: typeof input.type === 'string' ? input.type : undefined,
+      status: typeof input.status === 'string' ? input.status : undefined,
+    });
+  }, [initialFormParams]);
 
-  const {
-    tableProps,
-    refresh,
-    run,
-    search: { reset },
-  } = useAntdTable(getTableData, {
-    defaultPageSize: 10,
-    defaultParams: [
-      { current: 1, pageSize: 10 },
-      {
-        name: (initialFormParams?.name as string) || '',
-        status: (initialFormParams?.status as string) || 'ALL',
-        type: (initialFormParams?.type as string) || 'ALL',
-      },
-    ],
+  const [pagination, setPagination] = useState({
+    page: normalizedInitialQuery.page,
+    pageSize: normalizedInitialQuery.pageSize,
+  });
+  const [filters, setFilters] = useState<PaymentChannelSearchForm>({
+    name: normalizedInitialQuery.name ?? '',
+    type:
+      normalizedInitialQuery.type !== undefined
+        ? String(normalizedInitialQuery.type)
+        : 'ALL',
+    status:
+      normalizedInitialQuery.status !== undefined
+        ? String(normalizedInitialQuery.status)
+        : 'ALL',
   });
 
-  // 搜索回调：直接拿到所有值
+  const channelsQueryInput = useMemo(() => {
+    const searchParams: Record<string, string | undefined> = {
+      page: String(pagination.page),
+      pageSize: String(pagination.pageSize),
+      ...(filters.name && filters.name !== '' ? { name: filters.name } : {}),
+      ...(filters.type && filters.type !== 'ALL' ? { type: filters.type } : {}),
+      ...(filters.status && filters.status !== 'ALL'
+        ? { status: filters.status }
+        : {}),
+    };
+    return parsePaymentChannelsSearchParams(searchParams);
+  }, [
+    filters.name,
+    filters.type,
+    filters.status,
+    pagination.page,
+    pagination.pageSize,
+  ]);
+
+  const {
+    data: channelsData,
+    isFetching: channelsLoading,
+    refetch: refresh,
+  } = useQuery({
+    queryKey: paymentChannelsListQueryKey(channelsQueryInput),
+    queryFn: () =>
+      paymentChannelApi.getList(
+        buildPaymentChannelsListParams(
+          channelsQueryInput,
+        ) as PaymentChannelListParams,
+      ),
+    staleTime: 30_000,
+  });
+
   const handleSearch = (values: PaymentChannelSearchForm) => {
-    // 自动重置到第一页，并带上所有条件
-    run({ current: 1, pageSize: 10 }, values);
+    setFilters(values);
+    setPagination((prev) => ({ ...prev, page: 1 }));
     onParamsChange?.(values);
   };
 
   const handleReset = () => {
-    reset();
-    onParamsChange?.({ name: '', status: 'ALL', type: 'ALL' });
+    setFilters({ name: '', type: 'ALL', status: 'ALL' });
+    setPagination((prev) => ({ ...prev, page: 1 }));
+    onParamsChange?.({ name: '', type: 'ALL', status: 'ALL' });
   };
 
   const dataSource = useMemo(
-    () => tableProps.dataSource || [],
-    [tableProps.dataSource],
+    () => channelsData?.list || [],
+    [channelsData?.list],
   );
 
-  // 打开弹窗
   const handleEdit = useCallback(
     (record?: PaymentChannel) => {
       ModalManager.open({
@@ -162,7 +183,6 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
     [refresh],
   );
 
-  // 删除操作 (使用 ModalManager 而不是原生 confirm 会更好，这里保持逻辑不变但优化体验)
   const handleDelete = useCallback(
     (id: number) => {
       ModalManager.open({
@@ -174,7 +194,7 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
           try {
             await paymentChannelApi.delete(id, 0);
             addToast('success', 'Channel disabled successfully');
-            refresh();
+            void refresh();
           } catch {
             addToast('error', 'Failed to disable channel');
           }
@@ -378,27 +398,25 @@ export const PaymentChannelList: React.FC<PaymentChannelListProps> = ({
             <SchemaSearchForm<PaymentChannelSearchForm>
               schema={searchSchema}
               initialValues={{
-                name: (initialFormParams?.name as string) || '',
-                type: (initialFormParams?.type as string) || 'ALL',
-                status: (initialFormParams?.status as string) || 'ALL',
+                name: filters.name,
+                type: filters.type,
+                status: filters.status,
               }}
               onSearch={handleSearch}
               onReset={handleReset}
             />
           </div>
-          {/* SmartTable 内部通常自带 padding，或者保持 p-0 让表格贴边 */}
           <BaseTable
             data={dataSource}
             rowKey="id"
             columns={columns}
-            loading={tableProps.loading}
+            loading={channelsLoading}
             pagination={{
-              ...tableProps.pagination,
+              current: pagination.page,
+              pageSize: pagination.pageSize,
+              total: channelsData?.total || 0,
               onChange: (page: number, pageSize: number) => {
-                tableProps.onChange?.({
-                  current: page,
-                  pageSize: pageSize || 10,
-                });
+                setPagination({ page, pageSize });
               },
             }}
           />
