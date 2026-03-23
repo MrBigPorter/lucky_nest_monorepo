@@ -16,12 +16,7 @@ export function OperationLogClient() {
   const urlFilterParams = useMemo(() => {
     const params: Record<string, string> = {};
     searchParams.forEach((value, key) => {
-      if (
-        key !== 'page' &&
-        key !== 'pageSize' &&
-        key !== 'dateRange' &&
-        value
-      ) {
+      if (key !== 'dateRange' && value) {
         params[key] = value;
       }
     });
@@ -79,3 +74,5 @@ export function OperationLogClient() {
     />
   );
 }
+
+export const OperationLogsClient = OperationLogClient;

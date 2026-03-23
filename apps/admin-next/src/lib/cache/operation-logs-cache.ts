@@ -39,7 +39,9 @@ export function parseOperationLogsSearchParams(
     pageSize,
     ...(adminId ? { adminId } : {}),
     ...(keyword ? { keyword } : {}),
-    ...(actionRaw && actionRaw !== 'ALL' ? { action: actionRaw } : {}),
+    ...(actionRaw && actionRaw !== 'ALL' && actionRaw !== 'All'
+      ? { action: actionRaw }
+      : {}),
     ...(startDate ? { startDate } : {}),
     ...(endDate ? { endDate } : {}),
   };
