@@ -8,20 +8,20 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Operation Logs 缓存契约（单页面）  
-**上次停留**: Finance 三 tab 缓存契约收敛 + prefetch 体验优化完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Groups 缓存契约（单页面）  
+**上次停留**: Operation Logs 缓存契约 + 搜索契约修复完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Operation Logs**
+**当前页面：Groups**
 
-- [x] 读侧契约定义：新增 `operation-logs` 的 URL 参数解析 / queryKey / request params helper
-- [x] 页面级数据预取：`operation-logs/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
-- [x] 列表消费对齐：`OperationLogListClient` 接入 `enableHydration` + `hydrationQueryKey`
+- [x] 读侧契约定义：新增 `groups` 的 URL 参数解析 / queryKey / request params helper
+- [x] 页面级数据预取：`groups/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
+- [x] 列表消费对齐：`GroupManagementClient` 接入 `enableHydration` + `hydrationQueryKey`
 - [x] 边界确认：不改 `SmartTable` 全局模型，不改后端接口，只做单页可回退优化
-- [ ] 回归验证：`OperationLogList` Vitest + 手工验证 URL 筛选/刷新保持
-- [ ] 文档沉淀：新增「Operation Logs 缓存契约」问题与答案 + 心智模型提问
+- [x] 回归验证：`GroupManagement` Vitest 通过
+- [x] 文档沉淀：新增「Groups 缓存契约」问题与答案 + 心智模型提问
 
-> 下一步：完成回归与文档后，再按「单页面、可回退」推进下一个模块。
+> 下一步：继续按「单页面、可回退」推进下一个 SmartTable 读侧页面。
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
