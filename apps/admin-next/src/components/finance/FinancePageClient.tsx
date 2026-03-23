@@ -196,6 +196,10 @@ export const FinancePage: React.FC<FinancePageProps> = ({
       return;
     }
 
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     const tabsToPrefetch = PREFETCH_TABS.filter((tab) => tab !== activeTab);
     if (tabsToPrefetch.length === 0) {
       return;
@@ -206,6 +210,7 @@ export const FinancePage: React.FC<FinancePageProps> = ({
     let idleId: number | null = null;
 
     const runPrefetch = () => {
+      if (typeof window === 'undefined') return;
       tabsToPrefetch.forEach((tab, index) => {
         const id = window.setTimeout(() => {
           if (!cancelled) {
@@ -216,7 +221,7 @@ export const FinancePage: React.FC<FinancePageProps> = ({
       });
     };
 
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    if ('requestIdleCallback' in window) {
       idleId = (
         window as Window & {
           requestIdleCallback: (cb: IdleRequestCallback) => number;
@@ -224,19 +229,16 @@ export const FinancePage: React.FC<FinancePageProps> = ({
       ).requestIdleCallback(() => {
         if (!cancelled) runPrefetch();
       });
-    } else if (typeof window !== 'undefined') {
-      const id = window.setTimeout(runPrefetch, 120);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const id = (window as any).setTimeout(runPrefetch, 120);
       timeoutIds.push(id);
     }
 
     return () => {
       cancelled = true;
       timeoutIds.forEach((id) => window.clearTimeout(id));
-      if (
-        idleId !== null &&
-        typeof window !== 'undefined' &&
-        'cancelIdleCallback' in window
-      ) {
+      if (idleId !== null && 'cancelIdleCallback' in window) {
         (
           window as Window & {
             cancelIdleCallback: (id: number) => void;
