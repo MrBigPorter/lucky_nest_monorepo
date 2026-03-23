@@ -41,6 +41,11 @@ import { Card } from '@/components/UIComponents';
 import { useRequest } from 'ahooks';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { FormSchema } from '@/type/search';
+import {
+  buildProductsListParams,
+  parseProductsSearchParams,
+  productsListQueryKey,
+} from '@/lib/cache/products-cache';
 
 // -----------------------------------------------------------------------------
 // 辅助函数
@@ -123,6 +128,25 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
 }) => {
   const actionRef = useRef<ActionType>(null);
   const addToast = useToastStore((state) => state.addToast);
+
+  const normalizedInitialFormParams = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseProductsSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      treasureName:
+        typeof input.treasureName === 'string' ? input.treasureName : undefined,
+      categoryId:
+        typeof input.categoryId === 'string' ? input.categoryId : undefined,
+      filterType:
+        typeof input.filterType === 'string' ? input.filterType : undefined,
+    });
+  }, [initialFormParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => productsListQueryKey(normalizedInitialFormParams),
+    [normalizedInitialFormParams],
+  );
 
   // 1. 数据请求
   const { data: categories = [] } = useRequest(categoryApi.getCategories);
@@ -455,25 +479,25 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   );
 
   const requestProducts = useCallback(async (params: ProductListParams) => {
-    const apiParams: ProductListParams = {
-      page: params.page,
-      pageSize: params.pageSize,
-    };
-
-    if (params.treasureName) {
-      apiParams['treasureName'] = params.treasureName;
-    }
-
-    if (params.categoryId && String(params.categoryId) !== 'ALL') {
-      apiParams['categoryId'] = Number(params.categoryId);
-    }
-
-    if (params.filterType && params.filterType !== 'ALL') {
-      apiParams['filterType'] = params.filterType;
-    }
+    const input = params as unknown as Record<string, unknown>;
+    const queryInput = parseProductsSearchParams({
+      page: String(params.page ?? 1),
+      pageSize: String(params.pageSize ?? 10),
+      treasureName:
+        typeof input.treasureName === 'string' ? input.treasureName : undefined,
+      categoryId:
+        typeof input.categoryId === 'string' ||
+        typeof input.categoryId === 'number'
+          ? String(input.categoryId)
+          : undefined,
+      filterType:
+        typeof input.filterType === 'string' ? input.filterType : undefined,
+    });
 
     try {
-      const res = await productApi.getProducts(apiParams);
+      const res = await productApi.getProducts(
+        buildProductsListParams(queryInput) as ProductListParams,
+      );
       return {
         data: res.list,
         total: res.total,
@@ -524,8 +548,10 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
           columns={columns}
           request={requestProducts}
           searchSchema={searchSchema}
-          initialFormParams={initialFormParams}
+          initialFormParams={normalizedInitialFormParams}
           onParamsChange={onParamsChange}
+          enableHydration={true}
+          hydrationQueryKey={hydrationQueryKey}
         />
       </Card>
     </div>

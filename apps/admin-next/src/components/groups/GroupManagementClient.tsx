@@ -19,6 +19,11 @@ import { SmartImage } from '@/components/ui/SmartImage';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useRequest } from 'ahooks';
+import {
+  buildGroupsListParams,
+  groupsListQueryKey,
+  parseGroupsSearchParams,
+} from '@/lib/cache/groups-cache';
 
 // 表单层类型：select/input 值均为字符串，与 API 层类型解耦
 type GroupSearchForm = {
@@ -26,7 +31,17 @@ type GroupSearchForm = {
   pageSize?: number;
   treasureId?: string;
   status?: string; // form 传字符串，如 'ALL' / '1' / '2'
-  includeExpired?: string; // form 传字符串，如 'true' / 'false'
+  includeExpired?: boolean | string;
+};
+
+const normalizeIncludeExpired = (value: unknown): string | undefined => {
+  if (typeof value === 'boolean') {
+    return String(value);
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return undefined;
 };
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -182,6 +197,23 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
   onParamsChange,
 }) => {
   const actionRef = useRef<ActionType>(null);
+
+  const normalizedInitialFormParams = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseGroupsSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      treasureId:
+        typeof input.treasureId === 'string' ? input.treasureId : undefined,
+      status: typeof input.status === 'string' ? input.status : undefined,
+      includeExpired: normalizeIncludeExpired(input.includeExpired),
+    });
+  }, [initialFormParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => groupsListQueryKey(normalizedInitialFormParams),
+    [normalizedInitialFormParams],
+  );
 
   const handleViewDetail = useCallback((record: AdminGroupItem) => {
     ModalManager.open({
@@ -370,13 +402,19 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
 
   const requestGroups = useCallback(
     async (params: GroupSearchForm & { pageSize: number; page: number }) => {
-      const { page, pageSize, treasureId, status, includeExpired } = params;
-      const apiParams: AdminGroupListParams = { page, pageSize };
-      if (treasureId) apiParams.treasureId = treasureId;
-      if (status && status !== 'ALL') apiParams.status = Number(status);
-      if (includeExpired !== undefined) {
-        apiParams.includeExpired = String(includeExpired) === 'true';
-      }
+      const queryInput = parseGroupsSearchParams({
+        page: String(params.page ?? 1),
+        pageSize: String(params.pageSize ?? 20),
+        treasureId:
+          typeof params.treasureId === 'string' ? params.treasureId : undefined,
+        status: typeof params.status === 'string' ? params.status : undefined,
+        includeExpired: normalizeIncludeExpired(params.includeExpired),
+      });
+
+      const apiParams = buildGroupsListParams(
+        queryInput,
+      ) as AdminGroupListParams;
+
       try {
         const res = await groupApi.getList(apiParams);
         return { data: res.list, total: res.total, success: true };
@@ -409,6 +447,8 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
           defaultPageSize={20}
           initialFormParams={initialFormParams}
           onParamsChange={onParamsChange}
+          enableHydration={true}
+          hydrationQueryKey={hydrationQueryKey}
         />
       </Card>
     </div>

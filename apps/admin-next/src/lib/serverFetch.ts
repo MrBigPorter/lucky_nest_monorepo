@@ -5,6 +5,7 @@
  * - INTERNAL_API_URL 优先（Docker 内网，跳过公网往返）
  *   回退到 NEXT_PUBLIC_API_BASE_URL（本地开发 / 非 Docker）
  */
+import 'server-only';
 
 import { cookies } from 'next/headers';
 import type { ApiResponse } from '@/api/types';
@@ -40,6 +41,8 @@ export type ServerFetchParams = Record<
 export interface ServerFetchOptions {
   /** Next.js 增量静态再生（ISR）秒数，false = no-store */
   revalidate?: number | false;
+  /** Next.js Data Cache 标签，用于 revalidateTag 精准失效 */
+  tags?: string[];
 }
 
 /**
@@ -54,6 +57,7 @@ export async function serverGet<T>(
 ): Promise<T> {
   const revalidate =
     options?.revalidate === false ? 0 : (options?.revalidate ?? 30);
+  const tags = options?.tags;
 
   return withAppSpan(
     {
@@ -77,8 +81,8 @@ export async function serverGet<T>(
 
       const res = await fetch(url.toString(), {
         headers: await buildHeaders(),
-        next: { revalidate },
-      } as RequestInit & { next?: { revalidate?: number } });
+        next: { revalidate, ...(tags ? { tags } : {}) },
+      } as RequestInit & { next?: { revalidate?: number; tags?: string[] } });
 
       if (!res.ok) {
         throw new Error(`[serverFetch] ${path} → HTTP ${res.status}`);

@@ -2,11 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ban, CheckCircle, Edit3, User as UserIcon, Key } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, Badge } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
 import { AdminUser } from '@/type/types';
 import { userApi, applicationApi } from '@/api';
-import { useAntdTable, useRequest } from 'ahooks';
+import { useRequest } from 'ahooks';
 import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { CreateAdminUserModal } from '@/views/admin/CreateAdminUserModal';
 import { EditAdminUserModal } from '@/views/admin/EditAdminUserModal';
@@ -16,6 +17,11 @@ import { Button } from '@repo/ui';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
 import { PageHeader } from '@/components/scaffold/PageHeader';
+import {
+  adminUsersListQueryKey,
+  buildAdminUsersListParams,
+  parseAdminUsersSearchParams,
+} from '@/lib/cache/admin-users-cache';
 
 const PENDING_APPLICATIONS_UPDATED_EVENT = 'applications:pending-updated';
 
@@ -24,51 +30,6 @@ type AdminUserSearchForm = {
   realName: string;
   role: string;
   status: string;
-};
-
-type AdminUserListParams = {
-  page: number;
-  pageSize: number;
-  username?: string;
-  realName?: string;
-  role?: string;
-  status?: string | number;
-};
-
-const getAdminUserTableData = async (
-  { current, pageSize }: { current: number; pageSize: number },
-  formData: {
-    username?: string;
-    realName?: string;
-    role?: string;
-    status?: string | number;
-  },
-) => {
-  const params: AdminUserListParams = {
-    page: current,
-    pageSize,
-  };
-
-  if (formData?.username) params.username = formData.username;
-  if (formData?.realName) params.realName = formData.realName;
-  if (formData?.role && formData.role !== 'ALL') params.role = formData.role;
-  if (
-    formData?.status !== undefined &&
-    formData.status !== '' &&
-    formData.status !== 'ALL'
-  ) {
-    params.status = formData.status;
-  }
-
-  const data = await userApi.getUsers(params);
-
-  const items: AdminUser[] = data.list ?? [];
-  const total: number = data.total ?? 0;
-
-  return {
-    list: items,
-    total,
-  };
 };
 
 interface AdminUserManagementProps {
@@ -82,6 +43,30 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
 }) => {
   const addToast = useToastStore((state) => state.addToast);
   const [activeTab, setActiveTab] = useState<'users' | 'applications'>('users');
+  const normalizedInitialQuery = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseAdminUsersSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      username: typeof input.username === 'string' ? input.username : undefined,
+      realName: typeof input.realName === 'string' ? input.realName : undefined,
+      role: typeof input.role === 'string' ? input.role : undefined,
+      status: typeof input.status === 'string' ? input.status : undefined,
+    });
+  }, [initialFormParams]);
+  const [pagination, setPagination] = useState({
+    page: normalizedInitialQuery.page,
+    pageSize: normalizedInitialQuery.pageSize,
+  });
+  const [filters, setFilters] = useState<AdminUserSearchForm>({
+    username: normalizedInitialQuery.username ?? '',
+    realName: normalizedInitialQuery.realName ?? '',
+    role: normalizedInitialQuery.role ?? 'ALL',
+    status:
+      normalizedInitialQuery.status !== undefined
+        ? String(normalizedInitialQuery.status)
+        : 'ALL',
+  });
 
   // Pending applications count for badge
   const { data: pendingData, refresh: refreshPendingCount } = useRequest(
@@ -110,30 +95,32 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   const [isResetPwdModalOpen, setIsResetPwdModalOpen] = useState(false);
   const [resetPwdAdmin, setResetPwdAdmin] = useState<AdminUser | null>(null);
 
-  // useAntdTable 只负责「请求 + 分页」
+  const usersQueryInput = useMemo(
+    () =>
+      parseAdminUsersSearchParams({
+        page: String(pagination.page),
+        pageSize: String(pagination.pageSize),
+        username: filters.username,
+        realName: filters.realName,
+        role: filters.role,
+        status: filters.status,
+      }),
+    [filters, pagination.page, pagination.pageSize],
+  );
+
   const {
-    tableProps,
-    run,
-    refresh,
-    search: { reset },
-  } = useAntdTable(getAdminUserTableData, {
-    defaultPageSize: 10,
-    defaultParams: [
-      { current: 1, pageSize: 10 },
-      {
-        username: (initialFormParams?.username as string) || '',
-        realName: (initialFormParams?.realName as string) || '',
-        role: (initialFormParams?.role as string) || 'ALL',
-        status: (initialFormParams?.status as string) || 'ALL',
-      },
-    ],
+    data: usersData,
+    isFetching: usersLoading,
+    refetch: refresh,
+  } = useQuery({
+    queryKey: adminUsersListQueryKey(usersQueryInput),
+    queryFn: () => userApi.getUsers(buildAdminUsersListParams(usersQueryInput)),
+    staleTime: 30_000,
+    enabled: activeTab === 'users',
   });
 
-  const pagination = tableProps.pagination || {};
-  const pageSize = pagination.pageSize ?? 10;
-  const total = pagination.total ?? 0;
-  Math.max(1, Math.ceil(total / pageSize));
-  const dataSource = (tableProps.dataSource || []) as AdminUser[];
+  const total = usersData?.total ?? 0;
+  const dataSource = (usersData?.list ?? []) as AdminUser[];
 
   // -------------------- 列表操作 --------------------
 
@@ -157,7 +144,7 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
             data.status === 1 ? 'activated' : 'disabled'
           }.`,
         );
-        refresh();
+        void refresh();
       },
     },
   );
@@ -175,13 +162,19 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   };
   // 搜索回调：直接拿到所有值
   const handleSearch = (values: AdminUserSearchForm) => {
-    // 自动重置到第一页，并带上所有条件
-    run({ current: 1, pageSize: 10 }, values);
+    setFilters(values);
+    setPagination((prev) => ({ ...prev, page: 1 }));
     onParamsChange?.(values);
   };
 
   const handleReset = () => {
-    reset();
+    setFilters({
+      username: '',
+      realName: '',
+      role: 'ALL',
+      status: 'ALL',
+    });
+    setPagination((prev) => ({ ...prev, page: 1 }));
     onParamsChange?.({
       username: '',
       realName: '',
@@ -390,25 +383,29 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
                   },
                 ]}
                 initialValues={{
-                  username: (initialFormParams?.username as string) || '',
-                  realName: (initialFormParams?.realName as string) || '',
-                  role: (initialFormParams?.role as string) || 'ALL',
-                  status: (initialFormParams?.status as string) || 'ALL',
+                  username: filters.username,
+                  realName: filters.realName,
+                  role: filters.role,
+                  status: filters.status,
                 }}
                 onSearch={handleSearch}
                 onReset={handleReset}
+                loading={usersLoading}
               />
             </div>
             <BaseTable
               data={dataSource}
+              loading={usersLoading}
               rowKey="id"
               columns={columns}
               pagination={{
-                ...tableProps.pagination,
+                current: pagination.page,
+                pageSize: pagination.pageSize,
+                total,
                 onChange: (page, pageSize) => {
-                  tableProps.onChange?.({
-                    current: page,
-                    pageSize: pageSize || tableProps.pagination?.pageSize || 10,
+                  setPagination({
+                    page,
+                    pageSize: pageSize || pagination.pageSize || 10,
                   });
                 },
               }}
@@ -418,19 +415,19 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
           <CreateAdminUserModal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
-            onSuccess={refresh}
+            onSuccess={() => void refresh()}
           />
           <EditAdminUserModal
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
             editingUser={editingAdmin}
-            onSuccess={refresh}
+            onSuccess={() => void refresh()}
           />
 
           <EditAdminPasswordModal
             isOpen={isResetPwdModalOpen}
             onClose={() => setIsResetPwdModalOpen(false)}
-            onSuccess={refresh}
+            onSuccess={() => void refresh()}
             editingUser={resetPwdAdmin}
           />
         </>
