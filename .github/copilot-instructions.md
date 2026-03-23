@@ -8,18 +8,18 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Login Logs 缓存契约（单页面）  
-**上次停留**: Products 缓存契约完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Admin Users 缓存契约（单页面）  
+**上次停留**: Login Logs 缓存契约完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Login Logs**
+**当前页面：Admin Users**
 
-- [x] 读侧契约定义：新增 `login-logs` 的 URL 参数解析 / queryKey / request params helper
-- [x] 页面级数据预取：`login-logs/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
-- [x] 列表消费对齐：`LoginLogsClient` 接入 queryKey 消费 + URL 参数同步
+- [x] 读侧契约定义：新增 `admin-users` 的 URL 参数解析 / queryKey / request params helper
+- [x] 页面级数据预取：`admin-users/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
+- [x] 列表消费对齐：`AdminUserManagementClient` 接入 queryKey 消费 + URL 参数同步
 - [x] 边界确认：不改 `SmartTable` 全局模型，不改后端接口，只做单页可回退优化
-- [x] 回归验证：`LoginLogsClient` Vitest 通过
-- [x] 文档沉淀：新增「Login Logs 缓存契约」问题与答案 + 心智模型提问
+- [x] 回归验证：`AdminUserManagement` Vitest 通过
+- [x] 文档沉淀：新增「Admin Users 缓存契约」问题与答案 + 心智模型提问
 
 > 下一步：继续按「单页面、可回退」推进下一个 SmartTable 读侧页面。
 
