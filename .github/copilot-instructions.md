@@ -8,13 +8,22 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 收口（已完成）  
+**阶段**: Phase 6 P0 推进中 — Dashboard 缓存+安全隔离（试点页）  
 **上次停留**: Lighthouse CI + Sentry 生产验收完成（2026-03-23）  
 **立即执行**:
 
-- [ ] 从 `## 五、Phase 6 — 待规划` 选择下一方向，并在本区展开为可执行 checkbox
+**当前页面：Dashboard**
 
-> 归档说明：本轮 Phase 6 收口任务已完成，细节统一以 `read/` 专题文档与 Git 历史为准。
+- [ ] 梳理 `dashboard` 页关键 fetch：列出所有 fetch 并标记一致性等级（强/秒级/分钟级）
+- [ ] 定义缓存策略：为每个 fetch 明确 `cache/revalidate/tags` 值并文档化
+- [ ] 实现写后失效：对关键的后台写操作（如创建/编辑/删除）接入 `revalidateTag` 或 `revalidatePath`
+- [ ] Dashboard 相关模块 server-only 补齐：排查 `src/app/(dashboard)/page.tsx`、`src/components/dashboard/*` 敏感调用
+- [ ] 回归验证：Lighthouse 测、功能测、缓存命中率观测
+- [ ] 文档沉淀：记录「Dashboard 缓存一致性/安全隔离」方案并补 1 条心智模型提问
+
+> 下一步：Orders 页（预定计划排序：dashboard → orders → finance）；暂不并行其他页面或全局 ESLint 规则，以稳定性优先。
+
+> 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
 ---
 
@@ -226,15 +235,22 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 
 1. **先看 `🎯 当前任务` → 确认 Phase → 再动手**，不做 Phase 之外的事
 2. **每完成一个 checkbox 立即更新本文件**（`[ ]` → `[x]`），保持进度同步
-3. 修改 `packages/ui` → 必须 `node packages/ui/scripts/build.js`
-4. 修改 `packages/shared` → 必须 `node packages/shared/scripts/build.js`
-5. Zod schema **禁止** `.default()` 和 `.transform()`（见技术约定）
-6. 生产部署前检查 `deploy/.env.prod` 包含所有必需变量
-7. 数据库变更必须通过 `prisma migrate dev` 生成迁移文件
-8. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
-9. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理
-10. 修改 `schema.prisma` 后，**必须在宿主机跑一次** `node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`（让 IDE / ESLint 看到最新类型，否则会出现大量假报错）
-11. `apps/mini-shop-admin` 已弃用；除非用户明确点名，否则默认不阅读、不修改、不纳入计划。
-12. 每次遇到**核心技术点**或**高现实约束技术点**（如线上事故、性能瓶颈、部署兼容、类型系统陷阱），必须同步做两件事：
+3. **每次开始新任务前，先做"问题陈述"**：
+   - 阐述 `这次要解决什么问题`（背景、痛点、现状不清）
+   - 明确 `目标`（完成哪些 checkbox、交付什么物）
+   - 标注 `范围`（仅限哪些模块/页面、不涉及什么）
+   - 定义 `输出物`（表格/文档/指标等）
+   - 列举 `不做什么`（避免范围蔓延）
+   - 等用户确认无误再开始
+4. 修改 `packages/ui` → 必须 `node packages/ui/scripts/build.js`
+5. 修改 `packages/shared` → 必须 `node packages/shared/scripts/build.js`
+6. Zod schema **禁止** `.default()` 和 `.transform()`（见技术约定）
+7. 生产部署前检查 `deploy/.env.prod` 包含所有必需变量
+8. 数据库变更必须通过 `prisma migrate dev` 生成迁移文件
+9. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
+10. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理
+11. 修改 `schema.prisma` 后，**必须在宿主机跑一次** `node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`（让 IDE / ESLint 看到最新类型，否则会出现大量假报错）
+12. `apps/mini-shop-admin` 已弃用；除非用户明确点名，否则默认不阅读、不修改、不纳入计划。
+13. 每次遇到**核心技术点**或**高现实约束技术点**（如线上事故、性能瓶颈、部署兼容、类型系统陷阱），必须同步做两件事：
     - 记录文档（`read/` 对应专题或 `RUNBOOK.md` 补充「现象/根因/修复/预防」）
     - 提出至少 1 个「心智模型提问」（为什么会这样、边界条件是什么、下次如何更早发现）并写入该文档，沉淀可复用排障框架。
