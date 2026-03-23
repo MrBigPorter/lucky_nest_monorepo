@@ -62,14 +62,40 @@ export const Login: React.FC = () => {
         addToast('error', 'Login failed: No access token received.');
       }
     },
-    onError: (error) => {
-      console.error('Login request failed:', error);
-      addToast('error', 'Login failed. Please try again.');
+    onError: (error: unknown) => {
+      // 获取错误消息
+      let message = 'Login failed. Please try again.';
+
+      if (typeof error === 'object' && error !== null) {
+        if ('message' in error && typeof error.message === 'string') {
+          message = error.message;
+        } else if ('msg' in error && typeof error.msg === 'string') {
+          message = error.msg;
+        } else if ('error' in error && typeof error.error === 'string') {
+          message = error.error;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      } else if (typeof error === 'string') {
+        message = error;
+      }
+
+      addToast('error', message);
     },
   });
 
   const onSubmit = async (data: LoginFormInputs) => {
-    await runAsync(data);
+    try {
+      // 显式调用 runAsync，错误已通过 onError 回调处理
+      const result = await runAsync(data);
+      // 如果没有异常但也没有返回结果，说明某个环节出错了
+      if (!result) {
+        console.warn('Login returned no result');
+      }
+    } catch (error) {
+      // 这个 catch 可能不会执行，因为 ahooks useRequest 可能不会抛出异常
+      console.error('Unexpected error in onSubmit:', error);
+    }
   };
 
   return (
