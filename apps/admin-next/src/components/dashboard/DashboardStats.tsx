@@ -20,6 +20,7 @@ import {
   SENTRY_SPAN_NAME,
 } from '@/lib/sentry-span-constants';
 import { withSsrSpan } from '@/lib/sentry-span';
+import { FINANCE_STATS_TAG, FINANCE_TAG } from '@/lib/cache/finance-cache';
 import type { FinanceStatistics, ClientUserListItem } from '@/type/types';
 import type { PaginatedResponse } from '@/api/types';
 
@@ -94,7 +95,7 @@ export async function DashboardStats() {
           undefined,
           {
             revalidate: 60,
-            tags: ['dashboard:stats', 'finance'],
+            tags: ['dashboard:stats', FINANCE_TAG, FINANCE_STATS_TAG],
           },
         ).catch(() => null),
         serverGet<PaginatedResponse<ClientUserListItem>>(

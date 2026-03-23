@@ -19,6 +19,7 @@
  */
 
 import { revalidateTag } from 'next/cache';
+import { FINANCE_STATS_TAG, FINANCE_TAG } from '@/lib/cache/finance-cache';
 
 /** 订单写操作后调用：清除 Dashboard 最近订单列表缓存 */
 export async function revalidateDashboardOrders(): Promise<void> {
@@ -30,6 +31,7 @@ export async function revalidateDashboardOrders(): Promise<void> {
  * 包含：手动调账、提现审核、充值同步
  */
 export async function revalidateDashboardStats(): Promise<void> {
-  revalidateTag('finance');
+  revalidateTag(FINANCE_TAG);
+  revalidateTag(FINANCE_STATS_TAG);
   revalidateTag('dashboard:stats');
 }
