@@ -8,20 +8,22 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Admin Users 缓存契约（单页面）  
-**上次停留**: Login Logs 缓存契约完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — SmartTable 读侧缓存契约（单页面优化）  
+**上次停留**: PaymentChannels 缓存契约完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Admin Users**
+**当前页面：Orders（订单管理）**
 
-- [x] 读侧契约定义：新增 `admin-users` 的 URL 参数解析 / queryKey / request params helper
-- [x] 页面级数据预取：`admin-users/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
-- [x] 列表消费对齐：`AdminUserManagementClient` 接入 queryKey 消费 + URL 参数同步
-- [x] 边界确认：不改 `SmartTable` 全局模型，不改后端接口，只做单页可回退优化
-- [x] 回归验证：`AdminUserManagement` Vitest 通过
-- [x] 文档沉淀：新增「Admin Users 缓存契约」问题与答案 + 心智模型提问
+- [ ] 读侧契约定义：新增 `orders` 的 URL 参数解析 / queryKey / request params helper
+- [ ] 页面级数据预取：`orders/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
+- [ ] 列表消费对齐：`OrderListClient` 从 `useAntdTable` → `useQuery + BaseTable` 迁移
+- [ ] 边界确认：不改 `BaseTable` 全局模型，不改后端接口，只做单页可回退优化
+- [ ] 回归验证：`OrderList` Vitest 通过
+- [ ] 文档沉淀：新增「Orders 缓存契约」问题与答案 + 心智模型提问
 
 > 下一步：继续按「单页面、可回退」推进下一个 SmartTable 读侧页面。
+>
+> **参考模板**：`read/features/PAYMENT_CHANNELS_CACHE_CONTRACT_CN.md`（PaymentChannels 完整实现 + 6 个 Checkpoint）
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
