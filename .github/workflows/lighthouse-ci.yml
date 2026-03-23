@@ -86,7 +86,7 @@ jobs:
           LHCI_COOKIE: auth_token=${{ steps.auth.outputs.token }}
         run: |
           npx lhci autorun \
-            --config=apps/admin-next/lighthouserc.mjs \
+            --config=apps/admin-next/lighthouserc.js \
             --collect.numberOfRuns=${{ inputs.runs_per_page || '1' }} && \
           echo "LHCI_EXIT=0" >> "$GITHUB_ENV" || \
           echo "LHCI_EXIT=1" >> "$GITHUB_ENV"

@@ -529,6 +529,32 @@ docker logs --tail=50 lucky-backend-prod
 | `PrismaClientInitializationError`     | generate 没跑         | 重建镜像（重触发 deploy-backend workflow） |
 | `ECONNREFUSED` (db/redis)             | 数据库/Redis 还没起来 | `docker compose ps` 检查依赖容器           |
 
+### 8.7 Admin Next 启动报 `command not found: next`
+
+```text
+command not found: next
+```
+
+**原因**：`admin-next` 的 `node_modules` 卷缓存异常，`yarn.lock` 哈希未变化时跳过 install，导致 `next` 二进制缺失。
+
+**快速确认**：
+
+```bash
+cd /Volumes/MySSD/work/dev/lucky_nest_monorepo
+docker compose --env-file deploy/.env.dev logs --no-color --tail=120 admin-next | cat
+docker compose --env-file deploy/.env.dev run --rm admin-next sh -lc "yarn workspace @lucky/admin-next exec which next"
+```
+
+**一键修复**：
+
+```bash
+cd /Volumes/MySSD/work/dev/lucky_nest_monorepo
+docker rm -f lucky-admin-next-dev
+docker volume rm lucky_nest_monorepo_admin_next_nm lucky_nest_monorepo_admin_next_build
+docker compose --env-file deploy/.env.dev up -d admin-next
+docker compose --env-file deploy/.env.dev logs --no-color --tail=120 admin-next | cat
+```
+
 ---
 
 ## 9. 低频参考
