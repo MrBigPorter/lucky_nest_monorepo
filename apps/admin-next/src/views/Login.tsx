@@ -37,9 +37,8 @@ export const Login: React.FC = () => {
 
   const {
     register,
+    handleSubmit,
     formState: { errors },
-    getValues,
-    trigger,
   } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
   });
@@ -85,24 +84,13 @@ export const Login: React.FC = () => {
     },
   });
 
-  const handleLoginClick = async () => {
-    // 先验证表单
-    const isValid = await trigger();
-    if (!isValid) {
-      return;
-    }
-
-    // 获取表单数据
-    const data = getValues();
-
-    // 调用登录
+  // handleSubmit 内部已调用 e.preventDefault()，不会触发页面刷新
+  // try-catch 确保 runAsync 的异常不会变成 unhandled rejection 导致上层错误边界重载
+  const onSubmit = async (data: LoginFormInputs) => {
     try {
-      const result = await runAsync(data);
-      if (!result) {
-        console.warn('Login returned no result');
-      }
-    } catch (error) {
-      console.error('Unexpected error in login:', error);
+      await runAsync(data);
+    } catch {
+      // 错误已通过 useRequest 的 onError 处理并显示 toast，这里静默即可
     }
   };
 
@@ -145,7 +133,7 @@ export const Login: React.FC = () => {
             </p>
           </div>
 
-          <div className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-4">
               <div className="relative group">
                 <User
@@ -179,11 +167,10 @@ export const Login: React.FC = () => {
               </div>
             </div>
             <Button
-              type="button"
+              type="submit"
               className="w-full py-3 text-lg shadow-xl shadow-primary-500/20"
               isLoading={loading || isPending}
               disabled={loading || isPending}
-              onClick={handleLoginClick}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
                 Sign In <ArrowRight size={18} />
@@ -199,7 +186,7 @@ export const Login: React.FC = () => {
                 Apply for access
               </Link>
             </div>
-          </div>
+          </form>
         </motion.div>
 
         <motion.div
