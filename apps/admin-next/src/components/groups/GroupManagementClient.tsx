@@ -31,7 +31,17 @@ type GroupSearchForm = {
   pageSize?: number;
   treasureId?: string;
   status?: string; // form 传字符串，如 'ALL' / '1' / '2'
-  includeExpired?: string; // form 传字符串，如 'true' / 'false'
+  includeExpired?: boolean | string;
+};
+
+const normalizeIncludeExpired = (value: unknown): string | undefined => {
+  if (typeof value === 'boolean') {
+    return String(value);
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  return undefined;
 };
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -196,10 +206,7 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
       treasureId:
         typeof input.treasureId === 'string' ? input.treasureId : undefined,
       status: typeof input.status === 'string' ? input.status : undefined,
-      includeExpired:
-        typeof input.includeExpired === 'string'
-          ? input.includeExpired
-          : undefined,
+      includeExpired: normalizeIncludeExpired(input.includeExpired),
     });
   }, [initialFormParams]);
 
@@ -401,10 +408,7 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
         treasureId:
           typeof params.treasureId === 'string' ? params.treasureId : undefined,
         status: typeof params.status === 'string' ? params.status : undefined,
-        includeExpired:
-          typeof params.includeExpired === 'string'
-            ? params.includeExpired
-            : undefined,
+        includeExpired: normalizeIncludeExpired(params.includeExpired),
       });
 
       const apiParams = buildGroupsListParams(
