@@ -8,8 +8,8 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Finance transactions 缓存契约（tab 1）  
-**上次停留**: Finance Stats 缓存契约统一 + 写后失效完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Finance deposits/withdrawals 缓存契约（tab 2/3）  
+**上次停留**: Finance transactions 缓存契约 + 参数回写修复完成（2026-03-23）  
 **立即执行**:
 
 **当前页面：Finance**
@@ -21,7 +21,13 @@
 - [x] 回归验证：`check-types` / `lint` / `vitest`（31 files / 183 tests）通过
 - [x] 文档沉淀：记录「Finance transactions 缓存契约」问题与答案（`read/architecture/FINANCE_TRANSACTIONS_CACHE_CONTRACT_CN.md`）
 
-> 下一步：继续按 tab 推进 `deposits` → `withdrawals`；暂不并行三个 tab 或整页 Hydration 重构，以稳定性优先。
+- [x] `deposits` 读侧契约对齐：URL 参数解析、queryKey、Server 预取 + Hydration 命中
+- [x] `withdrawals` 读侧契约对齐：URL 参数解析、queryKey、Server 预取 + Hydration 命中
+- [x] 体验优化：tab hover/focus + idle warm-up 双通道 prefetch（避免首切 tab 冷启动）
+- [x] 回归修复：Finance 搜索后 URL 不再被 tab-only 回写覆盖；刷新后参数保持
+- [x] 文档沉淀：补充 deposits/withdrawals 一次性推进的问题与答案 + 心智模型提问
+
+> 下一步：按「单页面、可回退」继续推进 Phase 6 其余模块；如无明确收益，暂不做 Finance 全页重构。
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
