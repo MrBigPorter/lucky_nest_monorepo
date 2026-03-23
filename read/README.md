@@ -67,7 +67,7 @@ read/
 | [`DEPLOY_INCIDENT_20260321_CN.md`](./devops/DEPLOY_INCIDENT_20260321_CN.md) | 事故复盘：2026-03-21 容器启动失败 rootDir 问题         |
 
 > **Sentry 配置文件**：`apps/admin-next/sentry.*.config.ts` + `src/instrumentation.ts`（含工作原理注释）  
-> **Lighthouse 配置文件**：`apps/admin-next/lighthouserc.mjs`（含中英文注释）
+> **Lighthouse 配置文件**：`apps/admin-next/lighthouserc.js`（CI 主入口；`lighthouserc.mjs` 仅兼容旧引用）
 
 ---
 

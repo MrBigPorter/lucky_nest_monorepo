@@ -5,7 +5,7 @@
 ## 🔴 当前状态
 
 - ✅ 工作流代码已配置（`.github/workflows/lighthouse-ci.yml`）
-- ✅ 性能阈值已定义（`apps/admin-next/lighthouserc.mjs`）
+- ✅ 性能阈值已定义（`apps/admin-next/lighthouserc.js`）
 - ❌ **GitHub Secrets 缺失** → Lighthouse CI 无法启动认证，工作流失败
 
 ## 🎯 需要什么
@@ -180,7 +180,7 @@ docker exec lucky-backend-prod yarn workspace @lucky/api cli:create-admin
 ## 🔗 相关文件
 
 - 工作流定义：`.github/workflows/lighthouse-ci.yml`
-- 审计配置：`apps/admin-next/lighthouserc.mjs`
+- 审计配置：`apps/admin-next/lighthouserc.js`
 - 性能文档：`read/performance/PERFORMANCE_LIGHTHOUSE_CN.md`
 - Sentry 文档：`read/devops/LHCI_SENTRY_SETUP_CN.md`
 
