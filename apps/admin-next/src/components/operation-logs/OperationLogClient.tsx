@@ -16,7 +16,12 @@ export function OperationLogClient() {
   const urlFilterParams = useMemo(() => {
     const params: Record<string, string> = {};
     searchParams.forEach((value, key) => {
-      if (key !== 'page' && key !== 'pageSize' && value) {
+      if (
+        key !== 'page' &&
+        key !== 'pageSize' &&
+        key !== 'dateRange' &&
+        value
+      ) {
         params[key] = value;
       }
     });
@@ -27,7 +32,21 @@ export function OperationLogClient() {
   const handleParamsChange = useCallback(
     (formData: Record<string, unknown>) => {
       const qs = new URLSearchParams();
+
+      const dateRange = formData.dateRange as
+        | { from?: string; to?: string }
+        | undefined;
+      const startDate =
+        typeof formData.startDate === 'string'
+          ? formData.startDate
+          : dateRange?.from;
+      const endDate =
+        typeof formData.endDate === 'string' ? formData.endDate : dateRange?.to;
+
       Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'dateRange' || key === 'startDate' || key === 'endDate') {
+          return;
+        }
         if (
           value !== undefined &&
           value !== null &&
@@ -37,6 +56,14 @@ export function OperationLogClient() {
           qs.set(key, String(value));
         }
       });
+
+      if (startDate) {
+        qs.set('startDate', startDate);
+      }
+      if (endDate) {
+        qs.set('endDate', endDate);
+      }
+
       const newUrl = qs.toString()
         ? `/operation-logs?${qs.toString()}`
         : '/operation-logs';
