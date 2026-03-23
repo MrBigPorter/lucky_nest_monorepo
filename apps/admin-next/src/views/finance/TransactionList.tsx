@@ -12,6 +12,7 @@ import { TransactionsListParams, WalletTransaction } from '@/type/types';
 import { TRANSACTION_TYPE, NumHelper } from '@lucky/shared';
 import { ArrowDownRight, ArrowUpRight, Repeat } from 'lucide-react';
 import { FormSchema } from '@/type/search';
+import { parseTransactionsSearchParams } from '@/lib/cache/finance-transactions-cache';
 
 // Build a local options array from the shared enum (no TRANSACTION_TYPES_OPTIONS in shared)
 const TRANSACTION_TYPE_OPTIONS = Object.entries(TRANSACTION_TYPE).map(
@@ -28,6 +29,22 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   onParamsChange,
 }) => {
   const actionRef = useRef<ActionType>(null);
+
+  const normalizedInitialFormParams = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseTransactionsSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      keyword: typeof input.keyword === 'string' ? input.keyword : undefined,
+      transactionType:
+        typeof input.transactionType === 'string'
+          ? input.transactionType
+          : undefined,
+      startDate:
+        typeof input.startDate === 'string' ? input.startDate : undefined,
+      endDate: typeof input.endDate === 'string' ? input.endDate : undefined,
+    });
+  }, [initialFormParams]);
 
   const AmountDisplay = ({
     amount,
@@ -221,9 +238,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         ref={actionRef}
         columns={columns}
         searchSchema={searchSchema}
-        initialFormParams={initialFormParams}
+        initialFormParams={normalizedInitialFormParams}
         onParamsChange={onParamsChange}
         request={requestTransactions}
+        enableHydration={true}
+        hydrationQueryKey={['smart-table-hydration']}
       />
     </div>
   );

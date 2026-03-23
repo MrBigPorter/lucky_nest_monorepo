@@ -11,6 +11,7 @@ import React, {
 import get from 'lodash/get';
 import { RefreshCw, Download } from 'lucide-react';
 import { Button } from '@repo/ui';
+import { useQuery } from '@tanstack/react-query';
 
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
@@ -52,6 +53,17 @@ interface SmartTableProps<T extends Record<string, any>> {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onParamsChange?: (params: Record<string, any>) => void;
+  /**
+   * 是否启用 React Query Hydration 消费（用于 Server 预取）
+   * 若启用，SmartTable 会优先尝试从 useQuery 消费 hydrated 数据而非直接调用 request
+   * 默认 false，其他页面无感知
+   */
+  enableHydration?: boolean;
+  /**
+   * Hydration query key（需与 Server 预取时保持一致）
+   * 默认使用 ['smart-table-hydration']，保持向后兼容
+   */
+  hydrationQueryKey?: readonly unknown[];
 }
 
 // ------------------------------------
@@ -88,7 +100,6 @@ const renderSmartCell = (
           // 🛠️ 修复点：判断 item 是对象配置还是直接的 ReactNode
           if (
             typeof item === 'object' &&
-            item !== null &&
             'text' in item &&
             !React.isValidElement(item)
           ) {
@@ -189,6 +200,8 @@ const SmartTableInner = <T extends Record<string, any>>(
     params,
     initialFormParams = {},
     onParamsChange,
+    enableHydration = false,
+    hydrationQueryKey = ['smart-table-hydration'],
   } = props;
 
   // 引用锁定，防止死循环
@@ -205,6 +218,30 @@ const SmartTableInner = <T extends Record<string, any>>(
 
   const [formParams, setFormParams] =
     useState<Record<string, unknown>>(initialFormParams);
+
+  // ── Hydration 支持：若启用，优先消费 hydrated 数据 ──
+  const hydrationQuery = useQuery<{ data: T[]; total: number }>({
+    // 这个 queryKey 需要和 Server 预取时一致
+    queryKey: hydrationQueryKey,
+    // 占位符，实际数据由 HydrationBoundary 注入
+    queryFn: async () => ({ data: [], total: 0 }),
+    enabled: enableHydration,
+    // 不缓存，总是用预取的新鲜数据
+    staleTime: 0,
+  });
+
+  // 首次加载时，如启用 hydration 且有数据，直接使用
+  useEffect(() => {
+    if (
+      enableHydration &&
+      hydrationQuery.data &&
+      hydrationQuery.data.data.length > 0
+    ) {
+      setData(hydrationQuery.data.data);
+      setTotal(hydrationQuery.data.total);
+      setLoading(false);
+    }
+  }, [enableHydration, hydrationQuery.data]);
 
   const onPageChange = useCallback((p: number, ps: number) => {
     setPagination((prev) => {
@@ -277,9 +314,18 @@ const SmartTableInner = <T extends Record<string, any>>(
   );
 
   useEffect(() => {
+    // 若启用 hydration 且已有预取数据，不再主动 fetchData
+    if (
+      enableHydration &&
+      hydrationQuery.data &&
+      hydrationQuery.data.data.length > 0
+    ) {
+      return;
+    }
+    // 否则走原有逻辑
     if (request) fetchData().catch();
     else if (dataSource) setData(dataSource);
-  }, [request, dataSource, fetchData]);
+  }, [request, dataSource, fetchData, enableHydration, hydrationQuery.data]);
 
   useImperativeHandle(
     ref,
