@@ -63,19 +63,23 @@ export const Login: React.FC = () => {
       }
     },
     onError: (error: unknown) => {
-      // 获取错误消息
+      // 后端统一响应格式: { code, message, data, tid }
+      // axios error 结构: { response: { data: { code, message } }, message: "Request failed..." }
       let message = 'Login failed. Please try again.';
 
       if (typeof error === 'object' && error !== null) {
-        if ('message' in error && typeof error.message === 'string') {
-          message = error.message;
-        } else if ('msg' in error && typeof error.msg === 'string') {
-          message = error.msg;
-        } else if ('error' in error && typeof error.error === 'string') {
-          message = error.error;
+        // 优先取后端 response body 里的 message
+        const axiosError = error as {
+          response?: { data?: { message?: string; msg?: string } };
+          message?: string;
+        };
+        const apiMsg =
+          axiosError.response?.data?.message ?? axiosError.response?.data?.msg;
+        if (apiMsg) {
+          message = apiMsg;
+        } else if (axiosError.message) {
+          message = axiosError.message;
         }
-      } else if (error instanceof Error) {
-        message = error.message;
       } else if (typeof error === 'string') {
         message = error;
       }
