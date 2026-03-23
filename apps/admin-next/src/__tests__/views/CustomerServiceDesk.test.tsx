@@ -79,6 +79,7 @@ describe('CustomerServiceDesk', () => {
           page: 1,
           pageSize: 30,
         }),
+        { trace: false },
       );
     });
   });

@@ -16,6 +16,28 @@
 import * as Sentry from '@sentry/nextjs';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+const appEnv =
+  process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'development';
+const isProdRuntime = process.env.NODE_ENV === 'production';
+const enableNonProd = process.env.NEXT_PUBLIC_SENTRY_ENABLE_DEV === 'true';
+const sentryDebug = process.env.NEXT_PUBLIC_SENTRY_DEBUG === 'true';
+
+const parseRate = (value: string | undefined, fallback: number) => {
+  if (!value) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : fallback;
+};
+
+const previewTraceFallback = appEnv === 'preview' ? 0.1 : 0;
+const previewProfileFallback = appEnv === 'preview' ? 0.02 : 0;
+const tracesSampleRate = parseRate(
+  process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+  previewTraceFallback,
+);
+const profilesSampleRate = parseRate(
+  process.env.NEXT_PUBLIC_SENTRY_PROFILES_SAMPLE_RATE,
+  previewProfileFallback,
+);
 
 // Dev-time guard: warn when DSN is not configured so the issue is immediately visible.
 // In production this means Sentry is silently disabled (no events sent to sentry.io).
@@ -38,8 +60,22 @@ Sentry.init({
    */
   dsn,
 
-  // Only activate when both: running in production AND dsn is configured.
-  enabled: process.env.NODE_ENV === 'production' && Boolean(dsn),
+  // Production defaults to enabled; non-production can be opt-in via NEXT_PUBLIC_SENTRY_ENABLE_DEV=true.
+  enabled: Boolean(dsn) && (isProdRuntime || enableNonProd),
+
+  // Tag events by deployment environment (production / preview / development).
+  environment: appEnv,
+
+  // Print SDK internal debug logs when troubleshooting test/preview environment.
+  debug: sentryDebug,
+
+  // Keep production overhead near-zero by default; preview/test can opt in with low sampling.
+  tracesSampleRate,
+  profilesSampleRate,
+
+  // Browser profiling: must be explicitly registered as an integration (Sentry v8+).
+  // profilesSampleRate alone is not enough — the integration activates the sampling hooks.
+  integrations: [Sentry.browserProfilingIntegration()],
 
   // Error-only mode: do not attach user PII by default.
   sendDefaultPii: false,
