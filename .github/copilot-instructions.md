@@ -14,12 +14,12 @@
 
 **当前页面：Dashboard**
 
-- [ ] 梳理 `dashboard` 页关键 fetch：列出所有 fetch 并标记一致性等级（强/秒级/分钟级）
-- [ ] 定义缓存策略：为每个 fetch 明确 `cache/revalidate/tags` 值并文档化
-- [ ] 实现写后失效：对关键的后台写操作（如创建/编辑/删除）接入 `revalidateTag` 或 `revalidatePath`
-- [ ] Dashboard 相关模块 server-only 补齐：排查 `src/app/(dashboard)/page.tsx`、`src/components/dashboard/*` 敏感调用
-- [ ] 回归验证：Lighthouse 测、功能测、缓存命中率观测
-- [ ] 文档沉淀：记录「Dashboard 缓存一致性/安全隔离」方案并补 1 条心智模型提问
+- [x] 梳理 `dashboard` 页关键 fetch：列出所有 fetch 并标记一致性等级（强/秒级/分钟级）
+- [x] 定义缓存策略：为每个 fetch 明确 `cache/revalidate/tags` 值并文档化
+- [x] 实现写后失效：对关键的后台写操作（如创建/编辑/删除）接入 `revalidateTag` 或 `revalidatePath`
+- [x] Dashboard 相关模块 server-only 补齐：排查 `src/app/(dashboard)/page.tsx`、`src/components/dashboard/*` 敏感调用
+- [x] 回归验证：Lighthouse 测、功能测、缓存命中率观测
+- [x] 文档沉淀：记录「Dashboard 缓存一致性/安全隔离」方案并补 1 条心智模型提问（`read/architecture/DASHBOARD_CACHE_SECURITY_ISOLATION_CN.md`)
 
 > 下一步：Orders 页（预定计划排序：dashboard → orders → finance）；暂不并行其他页面或全局 ESLint 规则，以稳定性优先。
 

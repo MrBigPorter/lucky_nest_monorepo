@@ -163,15 +163,8 @@ export const DepositList: React.FC<DepositListProps> = ({
         width: 180, // Increased width to fit buttons
         render: (_, row) => {
           const button = DEPOSIT_STATUS_CONFIG[row.rechargeStatus];
-          // Assuming 0 is PENDING. You might need to import your ENUM here.
           const isPending = row.rechargeStatus === RECHARGE_STATUS.PENDING;
 
-          console.log(
-            'Rendering action buttons for row:',
-            row,
-            'isPending:',
-            isPending,
-          );
           return (
             <div className="flex gap-2">
               <Button
