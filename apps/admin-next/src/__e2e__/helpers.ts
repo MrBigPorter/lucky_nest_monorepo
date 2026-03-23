@@ -8,7 +8,7 @@ import { Page, BrowserContext } from '@playwright/test';
 /** 测试用管理员账号，通过环境变量注入（本地 .env.test 或 CI secret） */
 export const TEST_ADMIN = {
   username: process.env.E2E_ADMIN_USERNAME || 'admin',
-  password: process.env.E2E_ADMIN_PASSWORD || 'Admin@123456',
+  password: process.env.E2E_ADMIN_PASSWORD || 'admin888',
 };
 
 export const BASE_URL =

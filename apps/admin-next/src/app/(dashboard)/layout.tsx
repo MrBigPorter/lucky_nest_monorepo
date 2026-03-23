@@ -2,7 +2,6 @@ import React from 'react';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Providers } from '@/components/Providers';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { routes } from '@/routes';
 import { TRANSLATIONS } from '@/constants';
@@ -36,9 +35,5 @@ export default async function AuthenticatedLayout({
     redirect('/login');
   }
 
-  return (
-    <Providers>
-      <DashboardLayout>{children}</DashboardLayout>
-    </Providers>
-  );
+  return <DashboardLayout>{children}</DashboardLayout>;
 }

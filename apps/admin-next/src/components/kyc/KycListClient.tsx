@@ -26,6 +26,11 @@ import {
 } from '@repo/ui';
 import { useToastStore } from '@/store/useToastStore';
 import { PageHeader } from '@/components/scaffold/PageHeader';
+import {
+  buildKycListParams,
+  kycListQueryKey,
+  parseKycSearchParams,
+} from '@/lib/cache/kyc-cache';
 
 interface KycListProps {
   // Phase 3: URL searchParams 驱动 filter
@@ -45,6 +50,25 @@ export const KycList: React.FC<KycListProps> = ({
     (error: unknown, fallback: string) =>
       error instanceof Error ? error.message : fallback,
     [],
+  );
+
+  const normalizedInitialFormParams = useMemo(() => {
+    const input = initialFormParams ?? {};
+    return parseKycSearchParams({
+      page: typeof input.page === 'string' ? input.page : undefined,
+      pageSize: typeof input.pageSize === 'string' ? input.pageSize : undefined,
+      userId: typeof input.userId === 'string' ? input.userId : undefined,
+      kycStatus:
+        typeof input.kycStatus === 'string' ? input.kycStatus : undefined,
+      startDate:
+        typeof input.startDate === 'string' ? input.startDate : undefined,
+      endDate: typeof input.endDate === 'string' ? input.endDate : undefined,
+    });
+  }, [initialFormParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => kycListQueryKey(normalizedInitialFormParams),
+    [normalizedInitialFormParams],
   );
 
   // --- Actions ---
@@ -305,13 +329,29 @@ export const KycList: React.FC<KycListProps> = ({
   );
 
   const requestKyc = useCallback(async (params: KycRecordListParams) => {
-    const reqData = { ...params };
-    if (reqData.dateRange) {
-      reqData.startDate = reqData.dateRange.from;
-      reqData.endDate = reqData.dateRange.to;
-      delete reqData.dateRange;
-    }
-    const res = await kycApi.getRecords(reqData);
+    const input = params as unknown as Record<string, unknown>;
+    const dateRange = input.dateRange as
+      | { from?: string; to?: string }
+      | undefined;
+
+    const queryInput = parseKycSearchParams({
+      page: String(params.page ?? 1),
+      pageSize: String(params.pageSize ?? 10),
+      userId: typeof input.userId === 'string' ? input.userId : undefined,
+      kycStatus:
+        typeof input.kycStatus === 'string' ||
+        typeof input.kycStatus === 'number'
+          ? String(input.kycStatus)
+          : undefined,
+      startDate:
+        typeof input.startDate === 'string' ? input.startDate : dateRange?.from,
+      endDate:
+        typeof input.endDate === 'string' ? input.endDate : dateRange?.to,
+    });
+
+    const res = await kycApi.getRecords(
+      buildKycListParams(queryInput) as KycRecordListParams,
+    );
     return {
       data: res.list,
       total: res.total,
@@ -342,8 +382,10 @@ export const KycList: React.FC<KycListProps> = ({
             columns={columns}
             searchSchema={searchSchema}
             request={requestKyc}
-            initialFormParams={initialFormParams}
+            initialFormParams={normalizedInitialFormParams}
             onParamsChange={onParamsChange}
+            enableHydration={true}
+            hydrationQueryKey={hydrationQueryKey}
           />
         </div>
       </Card>
