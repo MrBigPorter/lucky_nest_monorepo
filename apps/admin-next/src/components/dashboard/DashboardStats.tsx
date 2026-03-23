@@ -3,6 +3,7 @@
  * 服务端直接 fetch 财务统计 + 用户总数，零 loading 闪烁。
  * 被 page.tsx 用 <Suspense> 包裹，支持 Streaming SSR。
  */
+import 'server-only';
 import React from 'react';
 import {
   DollarSign,
