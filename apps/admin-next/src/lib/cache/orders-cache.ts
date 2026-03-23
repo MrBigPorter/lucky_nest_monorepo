@@ -22,37 +22,27 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
+function parseOptionalInt(value: string | undefined): number | undefined {
+  if (!value || value === 'ALL' || value === 'All') return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.floor(parsed);
+}
+
 export function parseOrdersSearchParams(
   params: NextSearchParams,
 ): OrdersListQueryInput {
   const page = parsePositiveInt(readParam(params, 'page'), 1);
   const pageSize = parsePositiveInt(readParam(params, 'pageSize'), 10);
   const keyword = readParam(params, 'keyword')?.trim();
-  const orderStatusRaw = readParam(params, 'orderStatus');
-  const orderStatus =
-    orderStatusRaw && orderStatusRaw !== 'All'
-      ? parsePositiveInt(orderStatusRaw, 0)
-      : undefined;
+  const orderStatus = parseOptionalInt(readParam(params, 'orderStatus'));
 
   return {
     page,
     pageSize,
     ...(keyword ? { keyword } : {}),
-    ...(orderStatus ? { orderStatus } : {}),
+    ...(orderStatus !== undefined ? { orderStatus } : {}),
   };
-}
-
-export function parseOrdersUrlSearchParams(
-  params: URLSearchParams,
-): OrdersListQueryInput {
-  const record: NextSearchParams = {
-    page: params.get('page') ?? undefined,
-    pageSize: params.get('pageSize') ?? undefined,
-    keyword: params.get('keyword') ?? undefined,
-    orderStatus: params.get('orderStatus') ?? undefined,
-  };
-
-  return parseOrdersSearchParams(record);
 }
 
 export function buildOrdersListParams(
@@ -62,13 +52,15 @@ export function buildOrdersListParams(
     page: input.page,
     pageSize: input.pageSize,
     ...(input.keyword ? { keyword: input.keyword } : {}),
-    ...(input.orderStatus ? { orderStatus: input.orderStatus } : {}),
+    ...(input.orderStatus !== undefined
+      ? { orderStatus: input.orderStatus }
+      : {}),
   };
 }
 
 export function ordersListQueryKey(input: OrdersListQueryInput) {
   return [
-    'orders-list',
+    'orders',
     input.page,
     input.pageSize,
     input.keyword ?? '',

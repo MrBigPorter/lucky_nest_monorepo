@@ -1,6 +1,6 @@
 /**
  * Orders Page — Server Component
- * Phase 3: URL searchParams 驱动 filter
+ * Phase 6: URL searchParams 驱动 filter + 首屏预取
  */
 import type { Metadata } from 'next';
 
@@ -50,8 +50,8 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   const queryClient = new QueryClient();
   await queryClient.prefetchQuery({
     queryKey: ordersListQueryKey(queryInput),
-    queryFn: () =>
-      serverGet<PaginatedResponse<Order>>(
+    queryFn: async () => {
+      const res = await serverGet<PaginatedResponse<Order>>(
         '/v1/admin/order/list',
         buildOrdersListParams(queryInput) as Record<
           string,
@@ -61,7 +61,9 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
           revalidate: 30,
           tags: [ORDERS_LIST_TAG, 'dashboard:orders'],
         },
-      ),
+      );
+      return { list: res.list, total: res.total };
+    },
   });
 
   return (
