@@ -89,6 +89,13 @@ export function OrdersClient() {
     manual: true,
   });
 
+  // Dashboard 缓存失效（写操作后清除 dashboard:orders tag）
+  const invalidateDashboard = useCallback(async () => {
+    const { revalidateDashboardOrders } =
+      await import('@/lib/actions/dashboard-revalidate');
+    await revalidateDashboardOrders();
+  }, []);
+
   // 2. Logic: Handle Status Updates
   const handleUpdateStatus = useCallback(
     async (
@@ -104,11 +111,12 @@ export function OrdersClient() {
           `Order status updated to ${ORDER_STATUS_LABEL[status]}`,
         );
         refresh();
+        void invalidateDashboard();
       } catch (error) {
         addToast('error', 'Failed to update status');
       }
     },
-    [addToast, updateStatusApi, refresh],
+    [addToast, updateStatusApi, refresh, invalidateDashboard],
   );
 
   // 3. Logic: Handle Delete
@@ -133,6 +141,7 @@ export function OrdersClient() {
                       await deleteOrderApi(orderId);
                       addToast('success', 'Order deleted successfully');
                       refresh();
+                      void invalidateDashboard();
                       close();
                     } catch (error) {
                       addToast('error', 'Failed to delete order');
@@ -151,11 +160,12 @@ export function OrdersClient() {
         await deleteOrderApi(orderId);
         addToast('success', 'Order deleted successfully');
         refresh();
+        void invalidateDashboard();
       } catch (error) {
         addToast('error', 'Failed to delete order');
       }
     },
-    [addToast, deleteOrderApi, refresh],
+    [addToast, deleteOrderApi, refresh, invalidateDashboard],
   );
 
   // 4. Interaction: Open Shipping Modal
