@@ -9,33 +9,34 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Truck, XCircle, Trash2, Eye } from 'lucide-react';
 import { Card, Button, Badge, Input } from '@/components/UIComponents';
 import { useToastStore } from '@/store/useToastStore';
-import { Order, OrderListParams, OrderSearchForm } from '@/type/types';
+import { Order, OrderSearchForm } from '@/type/types';
 import { PageHeader } from '@/components/scaffold/PageHeader';
 import { SchemaSearchForm } from '@/components/scaffold/SchemaSearchForm';
-import { useAntdTable, useRequest } from 'ahooks';
+import { useRequest } from 'ahooks';
 import { orderApi } from '@/api';
 import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
+import { useQuery } from '@tanstack/react-query';
 import { ORDER_STATUS, ORDER_STATUS_LABEL } from '@lucky/shared';
 import { BaseTable } from '@/components/scaffold/BaseTable';
 import { ModalManager } from '@repo/ui';
 import dayjs from 'dayjs';
 import { ORDER_STATUS_COLORS } from '@/consts';
+import {
+  buildOrdersListParams,
+  ordersListQueryKey,
+  parseOrdersUrlSearchParams,
+} from '@/lib/cache/orders-cache';
 
 export function OrdersClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const addToast = useToastStore((state) => state.addToast);
 
-  // ── URL → 初始 filter 参数 ──────────────────────────────────
-  const urlFilterParams = useMemo(() => {
-    const params: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      if (key !== 'page' && key !== 'pageSize' && value) {
-        params[key] = value;
-      }
-    });
-    return params;
-  }, [searchParams]);
+  // ── URL → 查询参数（分页 + filter）───────────────────────────
+  const queryInput = useMemo(
+    () => parseOrdersUrlSearchParams(searchParams),
+    [searchParams],
+  );
 
   // ── filter 变化 → 更新 URL ──────────────────────────────────
   const handleParamsChange = useCallback(
@@ -45,41 +46,29 @@ export function OrdersClient() {
       if (formData.orderStatus && formData.orderStatus !== 'All') {
         qs.set('orderStatus', formData.orderStatus);
       }
-      const newUrl = qs.toString() ? `/orders?${qs.toString()}` : '/orders';
-      router.replace(newUrl, { scroll: false });
+      qs.set('page', '1');
+      qs.set('pageSize', String(queryInput.pageSize));
+      router.replace(`/orders?${qs.toString()}`, { scroll: false });
     },
-    [router],
+    [queryInput.pageSize, router],
   );
 
-  // 6. Data Fetching
-  const getTableData = async (
-    { current, pageSize }: { current: number; pageSize: number },
-    formData: OrderSearchForm,
-  ) => {
-    const params: OrderListParams = { page: current, pageSize };
-    if (formData?.keyword) params.keyword = formData.keyword;
-    if (formData?.orderStatus && formData?.orderStatus !== 'All')
-      params.orderStatus = Number(formData.orderStatus);
-
-    const res = await orderApi.getList(params);
-    return { list: res.list, total: res.total };
-  };
-
   const {
-    tableProps,
-    run,
-    refresh,
-    search: { reset },
-  } = useAntdTable(getTableData, {
-    defaultPageSize: 10,
-    defaultParams: [
-      { current: 1, pageSize: 10 },
-      {
-        keyword: urlFilterParams.keyword || '',
-        orderStatus: urlFilterParams.orderStatus || 'All',
-      },
-    ],
+    data: ordersRes,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: ordersListQueryKey(queryInput),
+    queryFn: () => orderApi.getList(buildOrdersListParams(queryInput)),
+    staleTime: 15_000,
   });
+
+  const orders = ordersRes?.list ?? [];
+  const total = ordersRes?.total ?? 0;
+
+  const refresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   // 1. API Hooks for Actions
   const { runAsync: updateStatusApi } = useRequest(orderApi.updateState, {
@@ -89,11 +78,11 @@ export function OrdersClient() {
     manual: true,
   });
 
-  // Dashboard 缓存失效（写操作后清除 dashboard:orders tag）
-  const invalidateDashboard = useCallback(async () => {
-    const { revalidateDashboardOrders } =
-      await import('@/lib/actions/dashboard-revalidate');
-    await revalidateDashboardOrders();
+  // Orders 写操作后失效（orders:list + dashboard:orders）
+  const invalidateOrdersCache = useCallback(async () => {
+    const { revalidateOrdersList } =
+      await import('@/lib/actions/orders-revalidate');
+    await revalidateOrdersList();
   }, []);
 
   // 2. Logic: Handle Status Updates
@@ -110,13 +99,13 @@ export function OrdersClient() {
           'success',
           `Order status updated to ${ORDER_STATUS_LABEL[status]}`,
         );
-        refresh();
-        void invalidateDashboard();
+        await refresh();
+        void invalidateOrdersCache();
       } catch (error) {
         addToast('error', 'Failed to update status');
       }
     },
-    [addToast, updateStatusApi, refresh, invalidateDashboard],
+    [addToast, updateStatusApi, refresh, invalidateOrdersCache],
   );
 
   // 3. Logic: Handle Delete
@@ -140,8 +129,8 @@ export function OrdersClient() {
                     try {
                       await deleteOrderApi(orderId);
                       addToast('success', 'Order deleted successfully');
-                      refresh();
-                      void invalidateDashboard();
+                      await refresh();
+                      void invalidateOrdersCache();
                       close();
                     } catch (error) {
                       addToast('error', 'Failed to delete order');
@@ -159,13 +148,13 @@ export function OrdersClient() {
       try {
         await deleteOrderApi(orderId);
         addToast('success', 'Order deleted successfully');
-        refresh();
-        void invalidateDashboard();
+        await refresh();
+        void invalidateOrdersCache();
       } catch (error) {
         addToast('error', 'Failed to delete order');
       }
     },
-    [addToast, deleteOrderApi, refresh, invalidateDashboard],
+    [addToast, deleteOrderApi, refresh, invalidateOrdersCache],
   );
 
   // 4. Interaction: Open Shipping Modal
@@ -356,6 +345,12 @@ export function OrdersClient() {
       <Card>
         <div className="mb-6">
           <SchemaSearchForm<OrderSearchForm>
+            initialValues={{
+              keyword: queryInput.keyword ?? '',
+              orderStatus: queryInput.orderStatus
+                ? String(queryInput.orderStatus)
+                : 'All',
+            }}
             schema={[
               {
                 type: 'input',
@@ -377,24 +372,32 @@ export function OrdersClient() {
                 ],
               },
             ]}
-            onSearch={(v) => {
-              run({ current: 1, pageSize: 10 }, v);
-              handleParamsChange(v);
-            }}
+            onSearch={handleParamsChange}
             onReset={() => {
-              reset();
               handleParamsChange({ keyword: '', orderStatus: 'All' });
             }}
+            loading={isFetching}
           />
         </div>
         <BaseTable
           columns={columns}
-          data={tableProps.dataSource || []}
+          data={orders}
+          loading={isFetching}
           rowKey="orderId"
           pagination={{
-            ...tableProps.pagination,
-            onChange: (p, s) =>
-              tableProps.onChange?.({ current: p, pageSize: s }),
+            current: queryInput.page,
+            pageSize: queryInput.pageSize,
+            total,
+            onChange: (p, s) => {
+              const qs = new URLSearchParams();
+              if (queryInput.keyword) qs.set('keyword', queryInput.keyword);
+              if (queryInput.orderStatus) {
+                qs.set('orderStatus', String(queryInput.orderStatus));
+              }
+              qs.set('page', String(p));
+              qs.set('pageSize', String(s));
+              router.replace(`/orders?${qs.toString()}`, { scroll: false });
+            },
           }}
         />
       </Card>

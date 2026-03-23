@@ -8,20 +8,20 @@
 
 ## 🎯 当前任务（每次对话从这里开始）
 
-**阶段**: Phase 6 P0 推进中 — Dashboard 缓存+安全隔离（试点页）  
-**上次停留**: Lighthouse CI + Sentry 生产验收完成（2026-03-23）  
+**阶段**: Phase 6 P0 推进中 — Orders 架构级缓存协同（Server 预取 + Hydration）  
+**上次停留**: Dashboard 缓存+安全隔离试点完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Dashboard**
+**当前页面：Orders**
 
-- [x] 梳理 `dashboard` 页关键 fetch：列出所有 fetch 并标记一致性等级（强/秒级/分钟级）
-- [x] 定义缓存策略：为每个 fetch 明确 `cache/revalidate/tags` 值并文档化
-- [x] 实现写后失效：对关键的后台写操作（如创建/编辑/删除）接入 `revalidateTag` 或 `revalidatePath`
-- [x] Dashboard 相关模块 server-only 补齐：排查 `src/app/(dashboard)/page.tsx`、`src/components/dashboard/*` 敏感调用
-- [x] 回归验证：Lighthouse 测、功能测、缓存命中率观测
-- [x] 文档沉淀：记录「Dashboard 缓存一致性/安全隔离」方案并补 1 条心智模型提问（`read/architecture/DASHBOARD_CACHE_SECURITY_ISOLATION_CN.md`)
+- [x] 关键 fetch 梳理：确认 Orders 页读写 API 与一致性等级（强/秒级）
+- [x] 架构改造：`src/app/(dashboard)/orders/page.tsx` 接入 Server 预取 + `HydrationBoundary`
+- [x] 跨页缓存协同：引入 `revalidateTag('orders:list')` 并联动 `dashboard:orders`
+- [x] 查询契约统一：新增 `src/lib/cache/orders-cache.ts`（queryKey/参数解析/构建）
+- [x] 回归验证：`check-types` / `lint` / `vitest`（31 files / 183 tests）通过
+- [x] 文档沉淀：记录「Orders Server 预取 + Hydration + Tag 失效」问题与答案（`read/architecture/ORDERS_CACHE_HYDRATION_CN.md`）
 
-> 下一步：Orders 页（预定计划排序：dashboard → orders → finance）；暂不并行其他页面或全局 ESLint 规则，以稳定性优先。
+> 下一步：Finance 页（预定计划排序：dashboard → orders → finance）；暂不并行其他页面或全局 ESLint 规则，以稳定性优先。
 
 > 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
 
