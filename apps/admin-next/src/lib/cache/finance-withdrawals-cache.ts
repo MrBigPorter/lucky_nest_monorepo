@@ -1,11 +1,8 @@
-// Finance transactions cache/query contract helpers.
-export const FINANCE_TRANSACTIONS_TAG = 'finance:transactions';
-
-export interface TransactionsQueryInput {
+export interface WithdrawalsListQueryInput {
   page: number;
   pageSize: number;
   keyword?: string;
-  transactionType?: number;
+  status?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -23,19 +20,13 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
-export function parseTransactionsSearchParams(
+export function parseWithdrawalsSearchParams(
   params: NextSearchParams,
-): TransactionsQueryInput {
+): WithdrawalsListQueryInput {
   const page = parsePositiveInt(readParam(params, 'page'), 1);
   const pageSize = parsePositiveInt(readParam(params, 'pageSize'), 10);
   const keyword = readParam(params, 'keyword')?.trim();
-  // 兼容 URL 两种命名：transactionType（前端）/ type（后端）
-  const transactionTypeRaw =
-    readParam(params, 'transactionType') ?? readParam(params, 'type');
-  const transactionType =
-    transactionTypeRaw && transactionTypeRaw !== 'ALL'
-      ? parsePositiveInt(transactionTypeRaw, 0)
-      : undefined;
+  const statusRaw = readParam(params, 'status');
   const startDate = readParam(params, 'startDate');
   const endDate = readParam(params, 'endDate');
 
@@ -43,34 +34,32 @@ export function parseTransactionsSearchParams(
     page,
     pageSize,
     ...(keyword ? { keyword } : {}),
-    ...(transactionType ? { transactionType } : {}),
+    ...(statusRaw && statusRaw !== 'ALL' ? { status: statusRaw } : {}),
     ...(startDate ? { startDate } : {}),
     ...(endDate ? { endDate } : {}),
   };
 }
 
-export function buildTransactionsListParams(
-  input: TransactionsQueryInput,
+export function buildWithdrawalsListParams(
+  input: WithdrawalsListQueryInput,
 ): Record<string, string | number | undefined> {
   return {
     page: input.page,
     pageSize: input.pageSize,
     ...(input.keyword ? { keyword: input.keyword } : {}),
-    ...(input.transactionType !== undefined
-      ? { type: input.transactionType }
-      : {}),
+    ...(input.status ? { status: input.status } : {}),
     ...(input.startDate ? { startDate: input.startDate } : {}),
     ...(input.endDate ? { endDate: input.endDate } : {}),
   };
 }
 
-export function transactionsListQueryKey(input: TransactionsQueryInput) {
+export function withdrawalsListQueryKey(input: WithdrawalsListQueryInput) {
   return [
-    'finance-transactions',
+    'finance-withdrawals',
     input.page,
     input.pageSize,
     input.keyword ?? '',
-    input.transactionType ?? 'all',
+    input.status ?? 'all',
     input.startDate ?? '',
     input.endDate ?? '',
   ] as const;
