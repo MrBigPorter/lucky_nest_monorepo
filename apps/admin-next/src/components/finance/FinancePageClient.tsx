@@ -224,7 +224,7 @@ export const FinancePage: React.FC<FinancePageProps> = ({
       ).requestIdleCallback(() => {
         if (!cancelled) runPrefetch();
       });
-    } else {
+    } else if (typeof window !== 'undefined') {
       const id = window.setTimeout(runPrefetch, 120);
       timeoutIds.push(id);
     }

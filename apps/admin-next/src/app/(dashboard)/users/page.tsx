@@ -56,7 +56,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
     queryFn: async () => {
       const res = await serverGet<PaginatedResponse<ClientUserListItem>>(
         '/v1/admin/client-user/list',
-        buildUsersListParams(queryInput) as Record<
+        buildUsersListParams(queryInput) as unknown as Record<
           string,
           string | number | boolean | undefined | null
         >,
