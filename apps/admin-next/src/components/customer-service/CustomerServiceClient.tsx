@@ -691,7 +691,8 @@ function ChatWindow({
   }, [conversation.id, registerOnNewMessage, registerOnRecalled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { loading: loadingMsgs, run: fetchMessages } = useRequest(
-    () => chatApi.getMessages(conversation.id, { pageSize: 30 }),
+    () =>
+      chatApi.getMessages(conversation.id, { pageSize: 30 }, { trace: false }),
     {
       refreshDeps: [conversation.id],
       pollingInterval: 10000,
@@ -1103,10 +1104,13 @@ export function CustomerServiceDesk() {
     data,
     loading,
     run: refreshList,
-  } = useRequest(() => chatApi.getConversations(queryParams), {
-    refreshDeps: [page, keyword, statusFilter],
-    pollingInterval: 30000, // 30s fallback 轮询（Socket 实时为主）
-  });
+  } = useRequest(
+    () => chatApi.getConversations(queryParams, { trace: false }),
+    {
+      refreshDeps: [page, keyword, statusFilter],
+      pollingInterval: 30000, // 30s fallback 轮询（Socket 实时为主）
+    },
+  );
 
   const conversations = data?.list ?? [];
   const total = data?.total ?? 0;
