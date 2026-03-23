@@ -9,23 +9,64 @@
 ## 🎯 当前任务（每次对话从这里开始）
 
 **阶段**: Phase 6 P0 推进中 — SmartTable 读侧缓存契约（单页面优化）  
-**上次停留**: Operation Logs 缓存契约完成（2026-03-23）  
+**上次停留**: 全部 7 个页面缓存契约完成（2026-03-23）  
 **立即执行**:
 
-**当前页面：Finance（交易流水）** ✅ 已完成
+### ✅ 已完成页面（全部 7 个）
 
-- [x] 读侧契约定义：新增 `finance` 的 URL 参数解析 / queryKey / request params helper
-- [x] 页面级数据预取：`finance/page.tsx` 增加 Server 预取 + HydrationBoundary 注水
-- [x] 列表消费对齐：`FinanceClient` / `TransactionListClient` 与缓存契约对齐
-- [x] 边界确认：不改 `BaseTable` 全局模型，不改后端接口，只做单页可回退优化
-- [x] 回归验证：`Finance` 相关 Vitest 通过
-- [x] 文档沉淀：新增「Finance 缓存契约」问题与答案 + 心智模型提问
+| #   | 页面             | 优先级 | 复杂度   | 状态    | 完成日期   |
+| --- | ---------------- | ------ | -------- | ------- | ---------- |
+| 1   | Operation Logs   | 🟡 中  | ⭐⭐     | ✅ 完成 | 2026-03-23 |
+| 2   | Finance          | 🔴 高  | ⭐⭐     | ✅ 完成 | 2026-03-23 |
+| 3   | Orders           | 🔴 高  | ⭐⭐⭐   | ✅ 完成 | 2026-03-23 |
+| 4   | Users            | 🔴 高  | ⭐⭐⭐   | ✅ 完成 | 2026-03-23 |
+| 5   | Products         | 🟡 中  | ⭐⭐⭐⭐ | ✅ 完成 | 2026-03-23 |
+| 6   | Payment Channels | 🟡 中  | ⭐⭐     | ✅ 完成 | 2026-03-23 |
+| 7   | Groups           | 🟡 中  | ⭐⭐     | ✅ 完成 | 2026-03-23 |
 
-> 下一步：继续按「单页面、可回退」推进下一个 SmartTable 读侧页面。
+### 📋 Phase 6 P0 验收结果
+
+**✅ 完成目标**：
+
+- 7 个 SmartTable 页面缓存契约全部落地
+- 统一读侧契约范式（`*-cache.ts` → `page.tsx` 预取 → Client 消费）
+- 85+ Vitest 用例覆盖，所有新式测试通过
+- 完整文档沉淀（7 个缓存契约文档 + 6 Q&A 心智模型题）
+
+**代码交付物**：
+
+- 7 个 `*-cache.ts` 读侧契约文件
+- 7 个 `page.tsx` Server 预取实现
+- 14+ 客户端组件（Client + ListClient）
+- 7+ Vitest 测试文件集
+
+**模式沉淀**：
+
+- 缓存契约双向转换（URL ↔ queryKey ↔ requestParams）
+- Server 预取 + HydrationBoundary 注水流程
+- Client 壳组件 + 列表消费层拆分架构
+
+> 下一步：选择 Phase 7 方向（Lighthouse 性能验收 / 移动端响应式 / 其他工作）
 >
-> **参考模板**：`read/features/OPERATION_LOGS_CACHE_CONTRACT_CN.md`、`read/features/PRODUCTS_CACHE_CONTRACT_CN.md`、`read/features/USERS_CACHE_CONTRACT_CN.md`
+> **参考**：所有缓存契约文档统一在 `read/features/` 下
 
-> 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0：缓存策略 + 安全隔离）。
+> 方向来源：`read/architecture/NEXT_APP_ROUTER_5TOPICS_PROJECT_OPTIMIZATION_CN.md`（P0 已完成）
+
+---
+
+## 📋 下一阶段候选方向（Phase 7）
+
+根据 RUNBOOK.md 与优先级评估，可选：
+
+| 候选项                     | 说明                            | 优先级 | 预计工作量 |
+| -------------------------- | ------------------------------- | ------ | ---------- |
+| **Lighthouse 性能验收**    | 验证 LCP < 500ms 目标           | 🔴 高  | 2-3d       |
+| **移动端响应式适配**       | Admin 页面在平板/手机上的适配   | 🟡 中  | 3-5d       |
+| **批量操作**               | 订单/用户批量状态变更、导出 CSV | 🟡 中  | 3-4d       |
+| **国际化完善**             | 新增页面补充 zh 翻译 key        | 🟡 中  | 1-2d       |
+| **@lucky/api lint 债清理** | 后端 lint 规范化                | 🟢 低  | 持续       |
+
+> 等待用户指示下一个工作优先级。
 
 ---
 
