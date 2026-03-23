@@ -19,14 +19,32 @@ import { FinanceStatsServer } from '@/components/finance/FinanceStatsServer';
 import { FinanceClient } from '@/components/finance/FinanceClient';
 import { serverGet } from '@/lib/serverFetch';
 import type { PaginatedResponse } from '@/api/types';
-import type { WalletTransaction } from '@/type/types';
+import type {
+  RechargeOrder,
+  WalletTransaction,
+  WithdrawOrder,
+} from '@/type/types';
 import {
   buildTransactionsListParams,
   parseTransactionsSearchParams,
   transactionsListQueryKey,
-  FINANCE_TRANSACTIONS_TAG,
   type NextSearchParams,
 } from '@/lib/cache/finance-transactions-cache';
+import {
+  buildDepositsListParams,
+  depositsListQueryKey,
+  parseDepositsSearchParams,
+} from '@/lib/cache/finance-deposits-cache';
+import {
+  buildWithdrawalsListParams,
+  parseWithdrawalsSearchParams,
+  withdrawalsListQueryKey,
+} from '@/lib/cache/finance-withdrawals-cache';
+import {
+  FINANCE_DEPOSITS_TAG,
+  FINANCE_TRANSACTIONS_TAG,
+  FINANCE_WITHDRAWALS_TAG,
+} from '@/lib/cache/finance-cache';
 
 function FinanceSkeleton() {
   return (
@@ -71,6 +89,44 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
           {
             revalidate: 30,
             tags: [FINANCE_TRANSACTIONS_TAG],
+          },
+        );
+        return { data: res.list, total: res.total };
+      },
+    });
+  } else if (tab === 'deposits') {
+    const queryInput = parseDepositsSearchParams(resolvedSearchParams);
+    await queryClient.prefetchQuery({
+      queryKey: depositsListQueryKey(queryInput),
+      queryFn: async () => {
+        const res = await serverGet<PaginatedResponse<RechargeOrder>>(
+          '/v1/admin/finance/recharges',
+          buildDepositsListParams(queryInput) as Record<
+            string,
+            string | number | boolean | undefined | null
+          >,
+          {
+            revalidate: 30,
+            tags: [FINANCE_DEPOSITS_TAG],
+          },
+        );
+        return { data: res.list, total: res.total };
+      },
+    });
+  } else if (tab === 'withdrawals') {
+    const queryInput = parseWithdrawalsSearchParams(resolvedSearchParams);
+    await queryClient.prefetchQuery({
+      queryKey: withdrawalsListQueryKey(queryInput),
+      queryFn: async () => {
+        const res = await serverGet<PaginatedResponse<WithdrawOrder>>(
+          '/v1/admin/finance/withdrawals',
+          buildWithdrawalsListParams(queryInput) as Record<
+            string,
+            string | number | boolean | undefined | null
+          >,
+          {
+            revalidate: 30,
+            tags: [FINANCE_WITHDRAWALS_TAG],
           },
         );
         return { data: res.list, total: res.total };

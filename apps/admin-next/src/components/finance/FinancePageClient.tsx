@@ -36,6 +36,7 @@ interface FinancePageProps {
 
 type FinanceTab = 'deposits' | 'transactions' | 'withdrawals';
 const PREFETCH_STALE_TIME = 30_000;
+const PREFETCH_TABS: FinanceTab[] = ['deposits', 'withdrawals'];
 
 const isFinanceTab = (value: unknown): value is FinanceTab =>
   value === 'deposits' || value === 'transactions' || value === 'withdrawals';
@@ -188,6 +189,62 @@ export const FinancePage: React.FC<FinancePageProps> = ({
     },
     [prefetchDeposits, prefetchWithdrawals],
   );
+
+  // Idle warm-up: prefetch non-active tabs in sequence to reduce first switch latency.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    const tabsToPrefetch = PREFETCH_TABS.filter((tab) => tab !== activeTab);
+    if (tabsToPrefetch.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutIds: number[] = [];
+    let idleId: number | null = null;
+
+    const runPrefetch = () => {
+      tabsToPrefetch.forEach((tab, index) => {
+        const id = window.setTimeout(() => {
+          if (!cancelled) {
+            prefetchByTab(tab);
+          }
+        }, index * 200);
+        timeoutIds.push(id);
+      });
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = (
+        window as Window & {
+          requestIdleCallback: (cb: IdleRequestCallback) => number;
+        }
+      ).requestIdleCallback(() => {
+        if (!cancelled) runPrefetch();
+      });
+    } else {
+      const id = window.setTimeout(runPrefetch, 120);
+      timeoutIds.push(id);
+    }
+
+    return () => {
+      cancelled = true;
+      timeoutIds.forEach((id) => window.clearTimeout(id));
+      if (
+        idleId !== null &&
+        typeof window !== 'undefined' &&
+        'cancelIdleCallback' in window
+      ) {
+        (
+          window as Window & {
+            cancelIdleCallback: (id: number) => void;
+          }
+        ).cancelIdleCallback(idleId);
+      }
+    };
+  }, [activeTab, prefetchByTab]);
 
   // 当 Tab 切换时同步更新 URL
   useEffect(() => {
