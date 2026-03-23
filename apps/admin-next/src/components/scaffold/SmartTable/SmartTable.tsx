@@ -226,22 +226,21 @@ const SmartTableInner = <T extends Record<string, any>>(
     // 占位符，实际数据由 HydrationBoundary 注入
     queryFn: async () => ({ data: [], total: 0 }),
     enabled: enableHydration,
-    // 不缓存，总是用预取的新鲜数据
-    staleTime: 0,
+    // 和 Orders 保持一致：30s 内复用 hydrated 数据，不触发空占位 queryFn
+    staleTime: 30_000,
   });
+
+  const hasHydratedRows =
+    enableHydration && (hydrationQuery.data?.data?.length ?? 0) > 0;
 
   // 首次加载时，如启用 hydration 且有数据，直接使用
   useEffect(() => {
-    if (
-      enableHydration &&
-      hydrationQuery.data &&
-      hydrationQuery.data.data.length > 0
-    ) {
+    if (hasHydratedRows && hydrationQuery.data) {
       setData(hydrationQuery.data.data);
       setTotal(hydrationQuery.data.total);
       setLoading(false);
     }
-  }, [enableHydration, hydrationQuery.data]);
+  }, [hasHydratedRows, hydrationQuery.data]);
 
   const onPageChange = useCallback((p: number, ps: number) => {
     setPagination((prev) => {
@@ -315,17 +314,13 @@ const SmartTableInner = <T extends Record<string, any>>(
 
   useEffect(() => {
     // 若启用 hydration 且已有预取数据，不再主动 fetchData
-    if (
-      enableHydration &&
-      hydrationQuery.data &&
-      hydrationQuery.data.data.length > 0
-    ) {
+    if (hasHydratedRows) {
       return;
     }
     // 否则走原有逻辑
     if (request) fetchData().catch();
     else if (dataSource) setData(dataSource);
-  }, [request, dataSource, fetchData, enableHydration, hydrationQuery.data]);
+  }, [request, dataSource, fetchData, hasHydratedRows]);
 
   useImperativeHandle(
     ref,

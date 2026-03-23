@@ -12,7 +12,11 @@ import { TransactionsListParams, WalletTransaction } from '@/type/types';
 import { TRANSACTION_TYPE, NumHelper } from '@lucky/shared';
 import { ArrowDownRight, ArrowUpRight, Repeat } from 'lucide-react';
 import { FormSchema } from '@/type/search';
-import { parseTransactionsSearchParams } from '@/lib/cache/finance-transactions-cache';
+import {
+  buildTransactionsListParams,
+  parseTransactionsSearchParams,
+  transactionsListQueryKey,
+} from '@/lib/cache/finance-transactions-cache';
 
 // Build a local options array from the shared enum (no TRANSACTION_TYPES_OPTIONS in shared)
 const TRANSACTION_TYPE_OPTIONS = Object.entries(TRANSACTION_TYPE).map(
@@ -45,6 +49,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       endDate: typeof input.endDate === 'string' ? input.endDate : undefined,
     });
   }, [initialFormParams]);
+
+  const hydrationQueryKey = useMemo(
+    () => transactionsListQueryKey(normalizedInitialFormParams),
+    [normalizedInitialFormParams],
+  );
 
   const AmountDisplay = ({
     amount,
@@ -213,14 +222,24 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   const requestTransactions = useCallback(
     async (params: TransactionsListParams) => {
-      const { ...rest } = params;
-      const requestData: Partial<TransactionsListParams> = { ...rest };
+      const input = params as Record<string, unknown>;
+      const queryInput = parseTransactionsSearchParams({
+        page: String(params.page ?? 1),
+        pageSize: String(params.pageSize ?? 10),
+        keyword: typeof input.keyword === 'string' ? input.keyword : undefined,
+        transactionType:
+          typeof input.transactionType === 'string' ||
+          typeof input.transactionType === 'number'
+            ? String(input.transactionType)
+            : undefined,
+        startDate:
+          typeof input.startDate === 'string' ? input.startDate : undefined,
+        endDate: typeof input.endDate === 'string' ? input.endDate : undefined,
+      });
 
-      if ((requestData as Record<string, unknown>).transactionType === 'ALL') {
-        delete (requestData as Record<string, unknown>).transactionType;
-      }
-
-      const res = await financeApi.getTransactions(requestData);
+      const res = await financeApi.getTransactions(
+        buildTransactionsListParams(queryInput) as TransactionsListParams,
+      );
       return {
         data: res.list,
         total: res.total,
@@ -242,7 +261,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         onParamsChange={onParamsChange}
         request={requestTransactions}
         enableHydration={true}
-        hydrationQueryKey={['smart-table-hydration']}
+        hydrationQueryKey={hydrationQueryKey}
       />
     </div>
   );

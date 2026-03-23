@@ -113,3 +113,20 @@
 **如果一个 tag 只存在于写侧失效逻辑，而读侧还没有真正消费它，这个 tag 的价值是什么？**
 
 > 答：它先统一了业务语言与失效面，为下一轮读侧缓存化预铺契约；不是立刻产生缓存命中收益，但能避免以后失效语义再次分叉。
+
+---
+
+## 8. 2026-03-23 增量：deposits / withdrawals 按需 Client Prefetch
+
+- `transactions` 保持 Server 预取 + HydrationBoundary 注水（`finance/page.tsx`）
+- `deposits` / `withdrawals` 本轮不做 Server 预取，改为 tab hover 触发 `queryClient.prefetchQuery`
+- 两个 tab 已补齐各自 query contract：
+  - `apps/admin-next/src/lib/cache/finance-deposits-cache.ts`
+  - `apps/admin-next/src/lib/cache/finance-withdrawals-cache.ts`
+- 对应列表已接入 `SmartTable` 的 `enableHydration + hydrationQueryKey`，命中预热缓存时可直接消费
+
+### 心智模型提问（本次）
+
+**为什么不直接给三个 tab 都做 Server 预取？**
+
+> 答：Finance 是 tab 结构，三 tab 全量 Server 预取会放大首屏请求和 hydration payload；按需 Client Prefetch 能在“切 tab 体感”与“首屏成本”之间取得更稳的平衡。
