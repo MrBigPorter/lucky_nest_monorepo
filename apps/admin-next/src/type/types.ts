@@ -570,7 +570,7 @@ export interface OrderTreasure {
 // output to API query parameters
 export interface OrderListParams extends PaginationParams {
   keyword?: string;
-  // Order status filter: 1 - Pending payment; 2 - Paid; 3 - Cancelled; 4 - Refunded
+  // 1=Pending; 2=Processing; 3=Paid; 4=Cancelled; 5=Refunded; 6=Wait Group; 7=Ready to Ship; 8=Shipped; 9=Completed
   orderStatus?: number;
 }
 
