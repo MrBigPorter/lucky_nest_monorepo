@@ -246,7 +246,10 @@ export function OrderListClient({
                 Close
               </Button>
 
-              {data.orderStatus === ORDER_STATUS.PAID && (
+              {/* Ship 按钮: Paid(3) 或 Ready to Ship(7) 均可发货 */}
+              {[ORDER_STATUS.PAID, ORDER_STATUS.WAIT_DELIVERY].includes(
+                data.orderStatus,
+              ) && (
                 <Button
                   onClick={() => {
                     close();
@@ -257,9 +260,23 @@ export function OrderListClient({
                 </Button>
               )}
 
-              {[ORDER_STATUS.PENDING_PAYMENT, ORDER_STATUS.PAID].includes(
-                data.orderStatus,
-              ) && (
+              {/* 标记已完成: Shipped(8) 后可确认收货 */}
+              {data.orderStatus === ORDER_STATUS.SHIPPED && (
+                <Button
+                  onClick={() =>
+                    handleUpdateStatus(data.orderId, ORDER_STATUS.COMPLETED)
+                  }
+                >
+                  Mark Completed
+                </Button>
+              )}
+
+              {[
+                ORDER_STATUS.PENDING_PAYMENT,
+                ORDER_STATUS.PAID,
+                ORDER_STATUS.WAIT_GROUP,
+                ORDER_STATUS.WAIT_DELIVERY,
+              ].includes(data.orderStatus) && (
                 <Button
                   onClick={() =>
                     handleUpdateStatus(data.orderId, ORDER_STATUS.CANCELED)

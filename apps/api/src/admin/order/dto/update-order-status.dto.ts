@@ -4,15 +4,16 @@ import { ToNumber } from '@api/common/dto/transforms';
 
 export class UpdateOrderStatusDto {
   @ApiProperty({
-    description: 'Order status: 3 - Cancelled; 5 - Refunded; 6 - Completed',
-    example: 3,
+    description:
+      'Admin-settable order status: 4=Cancelled, 5=Refunded, 8=Shipped, 9=Completed',
+    example: 8,
   })
   @IsNotEmpty()
   @ToNumber()
   @IsInt()
-  @IsIn([3, 5, 6], {
+  @IsIn([4, 5, 8, 9], {
     message:
-      'Status must be one of the following values: 3 (Cancelled), 5 (Refunded), 6 (Completed)',
+      'Status must be one of: 4 (Cancelled), 5 (Refunded), 8 (Shipped), 9 (Completed)',
   })
   status!: number;
 }

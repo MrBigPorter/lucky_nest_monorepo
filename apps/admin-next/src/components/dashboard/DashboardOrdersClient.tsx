@@ -14,7 +14,7 @@ import type { BadgeColor } from '@/components/UIComponents';
 import { orderApi } from '@/api';
 import { SmartImage } from '@/components/ui/SmartImage';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { ClientDate } from '@/components/ui/ClientDate';
 
 const ORDER_STATUS: Record<number, { label: string; color: BadgeColor }> = {
   1: { label: 'Pending', color: 'yellow' },
@@ -124,12 +124,11 @@ export function DashboardOrdersClient() {
                       <Badge color={status.color}>{status.label}</Badge>
                     </td>
                     <td className="py-3 text-xs text-gray-400">
-                      {order.createdAt
-                        ? format(
-                            new Date(order.createdAt * 1000),
-                            'MM-dd HH:mm',
-                          )
-                        : '—'}
+                      <ClientDate
+                        value={order.createdAt}
+                        unit="s"
+                        pattern="MM-dd HH:mm"
+                      />
                     </td>
                   </tr>
                 );
