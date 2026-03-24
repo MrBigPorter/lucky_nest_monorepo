@@ -4,8 +4,6 @@
 
 ---
 
-> **范围说明**：`apps/mini-shop-admin` 已弃用；默认忽略，不纳入日常排查、开发、测试与计划范围，除非用户明确要求。
-
 ## 🎯 当前任务（每次对话从这里开始）
 
 **阶段**: Phase 6 P0 推进中 — SmartTable 读侧缓存契约（单页面优化）  
@@ -89,18 +87,17 @@
 
 ## 一、项目全景
 
-| 维度                     | 详情                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| **仓库结构**             | Yarn 4 Workspace + Turborepo Monorepo                                          |
-| **后端**                 | `apps/api` — NestJS + Prisma + PostgreSQL + Redis                              |
-| **Admin 前端**           | `apps/admin-next` — Next.js 15 (standalone) + React 19 + Tailwind CSS v4       |
-| **小程序商城（已弃用）** | `apps/mini-shop-admin` — Vue 3 + Vite + UnoCSS（默认忽略，除非明确要求）       |
-| **共享包**               | `packages/ui` (React 组件库), `packages/shared` (工具/常量), `packages/config` |
-| **生产服务器**           | VPS Ubuntu 22.04, 1 GB RAM, 1 CPU, San Jose CA                                 |
-| **生产域名**             | `admin.joyminis.com` / `api.joyminis.com`                                      |
-| **开发域名**             | `admin-dev.joyminis.com` / 本地 API `http://localhost:3000`                    |
-| **镜像仓库**             | GHCR `ghcr.io/mrbigporter/lucky-{backend,admin-next}-prod`                     |
-| **VPS 目录**             | `/opt/lucky`                                                                   |
+| 维度           | 详情                                                                           |
+| -------------- | ------------------------------------------------------------------------------ |
+| **仓库结构**   | Yarn 4 Workspace + Turborepo Monorepo                                          |
+| **后端**       | `apps/api` — NestJS + Prisma + PostgreSQL + Redis                              |
+| **Admin 前端** | `apps/admin-next` — Next.js 15 (standalone) + React 19 + Tailwind CSS v4       |
+| **共享包**     | `packages/ui` (React 组件库), `packages/shared` (工具/常量), `packages/config` |
+| **生产服务器** | VPS Ubuntu 22.04, 1 GB RAM, 1 CPU, San Jose CA                                 |
+| **生产域名**   | `admin.joyminis.com` / `api.joyminis.com`                                      |
+| **开发域名**   | `admin-dev.joyminis.com` / 本地 API `http://localhost:3000`                    |
+| **镜像仓库**   | GHCR `ghcr.io/mrbigporter/lucky-{backend,admin-next}-prod`                     |
+| **VPS 目录**   | `/opt/lucky`                                                                   |
 
 ---
 
@@ -222,12 +219,12 @@ docker compose --env-file deploy/.env.dev up -d backend
 
 ### CI/CD 文件速查
 
-| 文件                                   | 触发           | 作用                             |
-| -------------------------------------- | -------------- | -------------------------------- |
-| `.github/workflows/ci.yml`             | PR / push main | Lint + 类型检查 + 单元测试 + E2E |
-| `.github/workflows/deploy-backend.yml` | push main      | 后端镜像 → GHCR → VPS            |
-| `.github/workflows/deploy-admin.yml`   | push main      | Admin 镜像 → GHCR → VPS          |
-| `.github/workflows/deploy-master.yml`  | 手动触发       | 全量部署                         |
+| 文件                                            | 触发           | 作用                             |
+| ----------------------------------------------- | -------------- | -------------------------------- |
+| `.github/workflows/ci.yml`                      | PR / push main | Lint + 类型检查 + 单元测试 + E2E |
+| `.github/workflows/deploy-backend.yml`          | push main      | 后端镜像 → GHCR → VPS            |
+| `.github/workflows/deploy-admin-cloudflare.yml` | push main/test | Admin → Cloudflare Workers       |
+| `.github/workflows/deploy-master.yml`           | 手动触发       | 全量部署                         |
 
 ### 本地开发
 
@@ -246,21 +243,6 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 ## 三、迭代与功能归档
 
 历史 Phase 与功能清单已全部完成，不再在本文件重复维护；请直接查看 `read/` 下对应文档与 Git 记录。
-
----
-
-## 五、Phase 6 — 待规划
-
-> 从下表选定方向后，在 `🎯 当前任务` 区块展开为具体 checkbox 再开始执行。
-
-| 候选项              | 说明                                                   | 优先级 |
-| ------------------- | ------------------------------------------------------ | ------ |
-| Lighthouse 性能验收 | 验证 LCP < 500ms（Phase 2 遗留）                       | 🔴 高  |
-| 移动端响应式适配    | Admin 页面在平板/手机上的布局优化                      | 🟡 中  |
-| 批量操作            | 订单/用户批量状态变更、批量导出 CSV                    | 🟡 中  |
-| 国际化完善          | 所有新增页面补充 `zh` 翻译 key                         | 🟡 中  |
-| E2E 覆盖率提升      | 为 CRUD 新建流程补充完整表单填写 + 提交测试            | 🟢 低  |
-| 单元测试补全        | Phase 5 新 view 组件（AdsManagement 等）补 Vitest 测试 | 🟢 低  |
 
 ---
 
@@ -293,7 +275,6 @@ docker compose --env-file deploy/.env.dev up -d admin-next
 9. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
 10. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理
 11. 修改 `schema.prisma` 后，**必须在宿主机跑一次** `node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`（让 IDE / ESLint 看到最新类型，否则会出现大量假报错）
-12. `apps/mini-shop-admin` 已弃用；除非用户明确点名，否则默认不阅读、不修改、不纳入计划。
-13. 每次遇到**核心技术点**或**高现实约束技术点**（如线上事故、性能瓶颈、部署兼容、类型系统陷阱），必须同步做两件事：
+12. 每次遇到**核心技术点**或**高现实约束技术点**（如线上事故、性能瓶颈、部署兼容、类型系统陷阱），必须同步做两件事：
     - 记录文档（`read/` 对应专题或 `RUNBOOK.md` 补充「现象/根因/修复/预防」）
     - 提出至少 1 个「心智模型提问」（为什么会这样、边界条件是什么、下次如何更早发现）并写入该文档，沉淀可复用排障框架。
