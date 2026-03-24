@@ -3,12 +3,17 @@
  * (No search params needed for this view yet, but making it a Server Component for consistency)
  */
 import type { Metadata } from 'next';
+import React, { Suspense } from 'react';
+
+import { PageSkeleton } from '@/components/ui/PageSkeleton';
+import { CategoryManagement } from '@/components/categories/CategoriesClient';
 
 export const metadata: Metadata = { title: 'Categories' };
 
-import React from 'react';
-import { CategoryManagement } from '@/views/CategoryManagement';
-
 export default function CategoriesPage() {
-  return <CategoryManagement />;
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <CategoryManagement />
+    </Suspense>
+  );
 }
