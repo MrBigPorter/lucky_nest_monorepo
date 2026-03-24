@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   keywords: ['JoyMini', 'admin', 'dashboard', 'e-commerce', 'management'],
   authors: [{ name: 'JoyMini', url: 'https://admin.joyminis.com' }],
   creator: 'JoyMini',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
   openGraph: {
     title: 'JoyMini Admin',
     description:
@@ -82,7 +82,6 @@ export default function RootLayout({
             __html: `(function(){try{var s=JSON.parse(localStorage.getItem('app-store')||'{}');var t=(s.state&&s.state.theme)||'dark';document.documentElement.classList.add(t);}catch(e){document.documentElement.classList.add('dark');}})();`,
           }}
         />
-        <title></title>
       </head>
       <body>
         <Providers>{children}</Providers>

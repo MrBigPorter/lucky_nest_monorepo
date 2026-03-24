@@ -1,7 +1,7 @@
 # 📚 文档导航 — Lucky Nest Monorepo
 
-> **30 个文档，6 大分类 + 1 个归档区。先看「必读」，再按需查。**  
-> 最后更新：2026-03-22
+> **31 个文档，6 大分类 + 1 个归档区。先看「必读」，再按需查。**  
+> 最后更新：2026-03-24
 
 ---
 
@@ -24,7 +24,7 @@ read/
 ├── devops/            ← 运维 + 事故 + 监控配置（4）
 ├── testing/           ← 测试规范与指南（3）
 ├── features/          ← 功能专题（8）
-├── performance/       ← 性能监控 + SEO（3）
+├── performance/       ← 性能监控 + SEO（4）
 └── archive/           ← 历史文档，不再日常使用（3）
 ```
 
@@ -100,13 +100,14 @@ read/
 
 ---
 
-## 📊 performance/ — 性能 & 监控（3 个）
+## 📊 performance/ — 性能 & 监控（4 个）
 
-| 文件                                                                         | 内容                                                 |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [`PERFORMANCE_LIGHTHOUSE_CN.md`](./performance/PERFORMANCE_LIGHTHOUSE_CN.md) | ⭐ Lighthouse 5 页面验收结果、指标记录表、优化决策树 |
-| [`SEO_SUMMARY_CN.md`](./performance/SEO_SUMMARY_CN.md)                       | SEO 优化总结（meta/OG/结构化数据）                   |
-| [`SEO_PERFORMANCE_CN.md`](./performance/SEO_PERFORMANCE_CN.md)               | Core Web Vitals 指标详解与优化手段                   |
+| 文件                                                                                               | 内容                                                 |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| [`PERFORMANCE_LIGHTHOUSE_CN.md`](./performance/PERFORMANCE_LIGHTHOUSE_CN.md)                       | ⭐ Lighthouse 5 页面验收结果、指标记录表、优化决策树 |
+| [`SEO_SUMMARY_CN.md`](./performance/SEO_SUMMARY_CN.md)                                             | SEO 优化总结（meta/OG/结构化数据）                   |
+| [`SEO_PERFORMANCE_CN.md`](./performance/SEO_PERFORMANCE_CN.md)                                     | Core Web Vitals 指标详解与优化手段                   |
+| [`NEXT_SSR_SEO_CRAWLER_MASTER_GUIDE_CN.md`](./performance/NEXT_SSR_SEO_CRAWLER_MASTER_GUIDE_CN.md) | ⭐ Next SSR SEO + 爬虫抓取全链路实战总指南           |
 
 ---
 
