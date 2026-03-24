@@ -20,7 +20,7 @@
 ```
 read/
 ├── getting-started/   ← 新人必读（3）
-├── architecture/      ← 系统设计 + 面试备用（6）
+├── architecture/      ← 系统设计 + 面试备用（7）
 ├── devops/            ← 运维 + 事故 + 监控配置（4）
 ├── testing/           ← 测试规范与指南（3）
 ├── features/          ← 功能专题（8）
@@ -134,6 +134,7 @@ read/
 | Prisma 模型改了但 TS 报错              | `devops/PRISMA_V6_MIGRATION_CN.md`                                         |
 | 想了解 IM 客服怎么实现的               | `features/IM_SUPPORT_REALTIME_CN.md`                                       |
 | 想了解 SSR 是怎么做的                  | `architecture/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md`                             |
+| 需要技术分享 / 面试 / 简历材料         | `architecture/ADMIN_NEXT_TECH_OVERVIEW_CN.md`                              |
 | OAuth 登录对接                         | `features/OAUTH_THIRDPARTY_LOGIN_CN.md`                                    |
 | Lighthouse 跑分结果                    | `performance/PERFORMANCE_LIGHTHOUSE_CN.md`                                 |
 
