@@ -486,7 +486,7 @@ views/
 
 ### 📎 参考资料
 
-- `read/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md` — 面试问答版架构说明
+- `read/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md` — 问答版架构说明
 - `src/lib/serverFetch.ts` — Server Component 专用 fetch 工具（`serverGet<T>`）
 - `src/components/dashboard/DashboardStats.tsx` — 教科书级 async Server Component 范例
 - `src/components/analytics/AnalyticsOverview.tsx` — 另一个完整 RSC 范例
