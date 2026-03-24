@@ -196,7 +196,9 @@ export const orderApi = {
 
   // 更新订单状态
   updateState: (id: string, state: number) =>
-    http.patch<Order>(`/v1/admin/order/${id}/status`, state),
+    http.patch<Order>(`/v1/admin/order/${id}/status`, {
+      status: state,
+    }),
 
   // 删除order
   delete: (id: string) => http.delete<Order>(`/v1/admin/order/${id}`),
