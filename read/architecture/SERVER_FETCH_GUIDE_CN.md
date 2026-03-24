@@ -155,7 +155,7 @@ await serverGet("/v1/admin/finance/statistics", undefined, {
 
 ---
 
-## 7. 面试速记（可直接说）
+## 7. 速记（可直接说）
 
 > 我们把服务端取数统一收口到 `serverFetch.ts`。它负责读取 HTTP-only Cookie 注入鉴权头、处理环境 baseURL、统一业务 code 校验和 revalidate 缓存策略。这样 Server Component 可以稳定做 SSR，而客户端继续用 Axios 处理交互请求，形成清晰的双通道数据访问架构。
 

@@ -20,7 +20,7 @@
 ```
 read/
 ├── getting-started/   ← 新人必读（3）
-├── architecture/      ← 系统设计 + 面试备用（7）
+├── architecture/      ← 系统设计 + 备用（7）
 ├── devops/            ← 运维 + 事故 + 监控配置（4）
 ├── testing/           ← 测试规范与指南（3）
 ├── features/          ← 功能专题（8）
@@ -42,14 +42,14 @@ read/
 
 ## 🏗️ architecture/ — 系统设计（6 个）
 
-> 理解系统怎么搭的，面试备用。
+> 理解系统怎么搭的，备用。
 
 | 文件                                                                                                                      | 内容                                                        |
 | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | [`ADMIN_NEXT_SSR_CSR_REVIEW_CN.md`](./architecture/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md)                                       | ⭐ Admin Next SSR/CSR 架构评审 + 6-Stage 重构路线图（最新） |
 | [`SERVER_FETCH_GUIDE_CN.md`](./architecture/SERVER_FETCH_GUIDE_CN.md)                                                     | Server Component 数据获取模式速查                           |
 | [`Chat Service.md`](./architecture/Chat%20Service.md)                                                                     | 聊天服务整体设计（Flutter + NestJS + Socket.IO）            |
-| [`ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md`](./architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md)                       | 面试题：架构问答（含标准答案）                              |
+| [`ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md`](./architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md)                       | 题：架构问答（含标准答案）                                  |
 | [`ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md`](./architecture/ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md)                       | 5 分钟口述架构要点                                          |
 | [`ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md`](./architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md) | 架构知识闪卡（背诵用）                                      |
 
@@ -134,7 +134,7 @@ read/
 | Prisma 模型改了但 TS 报错              | `devops/PRISMA_V6_MIGRATION_CN.md`                                         |
 | 想了解 IM 客服怎么实现的               | `features/IM_SUPPORT_REALTIME_CN.md`                                       |
 | 想了解 SSR 是怎么做的                  | `architecture/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md`                             |
-| 需要技术分享 / 面试 / 简历材料         | `architecture/ADMIN_NEXT_TECH_OVERVIEW_CN.md`                              |
+| 需要技术分享 / / 材料                  | `architecture/ADMIN_NEXT_TECH_OVERVIEW_CN.md`                              |
 | OAuth 登录对接                         | `features/OAUTH_THIRDPARTY_LOGIN_CN.md`                                    |
 | Lighthouse 跑分结果                    | `performance/PERFORMANCE_LIGHTHOUSE_CN.md`                                 |
 

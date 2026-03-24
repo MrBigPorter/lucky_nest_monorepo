@@ -1,6 +1,6 @@
 # Admin Next 技术全景文档
 
-> 适用场景：技术分享 / 面试答题 / 简历项目描述 / 团队 Onboarding  
+> 适用场景：技术分享 / 答题 / 项目描述 / 团队 Onboarding  
 > 范围：`apps/admin-next`（Lucky Nest Monorepo）  
 > 更新时间：2026-03-24
 
@@ -119,7 +119,7 @@ const form = useForm<z.infer<typeof schema>>({
 
 ---
 
-## 四、核心设计决策（面试最重要的点）
+## 四、核心设计决策（最重要的点）
 
 ### 4.1 为什么不用纯 CSR（Vue SPA / React SPA）？
 
@@ -288,7 +288,7 @@ git push   → prepush（tsc + vitest）
 
 ---
 
-## 九、面试标准答案（可直接背）
+## 九、标准答案（可直接背）
 
 ### Q1：这个项目用 Next.js 15 的哪些新特性？
 
@@ -316,7 +316,7 @@ git push   → prepush（tsc + vitest）
 
 ---
 
-## 十、简历描述模板
+## 十、描述模板
 
 ### 版本 A（标准型，适合大多数 JD）
 
@@ -351,13 +351,13 @@ git push   → prepush（tsc + vitest）
 
 ## 十三、大厂级深度理论题（SSR 核心命脉）
 
-> 以下 5 道题来自大厂实际面试，结合本项目真实实现，每题附 ❓ 心智模型提问 + ✅ 本项目实际对应。
+> 以下 5 道题来自大厂实际，结合本项目真实实现，每题附 ❓ 心智模型提问 + ✅ 本项目实际对应。
 
 ---
 
 ### 题 1：RSC 与传统 SSR 的本质区别 ⭐⭐⭐⭐
 
-**面试问法**：Server Components 和 Pages Router 里 `getServerSideProps` 的渲染产物、Bundle 体积有什么本质区别？
+**问法**：Server Components 和 Pages Router 里 `getServerSideProps` 的渲染产物、Bundle 体积有什么本质区别？
 
 **标准答案**：
 
@@ -385,7 +385,7 @@ page.tsx（Server Component）
 
 ### 题 2：Edge 计算与包体积极限压榨 ⭐⭐⭐
 
-**面试问法**：把 Next.js 部署到 Cloudflare Workers 遇到 3MB Bundle 限制，从架构角度怎么解决？
+**问法**：把 Next.js 部署到 Cloudflare Workers 遇到 3MB Bundle 限制，从架构角度怎么解决？
 
 **标准答案**：
 
@@ -404,7 +404,7 @@ page.tsx（Server Component）
 
 ### 题 3：Hydration 黑科技 — 服务端数据如何无缝衔接客户端 ⭐⭐⭐⭐
 
-**面试问法**：SSR 阶段已请求过一次 API，客户端接管后如何配合 React Query 做到"无缝衔接"且不重复请求？
+**问法**：SSR 阶段已请求过一次 API，客户端接管后如何配合 React Query 做到"无缝衔接"且不重复请求？
 
 **本项目标准流程**：
 
@@ -445,7 +445,7 @@ const { data } = useQuery({
 
 ### 题 4：Next.js App Router 的"三层缓存"迷宫 ⭐⭐⭐⭐
 
-**面试问法**：简述 Request Memoization、Data Cache 和 Full Route Cache 的区别，后台更新数据后如何精准让缓存失效？
+**问法**：简述 Request Memoization、Data Cache 和 Full Route Cache 的区别，后台更新数据后如何精准让缓存失效？
 
 **三层缓存对比**：
 
@@ -479,7 +479,7 @@ export async function updateOrderAction(...) {
 
 ### 题 5：服务端组件的安全护城河 — server-only ⭐⭐⭐
 
-**面试问法**：如果不小心在 Client Component 里 import 了包含数据库密码的工具类，会导致密钥泄露吗？企业级如何物理隔绝？
+**问法**：如果不小心在 Client Component 里 import 了包含数据库密码的工具类，会导致密钥泄露吗？企业级如何物理隔绝？
 
 **标准答案**：
 
@@ -522,9 +522,9 @@ export const getAdminToken = () => process.env.ADMIN_JWT_SECRET;
 | 文档                                                                   | 内容                            |
 | ---------------------------------------------------------------------- | ------------------------------- |
 | `read/architecture/ADMIN_NEXT_SSR_CSR_REVIEW_CN.md`                    | 6-Stage 重构全过程与架构评审    |
-| `read/architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md`            | 面试高频问题 + 简历模板         |
-| `read/architecture/ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md`            | 5 分钟口述稿（面试开场）        |
-| `read/architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md` | 闪卡速记（面试前 15 分钟）      |
+| `read/architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_CN.md`            | 高频问题 + 模板                 |
+| `read/architecture/ADMIN_NEXT_ARCHITECTURE_5MIN_ORAL_CN.md`            | 5 分钟口述稿（开场）            |
+| `read/architecture/ADMIN_NEXT_ARCHITECTURE_INTERVIEW_FLASHCARDS_CN.md` | 闪卡速记（前 15 分钟）          |
 | `read/performance/PERFORMANCE_LIGHTHOUSE_CN.md`                        | Lighthouse 性能验收结果         |
 | `read/performance/NEXT_SSR_SEO_CRAWLER_MASTER_GUIDE_CN.md`             | SEO + 爬虫全链路实战            |
 | `read/devops/LHCI_SENTRY_SETUP_CN.md`                                  | Lighthouse CI + Sentry 接入指南 |

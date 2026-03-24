@@ -1,6 +1,6 @@
 # 全项目架构全景分析（Monorepo 全栈）
 
-> 用途：全栈技术面试 / 架构分享 / 项目描述  
+> 用途：全栈技术 / 架构分享 / 项目描述  
 > 范围：`lucky_nest_monorepo`（NestJS API + Next.js Admin + 共享包 + 基础设施）  
 > 更新：2026-03-24
 
@@ -164,7 +164,7 @@ const label = ORDER_STATUS_LABELS[order.orderStatus];
 #   内存限制：NODE_OPTIONS=--max-old-space-size=256
 ```
 
-> **面试亮点**：三阶段构建中的 Pruner Stage 是专门为 1GB VPS 设计的"内存极限压缩"手段，在不影响运行时功能的前提下把 Docker 层从 ~1.2GB 压缩到 ~350MB。
+> **亮点**：三阶段构建中的 Pruner Stage 是专门为 1GB VPS 设计的"内存极限压缩"手段，在不影响运行时功能的前提下把 Docker 层从 ~1.2GB 压缩到 ~350MB。
 
 ---
 
@@ -228,7 +228,7 @@ git push   → prepush（tsc --noEmit + vitest）
 | Swap 兜底         | 1GB        | 防 OOM 杀进程              |
 | **合计**          | **~810MB** | 留有余量                   |
 
-> **面试亮点**：这是典型的"资源极限设计"——在 1GB RAM 限制下，通过 Docker 内存 `limit`、Node.js 堆限制、Redis maxmemory、PostgreSQL shared_buffers 四层约束，确保服务器不会因 OOM 自动重启。
+> **亮点**：这是典型的"资源极限设计"——在 1GB RAM 限制下，通过 Docker 内存 `limit`、Node.js 堆限制、Redis maxmemory、PostgreSQL shared_buffers 四层约束，确保服务器不会因 OOM 自动重启。
 
 ---
 
@@ -323,7 +323,7 @@ binaryTargets = [
 
 ---
 
-## 十二、面试全栈综合题
+## 十二、全栈综合题
 
 ### Q1：这个 Monorepo 的 `@lucky/shared` 是如何做到前后端类型安全的？
 
@@ -417,8 +417,8 @@ binaryTargets = [
 
 | 文档                                               | 内容                            |
 | -------------------------------------------------- | ------------------------------- |
-| `read/architecture/ADMIN_NEXT_TECH_OVERVIEW_CN.md` | 前端完整技术栈 + 面试题 + 模板  |
-| `read/architecture/NESTJS_API_ARCHITECTURE_CN.md`  | 后端完整技术栈 + 面试题 + 模板  |
+| `read/architecture/ADMIN_NEXT_TECH_OVERVIEW_CN.md` | 前端完整技术栈 + 题 + 模板      |
+| `read/architecture/NESTJS_API_ARCHITECTURE_CN.md`  | 后端完整技术栈 + 题 + 模板      |
 | `read/devops/DEPLOY_INCIDENT_20260321_CN.md`       | tsconfig rootDir 偏移事故复盘   |
 | `read/devops/PRISMA_V6_MIGRATION_CN.md`            | Prisma v6 Alpine 容器崩溃复盘   |
 | `read/devops/LHCI_SENTRY_SETUP_CN.md`              | Lighthouse CI + Sentry 接入指南 |
