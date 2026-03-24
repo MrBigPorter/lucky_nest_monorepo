@@ -17,10 +17,13 @@ function isExactOrSubPath(pathname: string, basePath: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 跳过静态资源
+  // 跳过静态资源与 metadata 资源
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
+    pathname.startsWith('/icon') ||
+    pathname.startsWith('/apple-icon') ||
+    pathname === '/manifest.webmanifest' ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
