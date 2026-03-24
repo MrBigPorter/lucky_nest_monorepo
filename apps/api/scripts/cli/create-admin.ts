@@ -6,7 +6,7 @@
  * 用法:
  *   本地开发:  yarn workspace @lucky/api create-admin
  *   生产容器:  docker exec -it lucky-backend-prod \
- *                node apps/api/dist/cli/create-admin.js
+ *                node apps/api/dist/scripts/cli/create-admin.js
  * ============================================================
  */
 
@@ -18,7 +18,7 @@
  * 用法:
  *   本地开发:  yarn workspace @lucky/api create-admin
  *   生产容器:  docker exec -it lucky-backend-prod \
- *                node apps/api/dist/cli/create-admin.js
+ *                node apps/api/dist/scripts/cli/create-admin.js
  * ============================================================
  */
 import * as readline from 'readline';

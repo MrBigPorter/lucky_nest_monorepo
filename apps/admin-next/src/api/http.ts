@@ -5,7 +5,12 @@ import axios, {
   CanceledError,
   InternalAxiosRequestConfig,
 } from 'axios';
-import type { ApiResponse, RequestConfig } from './types'; // 注意：这里不要写 .ts 后缀
+import type { ApiResponse, RequestConfig, RequestTraceConfig } from './types'; // 注意：这里不要写 .ts 后缀
+import {
+  SENTRY_SPAN_ATTR_KEY,
+  SENTRY_SPAN_NAME,
+} from '@/lib/sentry-span-constants';
+import { withHttpClientSpan } from '@/lib/sentry-span';
 import { useToastStore } from '@/store/useToastStore';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -326,6 +331,37 @@ class HttpClient {
     const { addToast } = useToastStore.getState();
     addToast('error', message);
   }
+
+  private traceRequest<T>(
+    method: string,
+    url: string,
+    config: RequestConfig | undefined,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const trace = config?.trace;
+
+    if (trace === false) {
+      return fn();
+    }
+
+    const traceConfig: RequestTraceConfig | undefined =
+      typeof trace === 'object' ? trace : undefined;
+
+    if (traceConfig?.enabled === false) {
+      return fn();
+    }
+
+    return withHttpClientSpan(
+      traceConfig?.name ?? SENTRY_SPAN_NAME.HTTP_CLIENT_REQUEST,
+      {
+        [SENTRY_SPAN_ATTR_KEY.HTTP_METHOD]: method.toUpperCase(),
+        [SENTRY_SPAN_ATTR_KEY.HTTP_ROUTE]: url,
+        ...traceConfig?.attributes,
+      },
+      fn,
+    );
+  }
+
   // ================= 对外 HTTP 方法 =================
 
   public async get<T = any>(
@@ -349,12 +385,14 @@ class HttpClient {
       return existing as Promise<T>;
     }
 
-    const requestPromise = this.instance
-      .get<ApiResponse<T>>(url, mergedConfig)
-      .then((res) => res.data.data)
-      .finally(() => {
-        this.inflightGetRequests.delete(key);
-      });
+    const requestPromise = this.traceRequest('get', url, config, async () => {
+      return this.instance
+        .get<ApiResponse<T>>(url, mergedConfig)
+        .then((res) => res.data.data)
+        .finally(() => {
+          this.inflightGetRequests.delete(key);
+        });
+    });
 
     this.inflightGetRequests.set(key, requestPromise);
     return requestPromise;
@@ -365,7 +403,9 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
-    const res = await this.instance.post<ApiResponse<T>>(url, data, config);
+    const res = await this.traceRequest('post', url, config, () =>
+      this.instance.post<ApiResponse<T>>(url, data, config),
+    );
     return res.data.data;
   }
 
@@ -374,7 +414,9 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
-    const res = await this.instance.put<ApiResponse<T>>(url, data, config);
+    const res = await this.traceRequest('put', url, config, () =>
+      this.instance.put<ApiResponse<T>>(url, data, config),
+    );
     return res.data.data;
   }
 
@@ -383,7 +425,9 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
-    const res = await this.instance.patch<ApiResponse<T>>(url, data, config);
+    const res = await this.traceRequest('patch', url, config, () =>
+      this.instance.patch<ApiResponse<T>>(url, data, config),
+    );
     return res.data.data;
   }
 
@@ -391,7 +435,9 @@ class HttpClient {
     url: string,
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
-    const res = await this.instance.delete<ApiResponse<T>>(url, config);
+    const res = await this.traceRequest('delete', url, config, () =>
+      this.instance.delete<ApiResponse<T>>(url, config),
+    );
     return res.data.data;
   }
 
@@ -399,24 +445,34 @@ class HttpClient {
     url: string,
     file: File | FormData,
     onProgress?: (percent: number) => void,
+    config?: RequestConfig,
   ): Promise<T> {
     const formData = file instanceof FormData ? file : new FormData();
     if (file instanceof File) formData.append('file', file);
 
-    const res = await this.instance.post<ApiResponse<T>>(url, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress: (e_1) => {
-        if (onProgress && e_1.total) {
-          const percent_1 = Math.round((e_1.loaded * 100) / e_1.total);
-          onProgress(percent_1);
-        }
-      },
-    });
+    const res = await this.traceRequest('post', url, config, () =>
+      this.instance.post<ApiResponse<T>>(url, formData, {
+        ...config,
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e_1) => {
+          if (onProgress && e_1.total) {
+            const percent_1 = Math.round((e_1.loaded * 100) / e_1.total);
+            onProgress(percent_1);
+          }
+        },
+      }),
+    );
     return res.data.data;
   }
 
-  public async download(url: string, filename = 'download'): Promise<void> {
-    const res = await this.instance.get(url, { responseType: 'blob' });
+  public async download(
+    url: string,
+    filename = 'download',
+    config?: RequestConfig,
+  ): Promise<void> {
+    const res = await this.traceRequest('get', url, config, () =>
+      this.instance.get(url, { responseType: 'blob', ...config }),
+    );
     const blob = new Blob([res.data]);
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
