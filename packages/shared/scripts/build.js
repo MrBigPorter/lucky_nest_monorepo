@@ -58,7 +58,8 @@ async function build() {
   console.log('   ✓ JS compiled (esbuild)');
 
   // Step 2: tsc — emit .d.ts declaration files only
-  execSync('node_modules/.bin/tsc -p tsconfig.json --emitDeclarationOnly --noEmit false', {
+  // Use tsc from root node_modules (monorepo setup)
+  execSync('npx tsc -p tsconfig.json --emitDeclarationOnly --noEmit false', {
     cwd: pkgRoot,
     stdio: 'inherit',
   });
