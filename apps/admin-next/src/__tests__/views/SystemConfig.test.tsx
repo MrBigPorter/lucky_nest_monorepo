@@ -106,7 +106,7 @@ describe('SystemConfig', () => {
       .closest('div[class*="justify-between"]');
     expect(row).not.toBeNull();
 
-    const editButton = within(row as HTMLDivElement).getByRole('button');
+    const editButton = within(row as HTMLDivElement).getAllByRole('button')[0];
     fireEvent.click(editButton);
 
     const input = screen.getByDisplayValue('Lucky Nest');
