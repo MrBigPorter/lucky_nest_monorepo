@@ -267,15 +267,25 @@ docker compose --env-file deploy/.env.dev up -d admin-next
    - 定义 `输出物`（表格/文档/指标等）
    - 列举 `不做什么`（避免范围蔓延）
    - 等用户确认无误再开始
-4. 修改 `packages/ui` → 必须 `node packages/ui/scripts/build.js`
-5. 修改 `packages/shared` → 必须 `node packages/shared/scripts/build.js`
-6. Zod schema **禁止** `.default()` 和 `.transform()`（见技术约定）
-7. 生产部署前检查 `deploy/.env.prod` 包含所有必需变量
-8. 数据库变更必须通过 `prisma migrate dev` 生成迁移文件
-9. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
-10. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理
-11. 修改 `schema.prisma` 后，**必须在宿主机跑一次** `node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`（让 IDE / ESLint 看到最新类型，否则会出现大量假报错）
-12. 每次遇到**核心技术点**或**高现实约束技术点**（如线上事故、性能瓶颈、部署兼容、类型系统陷阱），必须同步做两件事：
+4. **AI协作开发必须遵守对应技术栈的工作流程**：
+   - Flutter项目：查阅 `docs/flutter/AI_COLLABORATION_WORKFLOW.md`
+   - Next.js项目：查阅 `docs/nextjs/AI_COLLABORATION_WORKFLOW.md`
+   - NestJS项目：查阅 `docs/nestjs/AI_COLLABORATION_WORKFLOW.md`
+
+5. **命令执行前必须查阅对应速查表**：
+   - Flutter命令：`docs/flutter/FLUTTER_COMMANDS_CHEATSHEET.md`
+   - Next.js命令：`docs/nextjs/COMMANDS_CHEATSHEET.md`
+   - NestJS命令：`docs/nestjs/COMMANDS_CHEATSHEET.md`
+
+6. 修改 `packages/ui` → 必须 `node packages/ui/scripts/build.js`
+7. 修改 `packages/shared` → 必须 `node packages/shared/scripts/build.js`
+8. Zod schema **禁止** `.default()` 和 `.transform()`（见技术约定）
+9. 生产部署前检查 `deploy/.env.prod` 包含所有必需变量
+10. 数据库变更必须通过 `prisma migrate dev` 生成迁移文件
+11. 新增 API 接口必须有 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
+12. **新增 Prisma 模型后，本地必须重启 backend 容器**（`docker compose --env-file deploy/.env.dev up -d backend`）让 `prestart:dev` 重跑 `prisma generate`；生产走 CI/CD 重建镜像自动处理
+13. 修改 `schema.prisma` 后，**必须在宿主机跑一次** `node apps/api/node_modules/.bin/prisma generate --schema apps/api/prisma/schema.prisma`（让 IDE / ESLint 看到最新类型，否则会出现大量假报错）
+14. 每次遇到**核心技术点**或**高现实约束技术点**（如线上事故、性能瓶颈、部署兼容、类型系统陷阱），必须同步做两件事：
     - 记录文档（`read/` 对应专题或 `RUNBOOK.md` 补充「现象/根因/修复/预防」）
     - 提出至少 1 个「心智模型提问」（为什么会这样、边界条件是什么、下次如何更早发现）并写入该文档，沉淀可复用排障框架。
-13. **语言规范**：默认使用中文（必要时英文），**禁止输出韩文（韩语字符）**；若误用，立即改回中文并继续。
+15. **语言规范**：默认使用中文（必要时英文），**禁止输出韩文（韩语字符）**；若误用，立即改回中文并继续。
