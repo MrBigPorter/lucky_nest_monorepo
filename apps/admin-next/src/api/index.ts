@@ -859,11 +859,18 @@ export const systemConfigApi = {
     http.get<{ list: import('@/type/types').SystemConfigItem[] }>(
       '/v1/admin/system-config',
     ),
+  create: (data: { key: string; value: string }) =>
+    http.post<import('@/type/types').SystemConfigItem>(
+      '/v1/admin/system-config',
+      data,
+    ),
   update: (key: string, value: string) =>
     http.patch<import('@/type/types').SystemConfigItem>(
       `/v1/admin/system-config/${key}`,
       { value },
     ),
+  delete: (key: string) =>
+    http.delete<{ success: boolean }>(`/v1/admin/system-config/${key}`),
 };
 
 /**
