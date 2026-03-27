@@ -61,6 +61,11 @@ export class OrderService {
       couponId,
     } = dto;
 
+    // 添加调试日志
+    this.logger.debug(
+      `[checkOut] userId: ${userId}, paymentMethod: ${paymentMethod}, entries: ${entries}`,
+    );
+
     if (!entries || entries < 1) {
       throw new BadRequestException('entries must be at least 1');
     }
@@ -263,28 +268,42 @@ export class OrderService {
         let remainingAmount = originalAmount.sub(couponAmount);
         if (remainingAmount.lt(0)) remainingAmount = D(0);
 
+        // 添加调试日志
+        this.logger.debug(
+          `[checkOut] originalAmount: ${originalAmount}, couponAmount: ${couponAmount}, remainingAmount: ${remainingAmount}, rate: ${rate}`,
+        );
+
         // ==========================================
-        //  FIX 3: Coin Deduction Logic (Only applies to remaining balance)
+        //  简化Coin扣减逻辑：不限制，先放开
         // ==========================================
         if (paymentMethod === 2 && remainingAmount.gt(0)) {
+          this.logger.debug(
+            `[checkOut] paymentMethod is 2, entering coin deduction logic`,
+          );
           const w = await this.wallet.ensureWallet(userId, tx);
-          const maxCoinUsable = treasure.maxUnitCoins?.mul(entries) || D(0);
 
-          // Coins needed to pay off the remaining balance after coupon
+          // 计算需要的coin数（coupon抵扣后剩余金额）
           const coinsNeededForRemaining = remainingAmount.mul(rate);
 
-          // Actual max coins allowed (min of product limit vs needed for remaining balance)
-          const actualMaxCoins = Prisma.Decimal.min(
-            maxCoinUsable,
-            coinsNeededForRemaining,
-          );
+          // 简化：不限制maxUnitCoins，用户可以使用全部需要的coin
+          const maxCoinUsable = coinsNeededForRemaining;
 
-          const canUseCoins = w.coinBalance.lessThan(actualMaxCoins)
+          // 实际使用：用户coin余额和需要coin数的较小值
+          const canUseCoins = w.coinBalance.lessThan(maxCoinUsable)
             ? w.coinBalance
-            : actualMaxCoins;
+            : maxCoinUsable;
 
           coinUsed = canUseCoins;
           coinAmount = canUseCoins.div(rate);
+
+          // 添加调试日志
+          this.logger.debug(
+            `[checkOut] user coinBalance: ${w.coinBalance}, coinsNeededForRemaining: ${coinsNeededForRemaining}, maxCoinUsable: ${maxCoinUsable}, canUseCoins: ${canUseCoins}, coinUsed: ${coinUsed}, coinAmount: ${coinAmount}`,
+          );
+        } else {
+          this.logger.debug(
+            `[checkOut] paymentMethod: ${paymentMethod}, remainingAmount: ${remainingAmount}, skipping coin deduction`,
+          );
         }
 
         //  FIX 4: Final amounts calculation
@@ -292,11 +311,19 @@ export class OrderService {
         // Total discount is the sum of both coupon and coins
         const discountAmount = couponAmount.add(coinAmount);
 
+        // 添加调试日志
+        this.logger.debug(
+          `[checkOut] finalAmount: ${finalAmount}, coinUsed: ${coinUsed}, will debitCoin: ${paymentMethod == 2 && coinUsed.gt(0)}, will debitCash: ${finalAmount.gt(0)}`,
+        );
+
         const createdTxnIds: string[] = [];
 
         // deduce wallet coin balance before cash payment
         const related = { id: null as any, type: 'order' as string };
         if (paymentMethod == 2 && coinUsed.gt(0)) {
+          this.logger.debug(
+            `[checkOut] Calling debitCoin with coins: ${coinUsed}`,
+          );
           const { transactionId: coinTxnId } = await this.wallet.debitCoin(
             {
               userId,
@@ -307,9 +334,19 @@ export class OrderService {
             tx,
           );
           createdTxnIds.push(coinTxnId);
+          this.logger.debug(
+            `[checkOut] debitCoin successful, transactionId: ${coinTxnId}`,
+          );
+        } else {
+          this.logger.debug(
+            `[checkOut] Skipping debitCoin - paymentMethod: ${paymentMethod}, coinUsed: ${coinUsed}`,
+          );
         }
 
         if (finalAmount.gt(0)) {
+          this.logger.debug(
+            `[checkOut] Calling debitCash with amount: ${finalAmount}`,
+          );
           const { transactionId } = await this.wallet.debitCash(
             {
               userId,
@@ -320,6 +357,13 @@ export class OrderService {
             tx,
           );
           createdTxnIds.push(transactionId);
+          this.logger.debug(
+            `[checkOut] debitCash successful, transactionId: ${transactionId}`,
+          );
+        } else {
+          this.logger.debug(
+            `[checkOut] Skipping debitCash - finalAmount: ${finalAmount}`,
+          );
         }
 
         // safe to deduce stock now, ensure enough stock
