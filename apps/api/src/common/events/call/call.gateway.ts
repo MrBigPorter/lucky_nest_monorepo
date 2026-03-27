@@ -5,7 +5,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import {
   CallAcceptDto,
@@ -14,6 +14,9 @@ import {
   CallInviteDto,
 } from '@api/common/events/call/dto/call-signaling.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ChatService } from '@api/common/chat/chat.service';
+import { v4 as uuidv4 } from 'uuid';
+import { CallEndReason, CallMediaType, MESSAGE_TYPE } from '@lucky/shared';
 
 @WebSocketGateway({
   namespace: 'events',
@@ -24,7 +27,10 @@ export class CallGateway {
   server!: Server;
 
   private readonly logger = new Logger(CallGateway.name);
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    @Inject(ChatService) private readonly chatService: ChatService,
+  ) {}
 
   /**
    * 辅助方法：安全获取当前 Socket 的用户 ID
@@ -126,7 +132,7 @@ export class CallGateway {
   // 4. 挂断/拒绝/取消 (End)
   // ==========================================
   @SubscribeMessage('call_end')
-  handleCallEnd(
+  async handleCallEnd(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: CallEndDto,
   ) {
@@ -143,11 +149,87 @@ export class CallGateway {
       senderId,
     });
 
+    // 发送通话结束消息到聊天
+    await this.sendCallEndMessage(senderId, payload);
+
     this.eventEmitter.emit('call.wake_up', {
       targetId: payload.targetId,
       sessionId: payload.sessionId,
       senderId: senderId,
       type: 'call_end',
     });
+  }
+
+  /**
+   * 发送通话结束消息到聊天
+   */
+  private async sendCallEndMessage(callerId: string, payload: CallEndDto) {
+    try {
+      const { targetId, reason, conversationId } = payload;
+      const duration = payload.duration || 0;
+      const mediaType = payload.mediaType || 'audio'; // 兜底为语音
+
+      const mediaTypeText =
+        mediaType === CallMediaType.VIDEO ? 'Video' : 'Audio';
+      let content = '';
+
+      //  重点修改这里：使用 CallEndReason 枚举进行比较
+      if (reason === CallEndReason.MISSED) {
+        content = '[Missed]';
+      } else if (reason === CallEndReason.REJECTED) {
+        content = '[Rejected]';
+      } else if (duration > 0) {
+        // 正常通话结束
+        const durationText = this.formatDuration(duration);
+        content = `[${mediaTypeText}Call] Time ${durationText}`;
+      } else {
+        // 时长为0，且不是未接/拒绝，说明是发起方提前取消
+        content = '[Cancelled]';
+      }
+
+      // 2. 拿到会话 ID
+      const conversation = conversationId
+        ? { id: conversationId }
+        : await this.chatService.ensureDirectConversation(callerId, targetId);
+
+      // 3. 复用现有的 sendMessage 落库并广播
+      await this.chatService.sendMessage(callerId, {
+        id: uuidv4(),
+        conversationId: conversation.id,
+        type: MESSAGE_TYPE.SYSTEM,
+        content,
+        meta: {
+          callType: mediaType,
+          duration: duration,
+          startedAt: payload.startedAt,
+          sessionId: payload.sessionId,
+          reason: reason,
+          isSystemCallEnd: true,
+        },
+      });
+
+      this.logger.log(
+        `通话记录已生成: ${callerId} -> ${targetId}, 状态: ${content}`,
+      );
+    } catch (error) {
+      this.logger.error(`生成通话记录失败: ${error}`);
+    }
+  }
+
+  /**
+   * 格式化时长（秒 -> 时分秒）
+   */
+  private formatDuration(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h${minutes}m${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
   }
 }

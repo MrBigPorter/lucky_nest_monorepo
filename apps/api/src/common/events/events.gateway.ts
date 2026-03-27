@@ -7,7 +7,7 @@ import {
   OnGatewayDisconnect,
   MessageBody,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@api/common/prisma/prisma.service';
@@ -53,10 +53,16 @@ export enum PushEventType {
   GROUP_SUCCESS = 'group_success',
   GROUP_FAILED = 'group_failed',
 }
-@WebSocketGateway()
+
+@WebSocketGateway({
+  namespace: '/events',
+  cors: {
+    origin: '*', // 解决开发环境跨域
+  },
+})
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server!: Server;
+  server!: any;
 
   private readonly logger = new Logger(EventsGateway.name);
 
@@ -119,52 +125,59 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ---------------------------------------------------------
 
   /**
-   *  修改点 1: 增加统一分发出口
    * 所有业务指令的最终出口，前端只监听 SocketEvents.DISPATCH ('dispatch')
    */
   dispatch(room: string, type: string, data: unknown, excludeRoom?: string) {
+    const roomClients = this.server.adapter.rooms.get(room);
+    const clientCount = roomClients ? roomClients.size : 0;
+
+    // 记录数据摘要（避免日志过大）
+    const dataSummary =
+      typeof data === 'object' && data !== null
+        ? JSON.stringify(data).substring(0, 200) +
+          (JSON.stringify(data).length > 200 ? '...' : '')
+        : String(data);
+
     if (excludeRoom) {
       this.server
         .to(room)
         .except(excludeRoom) // 排除特定房间（如已在房间内的人）
         .emit(SocketEvents.DISPATCH, {
           type, // 对应前端的业务识别码，如 'chat_message'
-          data, // 实际数据载荷z
+          data, // 实际数据载荷
         });
+
+      this.logger.debug(
+        `[Dispatch] To: ${room} (${clientCount} clients, exclude: ${excludeRoom}), ` +
+          `Type: ${type}, Data: ${dataSummary}`,
+      );
     } else {
       this.server.to(room).emit(SocketEvents.DISPATCH, {
         type, // 对应前端的业务识别码，如 'chat_message'
         data, // 实际数据载荷
       });
-    }
 
-    this.logger.debug(` [Dispatch] To: ${room}, Type: ${type}`);
+      this.logger.debug(
+        `[Dispatch] To: ${room} (${clientCount} clients), ` +
+          `Type: ${type}, Data: ${dataSummary}`,
+      );
+    }
   }
 
   // ---------------------------------------------------------
   // 业务通知逻辑 (重构为调用 dispatch)
   // ---------------------------------------------------------
 
-  /**
-   *  修改点 2: 修改大厅广播逻辑
-   */
   broadcastToLobby(payload: unknown) {
     // 统一走 dispatch 出口，类型设为 GROUP_UPDATE
     this.dispatch(SocketRoom.LOBBY, SocketEvents.GROUP_UPDATE, payload);
   }
 
-  /**
-   *  修改点 3: 修改个人私信通知逻辑
-   */
   notifyUser(userId: string, type: string, payload: unknown) {
     const privateRoom = `user_${userId}`;
     this.dispatch(privateRoom, type, payload);
   }
 
-  /**
-   * 精准分发：发给特定用户 (通过私有房间)
-   * 这就是你问的 dispatchToUser 的来源
-   */
   dispatchToUser(userId: string, type: string, data: unknown) {
     const privateRoom = `user_${userId}`;
     // 直接复用 dispatch 逻辑，发送到该用户的私有房间
@@ -176,21 +189,102 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ---------------------------------------------------------
 
   @SubscribeMessage(SocketEvents.JOIN_CHAT)
-  handleJoinChat(
+  async handleJoinChat(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { conversationId: string },
+    @MessageBody() payload: unknown,
   ) {
-    if (!payload.conversationId) return;
-    void client.join(payload.conversationId);
-    return { status: 'joined', conversationId: payload.conversationId };
+    // 处理数组格式: ["join_chat", { conversationId: "..." }]
+    let conversationId: string | null = null;
+
+    if (Array.isArray(payload) && payload.length === 2) {
+      // 数组格式: 第一个元素是事件名，第二个是数据
+      const data = payload[1];
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'conversationId' in data
+      ) {
+        conversationId = String(data.conversationId);
+      }
+    } else if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'conversationId' in payload
+    ) {
+      // 对象格式: { conversationId: "..." }
+      conversationId = String(payload.conversationId);
+    }
+
+    if (!conversationId) {
+      this.logger.warn(
+        `[Join Chat] Invalid payload format: ${JSON.stringify(payload)}`,
+      );
+      return;
+    }
+
+    const userId = getSocketUserId(client);
+    const clientId = client.id;
+    const roomName = conversationId;
+
+    // 检查客户端是否已经在房间中
+    const rooms = Array.from(client.rooms);
+    const isAlreadyInRoom = rooms.includes(roomName);
+
+    // 使用 await 确保加入房间成功
+    await client.join(roomName);
+
+    // 👈 修改点：去掉了多余的 .sockets
+    const roomClients = this.server.adapter.rooms.get(roomName);
+    const clientCount = roomClients ? roomClients.size : 0;
+
+    this.logger.debug(
+      `[Join Chat] Client: ${clientId}, User: ${userId || 'unknown'}, ` +
+        `Room: ${roomName}, Already in room: ${isAlreadyInRoom}, ` +
+        `Room clients after join: ${clientCount}, Payload format: ${Array.isArray(payload) ? 'array' : 'object'}`,
+    );
+
+    return { status: 'joined', conversationId };
   }
 
   @SubscribeMessage(SocketEvents.LEAVE_CHAT)
   handleLeaveChat(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { conversationId: string },
+    @MessageBody() payload: unknown,
   ) {
-    void client.leave(payload.conversationId);
+    // 处理数组格式: ["leave_chat", { conversationId: "..." }]
+    let conversationId: string | null = null;
+
+    if (Array.isArray(payload) && payload.length === 2) {
+      // 数组格式: 第一个元素是事件名，第二个是数据
+      const data = payload[1];
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'conversationId' in data
+      ) {
+        conversationId = String(data.conversationId);
+      }
+    } else if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'conversationId' in payload
+    ) {
+      // 对象格式: { conversationId: "..." }
+      conversationId = String(payload.conversationId);
+    }
+
+    if (!conversationId) {
+      this.logger.warn(
+        `[Leave Chat] Invalid payload format: ${JSON.stringify(payload)}`,
+      );
+      return;
+    }
+
+    void client.leave(conversationId);
+
+    this.logger.debug(
+      `[Leave Chat] Client: ${client.id}, Room: ${conversationId}`,
+    );
   }
 
   @SubscribeMessage(SocketEvents.SEND_MESSAGE)
@@ -247,10 +341,6 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
       );
 
-      /**
-       *  修改点 5: 修改发送消息后的广播逻辑
-       * 不再直接 emit(chat_message)，而是通过 dispatch 分发
-       */
       this.dispatch(conversationId, SocketEvents.CHAT_MESSAGE, {
         ...result,
         isSelf: false, // 告知房间内其他人此消息非本人发送

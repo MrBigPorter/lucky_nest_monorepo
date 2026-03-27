@@ -298,30 +298,36 @@ export class WalletService {
 
     await this.ensureWallet(userId, db);
 
-    const res = await db.userWallet.updateMany({
-      where: { userId, coinBalance: { gte: amt } },
-      data: {
-        coinBalance: { decrement: amt },
-      },
-    });
-
-    if (res.count !== 1) {
+    // 使用 update 而不是 updateMany，直接获取更新后的值（与 debitCash 保持一致）
+    let updatedWallet: { id: string; coinBalance: Prisma.Decimal } | null =
+      null;
+    try {
+      updatedWallet = await db.userWallet.update({
+        where: { userId, coinBalance: { gte: amt } },
+        data: {
+          coinBalance: { decrement: amt },
+        },
+        select: {
+          id: true,
+          coinBalance: true,
+        },
+      });
+    } catch {
       throw new BadRequestException('insufficient coin balance');
     }
 
-    const currentWallet = await db.userWallet.findUniqueOrThrow({
-      where: { userId },
-      select: { id: true, coinBalance: true },
-    });
+    if (!updatedWallet) {
+      throw new BadRequestException('insufficient coin balance');
+    }
 
-    const after = currentWallet.coinBalance;
+    const after = updatedWallet.coinBalance;
     const before = after.add(amt);
 
     const txn = await db.walletTransaction.create({
       data: {
         transactionNo: generateTransactionNo(),
         userId,
-        walletId: currentWallet.id,
+        walletId: updatedWallet.id,
         transactionType: TRANSACTION_TYPE.COIN_EXCHANGE,
         balanceType: BALANCE_TYPE.COIN,
         amount: amt.neg(), // negative amount for debit
