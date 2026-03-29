@@ -210,9 +210,9 @@ jobs:
             # 0. 确保同步后的脚本可执行
             chmod +x deploy/*.sh || true
 
-            # 0.1 预检 VPS -> GHCR 网络连通性（避免后续 login/pull 直接超时）
-            echo "→ 预检 ghcr.io 连通性..."
-            retry 4 5 curl -fsS --max-time 15 https://ghcr.io/v2/ >/dev/null
+            # 0.1 预检 VPS 出海网络连通性（测 github 官网，避开 401 权限报错）
+            echo "→ 预检 GitHub 连通性..."
+            retry 4 5 curl -fsS --max-time 15 https://github.com >/dev/null
 
             # 1. 登录 GHCR
             echo "→ 登录 GHCR..."
