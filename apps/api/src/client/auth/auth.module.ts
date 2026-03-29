@@ -9,6 +9,7 @@ import { JwtStrategy } from '@api/common/jwt/jwt.strategy';
 import { GoogleProvider } from '@api/client/auth/providers/google.provider';
 import { FacebookProvider } from '@api/client/auth/providers/facebook.provider';
 import { AppleProvider } from '@api/client/auth/providers/apple.provider';
+import { FirebaseProvider } from '@api/client/auth/providers/firebase.provider';
 import type { StringValue } from 'ms';
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import type { StringValue } from 'ms';
     GoogleProvider,
     FacebookProvider,
     AppleProvider,
+    FirebaseProvider,
   ],
   exports: [AuthService, JwtModule],
 })
