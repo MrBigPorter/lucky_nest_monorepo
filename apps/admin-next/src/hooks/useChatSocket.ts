@@ -78,6 +78,16 @@ export function useChatSocket({
     onConversationUpdatedRef.current = onConversationUpdated;
   }, [onConversationUpdated]);
 
+  // ── 从 JWT token 中解析 userId ──
+  const getUserIdFromToken = useCallback((token: string): string | null => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.sub || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // ── 建立 Socket 连接（只执行一次） ──
   useEffect(() => {
     const token =
@@ -85,6 +95,7 @@ export function useChatSocket({
 
     if (!token) return;
 
+    const currentUserId = getUserIdFromToken(token);
     setStatus('connecting');
 
     /**
@@ -104,6 +115,13 @@ export function useChatSocket({
 
     socket.on('connect', () => {
       setStatus('connected');
+
+      // Admin 连接时自动加入自己的私有房间，用于接收新会话通知
+      if (currentUserId) {
+        const privateRoom = `user_${currentUserId}`;
+        socket.emit('join_chat', { conversationId: privateRoom });
+        currentRoomRef.current = privateRoom;
+      }
     });
 
     socket.on('disconnect', () => {
