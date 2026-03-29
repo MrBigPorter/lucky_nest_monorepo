@@ -202,8 +202,8 @@ export class AuthController {
     @Body() dto: FirebaseLoginDto,
     @CurrentDevice() device: DeviceInfo,
   ) {
-    const oauthProfile = await this.firebaseProvider.verifyIdToken(dto.idToken);
-    return this.auth.loginWithOauth('google', oauthProfile, {
+    const result = await this.firebaseProvider.verifyIdToken(dto.idToken);
+    return this.auth.loginWithOauth(result.provider, result.profile, {
       ip: device.ip,
       ua: device.userAgent,
       inviteCode: dto.inviteCode,

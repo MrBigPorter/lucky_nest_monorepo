@@ -121,7 +121,7 @@ export class GoogleProvider {
     }
 
     // 添加调试日志
-    console.log('Google OAuth Debug:', {
+    this.logger.debug('Google OAuth Debug:', {
       allowedClientIdsRaw,
       singleClientId,
       finalAllowedIds,
@@ -130,11 +130,11 @@ export class GoogleProvider {
 
     // 如果没有配置任何Client ID，跳过验证（为了向后兼容，但生产环境应该配置）
     if (finalAllowedIds.length === 0) {
-      console.warn(
+      this.logger.warn(
         'No Google Client IDs configured. Audience validation skipped.',
       );
     } else if (!finalAllowedIds.includes(data.aud || '')) {
-      console.error('Google token audience mismatch:', {
+      this.logger.error('Google token audience mismatch:', {
         allowedIds: finalAllowedIds,
         tokenAud: data.aud,
       });

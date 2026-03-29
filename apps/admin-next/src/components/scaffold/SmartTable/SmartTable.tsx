@@ -289,11 +289,17 @@ const SmartTableInner = <T extends Record<string, any>>(
           if (transformedParams[key] === 'ALL') delete transformedParams[key];
         });
 
+        // 避免搜索参数里的 page/pageSize 覆盖分页控件当前页
+        // （例如 initialFormParams 来自 URL 时会携带 page=1）
+        delete transformedParams.page;
+        delete transformedParams.pageSize;
+        delete transformedParams.current;
+
         const res = await request({
-          page: pageParams.page,
-          pageSize: pageParams.pageSize,
           ...externalParams,
           ...transformedParams,
+          page: pageParams.page,
+          pageSize: pageParams.pageSize,
         });
 
         setData(res.data);
