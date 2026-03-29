@@ -67,7 +67,7 @@ export class UserService {
       pageSize,
       page,
       totalPages: Math.ceil(total / pageSize),
-      list: list.map((item) => ({
+      list: list.map((item: any) => ({
         ...item,
         createdAt: item.createdAt.getTime(),
         lastLoginAt: item?.lastLoginAt?.getTime() || null,

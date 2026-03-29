@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
-import { VerifiedOauthProfile } from './provider.types';
+import { VerifiedOauthProfile, OauthProvider } from './provider.types';
 
 @Injectable()
 export class FirebaseProvider {
@@ -35,7 +35,9 @@ export class FirebaseProvider {
     }
   }
 
-  async verifyIdToken(idToken: string): Promise<VerifiedOauthProfile> {
+  async verifyIdToken(
+    idToken: string,
+  ): Promise<{ provider: OauthProvider; profile: VerifiedOauthProfile }> {
     try {
       // 检查 Firebase Admin SDK 是否已初始化
       if (!admin.apps.length) {
@@ -45,27 +47,31 @@ export class FirebaseProvider {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
 
       // 获取 provider 信息
-      const provider = decodedToken.firebase?.sign_in_provider || 'unknown';
-      let providerName = 'firebase';
+      const firebaseProvider =
+        decodedToken.firebase?.sign_in_provider || 'unknown';
+      let provider: OauthProvider = 'google'; // 默认为 google
 
-      if (provider.includes('google.com')) {
-        providerName = 'google';
-      } else if (provider.includes('facebook.com')) {
-        providerName = 'facebook';
-      } else if (provider.includes('apple.com')) {
-        providerName = 'apple';
+      if (firebaseProvider.includes('google.com')) {
+        provider = 'google';
+      } else if (firebaseProvider.includes('facebook.com')) {
+        provider = 'facebook';
+      } else if (firebaseProvider.includes('apple.com')) {
+        provider = 'apple';
       }
 
       this.logger.debug(
-        `Firebase token verified: ${decodedToken.uid}, provider: ${providerName}`,
+        `Firebase token verified: ${decodedToken.uid}, provider: ${provider}`,
       );
 
       return {
-        providerUserId: decodedToken.uid,
-        email: decodedToken.email || null,
-        nickname:
-          decodedToken.name || decodedToken.email?.split('@')[0] || null,
-        avatar: decodedToken.picture || null,
+        provider,
+        profile: {
+          providerUserId: decodedToken.uid,
+          email: decodedToken.email || null,
+          nickname:
+            decodedToken.name || decodedToken.email?.split('@')[0] || null,
+          avatar: decodedToken.picture || null,
+        },
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

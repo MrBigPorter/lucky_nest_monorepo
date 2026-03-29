@@ -74,7 +74,7 @@ services:
              CACHE=/app/node_modules/.admin-install-hash &&
              if [ ! -f \"$$CACHE\" ] || [ \"$$(cat $$CACHE 2>/dev/null)\" != \"$$LOCK_HASH\" ] || ! yarn workspace @lucky/admin-next exec which next >/dev/null 2>&1; then
                echo '>>> dependency check triggered - running install...' &&
-               yarn workspaces focus @lucky/admin-next &&
+               yarn install &&
                echo \"$$LOCK_HASH\" > \"$$CACHE\";
              else
                echo '>>> yarn.lock unchanged - skipping install';

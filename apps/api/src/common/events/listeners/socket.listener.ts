@@ -187,7 +187,7 @@ export class SocketListener {
         timestamp: Date.now(),
       };
 
-      supportAdmins.forEach((admin) => {
+      supportAdmins.forEach((admin: any) => {
         this.eventsGateway.dispatch(
           `user_${admin.id}`,
           'support_new_conversation',
