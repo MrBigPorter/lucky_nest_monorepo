@@ -99,16 +99,74 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Step 2 / 步骤 2: Sync deploy shell scripts to VPS
-      - name: Sync deploy scripts to VPS
+      # Step 1.1 / 步骤 1.1: Validate SSH secrets and basic connectivity from current runner
+      - name: Validate SSH connectivity preflight
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+
+          HOST="${SSH_HOST:-}"
+          PORT="${SSH_PORT:-22}"
+
+          if [ -z "$HOST" ]; then
+            echo "::error::SSH_HOST is empty. Please set repository/environment secret SSH_HOST."
+            exit 1
+          fi
+
+          echo "Preflight: probing ${HOST}:${PORT} from runner..."
+
+          OK=0
+          for i in 1 2 3; do
+            if nc -zvw5 "$HOST" "$PORT"; then
+              OK=1
+              echo "✅ SSH port reachable on attempt #$i"
+              break
+            fi
+            echo "⚠️ Attempt #$i failed, retrying in 5s..."
+            sleep 5
+          done
+
+          if [ "$OK" -ne 1 ]; then
+            echo "::error::Runner cannot reach ${HOST}:${PORT}."
+            echo "::error::Likely network path issue between GitHub runner and VPS (not key/auth issue yet)."
+            echo "::error::Check SSH_HOST/SSH_PORT secrets, VPS firewall/security group, or use self-hosted runner."
+            exit 1
+          fi
+
+      # Step 2 / 步骤 2: Sync deploy shell scripts to VPS (attempt 1)
+      - name: Sync deploy scripts to VPS (attempt 1)
+        id: scp_sync_1
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT != '' && secrets.SSH_PORT || 22 }}
           source: "deploy/*.sh"
           target: /opt/lucky/deploy
           overwrite: true
+          timeout: 120s
+          command_timeout: 15m
+          debug: true
+
+      # Step 2.1 / 步骤 2.1: Retry scp once for transient network jitter
+      - name: Sync deploy scripts to VPS (retry once)
+        if: steps.scp_sync_1.outcome == 'failure'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT != '' && secrets.SSH_PORT || 22 }}
+          source: "deploy/*.sh"
+          target: /opt/lucky/deploy
+          overwrite: true
+          timeout: 120s
+          command_timeout: 15m
+          debug: true
 
       # Step 3 / 步骤 3: Pull image, migrate DB, restart service, health-check, and rollback via SSH
       - name: Deploy via SSH (登录服务器执行脚本)
@@ -121,6 +179,10 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT != '' && secrets.SSH_PORT || 22 }}
+          timeout: 120s
+          command_timeout: 30m
+          debug: true
           envs: GHCR_TOKEN,GHCR_USER,IMAGE
           script: |
             set -e
