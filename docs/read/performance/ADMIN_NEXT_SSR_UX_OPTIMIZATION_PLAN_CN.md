@@ -56,6 +56,36 @@
 
 ## 4. 分阶段执行计划
 
+### ✅ 已完成的优化（2026-03-29）
+
+#### Phase 1: 高收益页面首屏改造 ✅
+
+- [x] Dashboard: SSR 预取 + Streaming + HydrationBoundary
+- [x] Orders: SSR 预取 + URL searchParams 驱动筛选
+- [x] Products: SSR 预取 + URL searchParams 驱动筛选
+- [x] Users: SSR 预取 + URL searchParams 驱动筛选
+- [x] Finance: 双 Suspense 并行流式渲染 + SSR 预取
+
+#### Phase 2: 缓存与失效机制精细化 ✅
+
+- [x] 建立 Cache Tag 体系（ORDERS*LIST_TAG, PRODUCTS_LIST_TAG, USERS_LIST_TAG, FINANCE*\*\_TAG）
+- [x] FinanceStatsServer 缓存优化：revalidate 30s → 60s（低频统计）
+- [x] DashboardStats 缓存：finance 60s, users 300s
+
+#### Phase 3: Bundle 与交互流畅度治理 ✅
+
+- [x] recharts 已分离为独立 chunk (362K)，仅 analytics 页面加载
+- [x] AnalyticsTrendSectionLazy 使用 dynamic() + IntersectionObserver 延迟加载
+- [x] optimizePackageImports 已配置 recharts, lucide-react, framer-motion 等
+
+#### Phase 4: 质量闸门与回归机制 ✅
+
+- [x] Lighthouse CI 已集成 GitHub Actions（lighthouse-ci.yml）
+- [x] 性能阈值已配置：LCP < 2.5s, TBT < 200ms, CLS < 0.1, Performance > 0.7
+- [x] 自动化报告上传（Artifacts 保留 30 天）
+
+---
+
 ## Phase 0（0.5 天）：基线固化
 
 1. 固定 5~8 个关键页面作为长期观测样本
@@ -132,3 +162,80 @@
   - `apps/admin-next/scripts/lighthouse/PRODUCTION_RUNBOOK.md`
 
 > 结论：本文是「优化策略文档」，不是「部署操作手册」。
+
+---
+
+## 7. 待优化空间（2026-03-29 分析）
+
+### 7.1 缺少 SSR 预取的页面（11个）
+
+以下页面当前使用普通 `function` 而非 `async function`，未实现 SSR 预取：
+
+| 页面                 | 优先级 | 建议                                    |
+| -------------------- | ------ | --------------------------------------- |
+| **Customer-service** | P1     | 如有 IM 消息列表，预取首屏数据          |
+| **Notifications**    | P1     | 预取通知列表                            |
+| **Marketing**        | P1     | 预取营销活动列表                        |
+| **Categories**       | P1     | 预取分类列表                            |
+| Roles                | P2     | 角色管理，可能是静态配置                |
+| Ads                  | P2     | 广告管理                                |
+| Lucky-draw           | P2     | 抽奖配置                                |
+| Flash-sale           | P2     | 秒杀配置                                |
+| Act-sections         | P2     | 活动板块                                |
+| Settings             | P2     | 已有特殊处理（initialData）             |
+| Analytics            | -      | 已使用 dynamic() + IntersectionObserver |
+
+### 7.2 Bundle 优化空间
+
+**当前状态：**
+
+- 主 chunk (1930): 408K - Next.js 核心，无法优化
+- recharts chunk (4204): 362K - 已分离，仅 analytics 页面加载 ✅
+- 共享 chunk: 186K
+
+**潜在优化：**
+
+- 检查 `@tanstack/react-table` 是否可以进一步拆分
+- 评估 `framer-motion` 使用场景，考虑 CSS animation 替代
+
+### 7.3 缓存策略优化
+
+**当前状态：**
+
+- 低频统计：60-300s ✅
+- 常规列表：30s ✅
+- 强实时：待确认（支付状态等）
+
+**建议：**
+
+- 为支付相关接口设置 `revalidate: 0` 或极短缓存
+- 考虑为 Dashboard 统计卡片增加 `revalidate: 120s`
+
+### 7.4 其他优化机会
+
+1. **字体优化**：检查是否使用 `next/font` 优化字体加载
+2. **第三方脚本**：使用 `next/script` 的 `strategy="lazyOnload"`
+3. **Edge Runtime**：简单页面考虑 Edge Runtime 提升冷启动
+4. **Streaming SSR**：扩展到更多页面（Customer-service, Notifications）
+
+---
+
+## 8. 下一步行动
+
+### 立即执行（P1）
+
+1. 检查 Customer-service 页面，评估是否需要 SSR 预取
+2. 检查 Notifications 页面，评估是否需要 SSR 预取
+3. 运行生产 Lighthouse 审计，获取基线数据
+
+### 短期优化（P2）
+
+1. 为 Marketing/Categories 页面添加 SSR 预取
+2. 评估强实时接口缓存策略
+3. 检查字体和第三方脚本优化
+
+### 持续监控
+
+1. 每周查看 Lighthouse CI 报告
+2. 监控 Sentry 性能追踪
+3. 定期 review 缓存命中率
