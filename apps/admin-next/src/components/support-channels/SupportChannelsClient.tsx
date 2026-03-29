@@ -12,6 +12,7 @@ import type {
   CreateSupportChannelPayload,
   QuerySupportChannelsParams,
   SupportChannelItem,
+  SupportChannelsResult,
   UpdateSupportChannelPayload,
 } from '@/type/types';
 import { PageHeader } from '@/components/scaffold/PageHeader';
@@ -37,11 +38,29 @@ const DEFAULT_FORM: CreateSupportChannelPayload = {
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-export function SupportChannels() {
+interface SupportChannelsProps {
+  initialData?: SupportChannelsResult;
+  initialQuery?: QuerySupportChannelsParams;
+}
+
+export function SupportChannels({
+  initialData,
+  initialQuery,
+}: SupportChannelsProps) {
   const addToast = useToastStore((s) => s.addToast);
-  const [page, setPage] = useState(1);
-  const [keyword, setKeyword] = useState('');
-  const [status, setStatus] = useState<FilterStatus>('ALL');
+  const initialPage = initialQuery?.page ?? 1;
+  const initialPageSize = initialQuery?.pageSize ?? 20;
+  const initialKeyword = initialQuery?.keyword ?? '';
+  const initialStatus: FilterStatus =
+    initialQuery?.isActive === undefined
+      ? 'ALL'
+      : initialQuery.isActive
+        ? 'ACTIVE'
+        : 'INACTIVE';
+
+  const [page, setPage] = useState(initialPage);
+  const [keyword, setKeyword] = useState(initialKeyword);
+  const [status, setStatus] = useState<FilterStatus>(initialStatus);
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -55,21 +74,30 @@ export function SupportChannels() {
   const query = useMemo<QuerySupportChannelsParams>(() => {
     return {
       page,
-      pageSize: 20,
+      pageSize: initialPageSize,
       keyword: keyword || undefined,
       isActive: status === 'ALL' ? undefined : status === 'ACTIVE',
     };
-  }, [page, keyword, status]);
+  }, [page, initialPageSize, keyword, status]);
+
+  const isInitialQuery =
+    page === initialPage &&
+    keyword === initialKeyword &&
+    status === initialStatus;
+
+  const hasServerPrefetch = Boolean(initialData);
 
   const {
     data,
     loading,
     run: refresh,
   } = useRequest(() => supportChannelApi.getList(query), {
+    ready: !(hasServerPrefetch && isInitialQuery),
     refreshDeps: [page, keyword, status],
   });
 
-  const list = data?.list ?? [];
+  const effectiveData = data ?? (isInitialQuery ? initialData : undefined);
+  const list = effectiveData?.list ?? [];
 
   const onCreate = async () => {
     const finalBusinessId =
@@ -415,7 +443,9 @@ export function SupportChannels() {
         </div>
 
         <div className="px-4 py-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between text-sm">
-          <span className="text-gray-500">Total: {data?.total ?? 0}</span>
+          <span className="text-gray-500">
+            Total: {effectiveData?.total ?? 0}
+          </span>
           <div className="flex items-center gap-2">
             <button
               disabled={page <= 1}
@@ -427,7 +457,8 @@ export function SupportChannels() {
             <span>Page {page}</span>
             <button
               disabled={Boolean(
-                data && page * (data.pageSize || 20) >= data.total,
+                effectiveData &&
+                page * (effectiveData.pageSize || 20) >= effectiveData.total,
               )}
               onClick={() => setPage((p) => p + 1)}
               className="h-8 px-2 rounded-md border border-gray-200 dark:border-white/10 disabled:opacity-50"

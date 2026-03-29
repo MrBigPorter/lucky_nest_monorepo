@@ -284,10 +284,22 @@ function ConfigRow({
   );
 }
 
-export function SystemConfig() {
-  const [configs, setConfigs] = useState<SystemConfigItem[]>([]);
+interface SystemConfigListResult {
+  list: SystemConfigItem[];
+}
+
+interface SystemConfigProps {
+  initialData?: SystemConfigListResult;
+}
+
+export function SystemConfig({ initialData }: SystemConfigProps) {
+  const [configs, setConfigs] = useState<SystemConfigItem[]>(
+    initialData?.list ?? [],
+  );
+  const hasServerPrefetch = Boolean(initialData?.list?.length);
 
   const { loading, run: refresh } = useRequest(() => systemConfigApi.getAll(), {
+    ready: !hasServerPrefetch,
     onSuccess: (data) => setConfigs(data.list),
   });
 
