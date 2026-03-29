@@ -29,9 +29,8 @@
    - 解析 `treasureId/status/includeExpired`
    - `includeExpired` 缺省时统一视为 `false`
 2. `buildGroupsListParams`
-   - 统一客户端 / 服务端请求参数? Groups 缓存契约（Phase 6 P0 / 单页面）
-     > 日期：2026-03-23  
-     > 范围：`groups`（`Group??> 日期：2026-03-23  
+   - 统一客户端 / 服务端请求参数? Groups 缓存契约（Phase 6 P0 / 单页面）> 日期：2026-03-23  
+      > 范围：`groups`（`Group??> 日期：2026-03-23  
 范围：`groups`（`G?? 范围：`groups`（??--
 
 ## 1. 问题
@@ -53,8 +52,7 @@
 
 1. `parseGroupsSearchParams`
    ?什么 `includeEx   - 解析 `treasureId/s收? - `includeExpired` 缺省时统一视为 `??. `buildGroupsListParams`
-   - 统一客户端 / ? - 统一客户端 / ?e> 日期：2026-03-23
-     > 范围：`groups`（`Group??> 日期：2026-03-23  
+   - 统一客户端 / ? - 统一客户端 / ?e> 日期：2026-03-23 > 范围：`groups`（`Group??> 日期：2026-03-23  
 范围：`us` ? 范围：`groups`（ir> 范围：`groups`（`G?? 范围：`groups`（??-?# 1. 问题
 
 ### Q1：为什么 `groups` 也适?#???### Q1：中? URL 参数解析和 API 参数整形散落在组件内部

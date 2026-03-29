@@ -4754,9 +4754,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@google-cloud/storage@npm:^7.14.0":
-  version: 7.18.0
-  resolution: "@google-cloud/storage@npm:7.18.0"
+"@google-cloud/storage@npm:^7.19.0":
+  version: 7.19.0
+  resolution: "@google-cloud/storage@npm:7.19.0"
   dependencies:
     "@google-cloud/paginator": "npm:^5.0.0"
     "@google-cloud/projectify": "npm:^4.0.0"
@@ -4764,7 +4764,7 @@ __metadata:
     abort-controller: "npm:^3.0.0"
     async-retry: "npm:^1.3.3"
     duplexify: "npm:^4.1.3"
-    fast-xml-parser: "npm:^4.4.1"
+    fast-xml-parser: "npm:^5.3.4"
     gaxios: "npm:^6.0.2"
     google-auth-library: "npm:^9.6.3"
     html-entities: "npm:^2.5.2"
@@ -4773,7 +4773,7 @@ __metadata:
     retry-request: "npm:^7.0.0"
     teeny-request: "npm:^9.0.0"
     uuid: "npm:^8.0.0"
-  checksum: 10c0/1879a7c60a0a23890067d0b17359da701d0504e46b8e4c0b3cdfd29dcd54fcaaddada68206d1d14fafadea86eb0a885bd8cc725c453def845f9bd9aae2cc3a85
+  checksum: 10c0/2951e4a0b3c2f90c28917a9b313a981722a9e5648ca2b6d04f384f816e9107e1637b00c32c5e71ed8d25c7e1840898b616f015b29c2cc1d8d8a22c8630778d8c
   languageName: node
   linkType: hard
 
@@ -6070,7 +6070,7 @@ __metadata:
     eslint: "npm:^9.15.0"
     eslint-plugin-prettier: "npm:^5.2.1"
     express: "npm:^5.1.0"
-    firebase-admin: "npm:^13.6.0"
+    firebase-admin: "npm:^13.7.0"
     globals: "npm:^15.13.0"
     helmet: "npm:^8.1.0"
     joi: "npm:^18.0.1"
@@ -12462,15 +12462,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.8.7":
-  version: 22.19.6
-  resolution: "@types/node@npm:22.19.6"
-  dependencies:
-    undici-types: "npm:~6.21.0"
-  checksum: 10c0/0d4f305ee560e4261b3aefb186d9a42c0a07d2ab2201cc8cba24b72793a13c3b2a5f0c138fe704e9aaa7a545066d6baf0b98afc1ef7e776503af25cdfd040de0
-  languageName: node
-  linkType: hard
-
 "@types/node@npm:^24.10.1":
   version: 24.12.0
   resolution: "@types/node@npm:24.12.0"
@@ -18311,17 +18302,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-xml-parser@npm:^4.4.1":
-  version: 4.5.3
-  resolution: "fast-xml-parser@npm:4.5.3"
-  dependencies:
-    strnum: "npm:^1.1.1"
-  bin:
-    fxparser: src/cli/cli.js
-  checksum: 10c0/bf9ccadacfadc95f6e3f0e7882a380a7f219cf0a6f96575149f02cb62bf44c3b7f0daee75b8ff3847bcfd7fbcb201e402c71045936c265cf6d94b141ec4e9327
-  languageName: node
-  linkType: hard
-
 "fast-xml-parser@npm:^5.3.4":
   version: 5.4.2
   resolution: "fast-xml-parser@npm:5.4.2"
@@ -18505,19 +18485,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"firebase-admin@npm:^13.6.0":
-  version: 13.6.0
-  resolution: "firebase-admin@npm:13.6.0"
+"firebase-admin@npm:^13.7.0":
+  version: 13.7.0
+  resolution: "firebase-admin@npm:13.7.0"
   dependencies:
     "@fastify/busboy": "npm:^3.0.0"
     "@firebase/database-compat": "npm:^2.0.0"
     "@firebase/database-types": "npm:^1.0.6"
     "@google-cloud/firestore": "npm:^7.11.0"
-    "@google-cloud/storage": "npm:^7.14.0"
-    "@types/node": "npm:^22.8.7"
+    "@google-cloud/storage": "npm:^7.19.0"
     farmhash-modern: "npm:^1.1.0"
     fast-deep-equal: "npm:^3.1.1"
-    google-auth-library: "npm:^9.14.2"
+    google-auth-library: "npm:^10.6.1"
     jsonwebtoken: "npm:^9.0.0"
     jwks-rsa: "npm:^3.1.0"
     node-forge: "npm:^1.3.1"
@@ -18527,7 +18506,7 @@ __metadata:
       optional: true
     "@google-cloud/storage":
       optional: true
-  checksum: 10c0/63394b43ae7dd467935b60e83d68a9bf6bfc120ebc2521c78b607b672d067ee426226ac6e6df006c39aeb53171314e1c37faae004147b2ebfcb16107939ca1ed
+  checksum: 10c0/1df48859bdc7b5c90a9bf48d321d4def6d704cec9087bf6afded5cc6524d47d93c37d636ac388b590a68228110360853d34ae710d4ec854f778a27cf60d7640f
   languageName: node
   linkType: hard
 
@@ -18860,6 +18839,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"gaxios@npm:^7.1.4":
+  version: 7.1.4
+  resolution: "gaxios@npm:7.1.4"
+  dependencies:
+    extend: "npm:^3.0.2"
+    https-proxy-agent: "npm:^7.0.1"
+    node-fetch: "npm:^3.3.2"
+  checksum: 10c0/147adf5f2606442945d8b19df1e9fe2833a5ec30af00743d0c44292899c5eef1c0a77b74ff07d9dfdc6b009c08af1f3f3d1d5d772109fde50c92435533795803
+  languageName: node
+  linkType: hard
+
+"gcp-metadata@npm:8.1.2, gcp-metadata@npm:^8.0.0":
+  version: 8.1.2
+  resolution: "gcp-metadata@npm:8.1.2"
+  dependencies:
+    gaxios: "npm:^7.0.0"
+    google-logging-utils: "npm:^1.0.0"
+    json-bigint: "npm:^1.0.0"
+  checksum: 10c0/15a61231a9410dc11c2828d2c9fdc8b0a939f1af746195c44edc6f2ffea0acab52cef3a7b9828069a36fd5d68bda730f7328a415fe42a01258f6e249dfba6908
+  languageName: node
+  linkType: hard
+
 "gcp-metadata@npm:^6.1.0":
   version: 6.1.1
   resolution: "gcp-metadata@npm:6.1.1"
@@ -18868,17 +18869,6 @@ __metadata:
     google-logging-utils: "npm:^0.0.2"
     json-bigint: "npm:^1.0.0"
   checksum: 10c0/71f6ad4800aa622c246ceec3955014c0c78cdcfe025971f9558b9379f4019f5e65772763428ee8c3244fa81b8631977316eaa71a823493f82e5c44d7259ffac8
-  languageName: node
-  linkType: hard
-
-"gcp-metadata@npm:^8.0.0":
-  version: 8.1.2
-  resolution: "gcp-metadata@npm:8.1.2"
-  dependencies:
-    gaxios: "npm:^7.0.0"
-    google-logging-utils: "npm:^1.0.0"
-    json-bigint: "npm:^1.0.0"
-  checksum: 10c0/15a61231a9410dc11c2828d2c9fdc8b0a939f1af746195c44edc6f2ffea0acab52cef3a7b9828069a36fd5d68bda730f7328a415fe42a01258f6e249dfba6908
   languageName: node
   linkType: hard
 
@@ -19243,7 +19233,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"google-auth-library@npm:^9.1.0, google-auth-library@npm:^9.14.2, google-auth-library@npm:^9.3.0, google-auth-library@npm:^9.6.3":
+"google-auth-library@npm:^10.6.1":
+  version: 10.6.2
+  resolution: "google-auth-library@npm:10.6.2"
+  dependencies:
+    base64-js: "npm:^1.3.0"
+    ecdsa-sig-formatter: "npm:^1.0.11"
+    gaxios: "npm:^7.1.4"
+    gcp-metadata: "npm:8.1.2"
+    google-logging-utils: "npm:1.1.3"
+    jws: "npm:^4.0.0"
+  checksum: 10c0/4878d9070e751202eff8adca7a78a41f045c460f611a62d8c0c14ac4bd33d66afc5d788ef82225873dadc7cde401d47f223f3c109f1a192564164fdd44a36614
+  languageName: node
+  linkType: hard
+
+"google-auth-library@npm:^9.1.0, google-auth-library@npm:^9.3.0, google-auth-library@npm:^9.6.3":
   version: 9.15.1
   resolution: "google-auth-library@npm:9.15.1"
   dependencies:
@@ -19296,17 +19300,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"google-logging-utils@npm:1.1.3, google-logging-utils@npm:^1.0.0, google-logging-utils@npm:^1.1.1":
+  version: 1.1.3
+  resolution: "google-logging-utils@npm:1.1.3"
+  checksum: 10c0/e65201c7e96543bd1423b9324013736646b9eed60941e0bfa47b9bfd146d2f09cf3df1c99ca60b7d80a726075263ead049ee72de53372cb8458c3bc55c2c1e59
+  languageName: node
+  linkType: hard
+
 "google-logging-utils@npm:^0.0.2":
   version: 0.0.2
   resolution: "google-logging-utils@npm:0.0.2"
   checksum: 10c0/9a4bbd470dd101c77405e450fffca8592d1d7114f245a121288d04a957aca08c9dea2dd1a871effe71e41540d1bb0494731a0b0f6fea4358e77f06645e4268c1
-  languageName: node
-  linkType: hard
-
-"google-logging-utils@npm:^1.0.0, google-logging-utils@npm:^1.1.1":
-  version: 1.1.3
-  resolution: "google-logging-utils@npm:1.1.3"
-  checksum: 10c0/e65201c7e96543bd1423b9324013736646b9eed60941e0bfa47b9bfd146d2f09cf3df1c99ca60b7d80a726075263ead049ee72de53372cb8458c3bc55c2c1e59
   languageName: node
   linkType: hard
 
@@ -26007,13 +26011,6 @@ __metadata:
   version: 3.1.1
   resolution: "strip-json-comments@npm:3.1.1"
   checksum: 10c0/9681a6257b925a7fa0f285851c0e613cc934a50661fa7bb41ca9cbbff89686bb4a0ee366e6ecedc4daafd01e83eee0720111ab294366fe7c185e935475ebcecd
-  languageName: node
-  linkType: hard
-
-"strnum@npm:^1.1.1":
-  version: 1.1.2
-  resolution: "strnum@npm:1.1.2"
-  checksum: 10c0/a0fce2498fa3c64ce64a40dada41beb91cabe3caefa910e467dc0518ef2ebd7e4d10f8c2202a6104f1410254cae245066c0e94e2521fb4061a5cb41831952392
   languageName: node
   linkType: hard
 
