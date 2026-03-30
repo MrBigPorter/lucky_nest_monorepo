@@ -171,19 +171,19 @@
 
 以下页面当前使用普通 `function` 而非 `async function`，未实现 SSR 预取：
 
-| 页面                 | 优先级 | 建议                                    |
-| -------------------- | ------ | --------------------------------------- |
-| **Customer-service** | P1     | 如有 IM 消息列表，预取首屏数据          |
-| **Notifications**    | P1     | 预取通知列表                            |
-| **Marketing**        | P1     | 预取营销活动列表                        |
-| **Categories**       | P1     | 预取分类列表                            |
-| Roles                | P2     | 角色管理，可能是静态配置                |
-| Ads                  | P2     | 广告管理                                |
-| Lucky-draw           | P2     | 抽奖配置                                |
-| Flash-sale           | P2     | 秒杀配置                                |
-| Act-sections         | P2     | 活动板块                                |
-| Settings             | P2     | 已有特殊处理（initialData）             |
-| Analytics            | -      | 已使用 dynamic() + IntersectionObserver |
+| 页面                 | 优先级 | 状态      | 建议                                    |
+| -------------------- | ------ | --------- | --------------------------------------- |
+| **Customer-service** | P1     | ✅ 已完成 | 已实现 SSR 预取 + HydrationBoundary     |
+| **Notifications**    | P1     | ✅ 已完成 | 已实现 SSR 预取 + HydrationBoundary     |
+| **Marketing**        | P1     | ✅ 已完成 | 已实现 SSR 预取 + HydrationBoundary     |
+| **Categories**       | P1     | ✅ 已完成 | 已实现 SSR 预取 + HydrationBoundary     |
+| Roles                | P2     | 待优化    | 角色管理，可能是静态配置                |
+| Ads                  | P2     | 待优化    | 广告管理                                |
+| Lucky-draw           | P2     | 待优化    | 抽奖配置                                |
+| Flash-sale           | P2     | 待优化    | 秒杀配置                                |
+| Act-sections         | P2     | 待优化    | 活动板块                                |
+| Settings             | P2     | 待优化    | 已有特殊处理（initialData）             |
+| Analytics            | -      | 已完成    | 已使用 dynamic() + IntersectionObserver |
 
 ### 7.2 Bundle 优化空间
 

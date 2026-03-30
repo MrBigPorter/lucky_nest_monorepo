@@ -9,7 +9,7 @@ import {
   FileMessage,
   LocationMessage,
 } from './messages';
-import { formatMsgTime, getInitials } from '@/lib/format-utils';
+import { formatMsgTime } from '@/lib/format-utils';
 import type { ChatMessage } from '@/type/types';
 
 export function MessageBubble({

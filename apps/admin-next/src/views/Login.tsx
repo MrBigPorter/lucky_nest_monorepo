@@ -15,11 +15,7 @@ import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authApi } from '@/api';
 import { LoginResponse, UserRole } from '@/type/types';
-import {
-  sanitizeInput,
-  generateCsrfToken,
-  checkPasswordStrength,
-} from '@/lib/security-utils';
+import { sanitizeInput, generateCsrfToken } from '@/lib/security-utils';
 
 const loginSchema = z.object({
   username: z
