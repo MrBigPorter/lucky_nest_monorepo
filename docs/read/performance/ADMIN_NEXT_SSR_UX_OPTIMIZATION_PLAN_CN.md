@@ -218,6 +218,146 @@
 3. **Edge Runtime**：简单页面考虑 Edge Runtime 提升冷启动
 4. **Streaming SSR**：扩展到更多页面（Customer-service, Notifications）
 
+### 7.5 代码质量与性能优化（2026-03-29 新增）
+
+#### 7.5.1 前端组件优化
+
+**问题发现：**
+
+- `CustomerServiceDesk.tsx` 组件过大（400+ 行），职责过多
+- 状态管理复杂，多个 `useState` 可以合并
+- 缺少虚拟化，大量消息时性能差
+
+**优化建议：**
+
+```typescript
+// 1. 组件拆分
+- 提取 ChatWindow 组件
+- 提取 ConversationList 组件
+- 提取 SearchAndFilter 组件
+
+// 2. 状态管理优化
+const chatReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_MESSAGES':
+      return { ...state, messages: action.payload };
+    case 'ADD_MESSAGE':
+      return { ...state, messages: [...state.messages, action.payload] };
+    // ...
+  }
+};
+
+// 3. 虚拟化长列表
+import { useVirtualizer } from '@tanstack/react-virtual';
+```
+
+#### 7.5.2 API 层优化
+
+**问题发现：**
+
+- HTTP 客户端缺少请求重试机制
+- 缓存策略不完善
+- 错误处理不够细粒度
+
+**优化建议：**
+
+```typescript
+// 1. 添加请求重试
+const retryConfig = {
+  retry: 3,
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+};
+
+// 2. 完善缓存策略
+const cacheConfig = {
+  staleTime: 5 * 60 * 1000, // 5分钟
+  cacheTime: 10 * 60 * 1000, // 10分钟
+};
+
+// 3. 细粒度错误处理
+class ApiError extends Error {
+  constructor(
+    public code: number,
+    message: string,
+    public data?: any,
+  ) {
+    super(message);
+  }
+}
+```
+
+#### 7.5.3 工具函数优化
+
+**已完成优化：**
+
+- ✅ `format-utils.ts` 已优化，添加缓存和常量
+- ✅ 提取公共辅助函数，减少代码重复
+- ✅ 添加缓存机制，提升性能
+
+**优化成果：**
+
+```typescript
+// 优化前：代码重复，无缓存
+function formatMsgTime(timestamp) {
+  // 重复的时间解析逻辑
+}
+
+// 优化后：提取公共函数，添加缓存
+const parseTimestamp = (timestamp) => {
+  /* 统一解析 */
+};
+const getDaysDiff = (date) => {
+  /* 统一计算 */
+};
+const timeFormatCache = new Map(); // 缓存机制
+```
+
+#### 7.5.4 安全加固
+
+**发现问题：**
+
+- 输入验证不够严格
+- 敏感数据可能泄露
+- 缺少数据脱敏
+
+**优化建议：**
+
+```typescript
+// 1. 输入验证
+import { z } from "zod";
+const UserInputSchema = z.object({
+  phone: z.string().regex(/^\+?[1-9]\d{1,14}$/),
+  nickname: z.string().min(1).max(50),
+});
+
+// 2. 敏感数据脱敏
+const maskSensitiveData = (data) => {
+  if (data.phone) {
+    data.phone = data.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2");
+  }
+  return data;
+};
+```
+
+#### 7.5.5 监控与日志
+
+**优化建议：**
+
+```typescript
+// 1. 性能监控
+import { getCLS, getFID, getFCP, getLCP, getTTFB } from "web-vitals";
+
+// 2. 错误监控
+import * as Sentry from "@sentry/nextjs";
+
+// 3. 业务监控
+const businessMetrics = {
+  userRegistration: "counter",
+  orderCreation: "counter",
+  paymentSuccess: "gauge",
+};
+```
+
 ---
 
 ## 8. 下一步行动
