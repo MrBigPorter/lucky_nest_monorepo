@@ -160,15 +160,6 @@ const nextConfig: NextConfig = {
       };
     }
 
-    // Add treeshake configuration to remove debug logging
-    // Replaces deprecated disableLogger option in Sentry config
-    if (!isServer) {
-      config.treeshake = {
-        ...config.treeshake,
-        removeDebugLogging: true,
-      };
-    }
-
     return config;
   },
 };
