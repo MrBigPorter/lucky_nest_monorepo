@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Play, X, Pause } from 'lucide-react';
+import { Play, X } from 'lucide-react';
 import { resolveMediaUrl, formatDuration } from '@/lib/media-utils';
 
 export function VideoMessage({
@@ -20,15 +20,6 @@ export function VideoMessage({
   const h = meta?.h as number | undefined;
   const thumbnail = meta?.thumbnail as string | undefined;
   const aspect = w && h ? Math.min(2, Math.max(0.5, w / h)) : 16 / 9;
-
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (playing) {
-      videoRef.current.pause();
-    } else {
-      void videoRef.current.play();
-    }
-  };
 
   return (
     <>

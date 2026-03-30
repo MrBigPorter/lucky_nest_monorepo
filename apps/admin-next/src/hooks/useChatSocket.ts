@@ -180,7 +180,7 @@ export function useChatSocket({
       currentRoomRef.current = null;
       setStatus('disconnected');
     };
-  }, []); // connect once on mount
+  }, [getUserIdFromToken]); // connect once on mount
 
   // ── 切换会话时 join/leave room ──
   useEffect(() => {
