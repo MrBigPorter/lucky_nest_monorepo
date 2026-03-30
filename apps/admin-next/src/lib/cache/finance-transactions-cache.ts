@@ -10,7 +10,7 @@ export interface TransactionsQueryInput {
   endDate?: string;
 }
 
-export type NextSearchParams = Record<string, string | string[] | undefined>;
+type NextSearchParams = Record<string, string | string[] | undefined>;
 
 function readParam(params: NextSearchParams, key: string): string | undefined {
   const value = params[key];
