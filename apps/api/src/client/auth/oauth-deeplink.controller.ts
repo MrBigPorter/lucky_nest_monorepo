@@ -1,8 +1,8 @@
 import {
   Controller,
   Get,
-  Post, // 修复: 引入 Post
-  Body, // 修复: 引入 Body
+  Post,
+  Body,
   Query,
   Res,
   HttpStatus,
@@ -12,6 +12,27 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import {
+  OAuthError,
+  OAuthStateError,
+  OAuthProviderError,
+  OAuthUserCancelledError,
+  getUserFriendlyErrorMessage,
+} from '@api/common/oauth/oauth-errors';
+import * as crypto from 'crypto';
+
+interface OAuthStateData {
+  // 必需字段
+  provider: string; // 'google' | 'facebook' | 'apple'
+  timestamp: number; // 创建时间戳（毫秒）
+  nonce: string; // 随机数，防止重放攻击
+
+  // 可选字段
+  callback?: string; // Deep Link回调URL
+  inviteCode?: string; // 邀请码
+  redirectUri?: string; // Web端重定向URI
+  webState?: string; // Web端生成的state（防CSRF）
+}
 
 @ApiTags('oauth-deeplink')
 @Controller('auth')
@@ -29,17 +50,33 @@ export class OAuthDeepLinkController {
 
   @Get('google/login')
   @ApiOperation({ summary: 'Google OAuth登录 - 发起授权' })
-  googleLogin(@Query('callback') callback: string, @Res() res: Response) {
+  googleLogin(
+    @Res() res: Response,
+    @Query('callback') callback: string,
+    @Query('inviteCode') inviteCode?: string,
+    @Query('redirect_uri') redirectUri?: string,
+    @Query('state') webState?: string,
+  ) {
     const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const redirectUri = this.configService.get<string>(
+    const redirectUriConfig = this.configService.get<string>(
       'GOOGLE_REDIRECT_URI',
       'https://api.luna.com/auth/google/callback',
     );
 
-    const state = this.encodeState({ provider: 'google', callback });
+    const stateData: OAuthStateData = {
+      provider: 'google',
+      timestamp: Date.now(),
+      nonce: this.generateNonce(),
+      callback,
+      inviteCode,
+      redirectUri,
+      webState,
+    };
+
+    const state = this.encodeState(stateData);
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId || '');
-    authUrl.searchParams.set('redirect_uri', redirectUri || '');
+    authUrl.searchParams.set('redirect_uri', redirectUriConfig || '');
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', 'openid email profile');
     authUrl.searchParams.set('state', state);
@@ -50,17 +87,33 @@ export class OAuthDeepLinkController {
 
   @Get('facebook/login')
   @ApiOperation({ summary: 'Facebook OAuth登录 - 发起授权' })
-  facebookLogin(@Query('callback') callback: string, @Res() res: Response) {
+  facebookLogin(
+    @Res() res: Response,
+    @Query('callback') callback: string,
+    @Query('inviteCode') inviteCode?: string,
+    @Query('redirect_uri') redirectUri?: string,
+    @Query('state') webState?: string,
+  ) {
     const appId = this.configService.get<string>('FACEBOOK_APP_ID');
-    const redirectUri = this.configService.get<string>(
+    const redirectUriConfig = this.configService.get<string>(
       'FACEBOOK_REDIRECT_URI',
       'https://api.luna.com/auth/facebook/callback',
     );
 
-    const state = this.encodeState({ provider: 'facebook', callback });
+    const stateData: OAuthStateData = {
+      provider: 'facebook',
+      timestamp: Date.now(),
+      nonce: this.generateNonce(),
+      callback,
+      inviteCode,
+      redirectUri,
+      webState,
+    };
+
+    const state = this.encodeState(stateData);
     const authUrl = new URL('https://www.facebook.com/v18.0/dialog/oauth');
     authUrl.searchParams.set('client_id', appId || '');
-    authUrl.searchParams.set('redirect_uri', redirectUri || '');
+    authUrl.searchParams.set('redirect_uri', redirectUriConfig || '');
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', 'email public_profile');
     authUrl.searchParams.set('state', state);
@@ -71,17 +124,33 @@ export class OAuthDeepLinkController {
 
   @Get('apple/login')
   @ApiOperation({ summary: 'Apple OAuth登录 - 发起授权' })
-  appleLogin(@Query('callback') callback: string, @Res() res: Response) {
+  appleLogin(
+    @Res() res: Response,
+    @Query('callback') callback: string,
+    @Query('inviteCode') inviteCode?: string,
+    @Query('redirect_uri') redirectUri?: string,
+    @Query('state') webState?: string,
+  ) {
     const clientId = this.configService.get<string>('APPLE_CLIENT_ID');
-    const redirectUri = this.configService.get<string>(
+    const redirectUriConfig = this.configService.get<string>(
       'APPLE_REDIRECT_URI',
       'https://api.luna.com/auth/apple/callback',
     );
 
-    const state = this.encodeState({ provider: 'apple', callback });
+    const stateData: OAuthStateData = {
+      provider: 'apple',
+      timestamp: Date.now(),
+      nonce: this.generateNonce(),
+      callback,
+      inviteCode,
+      redirectUri,
+      webState,
+    };
+
+    const state = this.encodeState(stateData);
     const authUrl = new URL('https://appleid.apple.com/auth/authorize');
     authUrl.searchParams.set('client_id', clientId || '');
-    authUrl.searchParams.set('redirect_uri', redirectUri || '');
+    authUrl.searchParams.set('redirect_uri', redirectUriConfig || '');
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('scope', 'name email');
     authUrl.searchParams.set('response_mode', 'form_post'); // 强制Apple返回POST
@@ -98,66 +167,110 @@ export class OAuthDeepLinkController {
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth回调' })
   async googleCallback(
+    @Res() res: Response,
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response,
   ) {
     try {
       this.logger.log('Received Google OAuth callback');
+
+      // 验证state
       const stateData = this.decodeState(state);
-      const callback = stateData?.callback;
+      if (stateData.provider === 'unknown') {
+        throw new OAuthStateError('Invalid or expired state', 'google');
+      }
+
+      // 验证时间有效性（10分钟内）
+      const now = Date.now();
+      const maxAge = 10 * 60 * 1000; // 10分钟
+      if (now - stateData.timestamp > maxAge) {
+        throw new OAuthStateError('State expired', 'google');
+      }
 
       const tokens = await this.exchangeGoogleCode(code);
       const userInfo = await this.getGoogleUserInfo(tokens.access_token);
 
-      const loginResult = await this.authService.loginWithOauth('google', {
-        providerUserId: userInfo.id,
-        email: userInfo.email,
-        nickname: userInfo.name,
-        avatar: userInfo.picture,
-      });
+      const loginResult = await this.authService.loginWithOauth(
+        'google',
+        {
+          providerUserId: userInfo.id,
+          email: userInfo.email,
+          nickname: userInfo.name,
+          avatar: userInfo.picture,
+        },
+        {
+          inviteCode: stateData.inviteCode,
+        },
+      );
 
-      return this.handleRedirect(res, callback, {
-        accessToken: loginResult.tokens.accessToken,
-        refreshToken: loginResult.tokens.refreshToken,
-      });
+      return this.handleRedirect(
+        res,
+        stateData.callback,
+        stateData.redirectUri,
+        stateData.webState,
+        {
+          accessToken: loginResult.tokens.accessToken,
+          refreshToken: loginResult.tokens.refreshToken,
+        },
+        'google',
+      );
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Google callback error: ${message}`);
-      return this.handleError(res, message);
+      return this.handleOAuthError(error, res, 'google');
     }
   }
 
   @Get('facebook/callback')
   @ApiOperation({ summary: 'Facebook OAuth回调' })
   async facebookCallback(
+    @Res() res: Response,
     @Query('code') code: string,
     @Query('state') state: string,
-    @Res() res: Response,
   ) {
     try {
       this.logger.log('Received Facebook OAuth callback');
+
+      // 验证state
       const stateData = this.decodeState(state);
-      const callback = stateData?.callback;
+      if (stateData.provider === 'unknown') {
+        throw new OAuthStateError('Invalid or expired state', 'facebook');
+      }
+
+      // 验证时间有效性（10分钟内）
+      const now = Date.now();
+      const maxAge = 10 * 60 * 1000; // 10分钟
+      if (now - stateData.timestamp > maxAge) {
+        throw new OAuthStateError('State expired', 'facebook');
+      }
 
       const tokens = await this.exchangeFacebookCode(code);
       const userInfo = await this.getFacebookUserInfo(tokens.access_token);
 
-      const loginResult = await this.authService.loginWithOauth('facebook', {
-        providerUserId: userInfo.id,
-        email: userInfo.email,
-        nickname: userInfo.name,
-        avatar: userInfo.picture?.data?.url,
-      });
+      const loginResult = await this.authService.loginWithOauth(
+        'facebook',
+        {
+          providerUserId: userInfo.id,
+          email: userInfo.email,
+          nickname: userInfo.name,
+          avatar: userInfo.picture?.data?.url,
+        },
+        {
+          inviteCode: stateData.inviteCode,
+        },
+      );
 
-      return this.handleRedirect(res, callback, {
-        accessToken: loginResult.tokens.accessToken,
-        refreshToken: loginResult.tokens.refreshToken,
-      });
+      return this.handleRedirect(
+        res,
+        stateData.callback,
+        stateData.redirectUri,
+        stateData.webState,
+        {
+          accessToken: loginResult.tokens.accessToken,
+          refreshToken: loginResult.tokens.refreshToken,
+        },
+        'facebook',
+      );
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Facebook callback error: ${message}`);
-      return this.handleError(res, message);
+      return this.handleOAuthError(error, res, 'facebook');
     }
   }
 
@@ -165,15 +278,26 @@ export class OAuthDeepLinkController {
   @Post('apple/callback')
   @ApiOperation({ summary: 'Apple OAuth回调' })
   async appleCallback(
+    @Res() res: Response,
     @Body('code') code: string,
     @Body('state') state: string,
-    @Body('user') userStr: string, // 修复: 截获首登时传来的用户名字
-    @Res() res: Response,
+    @Body('user') userStr?: string, // 修复: 截获首登时传来的用户名字
   ) {
     try {
       this.logger.log('Received Apple OAuth callback (POST)');
+
+      // 验证state
       const stateData = this.decodeState(state);
-      const callback = stateData?.callback;
+      if (stateData.provider === 'unknown') {
+        throw new OAuthStateError('Invalid or expired state', 'apple');
+      }
+
+      // 验证时间有效性（10分钟内）
+      const now = Date.now();
+      const maxAge = 10 * 60 * 1000; // 10分钟
+      if (now - stateData.timestamp > maxAge) {
+        throw new OAuthStateError('State expired', 'apple');
+      }
 
       const tokens = await this.exchangeAppleCode(code);
       const userInfo = this.parseAppleIdToken(tokens.id_token);
@@ -191,21 +315,32 @@ export class OAuthDeepLinkController {
         }
       }
 
-      const loginResult = await this.authService.loginWithOauth('apple', {
-        providerUserId: userInfo.sub,
-        email: userInfo.email,
-        nickname: nickname,
-        avatar: null, // Apple 不给头像
-      });
+      const loginResult = await this.authService.loginWithOauth(
+        'apple',
+        {
+          providerUserId: userInfo.sub,
+          email: userInfo.email,
+          nickname: nickname,
+          avatar: null, // Apple 不给头像
+        },
+        {
+          inviteCode: stateData.inviteCode,
+        },
+      );
 
-      return this.handleRedirect(res, callback, {
-        accessToken: loginResult.tokens.accessToken,
-        refreshToken: loginResult.tokens.refreshToken,
-      });
+      return this.handleRedirect(
+        res,
+        stateData.callback,
+        stateData.redirectUri,
+        stateData.webState,
+        {
+          accessToken: loginResult.tokens.accessToken,
+          refreshToken: loginResult.tokens.refreshToken,
+        },
+        'apple',
+      );
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Apple callback error: ${message}`);
-      return this.handleError(res, message);
+      return this.handleOAuthError(error, res, 'apple');
     }
   }
 
@@ -216,11 +351,38 @@ export class OAuthDeepLinkController {
   private handleRedirect(
     res: Response,
     callback: string | undefined,
+    redirectUri: string | undefined,
+    webState: string | undefined,
     loginResult: { accessToken: string; refreshToken: string },
+    provider: string,
   ) {
+    // Web端重定向逻辑
+    if (redirectUri) {
+      // 验证Web端State（防CSRF）
+      if (webState && !this.isValidWebState(webState, provider)) {
+        this.logger.warn(`Invalid web state for provider ${provider}`);
+        // 重定向到错误页面
+        return res.redirect(
+          HttpStatus.FOUND,
+          '/oauth-error?code=INVALID_STATE',
+        );
+      }
+
+      const redirectUrl = new URL(redirectUri);
+      redirectUrl.searchParams.set('token', loginResult.accessToken);
+      redirectUrl.searchParams.set('refreshToken', loginResult.refreshToken);
+
+      if (webState) {
+        redirectUrl.searchParams.set('state', webState);
+      }
+
+      this.logger.log(`Redirecting to Web: ${redirectUrl.toString()}`);
+      return res.redirect(HttpStatus.FOUND, redirectUrl.toString());
+    }
+
+    // 移动端Deep Link逻辑
     if (callback) {
       try {
-        // 修复: 加上 try...catch 防御，避免错误的 callback 导致整个服务 500
         const deepLink = new URL(callback);
         deepLink.searchParams.set('token', loginResult.accessToken);
         deepLink.searchParams.set('refreshToken', loginResult.refreshToken);
@@ -235,7 +397,7 @@ export class OAuthDeepLinkController {
       }
     }
 
-    // Web fallback
+    // Web fallback (默认)
     res.cookie('auth_token', loginResult.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -247,10 +409,30 @@ export class OAuthDeepLinkController {
     return res.redirect(HttpStatus.FOUND, '/dashboard');
   }
 
-  private handleError(res: Response, message: string) {
-    return res.status(HttpStatus.BAD_REQUEST).json({
+  private handleOAuthError(error: unknown, res: Response, provider: string) {
+    if (error instanceof OAuthError) {
+      const userMessage = getUserFriendlyErrorMessage(error);
+      this.logger.warn(
+        `OAuth error (${provider}): ${error.code} - ${error.message}`,
+      );
+
+      // 用户取消登录，静默处理
+      if (error instanceof OAuthUserCancelledError) {
+        return res.redirect(HttpStatus.FOUND, '/login?cancelled=true');
+      }
+
+      // 其他错误，重定向到错误页面
+      const errorUrl = `/oauth-error?code=${error.code}&provider=${provider}&message=${encodeURIComponent(userMessage)}`;
+      return res.redirect(HttpStatus.FOUND, errorUrl);
+    }
+
+    // 未知错误
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    this.logger.error(`Unexpected error in ${provider} callback: ${message}`);
+
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: message,
+      message: 'An unexpected error occurred',
     });
   }
 
@@ -277,7 +459,13 @@ export class OAuthDeepLinkController {
       }),
     });
 
-    if (!response.ok) throw new Error('Failed to exchange Google code');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new OAuthProviderError(
+        `Failed to exchange Google code: ${response.status} - ${errorText}`,
+        'google',
+      );
+    }
     return response.json() as Promise<{ access_token: string }>;
   }
 
@@ -290,7 +478,8 @@ export class OAuthDeepLinkController {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
     );
-    if (!response.ok) throw new Error('Failed to get Google user info');
+    if (!response.ok)
+      throw new OAuthProviderError('Failed to get Google user info', 'google');
     return response.json() as any;
   }
 
@@ -311,7 +500,13 @@ export class OAuthDeepLinkController {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
-    if (!response.ok) throw new Error('Failed to exchange Facebook code');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new OAuthProviderError(
+        `Failed to exchange Facebook code: ${response.status} - ${errorText}`,
+        'facebook',
+      );
+    }
     return response.json() as any;
   }
 
@@ -327,7 +522,11 @@ export class OAuthDeepLinkController {
         headers: { Authorization: `Bearer ${accessToken}` },
       },
     );
-    if (!response.ok) throw new Error('Failed to get Facebook user info');
+    if (!response.ok)
+      throw new OAuthProviderError(
+        'Failed to get Facebook user info',
+        'facebook',
+      );
     return response.json() as any;
   }
 
@@ -341,13 +540,19 @@ export class OAuthDeepLinkController {
       body: new URLSearchParams({
         code,
         client_id: clientId || '',
-        client_secret: this.generateAppleClientSecret(), // 注意：这里还是写死的！
+        client_secret: this.generateAppleClientSecret(), // TODO: 需要实现动态Apple Client Secret生成
         redirect_uri: redirectUri || '',
         grant_type: 'authorization_code',
       }),
     });
 
-    if (!response.ok) throw new Error('Failed to exchange Apple code');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new OAuthProviderError(
+        `Failed to exchange Apple code: ${response.status} - ${errorText}`,
+        'apple',
+      );
+    }
     return response.json() as any;
   }
 
@@ -356,7 +561,7 @@ export class OAuthDeepLinkController {
     return JSON.parse(Buffer.from(payload, 'base64').toString('utf-8'));
   }
 
-  // ⚠️ 终极暗坑提醒：
+  // TODO: Apple Client Secret生成（根据用户要求，先不做）
   private generateAppleClientSecret(): string {
     // TODO: Apple 的 Client Secret 不是一个静态字符串！
     // 它是你需要用你的 .p8 秘钥、Team ID 和 Key ID，通过 ES256 算法实时签发的一个 JWT Token。
@@ -368,15 +573,43 @@ export class OAuthDeepLinkController {
   // State编码/解码
   // ==========================================
 
-  private encodeState(data: { provider: string; callback?: string }): string {
-    return Buffer.from(JSON.stringify(data)).toString('base64url');
+  private encodeState(data: OAuthStateData): string {
+    const stateString = JSON.stringify(data);
+    return Buffer.from(stateString).toString('base64url');
   }
 
-  private decodeState(state: string): { provider: string; callback?: string } {
+  private decodeState(state: string): OAuthStateData {
     try {
-      return JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
-    } catch {
-      return { provider: 'unknown' };
+      const decoded = Buffer.from(state, 'base64url').toString('utf-8');
+      const data = JSON.parse(decoded) as OAuthStateData;
+
+      // 验证必需字段
+      if (!data.provider || !data.timestamp || !data.nonce) {
+        this.logger.warn(`Invalid state: missing required fields: ${state}`);
+        return { provider: 'unknown', timestamp: 0, nonce: '' };
+      }
+
+      return data;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to decode state: ${state}, error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return { provider: 'unknown', timestamp: 0, nonce: '' };
     }
+  }
+
+  private generateNonce(): string {
+    // 生成16字节的随机数
+    const randomBytes = crypto.randomBytes(16);
+    return randomBytes.toString('hex');
+  }
+
+  private isValidWebState(state: string, provider: string): boolean {
+    // TODO: 在实际项目中，这里需要：
+    // 1. 验证state格式
+    // 2. 从sessionStorage或Redis中查找对应的state
+    // 3. 验证state是否已使用（防止重放攻击）
+    // 暂时返回true，后续实现
+    return true;
   }
 }
