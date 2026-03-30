@@ -16,7 +16,7 @@ export async function FinanceStatsServer() {
     '/v1/admin/finance/statistics',
     undefined,
     {
-      revalidate: 30,
+      revalidate: 60,
       tags: [FINANCE_TAG, FINANCE_STATS_TAG],
     },
   );
