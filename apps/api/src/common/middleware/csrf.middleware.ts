@@ -11,6 +11,12 @@ interface RequestWithSession extends Request {
 /**
  * CSRF 保护中间件
  * 验证请求中的 CSRF Token 是否有效
+ *
+ * 设计原则：
+ * 1. 只对基于 session/cookie 认证的请求进行 CSRF 验证
+ * 2. 跳过所有基于 JWT token 认证的请求（Admin API 和 Client API）
+ * 3. 跳过支付回调、webhook 等第三方调用
+ * 4. 基于 Authorization header 智能判断认证方式
  */
 @Injectable()
 export class CsrfMiddleware implements NestMiddleware {
@@ -21,22 +27,28 @@ export class CsrfMiddleware implements NestMiddleware {
       return next();
     }
 
-    // 跳过不需要 CSRF 保护的路由
-    const skipRoutes = [
-      '/api/v1/auth/admin/login',
-      '/api/v1/auth/admin/refresh',
-      '/api/v1/auth/admin/set-cookie',
-      '/api/v1/auth/admin/clear-cookie',
-      '/api/health',
-      // 跳过所有客户端API路由（Flutter应用）
-      '/api/v1/client/',
-      // 跳过支付回调路由
-      '/api/v1/payment/',
-      // 跳过webhook路由
-      '/api/v1/webhook/',
-    ];
+    // 跳过健康检查
+    if (req.path === '/api/health') {
+      return next();
+    }
 
-    if (skipRoutes.some((route) => req.path.startsWith(route))) {
+    // 智能判断：如果请求带有 JWT Bearer token，则跳过 CSRF 验证
+    // 因为 JWT 认证本身就有防 CSRF 保护（token 不会自动携带）
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    // 跳过支付回调和 webhook（第三方调用，通常使用签名验证）
+    if (
+      req.path.startsWith('/api/v1/payment/') ||
+      req.path.startsWith('/api/v1/webhook/')
+    ) {
+      return next();
+    }
+
+    // 跳过登录、刷新token等认证相关接口
+    if (req.path.startsWith('/api/v1/auth/')) {
       return next();
     }
 

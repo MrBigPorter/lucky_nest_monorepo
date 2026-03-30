@@ -43,9 +43,17 @@ class HttpClient {
   };
 
   constructor() {
+    // 在SSR环境下，需要使用完整的URL
+    const baseURL =
+      typeof window === 'undefined'
+        ? process.env.INTERNAL_API_URL ||
+          process.env.API_BASE_URL ||
+          'http://localhost:3000/api'
+        : process.env.NEXT_PUBLIC_API_BASE_URL || '/api';
+
     this.instance = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
-      timeout: 30_000,
+      baseURL,
+      timeout: typeof window === 'undefined' ? 5_000 : 30_000, // SSR环境使用更短的超时
       headers: {
         'Content-Type': 'application/json',
       },
@@ -181,14 +189,17 @@ class HttpClient {
   }
 
   private getToken(): string | null {
+    if (typeof window === 'undefined') return null;
     return localStorage.getItem('auth_token');
   }
 
   private getRefreshToken(): string | null {
+    if (typeof window === 'undefined') return null;
     return localStorage.getItem('refresh_token');
   }
 
   private setAuthTokens(accessToken: string, refreshToken?: string) {
+    if (typeof window === 'undefined') return;
     localStorage.setItem('auth_token', accessToken);
     if (refreshToken) {
       localStorage.setItem('refresh_token', refreshToken);
@@ -196,6 +207,7 @@ class HttpClient {
   }
 
   private getLanguage(): string {
+    if (typeof window === 'undefined') return 'en';
     return localStorage.getItem('lang') || 'en';
   }
 
