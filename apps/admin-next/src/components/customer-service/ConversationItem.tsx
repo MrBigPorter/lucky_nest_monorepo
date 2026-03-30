@@ -1,6 +1,5 @@
 'use client';
 
-import { MessageSquare } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { formatTime, getInitials } from '@/lib/format-utils';
 import type { ChatConversation } from '@/type/types';

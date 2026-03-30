@@ -50,7 +50,7 @@ export function CustomerServiceDesk() {
     },
   );
 
-  const conversations = data?.list ?? [];
+  const conversations = React.useMemo(() => data?.list ?? [], [data?.list]);
   const total = data?.total ?? 0;
 
   const { status: socketStatus } = useChatSocket({

@@ -8,7 +8,7 @@ export interface DepositsListQueryInput {
   endDate?: string;
 }
 
-type NextSearchParams = Record<string, string | string[] | undefined>;
+export type NextSearchParams = Record<string, string | string[] | undefined>;
 
 function readParam(params: NextSearchParams, key: string): string | undefined {
   const value = params[key];
