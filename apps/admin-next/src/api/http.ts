@@ -24,6 +24,24 @@ class HttpClient {
   /** 单飞 refresh：并发 401 时只刷新一次 */
   private refreshPromise: Promise<string | null> | null = null;
 
+  // 重试配置
+  private readonly retryConfig = {
+    maxRetries: process.env.NODE_ENV === 'test' ? 0 : 3, // 测试环境不重试
+    retryDelay: (attemptIndex: number) =>
+      process.env.NODE_ENV === 'test'
+        ? 0 // 测试环境无延迟
+        : Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryCondition: (error: any) => {
+      // 测试环境不重试
+      if (process.env.NODE_ENV === 'test') return false;
+      // 网络错误或5xx服务器错误时重试
+      return (
+        !error.response ||
+        (error.response.status >= 500 && error.response.status < 600)
+      );
+    },
+  };
+
   constructor() {
     this.instance = axios.create({
       baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
@@ -362,6 +380,41 @@ class HttpClient {
     );
   }
 
+  // ================= 重试逻辑 =================
+
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    retryConfig = this.retryConfig,
+  ): Promise<T> {
+    let lastError: any;
+
+    for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+
+        // 检查是否应该重试
+        if (
+          attempt === retryConfig.maxRetries ||
+          !retryConfig.retryCondition(error)
+        ) {
+          throw error;
+        }
+
+        // 等待重试延迟
+        const delay = retryConfig.retryDelay(attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        console.log(
+          `[HTTP] Retrying request (attempt ${attempt + 1}/${retryConfig.maxRetries})`,
+        );
+      }
+    }
+
+    throw lastError;
+  }
+
   // ================= 对外 HTTP 方法 =================
 
   public async get<T = any>(
@@ -386,12 +439,13 @@ class HttpClient {
     }
 
     const requestPromise = this.traceRequest('get', url, config, async () => {
-      return this.instance
-        .get<ApiResponse<T>>(url, mergedConfig)
-        .then((res) => res.data.data)
-        .finally(() => {
-          this.inflightGetRequests.delete(key);
-        });
+      return this.withRetry(() =>
+        this.instance
+          .get<ApiResponse<T>>(url, mergedConfig)
+          .then((res) => res.data.data),
+      ).finally(() => {
+        this.inflightGetRequests.delete(key);
+      });
     });
 
     this.inflightGetRequests.set(key, requestPromise);
@@ -404,7 +458,9 @@ class HttpClient {
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
     const res = await this.traceRequest('post', url, config, () =>
-      this.instance.post<ApiResponse<T>>(url, data, config),
+      this.withRetry(() =>
+        this.instance.post<ApiResponse<T>>(url, data, config),
+      ),
     );
     return res.data.data;
   }
@@ -415,7 +471,9 @@ class HttpClient {
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
     const res = await this.traceRequest('put', url, config, () =>
-      this.instance.put<ApiResponse<T>>(url, data, config),
+      this.withRetry(() =>
+        this.instance.put<ApiResponse<T>>(url, data, config),
+      ),
     );
     return res.data.data;
   }
@@ -426,7 +484,9 @@ class HttpClient {
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
     const res = await this.traceRequest('patch', url, config, () =>
-      this.instance.patch<ApiResponse<T>>(url, data, config),
+      this.withRetry(() =>
+        this.instance.patch<ApiResponse<T>>(url, data, config),
+      ),
     );
     return res.data.data;
   }
@@ -436,7 +496,7 @@ class HttpClient {
     config?: AxiosRequestConfig & RequestConfig,
   ): Promise<T> {
     const res = await this.traceRequest('delete', url, config, () =>
-      this.instance.delete<ApiResponse<T>>(url, config),
+      this.withRetry(() => this.instance.delete<ApiResponse<T>>(url, config)),
     );
     return res.data.data;
   }
