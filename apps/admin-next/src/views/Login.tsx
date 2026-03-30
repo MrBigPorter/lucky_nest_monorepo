@@ -15,12 +15,22 @@ import { ArrowRight, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authApi } from '@/api';
 import { LoginResponse, UserRole } from '@/type/types';
+import {
+  sanitizeInput,
+  generateCsrfToken,
+  checkPasswordStrength,
+} from '@/lib/security-utils';
 
 const loginSchema = z.object({
-  username: z.string().min(1, { message: 'Username is required.' }),
+  username: z
+    .string()
+    .min(1, { message: 'Username is required.' })
+    .max(50, { message: 'Username too long.' })
+    .transform((val) => sanitizeInput(val)), // 清理输入
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+    .min(6, { message: 'Password must be at least 6 characters.' })
+    .max(128, { message: 'Password too long.' }),
 });
 
 type LoginFormInputs = z.infer<typeof loginSchema>;
@@ -34,6 +44,15 @@ export const Login: React.FC = () => {
   const [isPending, startTransition] = useTransition();
   const loginAction = useAuthStore((state) => state.login);
   const addToast = useToastStore((state) => state.addToast);
+  const [csrfToken, setCsrfToken] = React.useState<string>('');
+
+  // 生成 CSRF Token
+  React.useEffect(() => {
+    const token = generateCsrfToken();
+    setCsrfToken(token);
+    // 存储到 sessionStorage 用于验证
+    sessionStorage.setItem('csrf_token', token);
+  }, []);
 
   const {
     register,
@@ -138,6 +157,9 @@ export const Login: React.FC = () => {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* CSRF Token */}
+            <input type="hidden" name="_csrf" value={csrfToken} />
+
             <div className="space-y-4">
               <div className="relative group">
                 <User
