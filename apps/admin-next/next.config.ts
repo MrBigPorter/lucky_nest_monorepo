@@ -127,6 +127,46 @@ const nextConfig: NextConfig = {
         ),
       );
     }
+
+    // Remove Sentry debug logging from production bundle
+    // Replaces deprecated disableLogger option
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        minimize: true,
+        minimizer: config.optimization?.minimizer?.map((plugin: any) => {
+          if (plugin.constructor.name === 'TerserPlugin') {
+            return new (plugin.constructor as any)({
+              ...plugin.options,
+              terserOptions: {
+                ...plugin.options.terserOptions,
+                compress: {
+                  ...plugin.options.terserOptions?.compress,
+                  drop_debugger: true,
+                  pure_funcs: [
+                    'console.log',
+                    'console.info',
+                    'console.debug',
+                    'console.trace',
+                  ],
+                },
+              },
+            });
+          }
+          return plugin;
+        }),
+      };
+    }
+
+    // Add treeshake configuration to remove debug logging
+    // Replaces deprecated disableLogger option in Sentry config
+    if (!isServer) {
+      config.treeshake = {
+        ...config.treeshake,
+        removeDebugLogging: true,
+      };
+    }
+
     return config;
   },
 };
@@ -160,5 +200,5 @@ export default withSentryConfig(withBundleAnalyzer(nextConfig), {
   tunnelRoute: undefined,
 
   // 关闭自动 tree-shaking 日志（已在 Sentry.init 的 enabled 字段控制）
-  disableLogger: true,
+  // disableLogger: true, // Deprecated, use webpack.treeshake.removeDebugLogging instead
 });
