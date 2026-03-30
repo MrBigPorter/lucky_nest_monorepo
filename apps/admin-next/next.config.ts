@@ -131,30 +131,32 @@ const nextConfig: NextConfig = {
     // Remove Sentry debug logging from production bundle
     // Replaces deprecated disableLogger option
     if (!isServer) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const minimizer = config.optimization?.minimizer?.map((plugin: any) => {
+        if (plugin.constructor.name === 'TerserPlugin') {
+          return new (plugin.constructor as typeof plugin.constructor)({
+            ...plugin.options,
+            terserOptions: {
+              ...plugin.options?.terserOptions,
+              compress: {
+                ...plugin.options?.terserOptions?.compress,
+                drop_debugger: true,
+                pure_funcs: [
+                  'console.log',
+                  'console.info',
+                  'console.debug',
+                  'console.trace',
+                ],
+              },
+            },
+          });
+        }
+        return plugin;
+      });
       config.optimization = {
         ...config.optimization,
         minimize: true,
-        minimizer: config.optimization?.minimizer?.map((plugin: any) => {
-          if (plugin.constructor.name === 'TerserPlugin') {
-            return new (plugin.constructor as any)({
-              ...plugin.options,
-              terserOptions: {
-                ...plugin.options.terserOptions,
-                compress: {
-                  ...plugin.options.terserOptions?.compress,
-                  drop_debugger: true,
-                  pure_funcs: [
-                    'console.log',
-                    'console.info',
-                    'console.debug',
-                    'console.trace',
-                  ],
-                },
-              },
-            });
-          }
-          return plugin;
-        }),
+        minimizer,
       };
     }
 

@@ -12,7 +12,6 @@ export function VideoMessage({
   meta: Record<string, unknown> | null;
 }) {
   const [playerOpen, setPlayerOpen] = useState(false);
-  const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoUrl = resolveMediaUrl(content);
   const duration = meta?.duration as number | undefined;
@@ -82,9 +81,6 @@ export function VideoMessage({
               ref={videoRef}
               src={videoUrl}
               className="max-w-full max-h-[90vh] rounded-lg"
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onEnded={() => setPlaying(false)}
               controls
               autoPlay
             />
