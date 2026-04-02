@@ -5,7 +5,17 @@
       "namespace": "android_app",
       "package_name": "com.porter.joyminis",
       "sha256_cert_fingerprints": [
-        "37:99:94:B2:80:2D:1A:97:76:3F:EB:7D:B3:3E:3B:79:A5:9C:39:05:E3:2D:EA:8F:D1:8F:00:EE:8D:B3:67:F6"
+        "FC:08:2E:C4:D1:B5:D8:8B:89:45:85:BC:11:1B:44:54:86:39:65:EE:AD:92:4C:D1:7B:F7:8C:94:80:D9:60:5B"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.porter.joyminis.test",
+      "sha256_cert_fingerprints": [
+        "E5:5D:0E:5F:05:A6:9C:A9:CD:55:B8:4F:96:2D:FB:0F:47:CE:A6:E0:FB:3E:B9:FA:C8:89:64:EC:DF:C4:D0:5E"
       ]
     }
   }

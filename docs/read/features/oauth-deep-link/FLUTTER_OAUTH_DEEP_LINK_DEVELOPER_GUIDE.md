@@ -125,6 +125,12 @@ dependencies:
   <string>firefox</string>
   <string>safari</string>
 </array>
+
+<!-- 添加Associated Domains支持（Universal Links） -->
+<key>com.apple.developer.associated-domains</key>
+<array>
+  <string>applinks:app.joyminis.com</string>
+</array>
 ```
 
 #### Android配置 (android/app/src/main/AndroidManifest.xml)
@@ -143,6 +149,17 @@ dependencies:
         <data
             android:scheme="joymini"
             android:host="oauth" />
+    </intent-filter>
+
+    <!-- Android App Links支持（解决华为设备延迟问题） -->
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data
+            android:scheme="https"
+            android:host="app.joyminis.com"
+            android:pathPrefix="/oauth/callback" />
     </intent-filter>
 </activity>
 ```
@@ -1418,6 +1435,98 @@ try {
   OAuthErrorHandler.showToast(context, 'Login timeout. Please try again.');
 }
 ```
+
+### Q6: 华为设备OAuth延迟和Android App Links验证
+
+**问题描述**: 华为设备使用Custom Scheme OAuth时出现延迟（需要浏览器中转），用户体验不佳
+
+**解决方案**:
+
+#### Android App Links（零延迟OAuth）
+
+1. **服务器配置**:
+   - 确保 `https://app.joyminis.com/.well-known/assetlinks.json` 文件可访问
+   - 更新文件内容中的SHA256证书指纹为实际应用签名证书
+
+2. **Android配置** (已在AndroidManifest.xml添加):
+
+   ```xml
+   <!-- Android App Links支持 -->
+   <intent-filter android:autoVerify="true">
+       <action android:name="android.intent.action.VIEW" />
+       <category android:name="android.intent.category.DEFAULT" />
+       <category android:name="android.intent.category.BROWSABLE" />
+       <data
+           android:scheme="https"
+           android:host="app.joyminis.com"
+           android:pathPrefix="/oauth/callback" />
+   </intent-filter>
+   ```
+
+3. **后端OAuth调整**:
+   ```typescript
+   // 在OAuthDeepLinkController.handleRedirect()中添加平台检测
+   private handleRedirect(res: Response, ...) {
+     // 安卓设备使用Android App Links
+     if (platform === 'android') {
+       const androidUrl = `https://app.joyminis.com/oauth/callback?token=${token}&refreshToken=${refreshToken}`;
+       return res.redirect(androidUrl);
+     }
+     // iOS设备使用Universal Links
+     if (platform === 'ios') {
+       const iosUrl = `https://app.joyminis.com/oauth/callback?token=${token}&refreshToken=${refreshToken}`;
+       return res.redirect(iosUrl);
+     }
+     // 其他设备使用Custom Scheme
+     return res.redirect(`joymini://oauth/callback?token=${token}&refreshToken=${refreshToken}`);
+   }
+   ```
+
+#### 测试验证步骤
+
+1. **Android App Links验证**:
+
+   ```bash
+   # 检查assetlinks.json文件
+   curl -s https://app.joyminis.com/.well-known/assetlinks.json | jq .
+
+   # 使用Android Debug Bridge验证
+   adb shell dumpsys package domain-preferred-apps
+
+   # 手动测试App Links
+   adb shell am start -a android.intent.action.VIEW \
+     -d "https://app.joyminis.com/oauth/callback?token=test" \
+     com.porter.joyminis
+   ```
+
+2. **iOS Universal Links验证**:
+
+   ```bash
+   # 检查apple-app-site-association文件
+   curl -s https://app.joyminis.com/.well-known/apple-app-site-association | jq .
+
+   # 使用Apple Universal Links验证工具
+   # 或直接测试：https://app.joyminis.com/oauth/callback?token=test
+   ```
+
+3. **华为设备专用测试**:
+   - 使用华为手机测试Custom Scheme和Android App Links两种方式
+   - 对比唤醒速度：Custom Scheme有延迟 vs Android App Links零延迟
+   - 验证HTTPS链接直接唤醒App，无需浏览器中转
+
+#### 故障排查
+
+1. **Android App Links不生效**:
+   - 检查 `assetlinks.json` 中的SHA256证书指纹是否正确
+   - 验证域名所有权（需要正确配置HTTPS证书）
+   - 检查 `android:autoVerify="true"` 属性是否设置
+   - 等待24小时让Android系统缓存验证结果
+
+2. **iOS Universal Links不生效**:
+   - 检查 `apple-app-site-association` 文件内容和MIME类型
+   - 验证App ID格式：`{TeamID}.{BundleID}`
+   - 检查Associated Domains配置是否正确
+   - 重启iOS设备清除缓存
 
 ---
 
