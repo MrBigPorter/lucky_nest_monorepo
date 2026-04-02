@@ -5,7 +5,7 @@
       "namespace": "android_app",
       "package_name": "com.porter.joyminis",
       "sha256_cert_fingerprints": [
-        "FC:08:2E:C4:D1:B5:D8:8B:89:45:85:BC:11:1B:44:54:86:39:65:EE:AD:92:4C:D1:7B:F7:8C:94:80:D9:60:5B"
+        "25:FF:FB:2D:D8:CA:20:90:CA:D3:EC:36:59:C5:20:0C:81:7A:C5:F0:FC:C4:49:E2:CD:06:EE:04:82:68:AA:DC"
       ]
     }
   },
@@ -15,7 +15,7 @@
       "namespace": "android_app",
       "package_name": "com.porter.joyminis.test",
       "sha256_cert_fingerprints": [
-        "E5:5D:0E:5F:05:A6:9C:A9:CD:55:B8:4F:96:2D:FB:0F:47:CE:A6:E0:FB:3E:B9:FA:C8:89:64:EC:DF:C4:D0:5E"
+        "BC:A4:D6:4D:3F:38:B5:68:3B:2D:27:98:13:70:44:1A:CD:BE:1C:C2:FD:31:3E:A5:C9:E8:F1:00:40:AA:C9:A2"
       ]
     }
   }

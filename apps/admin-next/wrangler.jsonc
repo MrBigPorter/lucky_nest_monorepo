@@ -5,6 +5,13 @@
   "compatibility_date": "2026-03-20",
   "compatibility_flags": ["nodejs_compat"],
   "minify": true,
+  //  新增这一段：绑定你的域名
+  "routes": [
+    {
+      "pattern": "admin.joyminis.com/*",
+      "zone_name": "joyminis.com"
+    }
+  ],
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
