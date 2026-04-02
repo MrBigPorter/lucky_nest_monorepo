@@ -64,12 +64,28 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
-      await Promise.allSettled([authApi.logout(), authApi.clearCookie()]);
+      // 使用Promise.allSettled确保即使某些请求失败也能继续执行
+      const results = await Promise.allSettled([
+        authApi.logout(),
+        authApi.clearCookie(),
+      ]);
+
+      // 记录任何失败但不阻止退出登录流程
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.warn(
+            `[useAuthStore] logout API call ${index === 0 ? 'logout' : 'clearCookie'} failed:`,
+            result.reason,
+          );
+        }
+      });
     } catch (error) {
-      console.error('[useAuthStore] logout API failed', error);
+      console.error('[useAuthStore] logout unexpected error', error);
     } finally {
+      // 无论如何都清理本地存储和状态
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
+      sessionStorage.removeItem('csrf_token');
       set({
         isAuthenticated: false,
         token: null,
@@ -77,7 +93,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         userRole: 'viewer',
         userInfo: null,
       });
-      window.location.href = '/login';
+      // 使用replace而不是href避免历史记录问题
+      window.location.replace('/login');
     }
   },
 

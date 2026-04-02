@@ -23,7 +23,7 @@ import { AdminTokenResponseDto } from './dto/admin-token-response.dto';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
-  private buildAdminCookieOptions() {
+  private buildAdminCookieBaseOptions() {
     const isProd = process.env.NODE_ENV === 'production';
     const configuredDomain = process.env.AUTH_COOKIE_DOMAIN?.trim();
     const sameSite: 'strict' | 'lax' = isProd ? 'strict' : 'lax';
@@ -41,9 +41,15 @@ export class AuthController {
       httpOnly: true,
       secure: isProd,
       sameSite,
-      maxAge: 24 * 60 * 60 * 1000,
       path: '/',
       ...(cookieDomain ? { domain: cookieDomain } : {}),
+    };
+  }
+
+  private buildAdminSetCookieOptions() {
+    return {
+      ...this.buildAdminCookieBaseOptions(),
+      maxAge: 24 * 60 * 60 * 1000,
     };
   }
 
@@ -98,7 +104,7 @@ export class AuthController {
   ) {
     await this.auth.verifyAdminToken(dto.token);
 
-    res.cookie('auth_token', dto.token, this.buildAdminCookieOptions());
+    res.cookie('auth_token', dto.token, this.buildAdminSetCookieOptions());
 
     return { ok: true };
   }
@@ -109,7 +115,7 @@ export class AuthController {
   @Post('admin/clear-cookie')
   @HttpCode(HttpStatus.OK)
   clearAuthCookie(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('auth_token', this.buildAdminCookieOptions());
+    res.clearCookie('auth_token', this.buildAdminCookieBaseOptions());
     return { ok: true };
   }
 }

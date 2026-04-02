@@ -64,6 +64,10 @@ export default async function OperationLogsPage({
           tags: [OPERATION_LOGS_LIST_TAG],
         },
       );
+      // 如果返回null（401错误），返回空数据
+      if (!res) {
+        return { data: [], total: 0 };
+      }
       return { data: res.list, total: res.total };
     },
   });

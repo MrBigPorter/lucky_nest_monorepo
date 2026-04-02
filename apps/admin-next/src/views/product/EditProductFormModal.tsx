@@ -28,11 +28,17 @@ type ProductFormInputs = z.infer<typeof createProductSchema> & {
   bonusWinnerCount?: number;
 };
 
-export const EditProductFormModal = (
-  categories: Category[],
-  confirm: () => void,
-  product: Product,
-) => {
+interface EditProductFormModalProps {
+  categories: Category[];
+  confirm: () => void;
+  product: Product;
+}
+
+export const EditProductFormModal: React.FC<EditProductFormModalProps> = ({
+  categories,
+  confirm,
+  product,
+}) => {
   const addToast = useToastStore((s) => s.addToast);
 
   const { run: updateProduct, loading } = useRequest(productApi.updateProduct, {

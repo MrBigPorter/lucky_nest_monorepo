@@ -103,6 +103,14 @@ export async function serverGet<T>(
         return json.data;
       } catch (error) {
         if (error instanceof Error) {
+          // 如果是401未授权错误，返回空数据而不是抛出错误
+          // 这允许页面在构建时继续渲染，客户端会重新获取数据
+          if (error.message.includes('HTTP 401')) {
+            console.warn(
+              `serverFetch: 401 Unauthorized for ${path}, returning empty data`,
+            );
+            return null as T;
+          }
           console.error(`serverFetch error for ${path}:`, error.message);
         } else {
           console.error(`serverFetch unknown error for ${path}:`, error);
