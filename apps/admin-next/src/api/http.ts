@@ -345,7 +345,7 @@ class HttpClient {
           });
 
         return newAccessToken;
-      } catch (error) {
+      } catch {
         return null;
       } finally {
         this.refreshPromise = null;

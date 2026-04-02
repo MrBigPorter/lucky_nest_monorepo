@@ -52,10 +52,17 @@ export const OperationLogList: React.FC<OperationLogListProps> = ({
     });
   }, [initialFormParams]);
 
-  const hydrationQueryKey = useMemo(
-    () => operationLogsListQueryKey(hydrationInput),
-    [hydrationInput],
-  );
+  const hydrationQueryKey = useMemo(() => {
+    return operationLogsListQueryKey(hydrationInput);
+  }, [
+    hydrationInput.page,
+    hydrationInput.pageSize,
+    hydrationInput.adminId,
+    hydrationInput.action,
+    hydrationInput.keyword,
+    hydrationInput.startDate,
+    hydrationInput.endDate,
+  ]);
 
   // ── SmartTable request（唯一的数据获取入口）────────────────────
   const requestLogs = useCallback(

@@ -27,10 +27,15 @@ type ProductFormInputs = z.infer<typeof createProductSchema> & {
   bonusWinnerCount?: number;
 };
 
-export const CreateProductFormModal = (
-  categories: Category[],
-  confirm: () => void,
-) => {
+interface CreateProductFormModalProps {
+  categories: Category[];
+  confirm: () => void;
+}
+
+export const CreateProductFormModal: React.FC<CreateProductFormModalProps> = ({
+  categories,
+  confirm,
+}) => {
   const addToast = useToastStore((s) => s.addToast);
 
   // 创建商品请求
