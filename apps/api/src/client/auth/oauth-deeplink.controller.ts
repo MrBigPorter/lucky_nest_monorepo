@@ -356,6 +356,12 @@ export class OAuthDeepLinkController {
     loginResult: { accessToken: string; refreshToken: string },
     provider: string,
   ) {
+    this.logger.debug(`handleRedirect called with:
+      callback: ${callback}
+      redirectUri: ${redirectUri}
+      webState: ${webState}
+      provider: ${provider}`);
+
     // Web端重定向逻辑
     if (redirectUri) {
       // 验证Web端State（防CSRF）
@@ -391,7 +397,7 @@ export class OAuthDeepLinkController {
         return res.redirect(HttpStatus.FOUND, deepLink.toString());
       } catch (e) {
         this.logger.warn(
-          `Invalid callback URL format: ${callback}. Falling back to web dashboard.`,
+          `Invalid callback URL format: ${callback}. Error: ${e instanceof Error ? e.message : 'Unknown error'}`,
         );
         // URL 格式错误，降级跳回 Web 首页
       }

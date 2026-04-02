@@ -79,24 +79,36 @@ export async function serverGet<T>(
         });
       }
 
-      const res = await fetch(url.toString(), {
-        headers: await buildHeaders(),
-        next: { revalidate, ...(tags ? { tags } : {}) },
-      } as RequestInit & { next?: { revalidate?: number; tags?: string[] } });
+      try {
+        const res = await fetch(url.toString(), {
+          headers: await buildHeaders(),
+          next: { revalidate, ...(tags ? { tags } : {}) },
+        } as RequestInit & { next?: { revalidate?: number; tags?: string[] } });
 
-      if (!res.ok) {
-        throw new Error(`[serverFetch] ${path} → HTTP ${res.status}`);
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => '');
+          throw new Error(
+            `[serverFetch] ${path} → HTTP ${res.status}${errorText ? `: ${errorText.substring(0, 200)}` : ''}`,
+          );
+        }
+
+        const json: ApiResponse<T> = await res.json();
+
+        if (json.code !== 10000 && json.code !== 200) {
+          throw new Error(
+            `[serverFetch] ${path} → ${json.message ?? 'API error'} (code: ${json.code})`,
+          );
+        }
+
+        return json.data;
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error(`serverFetch error for ${path}:`, error.message);
+        } else {
+          console.error(`serverFetch unknown error for ${path}:`, error);
+        }
+        throw error;
       }
-
-      const json: ApiResponse<T> = await res.json();
-
-      if (json.code !== 10000 && json.code !== 200) {
-        throw new Error(
-          `[serverFetch] ${path} → ${json.message ?? 'API error'}`,
-        );
-      }
-
-      return json.data;
     },
   );
 }
