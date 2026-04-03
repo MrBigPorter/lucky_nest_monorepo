@@ -21,8 +21,7 @@ const loginSchema = z.object({
   username: z
     .string()
     .min(1, { message: 'Username is required.' })
-    .max(50, { message: 'Username too long.' })
-    .transform((val) => sanitizeInput(val)), // 清理输入
+    .max(50, { message: 'Username too long.' }),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' })
@@ -123,7 +122,8 @@ export const Login: React.FC = () => {
   // try-catch 确保 runAsync 的异常不会变成 unhandled rejection 导致上层错误边界重载
   const onSubmit = async (data: LoginFormInputs) => {
     try {
-      await runAsync(data);
+      // sanitizeInput 在 submit handler 里手动处理（禁止在 Zod schema 里用 .transform()）
+      await runAsync({ ...data, username: sanitizeInput(data.username) });
     } catch {
       // 错误已通过 useRequest 的 onError 处理并显示 toast，这里静默即可
     }
