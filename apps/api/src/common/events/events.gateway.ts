@@ -11,6 +11,7 @@ import { Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@api/common/prisma/prisma.service';
+import { RedisService } from '@api/common/redis/redis.service';
 import { SocketEvents } from '@lucky/shared';
 import type { Prisma } from '@prisma/client';
 
@@ -69,6 +70,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prismaService: PrismaService,
+    private readonly redisService: RedisService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -109,6 +111,21 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.logger.log(
             `🔌 Client connected: ${client.id} (User: ${userId})`,
           );
+
+          // 补投：FCM 唤醒后重连时，若有待接来电则立即推给该 socket
+          try {
+            const pendingCall = await this.redisService.get(
+              `pending_call:${userId}`,
+            );
+            if (pendingCall) {
+              client.emit('call_invite', JSON.parse(pendingCall));
+              this.logger.log(
+                `📞 [Call Invite REPLAY] -> ${userId} (socket: ${client.id})`,
+              );
+            }
+          } catch (e) {
+            this.logger.warn(`[Call Invite REPLAY] Redis error: ${String(e)}`);
+          }
         }
       }
     } catch (error: unknown) {
