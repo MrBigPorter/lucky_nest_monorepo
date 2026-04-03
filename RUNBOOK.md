@@ -49,6 +49,7 @@ Redis 容器  lucky-redis-prod
 | Admin Cloudflare 部署失败                      | [→ Admin 部署失败](#admin-cloudflare-部署失败)       |
 | VPS 内存告急                                   | [→ 资源检查](#资源检查)                              |
 | 本地 `admin-next` 报 `command not found: next` | [→ admin-next 卷缓存坏了](#本地-admin-next-启动失败) |
+| 代码明明在 main，但线上行为还是旧的            | [→ 后端镜像未更新](#后端镜像未更新)                  |
 
 ---
 
@@ -154,6 +155,62 @@ ssh root@***REDACTED*** 'docker exec -it lucky-backend-prod sh -lc \
 
 ---
 
+### 后端镜像未更新
+
+**症状**：代码改动已经合并到 `main`，但线上 API 行为还是旧的（比如 Cookie 缺少 `Domain` 属性、接口逻辑没变）。
+
+**根本原因**：`deploy-backend.yml` 只在以下路径有变动时才触发：
+
+```
+apps/api/**  |  packages/shared/**  |  packages/config/**
+Dockerfile.prod  |  compose.prod.yml  |  .github/workflows/deploy-backend.yml
+```
+
+如果本次 PR **只改了 `apps/admin-next/**`\*\*（前端代码、中间件、配置等），  
+后端 deploy 就不会跑，即使后端代码早已修好也不会上线。
+
+**诊断：确认容器跑的是不是最新代码**
+
+```bash
+# 1. 检查生产容器里某个关键函数的实际实现
+ssh root@***REDACTED*** 'docker exec lucky-backend-prod \
+  grep -n "domain\|cookieDomain\|buildAdmin" \
+  /app/apps/api/dist/admin/auth/auth.controller.js | head -10'
+
+# 2. 用 curl 验证 set-cookie 响应头是否含 Domain=.joyminis.com
+#    先登录拿 token（换成真实账号密码）
+TOKEN=$(curl -s -X POST https://api.joyminis.com/api/v1/auth/admin/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"<admin>","password":"<pass>"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['tokens']['accessToken'])")
+curl -sI -X POST https://api.joyminis.com/api/v1/auth/admin/set-cookie \
+  -H "Content-Type: application/json" \
+  -H "Origin: https://admin.joyminis.com" \
+  -d "{\"token\":\"$TOKEN\"}" | grep -i "set-cookie"
+# 正确输出应含: Domain=.joyminis.com
+```
+
+**修复（手动强制部署后端）**
+
+```bash
+# 方式一：GitHub Actions 手动触发（推荐，走完整 CI → GHCR → VPS 流程）
+# GitHub → Actions → Deploy Backend → Run workflow → 选 ubuntu-latest → Run
+
+# 方式二：本地构建并直接推到 VPS（无需 GHA，立即生效）
+cd /Volumes/MySSD/work/dev/lucky_nest_monorepo
+yarn deploy:backend
+# 构建完成后手动重启（脚本有时因 admin-next 镜像拉取失败报错，需单独重启）
+ssh root@***REDACTED*** \
+  'cd /opt/lucky && docker compose -f compose.prod.yml --env-file deploy/.env.prod \
+   up -d --no-build --force-recreate --no-deps backend'
+```
+
+> ⚠️ **预防措施**：当 `apps/api/**` 有修复合并进 `dev` 但下一个 PR 只改前端时，  
+> 合并前在 PR 描述里注明"包含后端修复，需手动触发 deploy-backend"，  
+> 或在 PR 里 touch 一个 `apps/api/` 下的注释行强制触发。
+
+---
+
 ### 容器启动崩溃
 
 ```bash
@@ -212,15 +269,19 @@ docker compose --env-file deploy/.env.dev logs --no-color --tail=120 admin-next 
 
 ### 什么是自动的
 
-| 操作                  | 触发条件                                         |
-| --------------------- | ------------------------------------------------ |
-| ✅ 后端部署 + DB 迁移 | `apps/api/**` 有改动合并到 main                  |
-| ✅ Admin 部署         | `apps/admin-next/**` 有改动合并到 main           |
-| ❌ 纯环境变量变更     | 需手动：`yarn deploy:sync` + `yarn deploy:quick` |
-| ❌ Seed 数据          | 首次上线手动跑一次                               |
-| ❌ TURN 服务器        | VPS 重置后手动恢复                               |
+| 操作                  | 触发条件                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| ✅ 后端部署 + DB 迁移 | `apps/api/**` / `packages/shared/**` / `Dockerfile.prod` / `compose.prod.yml` 有改动合并到 main |
+| ✅ Admin 部署         | `apps/admin-next/**` 有改动合并到 main                                                          |
+| ❌ 纯环境变量变更     | 需手动：`yarn deploy:sync` + `yarn deploy:quick`                                                |
+| ❌ Seed 数据          | 首次上线手动跑一次                                                                              |
+| ❌ TURN 服务器        | VPS 重置后手动恢复                                                                              |
 
 > ⚠️ 只改 `deploy/.env.prod` **不会**触发重建，必须手动同步。
+>
+> ⚠️ **易踩坑**：后端修复若随"纯前端 PR"合并到 main（PR 里无 `apps/api/**` 变动），  
+> `deploy-backend.yml` **不会触发**，生产容器不会更新。  
+> 遇到"代码在 main 但线上没生效"→ 参见 [→ 后端镜像未更新](#后端镜像未更新)。
 
 ### 手动发布命令
 
