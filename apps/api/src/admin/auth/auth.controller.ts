@@ -2,6 +2,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -51,6 +52,18 @@ export class AuthController {
       ...this.buildAdminCookieBaseOptions(),
       maxAge: 24 * 60 * 60 * 1000,
     };
+  }
+
+  /**
+   * 获取当前登录的管理员信息
+   * 用于前端 page refresh 后从 JWT token 恢复 userInfo（角色、权限等）
+   */
+  @Get('admin/me')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async getAdminMe(@CurrentUserId() userId: string) {
+    return this.auth.getAdminMe(userId);
   }
 
   /**

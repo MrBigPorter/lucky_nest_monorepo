@@ -305,7 +305,15 @@ const SmartTableInner = <T extends Record<string, any>>(
         setData(res.data);
         setTotal(res.total);
       } catch (e) {
-        console.error(e);
+        // 4xx 错误（401/403/404 等）已由 HTTP 拦截器统一处理（toast + redirect），
+        // 不需要在此重复 console.error，否则会触发 Next.js dev overlay 红框。
+        // 只有非 4xx 的意外错误（5xx、网络断连、代码 bug）才值得打印。
+        const status = (e as { response?: { status?: number } })?.response
+          ?.status;
+        const is4xx = status != null && status >= 400 && status < 500;
+        if (!is4xx) {
+          console.error('[SmartTable] fetch error:', e);
+        }
       } finally {
         setLoading(false);
       }

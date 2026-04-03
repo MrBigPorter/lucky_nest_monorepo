@@ -161,6 +161,7 @@ async function main() {
     update: {
       password: hashedPassword,
       realName,
+      role: Role.SUPER_ADMIN, // ← 必须同步更新 role，否则旧 ADMIN 账号重置后仍无 SUPER_ADMIN 权限
       updatedAt: new Date(),
     },
     create: {

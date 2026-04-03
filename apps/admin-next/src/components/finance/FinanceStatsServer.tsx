@@ -8,7 +8,7 @@ import { serverGet } from '@/lib/serverFetch';
 import { FINANCE_STATS_TAG, FINANCE_TAG } from '@/lib/cache/finance-cache';
 import type { FinanceStatistics } from '@/type/types';
 import { NumHelper } from '@lucky/shared';
-import { Clock, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Wallet, Lock } from 'lucide-react';
 import { FinanceRefreshButton } from './FinanceRefreshButton';
 
 export async function FinanceStatsServer() {
@@ -20,6 +20,27 @@ export async function FinanceStatsServer() {
       tags: [FINANCE_TAG, FINANCE_STATS_TAG],
     },
   );
+
+  // 无权限 / 请求失败 → 降级展示，不崩溃
+  if (!statistics) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-2xl ring-1 ring-white/10">
+        <div className="relative z-10 flex flex-col items-center justify-center py-8 gap-4 text-center">
+          <div className="p-3 bg-slate-700/50 rounded-full">
+            <Lock className="h-8 w-8 text-slate-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-300">
+              No Permission
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Your account does not have access to finance statistics.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-8 text-white shadow-2xl ring-1 ring-white/10">
