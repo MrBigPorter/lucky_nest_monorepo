@@ -15,7 +15,13 @@
 set -euo pipefail
 
 # ---- 配置 ----
-VPS_IP="***REDACTED***"
+# 优先读环境变量 VPS_IP；若未设置则交互式询问
+if [ -z "${VPS_IP:-}" ]; then
+    read -rp "请输入 VPS IP 地址: " VPS_IP
+fi
+if [ -z "${VPS_IP:-}" ]; then
+    err "VPS_IP 不能为空"
+fi
 VPS_USER="root"
 VPS_DIR="/opt/lucky"
 SSH_TARGET="${VPS_USER}@${VPS_IP}"

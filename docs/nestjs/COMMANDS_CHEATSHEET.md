@@ -290,7 +290,7 @@ NODE_ENV=development yarn workspace @lucky/api start:dev
 docker logs --tail=200 lucky-backend-dev
 
 # 查看生产日志
-ssh root@***REDACTED*** 'docker logs --tail=200 lucky-backend-prod'
+ssh root@<VPS_IP> 'docker logs --tail=200 lucky-backend-prod'
 ```
 
 #### 性能分析
@@ -431,7 +431,7 @@ yarn deploy:backend
 
 # 4. 验证发布
 curl -sS https://api.joyminis.com/api/v1/health
-ssh root@***REDACTED*** 'docker logs --tail=100 lucky-backend-prod'
+ssh root@<VPS_IP> 'docker logs --tail=100 lucky-backend-prod'
 ```
 
 ## ⚠️ 注意事项

@@ -23,7 +23,7 @@
 ```
 API 健康检查  https://api.joyminis.com/api/v1/health
 Admin 入口    https://admin.joyminis.com
-VPS           root@***REDACTED***  →  /opt/lucky
+VPS           root@<VPS_IP>  →  /opt/lucky
 
 后端容器   lucky-backend-prod
 Nginx 容器  lucky-nginx-prod
@@ -60,13 +60,13 @@ Redis 容器  lucky-redis-prod
 curl -sS https://api.joyminis.com/api/v1/health
 
 # 2. 看容器状态
-ssh root@***REDACTED*** 'cd /opt/lucky && docker compose -f compose.prod.yml ps'
+ssh root@<VPS_IP> 'cd /opt/lucky && docker compose -f compose.prod.yml ps'
 
 # 3. 看后端日志
-ssh root@***REDACTED*** 'docker logs --tail=100 lucky-backend-prod'
+ssh root@<VPS_IP> 'docker logs --tail=100 lucky-backend-prod'
 
 # 4. 看 Nginx 日志
-ssh root@***REDACTED*** 'docker logs --tail=100 lucky-nginx-prod'
+ssh root@<VPS_IP> 'docker logs --tail=100 lucky-nginx-prod'
 ```
 
 确认是新版本问题 → 立即回滚：
@@ -118,7 +118,7 @@ AUTH_COOKIE_DOMAIN=.joyminis.com
 ```bash
 cd /Volumes/MySSD/work/dev/lucky_nest_monorepo
 yarn deploy:sync
-ssh root@***REDACTED*** \
+ssh root@<VPS_IP> \
   'cd /opt/lucky && docker compose -f compose.prod.yml --env-file deploy/.env.prod \
    up -d --no-build --force-recreate --no-deps nginx'
 ```
@@ -133,7 +133,7 @@ ssh root@***REDACTED*** \
 # 对比本地迁移列表 vs 生产已跑迁移
 ls apps/api/prisma/migrations/
 
-ssh root@***REDACTED*** 'docker exec lucky-backend-prod \
+ssh root@<VPS_IP> 'docker exec lucky-backend-prod \
   node -e "
 const { PrismaClient } = require(\"/app/apps/api/node_modules/@prisma/client\");
 const p = new PrismaClient();
@@ -148,7 +148,7 @@ p.\$queryRaw\`SELECT migration_name, finished_at FROM _prisma_migrations ORDER B
 ```bash
 # 方式一：GitHub Actions → deploy-backend → Run workflow（手动触发，推荐）
 # 方式二：手动补跑迁移
-ssh root@***REDACTED*** 'docker exec -it lucky-backend-prod sh -lc \
+ssh root@<VPS_IP> 'docker exec -it lucky-backend-prod sh -lc \
   "./node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma"'
 # 方式三：推一个 apps/api 路径下的小改动触发自动部署
 ```
@@ -173,7 +173,7 @@ Dockerfile.prod  |  compose.prod.yml  |  .github/workflows/deploy-backend.yml
 
 ```bash
 # 1. 检查生产容器里某个关键函数的实际实现
-ssh root@***REDACTED*** 'docker exec lucky-backend-prod \
+ssh root@<VPS_IP> 'docker exec lucky-backend-prod \
   grep -n "domain\|cookieDomain\|buildAdmin" \
   /app/apps/api/dist/admin/auth/auth.controller.js | head -10'
 
@@ -200,7 +200,7 @@ curl -sI -X POST https://api.joyminis.com/api/v1/auth/admin/set-cookie \
 cd /Volumes/MySSD/work/dev/lucky_nest_monorepo
 yarn deploy:backend
 # 构建完成后手动重启（脚本有时因 admin-next 镜像拉取失败报错，需单独重启）
-ssh root@***REDACTED*** \
+ssh root@<VPS_IP> \
   'cd /opt/lucky && docker compose -f compose.prod.yml --env-file deploy/.env.prod \
    up -d --no-build --force-recreate --no-deps backend'
 ```
@@ -214,7 +214,7 @@ ssh root@***REDACTED*** \
 ### 容器启动崩溃
 
 ```bash
-ssh root@***REDACTED*** 'docker logs --tail=50 lucky-backend-prod'
+ssh root@<VPS_IP> 'docker logs --tail=50 lucky-backend-prod'
 ```
 
 | 日志关键字                            | 原因                 | 解法                                       |
@@ -239,7 +239,7 @@ ssh root@***REDACTED*** 'docker logs --tail=50 lucky-backend-prod'
 ### 资源检查
 
 ```bash
-ssh root@***REDACTED*** 'free -h && echo "---" && \
+ssh root@<VPS_IP> 'free -h && echo "---" && \
   docker stats --no-stream --format \
     "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}"'
 ```
@@ -302,11 +302,11 @@ yarn deploy:quick      # 跳过构建，只重启服务
 curl -sS https://api.joyminis.com/api/v1/health
 
 # 2. 容器状态
-ssh root@***REDACTED*** \
+ssh root@<VPS_IP> \
   'cd /opt/lucky && docker compose -f compose.prod.yml --env-file deploy/.env.prod ps'
 
 # 3. 后端日志有无 ERROR
-ssh root@***REDACTED*** 'docker logs --tail=100 lucky-backend-prod'
+ssh root@<VPS_IP> 'docker logs --tail=100 lucky-backend-prod'
 ```
 
 手动确认：
@@ -393,7 +393,7 @@ yarn rollback:admin:dns:execute
 ### 查看日志
 
 ```bash
-ssh root@***REDACTED***
+ssh root@<VPS_IP>
 cd /opt/lucky
 
 docker compose -f compose.prod.yml --env-file deploy/.env.prod ps
@@ -420,18 +420,18 @@ docker compose -f compose.prod.yml --env-file deploy/.env.prod \
 ### 进入数据库（只读）
 
 ```bash
-ssh root@***REDACTED***
+ssh root@<VPS_IP>
 docker exec -it lucky-db-prod sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 ### TURN 服务器恢复（VPS 重置后）
 
 ```bash
-ssh root@***REDACTED***
+ssh root@<VPS_IP>
 cd /opt/lucky
 
 export TURN_SECRET="与 .env.prod 里相同的值"
-export TURN_PUBLIC_IP="***REDACTED***"
+export TURN_PUBLIC_IP="<VPS_IP>"
 export TURN_DOMAIN="turn.joyminis.com"
 
 bash deploy/install-turn.sh
@@ -508,7 +508,7 @@ node packages/ui/scripts/build.js       # 改了 packages/ui
 ### 迁移报 P3005
 
 ```bash
-ssh root@***REDACTED***
+ssh root@<VPS_IP>
 cd /opt/lucky
 bash deploy/baseline-db.sh
 # 然后重新发布
@@ -564,8 +564,8 @@ bash deploy/baseline-db.sh
 ### 初始化 VPS
 
 ```bash
-scp deploy/server-init.sh root@***REDACTED***:/root/
-ssh root@***REDACTED*** 'chmod +x /root/server-init.sh && /root/server-init.sh'
+scp deploy/server-init.sh root@<VPS_IP>:/root/
+ssh root@<VPS_IP> 'chmod +x /root/server-init.sh && /root/server-init.sh'
 ```
 
 ### 首次部署
@@ -594,7 +594,7 @@ docker compose -f compose.prod.yml --env-file deploy/.env.prod \
 ### 创建 / 重置管理员密码
 
 ```bash
-ssh root@***REDACTED***
+ssh root@<VPS_IP>
 docker exec -it lucky-backend-prod \
   node /app/apps/api/dist/cli/cli/create-admin.js
 ```
