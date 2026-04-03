@@ -9,6 +9,7 @@ import { AdminUser } from '@/type/types';
 import { userApi, applicationApi } from '@/api';
 import { useRequest } from 'ahooks';
 import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
+import { useAuthStore } from '@/store/useAuthStore';
 import { CreateAdminUserModal } from '@/views/admin/CreateAdminUserModal';
 import { EditAdminUserModal } from '@/views/admin/EditAdminUserModal';
 import { EditAdminPasswordModal } from '@/views/admin/EditAdminPassowordModal';
@@ -42,6 +43,9 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   onParamsChange,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
+  const userInfo = useAuthStore((state) => state.userInfo);
+  const canReviewApplications = userInfo?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = userInfo?.role === 'SUPER_ADMIN';
   const [activeTab, setActiveTab] = useState<'users' | 'applications'>('users');
   const normalizedInitialQuery = useMemo(() => {
     const input = initialFormParams ?? {};
@@ -72,7 +76,11 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   const { data: pendingData, refresh: refreshPendingCount } = useRequest(
     () => applicationApi.pendingCount(),
     {
+      ready: canReviewApplications,
       refreshDeps: [activeTab],
+      onError: () => {
+        // 403/401 等错误由 http 层处理，这里保持静默
+      },
     },
   );
   const pendingCount = pendingData?.count ?? 0;
@@ -150,10 +158,14 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
   );
   const handleToggleStatus = useCallback(
     async (admin: AdminUser) => {
+      if (admin.role === 'SUPER_ADMIN' && !isSuperAdmin) {
+        addToast('error', 'Only Super Admin can modify Super Admin accounts');
+        return;
+      }
       const newStatus = admin.status === 1 ? 0 : 1;
       updateUser(admin.id, { status: newStatus });
     },
-    [updateUser],
+    [updateUser, addToast, isSuperAdmin],
   );
 
   const handleOpenResetPwd = (admin: AdminUser) => {
@@ -244,7 +256,9 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
         header: 'Last Login',
         cell: (info) => (
           <div className="text-xs text-gray-500">
-            <div>
+            {/* suppressHydrationWarning: toLocaleString() 依赖本地时区，
+                SSR（UTC）与客户端结果不同，属于预期行为，不是 bug */}
+            <div suppressHydrationWarning>
               {info.getValue()
                 ? new Date(Number(info.getValue())).toLocaleString()
                 : 'Never'}
@@ -260,48 +274,75 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
       columnHelper.display({
         id: 'actions',
         header: 'Actions',
-        cell: (info) => (
-          <div className="flex  gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleEdit(info.row.original)}
-              title="Edit"
-            >
-              <Edit3 size={16} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleOpenResetPwd(info.row.original)}
-              title="Reset Password"
-            >
-              <Key size={16} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isUpdating}
-              isLoading={isUpdating}
-              className={
-                info.row.original.status === 1
-                  ? 'text-red-500 hover:text-red-600'
-                  : 'text-green-500 hover:text-green-600'
-              }
-              onClick={() => handleToggleStatus(info.row.original)}
-              title={info.row.original.status === 1 ? 'Disable' : 'Activate'}
-            >
-              {info.row.original.status === 1 ? (
-                <Ban size={16} />
-              ) : (
-                <CheckCircle size={16} />
-              )}
-            </Button>
-          </div>
-        ),
+        cell: (info) => {
+          const isTargetSuper = info.row.original.role === 'SUPER_ADMIN';
+          // 非 SUPER_ADMIN 不能操作 SUPER_ADMIN 账号
+          const actionsLocked = isTargetSuper && !isSuperAdmin;
+          return (
+            <div className="flex  gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={actionsLocked}
+                onClick={() => handleEdit(info.row.original)}
+                title={
+                  actionsLocked
+                    ? 'Only Super Admin can edit Super Admin accounts'
+                    : 'Edit'
+                }
+              >
+                <Edit3 size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={actionsLocked}
+                onClick={() => handleOpenResetPwd(info.row.original)}
+                title={
+                  actionsLocked
+                    ? 'Only Super Admin can reset Super Admin password'
+                    : 'Reset Password'
+                }
+              >
+                <Key size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isUpdating || actionsLocked}
+                isLoading={isUpdating}
+                className={
+                  info.row.original.status === 1
+                    ? 'text-red-500 hover:text-red-600'
+                    : 'text-green-500 hover:text-green-600'
+                }
+                onClick={() => handleToggleStatus(info.row.original)}
+                title={
+                  actionsLocked
+                    ? 'Only Super Admin can modify Super Admin accounts'
+                    : info.row.original.status === 1
+                      ? 'Disable'
+                      : 'Activate'
+                }
+              >
+                {info.row.original.status === 1 ? (
+                  <Ban size={16} />
+                ) : (
+                  <CheckCircle size={16} />
+                )}
+              </Button>
+            </div>
+          );
+        },
       }),
     ];
-  }, [handleToggleStatus, isUpdating]);
+  }, [
+    handleToggleStatus,
+    isUpdating,
+    isSuperAdmin,
+    handleEdit,
+    handleOpenResetPwd,
+  ]);
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   return (

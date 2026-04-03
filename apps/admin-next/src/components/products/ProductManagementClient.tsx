@@ -173,8 +173,9 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       title: 'Create Product',
       size: 'xl',
       onConfirm: () => actionRef.current?.reload(),
-      renderChildren: ({ confirm }) =>
-        CreateProductFormModal(categories, confirm),
+      renderChildren: ({ confirm }) => (
+        <CreateProductFormModal categories={categories} confirm={confirm} />
+      ),
     });
   }, [categories]);
 
@@ -184,8 +185,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
         title: 'Edit Product',
         size: 'xl',
         onConfirm: () => actionRef.current?.reload(),
-        renderChildren: ({ confirm }) =>
-          EditProductFormModal(categories, confirm, record),
+        renderChildren: ({ confirm }) => (
+          <EditProductFormModal
+            categories={categories}
+            confirm={confirm}
+            product={record}
+          />
+        ),
       });
     },
     [categories],

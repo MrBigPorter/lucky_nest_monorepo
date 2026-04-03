@@ -348,11 +348,25 @@ export function UserListClient({
       columnHelper.accessor('createdAt', {
         header: 'Register Time',
         size: 160,
-        cell: (info) => (
-          <span className="text-[11px] font-medium text-slate-500">
-            {new Date(info.getValue()).toLocaleString()}
-          </span>
-        ),
+        cell: (info) => {
+          const date = new Date(info.getValue());
+          // 使用固定格式避免服务器-客户端时区差异
+          const formattedDate = date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZone: 'UTC',
+          });
+          return (
+            <span className="text-[11px] font-medium text-slate-500">
+              {formattedDate}
+            </span>
+          );
+        },
       }),
       columnHelper.display({
         id: 'action',
