@@ -15,11 +15,15 @@ import {
 } from '@api/common/events/call/dto/call-signaling.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ChatService } from '@api/common/chat/chat.service';
+import { RedisService } from '@api/common/redis/redis.service';
 import { v4 as uuidv4 } from 'uuid';
 import { CallEndReason, CallMediaType, MESSAGE_TYPE } from '@lucky/shared';
 
+// pending_call:{userId} 的 Redis TTL（秒），与来电超时对齐
+const PENDING_CALL_TTL_SEC = 60;
+
 @WebSocketGateway({
-  namespace: 'events',
+  namespace: '/events',
   cors: { origin: '*' },
 })
 export class CallGateway {
@@ -30,6 +34,7 @@ export class CallGateway {
   constructor(
     private readonly eventEmitter: EventEmitter2,
     @Inject(ChatService) private readonly chatService: ChatService,
+    private readonly redisService: RedisService,
   ) {}
 
   /**
@@ -45,7 +50,7 @@ export class CallGateway {
   // 1. 发起呼叫 (Invite)
   // ==========================================
   @SubscribeMessage('call_invite')
-  handleCallInvite(
+  async handleCallInvite(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: CallInviteDto,
   ) {
@@ -63,12 +68,18 @@ export class CallGateway {
 
     // 目标用户的私有房间名 (与 EventsGateway 保持一致)
     const targetRoom = `user_${payload.targetId}`;
-    // 转发消息给目标
-    // 注意：我们将 senderId 附带在消息中，这样接收方知道是谁打来的
-    this.server.to(targetRoom).emit('call_invite', {
-      ...payload, // 包含 sessionId, sdp, mediaType
-      senderId, // 补充发送者 ID
-    });
+
+    const invitePayload = { ...payload, senderId };
+
+    // 缓存到 Redis：FCM 唤醒后重连时补投（竞态兜底）
+    await this.redisService.set(
+      `pending_call:${payload.targetId}`,
+      JSON.stringify(invitePayload),
+      PENDING_CALL_TTL_SEC,
+    );
+
+    // 转发消息给目标（若已在线则直接收到）
+    this.server.to(targetRoom).emit('call_invite', invitePayload);
     this.eventEmitter.emit('call.wake_up', {
       targetId: payload.targetId,
       sessionId: payload.sessionId,
@@ -148,6 +159,10 @@ export class CallGateway {
       ...payload, // 包含 reason, sessionId
       senderId,
     });
+
+    // 清除 Redis 缓存（无论主被叫谁挂断）
+    await this.redisService.del(`pending_call:${payload.targetId}`);
+    await this.redisService.del(`pending_call:${senderId}`);
 
     // 发送通话结束消息到聊天
     await this.sendCallEndMessage(senderId, payload);
