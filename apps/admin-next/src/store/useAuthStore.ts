@@ -17,6 +17,8 @@ interface AuthState {
   logout: () => Promise<void>;
   checkAuth: () => void;
   setTokens: (token: string, refreshToken?: string | null) => void;
+  /** page refresh 后调用，从后端拉取最新 userInfo 并写入 store */
+  fetchMe: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -115,6 +117,21 @@ export const useAuthStore = create<AuthState>((set) => ({
         refreshToken: null,
         userRole: 'viewer',
       });
+    }
+  },
+
+  fetchMe: async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      const userInfo = await authApi.getMe();
+      set({
+        userInfo,
+        userRole: (userInfo.role as UserRole) ?? 'admin',
+        isAuthenticated: true,
+      });
+    } catch {
+      // token 过期或无效由 HTTP 拦截器处理，这里静默忽略
     }
   },
 }));

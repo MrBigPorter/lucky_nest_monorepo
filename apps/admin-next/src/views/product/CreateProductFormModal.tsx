@@ -173,7 +173,10 @@ export const CreateProductFormModal: React.FC<CreateProductFormModalProps> = ({
 
       await createProduct(payload);
     } catch (e) {
-      console.error(e);
+      // 4xx 由 HTTP 拦截器统一 toast，此处不重复 console.error
+      const status = (e as { response?: { status?: number } })?.response
+        ?.status;
+      if (!status || status < 400 || status >= 500) console.error(e);
       addToast('error', 'Failed to save product');
     }
   };

@@ -584,6 +584,9 @@ export const authApi = {
   // 修改密码
   changePassword: (data: { oldPassword: string; newPassword: string }) =>
     http.post('/auth/change-password', data),
+
+  // 获取当前登录管理员信息（page refresh 后恢复 userInfo）
+  getMe: () => http.get<AdminUser>('/v1/auth/admin/me'),
 };
 
 /**
@@ -906,6 +909,7 @@ export const applicationApi = {
       undefined,
       {
         trace: false,
+        showError: false, // 轮询请求，403（非 SUPER_ADMIN）静默处理，不弹 toast
       },
     ),
 

@@ -114,6 +114,7 @@
 
 - Admin 接口路径统一 `/admin/*`，受 `AdminJwtAuthGuard` + `RolesGuard` 保护
 - JWT 双密钥: `JWT_SECRET`（客户端）/ `ADMIN_JWT_SECRET`（后台）
+- **⚠️ 关键**：Admin 相关模块的 `JwtModule.register({ secret })` 必须使用 `ADMIN_JWT_SECRET || JWT_SECRET`（与 `AuthService.getAdminJwtSecret()` 保持一致），否则签发和验证使用不同密钥会导致 401 Unauthorized
 - 新接口必须有对应 TS 类型定义（`src/api/types.ts` 或模块 type 文件）
 - 数据库变更走 `prisma migrate dev`，不直接改库
 - 环境变量: `deploy/.env.dev` (开发) / `deploy/.env.prod` (生产)

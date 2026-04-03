@@ -152,8 +152,15 @@ class HttpClient {
           return this.handle401AndRetry(retryConfig);
         }
 
-        this.handleBizError(data);
-        return Promise.reject(data);
+        this.handleBizError(
+          data,
+          res.config as InternalAxiosRequestConfig & RequestConfig,
+        );
+        // 防止 unhandledrejection 事件被 Next.js dev overlay 捕获显示为红色堆栈。
+        // toast 已提示用户；promise 仍是 rejected 状态，onError 回调正常触发。
+        const bizRejection = Promise.reject(data);
+        bizRejection.catch(() => {});
+        return bizRejection;
       },
       async (error) => {
         if (error.config) {
@@ -176,7 +183,11 @@ class HttpClient {
           }
         }
         this.handleHttpError(error);
-        return Promise.reject(error);
+        // 防止 unhandledrejection 事件被 Next.js dev overlay 捕获显示为红色堆栈。
+        // toast 已提示用户；promise 仍是 rejected 状态，调用侧 try-catch / onError 正常触发。
+        const httpRejection = Promise.reject(error);
+        httpRejection.catch(() => {});
+        return httpRejection;
       },
     );
   }
@@ -213,12 +224,18 @@ class HttpClient {
 
   // ================= 错误处理 =================
 
-  private handleBizError(data: ApiResponse) {
+  private handleBizError(
+    data: ApiResponse,
+    config?: InternalAxiosRequestConfig & RequestConfig,
+  ) {
     // 401 单独处理，不再额外弹 toast
     if (data.code === 401) {
       void this.handleUnauthorized();
       return;
     }
+
+    // showError: false → 静默请求，不弹 toast
+    if (config?.showError === false) return;
 
     const fallbackMap: Record<number, string> = {
       400: 'Bad Request',
@@ -239,6 +256,12 @@ class HttpClient {
       return;
     }
 
+    // showError: false → 静默请求，不弹 toast
+    const reqConfig = error.config as
+      | (InternalAxiosRequestConfig & RequestConfig)
+      | undefined;
+    if (reqConfig?.showError === false) return;
+
     if (error.response) {
       const { status, data } = error.response;
 
@@ -253,6 +276,9 @@ class HttpClient {
 
       const msg = data?.message || `Server Error: ${error.message}`;
       this.toastError(msg);
+
+      // 403 权限错误：toast 已提示用户，不需要 console.error 污染控制台
+      if (status === 403) return;
     } else if (error.request) {
       this.toastError('No response from server, please check your network');
     } else {
@@ -459,6 +485,10 @@ class HttpClient {
         this.inflightGetRequests.delete(key);
       });
     });
+
+    // 防止 unhandledrejection 事件被 Next.js dev overlay 捕获显示为红色堆栈。
+    // promise 仍然是 rejected 状态，useRequest 的 onError 回调正常触发。
+    requestPromise.catch(() => {});
 
     this.inflightGetRequests.set(key, requestPromise);
     return requestPromise;
