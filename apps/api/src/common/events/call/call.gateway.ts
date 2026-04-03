@@ -79,12 +79,32 @@ export class CallGateway {
     );
 
     // 转发消息给目标（若已在线则直接收到）
+    const roomClients = (this.server as any).adapter?.rooms?.get(targetRoom);
+    const onlineCount = roomClients ? roomClients.size : 0;
+    this.logger.log(
+      `[Call Invite] target room "${targetRoom}" has ${onlineCount} socket(s)`,
+    );
     this.server.to(targetRoom).emit('call_invite', invitePayload);
+
+    // 预取会话 ID（用于 FCM payload，让 Flutter 拒接时能带上 conversationId）
+    let conversationId: string | undefined;
+    try {
+      const conv = await this.chatService.ensureDirectConversation(
+        senderId,
+        payload.targetId,
+      );
+      conversationId = conv.id;
+    } catch {
+      // 查询失败不阻断信令，conversationId 留 undefined
+    }
+
     this.eventEmitter.emit('call.wake_up', {
+      type: 'call_invite', // 显式传递，不依赖 push.listener 的默认值
       targetId: payload.targetId,
       sessionId: payload.sessionId,
       senderId: senderId,
       mediaType: payload.mediaType,
+      conversationId,
     });
   }
 
@@ -167,10 +187,13 @@ export class CallGateway {
     // 发送通话结束消息到聊天
     await this.sendCallEndMessage(senderId, payload);
 
+    // type: 'call_end' 必须透传，push.listener → sendCallWakeUpPush 会把它写入 FCM data.type
+    // 如果漏传，FCM data.type 会被硬编码为 'call_invite'，App 收到后显示幽灵来电屏幕
     this.eventEmitter.emit('call.wake_up', {
       targetId: payload.targetId,
       sessionId: payload.sessionId,
       senderId: senderId,
+      mediaType: payload.mediaType ?? 'audio',
       type: 'call_end',
     });
   }

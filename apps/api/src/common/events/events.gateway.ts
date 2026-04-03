@@ -12,7 +12,12 @@ import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@api/common/prisma/prisma.service';
 import { RedisService } from '@api/common/redis/redis.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SocketEvents } from '@lucky/shared';
+import {
+  CHAT_EVENTS,
+  MessageCreatedEvent,
+} from '@api/common/chat/events/chat.events';
 import type { Prisma } from '@prisma/client';
 
 interface JwtPayloadLike {
@@ -71,6 +76,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly prismaService: PrismaService,
     private readonly redisService: RedisService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -362,6 +368,38 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ...result,
         isSelf: false, // 告知房间内其他人此消息非本人发送
       });
+
+      // 触发完整的消息分发链：user_X 私有房间 + FCM 离线推送
+      // (修复：WebSocket 路径之前只派发到 conversationId 房间，
+      //  未在 join_chat 的接收方永远收不到消息)
+      const members = await this.prismaService.chatMember.findMany({
+        where: { conversationId },
+        select: { userId: true, isMuted: true },
+      });
+      const memberIds = members.map((m) => m.userId);
+      const pushMemberIds = members
+        .filter((m) => !m.isMuted)
+        .map((m) => m.userId);
+
+      this.eventEmitter.emit(
+        CHAT_EVENTS.MESSAGE_CREATED,
+        new MessageCreatedEvent(
+          result.id,
+          result.conversationId,
+          result.content,
+          result.type,
+          result.senderId ?? '',
+          result.sender?.nickname ?? '',
+          result.sender?.avatar ?? '',
+          result.createdAt.getTime(),
+          memberIds,
+          result.seqId,
+          result.meta,
+          undefined,
+          undefined,
+          pushMemberIds,
+        ),
+      );
 
       return {
         status: 'ok',
