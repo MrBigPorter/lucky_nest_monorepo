@@ -271,7 +271,8 @@ export const Switch: React.FC<{
   label?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-}> = ({ label, checked, onChange }) => (
+  disabled?: boolean;
+}> = ({ label, checked, onChange, disabled = false }) => (
   <div className="flex items-center justify-between">
     {label && (
       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -282,10 +283,11 @@ export const Switch: React.FC<{
       type="button"
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-        checked ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'
-      }`}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+      } ${checked ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}
     >
       <motion.span
         layout
