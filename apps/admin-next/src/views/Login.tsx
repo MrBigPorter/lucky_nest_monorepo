@@ -50,6 +50,22 @@ export const Login: React.FC = () => {
     sessionStorage.setItem('csrf_token', token);
   }, []);
 
+  // 登录页挂载时，检测并清理本地残留 token（middleware 已清理 cookie）
+  React.useEffect(() => {
+    const hasLocalToken = Boolean(
+      localStorage.getItem('auth_token') ||
+      localStorage.getItem('refresh_token'),
+    );
+    if (!hasLocalToken) {
+      return;
+    }
+
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('csrf_token');
+    void authApi.clearCookie().catch(() => {});
+  }, []);
+
   const {
     register,
     handleSubmit,

@@ -54,7 +54,7 @@ export default async function PaymentChannelsPage({
     queryKey: paymentChannelsListQueryKey(queryInput),
     queryFn: async () => {
       const res = await serverGet<PaginatedResponse<PaymentChannel>>(
-        '/v1/admin/payment-channels/list',
+        '/v1/admin/payment/channels/list',
         buildPaymentChannelsListParams(queryInput) as Record<
           string,
           string | number | boolean | undefined | null
@@ -64,6 +64,10 @@ export default async function PaymentChannelsPage({
           tags: [PAYMENT_CHANNELS_LIST_TAG],
         },
       );
+      // 如果返回null（401错误），返回空数据
+      if (!res) {
+        return { list: [], total: 0 };
+      }
       return { list: res.list, total: res.total };
     },
   });

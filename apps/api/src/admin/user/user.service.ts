@@ -140,6 +140,25 @@ export class UserService {
       }
     }
 
+    // 仅超级管理员可以修改超级管理员账号的任意字段（role/status/password/realName）
+    // 此检查放在 role/status/password 都生效，阻断所有提权/降级/重置密码攻击路径
+    const target = await this.prisma.adminUser.findUnique({
+      where: { id },
+      select: { role: true },
+    });
+    if (!target) throw new BadRequestException('admin not found');
+    if (target.role === Role.SUPER_ADMIN) {
+      const operator = await this.prisma.adminUser.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (operator?.role !== Role.SUPER_ADMIN) {
+        throw new ForbiddenException(
+          'only super admin can modify super admin account',
+        );
+      }
+    }
+
     if (dto.password) {
       dto.password = await this.passwordService.hash(dto.password);
     }

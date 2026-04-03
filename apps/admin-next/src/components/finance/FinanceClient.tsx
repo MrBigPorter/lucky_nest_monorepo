@@ -7,6 +7,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FinancePage } from './FinancePageClient';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export function FinanceClient() {
   const router = useRouter();
@@ -55,9 +56,11 @@ export function FinanceClient() {
   );
 
   return (
-    <FinancePage
-      initialFormParams={urlFilterParams}
-      onParamsChange={handleParamsChange}
-    />
+    <ErrorBoundary>
+      <FinancePage
+        initialFormParams={urlFilterParams}
+        onParamsChange={handleParamsChange}
+      />
+    </ErrorBoundary>
   );
 }

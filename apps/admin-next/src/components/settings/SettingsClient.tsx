@@ -65,7 +65,11 @@ function CreateConfigForm({ onCreated }: { onCreated: () => void }) {
       setValue('');
       setShowForm(false);
     } catch (error) {
-      console.error('Failed to create config:', error);
+      // 4xx 由 HTTP 拦截器统一 toast，此处不重复 console.error
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      if (!status || status < 400 || status >= 500)
+        console.error('Failed to create config:', error);
       alert(
         `Create failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
