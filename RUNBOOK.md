@@ -39,18 +39,19 @@ Redis 容器  lucky-redis-prod
 
 ### 症状速查
 
-| 症状                                           | 直接跳到                                             |
-| ---------------------------------------------- | ---------------------------------------------------- |
-| API 返回 5xx / 无响应                          | [→ API 不通](#api-不通)                              |
-| Admin 登录报 `/v1/...` 路径错                  | [→ API 路径缺 /api](#admin-登录-api-路径缺-api)      |
-| 登录显示 200 但报 ERR_NETWORK                  | [→ CORS 问题](#cors-问题)                            |
-| 部署后新功能不存在 / 模型 undefined            | [→ Prisma 落后](#prisma-落后)                        |
-| 后端容器启动就崩溃                             | [→ 容器启动崩溃](#容器启动崩溃)                      |
-| Admin Cloudflare 部署失败                      | [→ Admin 部署失败](#admin-cloudflare-部署失败)       |
-| VPS 内存告急                                   | [→ 资源检查](#资源检查)                              |
-| 本地 `admin-next` 报 `command not found: next` | [→ admin-next 卷缓存坏了](#本地-admin-next-启动失败) |
-| 代码明明在 main，但线上行为还是旧的            | [→ 后端镜像未更新](#后端镜像未更新)                  |
-| `/auth/google/login` 返回 404                  | [→ Nginx 配置未同步](#nginx-配置未同步到-vps)        |
+| 症状                                              | 直接跳到                                             |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| API 返回 5xx / 无响应                             | [→ API 不通](#api-不通)                              |
+| Admin 登录报 `/v1/...` 路径错                     | [→ API 路径缺 /api](#admin-登录-api-路径缺-api)      |
+| 登录显示 200 但报 ERR_NETWORK                     | [→ CORS 问题](#cors-问题)                            |
+| 部署后新功能不存在 / 模型 undefined               | [→ Prisma 落后](#prisma-落后)                        |
+| 后端容器启动就崩溃                                | [→ 容器启动崩溃](#容器启动崩溃)                      |
+| Admin Cloudflare 部署失败                         | [→ Admin 部署失败](#admin-cloudflare-部署失败)       |
+| VPS 内存告急                                      | [→ 资源检查](#资源检查)                              |
+| 本地 `admin-next` 报 `command not found: next`    | [→ admin-next 卷缓存坏了](#本地-admin-next-启动失败) |
+| 代码明明在 main，但线上行为还是旧的               | [→ 后端镜像未更新](#后端镜像未更新)                  |
+| `/auth/google/login` 返回 404                     | [→ Nginx 配置未同步](#nginx-配置未同步到-vps)        |
+| OAuth 取消后跳转到 `api.joyminis.com/oauth-error` | [→ OAuth 错误重定向](#oauth-错误重定向问题)          |
 
 ---
 
@@ -78,6 +79,63 @@ curl -v "https://api.joyminis.com/auth/google/login?state=test&redirect_uri=http
 ```
 
 **后续**：CI 已更新（`deploy-backend.yml`），后续推送 `nginx/**` 变更会自动同步并 reload。
+
+---
+
+### OAuth 错误重定向问题
+
+**症状**：用户点击 Facebook/Google 登录后选择"取消"，浏览器跳转到：
+
+```
+https://api.joyminis.com/oauth-error?code=PROVIDER_ERROR&...#_=_
+```
+
+而不是前端登录页 `https://admin.joyminis.com/login?cancelled=true`
+
+**根因**：
+
+1. 后端 `oauth-deeplink.controller.ts` 旧代码使用相对路径 `/oauth-error`，在 API 服务器上解析为 API 域名
+2. Facebook/Google 取消授权时返回 `?error=access_denied`，旧代码未检测直接用 `undefined` code 调第三方 API → 报错
+3. `#_=_` 是 Facebook 老版 OAuth JS SDK 的历史遗留 fragment
+
+**已修复**（2026-04-04）：
+
+- `facebookCallback` / `googleCallback` 新增 `@Query('error')` 早检测
+- 新增 `handleCancelledOAuth()` 方法，优先级：移动端 Deep Link > Web redirectUri > `FRONTEND_URL/login?cancelled`
+- `handleOAuthError()` 所有重定向改为绝对 `FRONTEND_URL` 路径
+- `.env.dev` 的 `FRONTEND_URL` 改为 `https://dev.joyminis.com`
+
+**立即部署修复**：
+
+```bash
+# 1. 确认代码已在 main 分支
+git log --oneline -1  # 应该显示最新的 OAuth 修复 commit
+
+# 2. 推送触发 CI/CD（自动构建 + 推送镜像）
+git push origin main
+
+# 3. 等待 CI 完成后，SSH 到 VPS 拉取新镜像
+ssh root@<VPS_IP>
+cd /opt/lucky
+docker compose --env-file deploy/.env.prod pull backend
+docker compose --env-file deploy/.env.prod up -d backend
+
+# 4. 验证修复（模拟取消回调）
+curl -L -v "https://api.joyminis.com/auth/facebook/callback?error=access_denied&error_reason=user_denied&state=xxx"
+# 预期：302 重定向到 https://admin.joyminis.com/login?cancelled=true&provider=facebook
+```
+
+**测试脚本**：
+
+```bash
+# 运行自动化测试（本地）
+./scripts/test-oauth-cancel.sh
+
+# 测试生产环境（取消注释脚本中的生产测试部分）
+./scripts/test-oauth-cancel.sh -e prod
+```
+
+**详细文档**：`docs/read/features/oauth-deep-link/OAUTH_CANCEL_FIX_20260404.md`
 
 ---
 
