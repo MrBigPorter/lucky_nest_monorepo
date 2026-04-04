@@ -64,7 +64,7 @@ export const DepositList: React.FC<DepositListProps> = ({
     ModalManager.open({
       title: 'Deposit Order Details',
       renderChildren: ({ close }) => (
-        <DepositDetailModal data={record} close={close} />
+        <DepositDetailModal data={record} closeAction={close} />
       ),
     });
   }, []);

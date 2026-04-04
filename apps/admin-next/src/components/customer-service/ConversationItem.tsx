@@ -8,19 +8,19 @@ export function ConversationItem({
   conv,
   isActive,
   unreadCount = 0,
-  onClick,
+  onClickAction,
 }: {
   conv: ChatConversation;
   isActive: boolean;
   unreadCount?: number;
-  onClick: () => void;
+  onClickAction: () => void;
 }) {
   const user = conv.members.find((m) => m.role !== 'OWNER') ?? conv.members[0];
   const displayName = user?.nickname ?? conv.name ?? 'Unknown';
 
   return (
     <button
-      onClick={onClick}
+      onClick={onClickAction}
       className={`w-full text-left p-3 rounded-xl transition-all ${
         isActive
           ? 'bg-teal-50 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/30'

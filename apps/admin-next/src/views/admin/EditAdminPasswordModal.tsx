@@ -19,16 +19,16 @@ type EditAdminPasswordFormInputs = z.infer<typeof editAdminPasswordSchema>;
 
 interface EditAdminPasswordModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   editingUser: AdminUser | null;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export const EditAdminPasswordModal: React.FC<EditAdminPasswordModalProps> = ({
   isOpen,
-  onClose,
+  onCloseAction,
   editingUser,
-  onSuccess,
+  onSuccessAction,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
   const currentUserRole = useAuthStore((state) => state.userInfo?.role);
@@ -50,8 +50,8 @@ export const EditAdminPasswordModal: React.FC<EditAdminPasswordModalProps> = ({
       manual: true,
       onSuccess: () => {
         addToast('success', 'Admin user updated successfully');
-        onSuccess();
-        onClose();
+        onSuccessAction();
+        onCloseAction();
       },
     },
   );
@@ -66,7 +66,7 @@ export const EditAdminPasswordModal: React.FC<EditAdminPasswordModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onCloseAction={onCloseAction}
       title={`Edit Admin Password: ${editingUser?.username}`}
       size="lg"
     >
@@ -83,7 +83,7 @@ export const EditAdminPasswordModal: React.FC<EditAdminPasswordModalProps> = ({
           />
         )}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onCloseAction}>
             Cancel
           </Button>
           <Button type="submit" disabled={resetLocked} isLoading={isUpdating}>

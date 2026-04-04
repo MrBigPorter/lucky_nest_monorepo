@@ -258,7 +258,7 @@ export function ChatWindow({
         )}
 
         {allMessages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} onRecall={handleRecall} />
+          <MessageBubble key={msg.id} msg={msg} onRecallAction={handleRecall} />
         ))}
         <div ref={messagesEndRef} />
       </div>
@@ -296,8 +296,8 @@ export function ChatWindow({
           <div className="relative">
             {showQuickReplies && (
               <QuickRepliesPanel
-                onSelect={(text) => setReplyText(text)}
-                onClose={() => setShowQuickReplies(false)}
+                onSelectAction={(text) => setReplyText(text)}
+                onCloseAction={() => setShowQuickReplies(false)}
               />
             )}
 

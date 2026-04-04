@@ -23,14 +23,14 @@ type createCategoryFormInput = z.infer<typeof createCategorySchema>;
 
 interface createCategoryModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  onCloseAction: () => void;
+  onSuccessAction: () => void;
 }
 
 export const CreateCategoryModal: React.FC<createCategoryModalProps> = ({
   isOpen,
-  onClose,
-  onSuccess,
+  onCloseAction,
+  onSuccessAction,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
 
@@ -52,8 +52,8 @@ export const CreateCategoryModal: React.FC<createCategoryModalProps> = ({
     manual: true,
     onSuccess: () => {
       addToast('success', 'category created successfully');
-      onSuccess();
-      onClose();
+      onSuccessAction();
+      onCloseAction();
     },
   });
 
@@ -70,7 +70,7 @@ export const CreateCategoryModal: React.FC<createCategoryModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onCloseAction={onCloseAction}
       title="Create New Category"
       size="lg"
     >
@@ -93,7 +93,7 @@ export const CreateCategoryModal: React.FC<createCategoryModalProps> = ({
         />
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onCloseAction}>
             Cancel
           </Button>
           <Button type="submit" isLoading={loading} disabled={loading}>

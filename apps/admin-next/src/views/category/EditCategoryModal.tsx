@@ -25,15 +25,15 @@ type editCategoryFormInput = z.infer<typeof editCategorySchema>;
 
 interface editCategoryModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  onCloseAction: () => void;
+  onSuccessAction: () => void;
   detail: Category;
 }
 
 export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
   isOpen,
-  onClose,
-  onSuccess,
+  onCloseAction,
+  onSuccessAction,
   detail,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
@@ -58,8 +58,8 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
     manual: true,
     onSuccess: () => {
       addToast('success', 'category updated successfully');
-      onSuccess();
-      onClose();
+      onSuccessAction();
+      onCloseAction();
     },
   });
 
@@ -79,7 +79,12 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Category" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onCloseAction={onCloseAction}
+      title="Edit Category"
+      size="lg"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
           label="Name"
@@ -116,7 +121,7 @@ export const EditCategoryModal: React.FC<editCategoryModalProps> = ({
           )}
         />
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onCloseAction}>
             Cancel
           </Button>
           <Button type="submit" isLoading={loading}>

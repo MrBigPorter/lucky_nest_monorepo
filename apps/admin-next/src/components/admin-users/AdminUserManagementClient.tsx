@@ -12,7 +12,7 @@ import { createColumnHelper, ColumnDef } from '@tanstack/react-table';
 import { useAuthStore } from '@/store/useAuthStore';
 import { CreateAdminUserModal } from '@/views/admin/CreateAdminUserModal';
 import { EditAdminUserModal } from '@/views/admin/EditAdminUserModal';
-import { EditAdminPasswordModal } from '@/views/admin/EditAdminPassowordModal';
+import { EditAdminPasswordModal } from '@/views/admin/EditAdminPasswordModal';
 import { ApplicationsManagement } from '@/views/admin/ApplicationsManagement';
 import { Button } from '@repo/ui';
 import { BaseTable } from '@/components/scaffold/BaseTable';
@@ -455,20 +455,20 @@ export const AdminUserManagement: React.FC<AdminUserManagementProps> = ({
 
           <CreateAdminUserModal
             isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            onSuccess={() => void refresh()}
+            onCloseAction={() => setIsCreateModalOpen(false)}
+            onSuccessAction={() => void refresh()}
           />
           <EditAdminUserModal
             isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
+            onCloseAction={() => setIsEditModalOpen(false)}
             editingUser={editingAdmin}
-            onSuccess={() => void refresh()}
+            onSuccessAction={() => void refresh()}
           />
 
           <EditAdminPasswordModal
             isOpen={isResetPwdModalOpen}
-            onClose={() => setIsResetPwdModalOpen(false)}
-            onSuccess={() => void refresh()}
+            onCloseAction={() => setIsResetPwdModalOpen(false)}
+            onSuccessAction={() => void refresh()}
             editingUser={resetPwdAdmin}
           />
         </>

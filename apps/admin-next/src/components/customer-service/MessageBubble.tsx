@@ -14,10 +14,10 @@ import type { ChatMessage } from '@/type/types';
 
 export function MessageBubble({
   msg,
-  onRecall,
+  onRecallAction,
 }: {
   msg: ChatMessage;
-  onRecall?: (id: string) => void;
+  onRecallAction?: (id: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -123,9 +123,9 @@ export function MessageBubble({
             {formatMsgTime(msg.createdAt)}
           </span>
           {/* 撤回按钮 — 仅对客服消息且非已撤回 */}
-          {isSupport && !msg.isRecalled && onRecall && hovered && (
+          {isSupport && !msg.isRecalled && onRecallAction && hovered && (
             <button
-              onClick={() => onRecall(msg.id)}
+              onClick={() => onRecallAction(msg.id)}
               title="Force recall"
               className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-0.5"
             >

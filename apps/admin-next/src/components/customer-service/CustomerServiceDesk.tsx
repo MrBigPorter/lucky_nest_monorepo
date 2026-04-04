@@ -116,11 +116,11 @@ export function CustomerServiceDesk() {
           keyword={keyword}
           statusFilter={statusFilter}
           lastSeenSeqId={lastSeenSeqId}
-          onKeywordChange={setKeyword}
-          onStatusFilterChange={setStatusFilter}
-          onPageChange={setPage}
-          onSelectConversation={handleSelectConv}
-          onRefresh={refreshList}
+          onKeywordChangeAction={setKeyword}
+          onStatusFilterChangeAction={setStatusFilter}
+          onPageChangeAction={setPage}
+          onSelectConversationAction={handleSelectConv}
+          onRefreshAction={refreshList}
         />
 
         {/* 右侧：聊天窗口 */}

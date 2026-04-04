@@ -120,14 +120,14 @@ export const CategoryManagement: React.FC = () => {
 
       <CreateCategoryModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={categories.refresh}
+        onCloseAction={() => setIsCreateModalOpen(false)}
+        onSuccessAction={categories.refresh}
       />
 
       <EditCategoryModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSuccess={categories.refresh}
+        onCloseAction={() => setIsEditModalOpen(false)}
+        onSuccessAction={categories.refresh}
         detail={editingItem as Category}
       />
     </div>

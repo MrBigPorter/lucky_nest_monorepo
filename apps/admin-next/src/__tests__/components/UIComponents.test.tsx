@@ -199,26 +199,26 @@ describe('Input', () => {
 // ═══════════════════════════════════════════════════════════════
 describe('Switch', () => {
   it('渲染 label', () => {
-    render(<Switch label="Enable" checked={false} onChange={vi.fn()} />);
+    render(<Switch label="Enable" checked={false} onChangeAction={vi.fn()} />);
     expect(screen.getByText('Enable')).toBeInTheDocument();
   });
 
   it('unchecked 时 aria-checked=false', () => {
-    render(<Switch checked={false} onChange={vi.fn()} />);
+    render(<Switch checked={false} onChangeAction={vi.fn()} />);
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
   });
 
   it('checked 时 aria-checked=true', () => {
-    render(<Switch checked={true} onChange={vi.fn()} />);
+    render(<Switch checked={true} onChangeAction={vi.fn()} />);
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('点击时调用 onChange(!checked)', async () => {
+  it('点击时调用 onChangeAction(!checked)', async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<Switch checked={false} onChange={onChange} />);
+    const onChangeAction = vi.fn();
+    render(<Switch checked={false} onChangeAction={onChangeAction} />);
     await user.click(screen.getByRole('switch'));
-    expect(onChange).toHaveBeenCalledWith(true);
+    expect(onChangeAction).toHaveBeenCalledWith(true);
   });
 });
 
@@ -234,26 +234,33 @@ describe('Toast', () => {
   });
 
   it('渲染 message', () => {
-    render(<Toast toast={makeToast()} onClose={vi.fn()} />);
+    render(<Toast toast={makeToast()} onCloseAction={vi.fn()} />);
     expect(screen.getByText('Saved!')).toBeInTheDocument();
   });
 
-  it('点击关闭按钮调用 onClose', async () => {
+  it('点击关闭按钮调用 onCloseAction', async () => {
     const user = userEvent.setup();
-    const onClose = vi.fn();
-    render(<Toast toast={makeToast({ id: 'abc' })} onClose={onClose} />);
+    const onCloseAction = vi.fn();
+    render(
+      <Toast toast={makeToast({ id: 'abc' })} onCloseAction={onCloseAction} />,
+    );
     await user.click(screen.getByRole('button'));
-    expect(onClose).toHaveBeenCalledWith('abc');
+    expect(onCloseAction).toHaveBeenCalledWith('abc');
   });
 
   it('3 秒后自动关闭', async () => {
     vi.useFakeTimers();
-    const onClose = vi.fn();
-    render(<Toast toast={makeToast({ id: 'timer-test' })} onClose={onClose} />);
+    const onCloseAction = vi.fn();
+    render(
+      <Toast
+        toast={makeToast({ id: 'timer-test' })}
+        onCloseAction={onCloseAction}
+      />,
+    );
     await act(async () => {
       vi.advanceTimersByTime(3000);
     });
-    expect(onClose).toHaveBeenCalledWith('timer-test');
+    expect(onCloseAction).toHaveBeenCalledWith('timer-test');
     vi.useRealTimers();
   });
 });
@@ -267,14 +274,14 @@ describe('ToastContainer', () => {
       { id: '1', type: 'success', message: 'Done' },
       { id: '2', type: 'error', message: 'Fail' },
     ];
-    render(<ToastContainer toasts={toasts} removeToast={vi.fn()} />);
+    render(<ToastContainer toasts={toasts} removeToastAction={vi.fn()} />);
     expect(screen.getByText('Done')).toBeInTheDocument();
     expect(screen.getByText('Fail')).toBeInTheDocument();
   });
 
   it('空数组时不渲染任何 toast', () => {
     const { container } = render(
-      <ToastContainer toasts={[]} removeToast={vi.fn()} />,
+      <ToastContainer toasts={[]} removeToastAction={vi.fn()} />,
     );
     expect(container.querySelectorAll('[class*="border-l-"]')).toHaveLength(0);
   });

@@ -169,11 +169,11 @@ export const Button: React.FC<ButtonProps> = ({
 export const ExportButton: React.FC<{
   data?: Record<string, unknown>[];
   filename?: string;
-  onClick?: () => void;
-}> = ({ data, filename = 'export', onClick }) => {
+  onClickAction?: () => void;
+}> = ({ data, filename = 'export', onClickAction }) => {
   const handleExport = () => {
-    if (onClick) {
-      onClick();
+    if (onClickAction) {
+      onClickAction();
     } else if (data) {
       exportToCSV(data, filename);
     } else {
@@ -270,9 +270,9 @@ export const Select: React.FC<
 export const Switch: React.FC<{
   label?: string;
   checked: boolean;
-  onChange: (checked: boolean) => void;
+  onChangeAction: (checked: boolean) => void;
   disabled?: boolean;
-}> = ({ label, checked, onChange, disabled = false }) => (
+}> = ({ label, checked, onChangeAction, disabled = false }) => (
   <div className="flex items-center justify-between">
     {label && (
       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -284,7 +284,7 @@ export const Switch: React.FC<{
       role="switch"
       aria-checked={checked}
       disabled={disabled}
-      onClick={() => !disabled && onChange(!checked)}
+      onClick={() => !disabled && onChangeAction(!checked)}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
       } ${checked ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}
@@ -335,11 +335,11 @@ export const Badge: React.FC<{
 // --- Modal ---
 export const Modal: React.FC<{
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   title: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
-}> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+}> = ({ isOpen, onCloseAction, title, children, size = 'md' }) => {
   const sizes = {
     sm: 'max-w-sm',
     md: 'max-w-lg',
@@ -355,7 +355,7 @@ export const Modal: React.FC<{
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={onCloseAction}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -373,7 +373,7 @@ export const Modal: React.FC<{
                   {title}
                 </h3>
                 <button
-                  onClick={onClose}
+                  onClick={onCloseAction}
                   className="text-gray-400 hover:text-gray-500 dark:hover:text-white transition-colors p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full"
                 >
                   <X className="w-5 h-5" />
@@ -408,8 +408,8 @@ export const DateRangePicker: React.FC = () => {
 export const ImageUpload: React.FC<{
   label?: string;
   value: string;
-  onChange: (val: string) => void;
-}> = ({ label, value, onChange }) => {
+  onChangeAction: (val: string) => void;
+}> = ({ label, value, onChangeAction }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -418,7 +418,7 @@ export const ImageUpload: React.FC<{
     setUploading(true);
     setTimeout(() => {
       const fakeUrl = URL.createObjectURL(file);
-      onChange(fakeUrl);
+      onChangeAction(fakeUrl);
       setUploading(false);
     }, 1500);
   };
@@ -571,12 +571,12 @@ export interface ToastMessage {
 
 export const Toast: React.FC<{
   toast: ToastMessage;
-  onClose: (id: string) => void;
-}> = ({ toast, onClose }) => {
+  onCloseAction: (id: string) => void;
+}> = ({ toast, onCloseAction }) => {
   useEffect(() => {
-    const timer = setTimeout(() => onClose(toast.id), 3000);
+    const timer = setTimeout(() => onCloseAction(toast.id), 3000);
     return () => clearTimeout(timer);
-  }, [toast.id, onClose]);
+  }, [toast.id, onCloseAction]);
 
   const icons = {
     success: <Check className="text-green-500" size={20} />,
@@ -603,7 +603,7 @@ export const Toast: React.FC<{
         {toast.message}
       </p>
       <button
-        onClick={() => onClose(toast.id)}
+        onClick={() => onCloseAction(toast.id)}
         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
       >
         <X size={16} />
@@ -614,14 +614,14 @@ export const Toast: React.FC<{
 
 export const ToastContainer: React.FC<{
   toasts: ToastMessage[];
-  removeToast: (id: string) => void;
-}> = ({ toasts, removeToast }) => {
+  removeToastAction: (id: string) => void;
+}> = ({ toasts, removeToastAction }) => {
   return (
     <div className="fixed top-20 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
       <div className="pointer-events-auto flex flex-col gap-3">
         <AnimatePresence mode="popLayout">
           {toasts.map((t) => (
-            <Toast key={t.id} toast={t} onClose={removeToast} />
+            <Toast key={t.id} toast={t} onCloseAction={removeToastAction} />
           ))}
         </AnimatePresence>
       </div>

@@ -24,14 +24,14 @@ type CreateAdminUserFormInputs = z.infer<typeof createAdminUserSchema>;
 
 interface CreateAdminUserModalProps {
   isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
+  onCloseAction: () => void;
+  onSuccessAction: () => void;
 }
 
 export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
   isOpen,
-  onClose,
-  onSuccess,
+  onCloseAction,
+  onSuccessAction,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
 
@@ -56,8 +56,8 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
       manual: true,
       onSuccess: () => {
         addToast('success', 'Admin user created successfully');
-        onSuccess();
-        onClose();
+        onSuccessAction();
+        onCloseAction();
       },
     },
   );
@@ -75,7 +75,7 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onCloseAction={onCloseAction}
       title="Create New Admin User"
       size="lg"
     >
@@ -108,7 +108,7 @@ export const CreateAdminUserModal: React.FC<CreateAdminUserModalProps> = ({
         />
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onCloseAction}>
             Cancel
           </Button>
           <Button type="submit" isLoading={isCreating}>

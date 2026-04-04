@@ -14,11 +14,11 @@ interface ConversationListProps {
   keyword: string;
   statusFilter: number | undefined;
   lastSeenSeqId: Record<string, number>;
-  onKeywordChange: (keyword: string) => void;
-  onStatusFilterChange: (status: number | undefined) => void;
-  onPageChange: (page: number) => void;
-  onSelectConversation: (conv: ChatConversation) => void;
-  onRefresh: () => void;
+  onKeywordChangeAction: (keyword: string) => void;
+  onStatusFilterChangeAction: (status: number | undefined) => void;
+  onPageChangeAction: (page: number) => void;
+  onSelectConversationAction: (conv: ChatConversation) => void;
+  onRefreshAction: () => void;
 }
 
 export function ConversationList({
@@ -30,11 +30,11 @@ export function ConversationList({
   keyword,
   statusFilter,
   lastSeenSeqId,
-  onKeywordChange,
-  onStatusFilterChange,
-  onPageChange,
-  onSelectConversation,
-  onRefresh,
+  onKeywordChangeAction,
+  onStatusFilterChangeAction,
+  onPageChangeAction,
+  onSelectConversationAction,
+  onRefreshAction,
 }: ConversationListProps) {
   return (
     <div className="w-80 flex-shrink-0 flex flex-col rounded-2xl border border-gray-100 dark:border-white/10 bg-white dark:bg-gray-900 overflow-hidden">
@@ -50,8 +50,8 @@ export function ConversationList({
             placeholder="Search user or keyword…"
             value={keyword}
             onChange={(e) => {
-              onKeywordChange(e.target.value);
-              onPageChange(1);
+              onKeywordChangeAction(e.target.value);
+              onPageChangeAction(1);
             }}
             className="w-full pl-8 pr-3 py-2 text-sm rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/50"
           />
@@ -66,8 +66,8 @@ export function ConversationList({
             <button
               key={String(opt.value)}
               onClick={() => {
-                onStatusFilterChange(opt.value);
-                onPageChange(1);
+                onStatusFilterChangeAction(opt.value);
+                onPageChangeAction(1);
               }}
               className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
                 statusFilter === opt.value
@@ -79,7 +79,7 @@ export function ConversationList({
             </button>
           ))}
           <button
-            onClick={onRefresh}
+            onClick={onRefreshAction}
             disabled={loading}
             className="p-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
           >
@@ -112,7 +112,7 @@ export function ConversationList({
               conv={conv}
               isActive={selectedConv?.id === conv.id}
               unreadCount={unread}
-              onClick={() => onSelectConversation(conv)}
+              onClickAction={() => onSelectConversationAction(conv)}
             />
           );
         })}
@@ -123,7 +123,7 @@ export function ConversationList({
         <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-white/10">
           <button
             disabled={page <= 1}
-            onClick={() => onPageChange(page - 1)}
+            onClick={() => onPageChangeAction(page - 1)}
             className="text-xs px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/5 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
           >
             Prev
@@ -133,7 +133,7 @@ export function ConversationList({
           </span>
           <button
             disabled={page * 30 >= total}
-            onClick={() => onPageChange(page + 1)}
+            onClick={() => onPageChangeAction(page + 1)}
             className="text-xs px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/5 disabled:opacity-40 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
           >
             Next

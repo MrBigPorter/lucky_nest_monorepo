@@ -22,8 +22,8 @@ const InfoRow = ({
 
 export const DepositDetailModal: React.FC<{
   data: RechargeOrder;
-  close: () => void;
-}> = ({ data, close }) => {
+  closeAction: () => void;
+}> = ({ data, closeAction }) => {
   const { copy } = useCopyToClipboard();
 
   return (
@@ -89,7 +89,7 @@ export const DepositDetailModal: React.FC<{
       </div>
 
       <div className="flex justify-end pt-2">
-        <Button onClick={close} variant="outline">
+        <Button onClick={closeAction} variant="outline">
           Close
         </Button>
       </div>

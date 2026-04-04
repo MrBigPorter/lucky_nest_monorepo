@@ -38,12 +38,12 @@ type SessionForm = z.infer<typeof sessionSchema>;
 
 function SessionModal({
   session,
-  onClose,
-  onSaved,
+  onCloseAction,
+  onSavedAction,
 }: {
   session: FlashSaleSession | null;
-  onClose: () => void;
-  onSaved: () => void;
+  onCloseAction: () => void;
+  onSavedAction: () => void;
 }) {
   const isEdit = !!session;
   const [saving, setSaving] = useState(false);
@@ -79,8 +79,8 @@ function SessionModal({
       } else {
         await flashSaleApi.createSession(payload);
       }
-      onSaved();
-      onClose();
+      onSavedAction();
+      onCloseAction();
     } finally {
       setSaving(false);
     }
@@ -94,7 +94,7 @@ function SessionModal({
             {isEdit ? 'Edit Flash Sale' : 'New Flash Sale'}
           </h3>
           <button
-            onClick={onClose}
+            onClick={onCloseAction}
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
           >
             <X size={16} />
@@ -140,7 +140,7 @@ function SessionModal({
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={onCloseAction}
               className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
             >
               Cancel
@@ -497,8 +497,8 @@ export function FlashSaleManagement() {
       {modal !== null && (
         <SessionModal
           session={modal === 'new' ? null : modal}
-          onClose={() => setModal(null)}
-          onSaved={refresh}
+          onCloseAction={() => setModal(null)}
+          onSavedAction={refresh}
         />
       )}
     </div>

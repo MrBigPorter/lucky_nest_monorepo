@@ -27,16 +27,16 @@ type EditAdminUserFormInputs = z.infer<typeof editAdminUserSchema>;
 
 interface EditAdminUserModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   editingUser: AdminUser | null;
-  onSuccess: () => void;
+  onSuccessAction: () => void;
 }
 
 export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
   isOpen,
-  onClose,
+  onCloseAction,
   editingUser,
-  onSuccess,
+  onSuccessAction,
 }) => {
   const addToast = useToastStore((state) => state.addToast);
   const currentUserRole = useAuthStore((state) => state.userInfo?.role);
@@ -69,8 +69,8 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
       manual: true,
       onSuccess: () => {
         addToast('success', 'Admin user updated successfully');
-        onSuccess();
-        onClose();
+        onSuccessAction();
+        onCloseAction();
       },
     },
   );
@@ -95,7 +95,7 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onCloseAction={onCloseAction}
       title={`Edit Admin User: ${editingUser?.username}`}
       size="lg"
     >
@@ -127,7 +127,7 @@ export const EditAdminUserModal: React.FC<EditAdminUserModalProps> = ({
               <Switch
                 checked={field.value === 1}
                 disabled={roleDisabled}
-                onChange={(checked) => field.onChange(checked ? 1 : 0)}
+                onChangeAction={(checked) => field.onChange(checked ? 1 : 0)}
               />
             )}
           />

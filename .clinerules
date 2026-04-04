@@ -44,6 +44,29 @@
 - 包含影响范围说明
 - 符合 Conventional Commits
 
+## 7. Next.js 15 Server Actions 规范
+### 7.1 函数 Props 命名规范
+- 在 "use client" 组件中传递的函数 props 必须以 "Action" 结尾
+- 确保函数可以被序列化，在客户端和服务器端之间安全传递
+- 这是 Next.js 15 的新安全特性，防止函数 props 被错误地序列化
+
+### 7.2 组件接口一致性
+- Modal 组件期望的 prop：`onCloseAction: () => void`
+- 调用方传递的 prop 必须匹配：`onCloseAction={() => setIsModalOpen(false)}`
+- 避免 TS2322 错误：属性 'onClose' 不存在于类型中
+
+### 7.3 常见修复模式
+- 修复前：`onClose={() => setIsModalOpen(false)}`
+- 修复后：`onCloseAction={() => setIsModalOpen(false)}`
+- 修复前：`onSuccess={refresh}`
+- 修复后：`onSuccessAction={refresh}`
+
+### 7.4 API 定义规范
+- 遵循现有 `authApi`、`uploadApi` 模式
+- 使用清晰的注释说明每个 API 方法的作用
+- 包含必要的请求头配置（如 `x-skip-auth-refresh: '1'`）
+- 使用 TypeScript 类型确保类型安全
+
 --- 
-最后更新：2026-04-02
+最后更新：2026-04-05
 参考文档：docs/read/getting-started/ONBOARDING_CN.md

@@ -13,11 +13,11 @@ const QUICK_REPLIES = [
 ];
 
 export function QuickRepliesPanel({
-  onSelect,
-  onClose,
+  onSelectAction,
+  onCloseAction,
 }: {
-  onSelect: (text: string) => void;
-  onClose: () => void;
+  onSelectAction: (text: string) => void;
+  onCloseAction: () => void;
 }) {
   return (
     <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden z-10">
@@ -27,7 +27,7 @@ export function QuickRepliesPanel({
           Quick Replies
         </span>
         <button
-          onClick={onClose}
+          onClick={onCloseAction}
           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
         >
           <X size={13} />
@@ -38,8 +38,8 @@ export function QuickRepliesPanel({
           <button
             key={i}
             onClick={() => {
-              onSelect(text);
-              onClose();
+              onSelectAction(text);
+              onCloseAction();
             }}
             className="w-full text-left text-sm px-3 py-2 hover:bg-teal-50 dark:hover:bg-teal-500/10 text-gray-700 dark:text-gray-300 border-b border-gray-50 dark:border-white/5 last:border-0 transition-colors truncate"
           >

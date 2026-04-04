@@ -135,4 +135,54 @@ export const routes: RouteConfig[] = [
     group: 'System',
     hidden: true,
   },
+
+  // Blog Management
+  {
+    path: '/blog',
+    name: 'blog',
+    icon: FileText,
+    group: 'Catalog',
+  },
+  {
+    path: '/blog/articles',
+    name: 'articles',
+    icon: FileText,
+    group: 'Catalog',
+    hidden: true,
+  },
+  {
+    path: '/blog/articles/create',
+    name: 'create_article',
+    icon: FileText,
+    group: 'Catalog',
+    hidden: true,
+  },
+  {
+    path: '/blog/articles/[id]/edit',
+    name: 'edit_article',
+    icon: FileText,
+    group: 'Catalog',
+    hidden: true,
+  },
+  {
+    path: '/blog/categories',
+    name: 'categories',
+    icon: Tag,
+    group: 'Catalog',
+    hidden: true,
+  },
+  {
+    path: '/blog/tags',
+    name: 'tags',
+    icon: Tag,
+    group: 'Catalog',
+    hidden: true,
+  },
+  {
+    path: '/blog/comments',
+    name: 'comments',
+    icon: MessageSquare,
+    group: 'Catalog',
+    hidden: true,
+  },
 ];

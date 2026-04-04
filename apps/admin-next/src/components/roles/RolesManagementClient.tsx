@@ -289,9 +289,9 @@ function RoleUsersPanel({
 
       <EditAdminUserModal
         isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
+        onCloseAction={() => setIsEditOpen(false)}
         editingUser={editingUser}
-        onSuccess={refresh}
+        onSuccessAction={refresh}
       />
     </div>
   );
