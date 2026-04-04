@@ -583,5 +583,517 @@ export class UpdateArticleDto {
 ---
 
 **文档版本**: 1.0.0  
+**最后更新**: 2026-04-04
+
+## 20. Capacitor.js 架构分析
+
+### 20.1 Capacitor.js 核心特点
+
+- **跨平台**: 使用Web技术栈开发，编译成原生应用
+- **Web标准**: 基于HTML/CSS/JavaScript，支持现代Web标准
+- **原生API**: 提供访问原生设备功能的API
+- **性能**: 通过WebView渲染，性能接近原生应用
+
+### 20.2 统一代码架构设计
+
+#### 20.2.1 技术栈选择
+
+- **前端框架**: Next.js 15 (App Router)
+- **UI框架**: Tailwind CSS + Headless UI
+- **状态管理**: Zustand + TanStack Query
+- **路由**: Next.js App Router
+- **样式**: Tailwind CSS (响应式设计)
+
+#### 20.2.2 项目结构
+
+```
+capacitor-blog/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (blog)/            # 博客展示路由
+│   │   │   ├── page.tsx       # 博客首页
+│   │   │   ├── articles/      # 文章列表页
+│   │   │   │   └── page.tsx
+│   │   │   └── articles/[slug]/page.tsx  # 文章详情页
+│   │   ├── (dashboard)/       # 管理后台路由
+│   │   │   ├── page.tsx       # 管理后台首页
+│   │   │   ├── blog/          # 博客管理
+│   │   │   │   ├── page.tsx   # 博客管理首页
+│   │   │   │   ├── articles/  # 文章管理
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── categories/ # 分类管理
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── tags/      # 标签管理
+│   │   │   │       └── page.tsx
+│   │   │   └── comments/      # 评论管理
+│   │   │       └── page.tsx
+│   │   └── layout.tsx         # 全局布局
+│   ├── components/            # 共享组件
+│   │   ├── blog/             # 博客展示组件
+│   │   │   ├── BlogLayout.tsx
+│   │   │   ├── ArticleList.tsx
+│   │   │   ├── ArticleDetail.tsx
+│   │   │   ├── CategoryList.tsx
+│   │   │   ├── TagCloud.tsx
+│   │   │   ├── SearchBox.tsx
+│   │   │   └── CommentSection.tsx
+│   │   ├── admin/            # 管理后台组件
+│   │   │   ├── AdminLayout.tsx
+│   │   │   ├── ArticleList.tsx
+│   │   │   ├── ArticleForm.tsx
+│   │   │   ├── CategoryList.tsx
+│   │   │   ├── CategoryForm.tsx
+│   │   │   ├── TagList.tsx
+│   │   │   ├── TagForm.tsx
+│   │   │   ├── CommentList.tsx
+│   │   │   └── CommentApproval.tsx
+│   │   └── shared/           # 共享组件
+│   │       ├── Button.tsx
+│   │       ├── Input.tsx
+│   │       ├── Modal.tsx
+│   │       └── Loading.tsx
+│   ├── lib/                 # 工具函数
+│   │   ├── api/            # API客户端
+│   │   │   ├── blog.ts     # 博客API
+│   │   │   ├── auth.ts     # 认证API
+│   │   │   └── index.ts    # API入口
+│   │   ├── hooks/          # 自定义Hook
+│   │   │   ├── useBlog.ts  # 博客Hook
+│   │   │   ├── useAuth.ts  # 认证Hook
+│   │   │   └── useUI.ts    # UI Hook
+│   │   ├── utils/          # 工具函数
+│   │   │   ├── format.ts   # 格式化工具
+│   │   │   ├── validation.ts # 验证工具
+│   │   │   └── storage.ts  # 存储工具
+│   │   └── types/          # 类型定义
+│   │       ├── blog.ts     # 博客类型
+│   │       ├── auth.ts     # 认证类型
+│   │       └── index.ts    # 类型入口
+│   ├── styles/             # 样式文件
+│   │   ├── globals.css
+│   │   ├── blog.css
+│   │   └── admin.css
+│   └── constants/          # 常量配置
+│       ├── routes.ts      # 路由常量
+│       ├── api.ts        # API常量
+│       └── theme.ts      # 主题常量
+├── capacitor.config.ts    # Capacitor配置
+├── capacitor/            # Capacitor原生项目
+│   ├── android/
+│   ├── ios/
+│   └── web/
+├── next.config.ts        # Next.js配置
+├── tailwind.config.js    # Tailwind配置
+├── tsconfig.json        # TypeScript配置
+└── package.json         # 依赖配置
+```
+
+#### 20.2.3 响应式设计策略
+
+```typescript
+// 设备检测工具
+export const useDeviceDetect = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkDevice = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width >= 768 && width < 1024);
+      setIsDesktop(width >= 1024);
+    };
+
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
+
+  return { isMobile, isTablet, isDesktop };
+};
+```
+
+#### 20.2.4 平台适配策略
+
+```typescript
+// 平台检测工具
+export const usePlatformDetect = () => {
+  const [isCapacitor, setIsCapacitor] = useState(false);
+  const [isWeb, setIsWeb] = useState(false);
+  const [isMobileApp, setIsMobileApp] = useState(false);
+  const [isDesktopApp, setIsDesktopApp] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.Capacitor) {
+      setIsCapacitor(true);
+      setIsMobileApp(
+        Capacitor.isPluginAvailable("App") &&
+          (Capacitor.getPlatform() === "ios" ||
+            Capacitor.getPlatform() === "android"),
+      );
+      setIsDesktopApp(Capacitor.getPlatform() === "electron");
+    } else {
+      setIsWeb(true);
+    }
+  }, []);
+
+  return { isCapacitor, isWeb, isMobileApp, isDesktopApp };
+};
+```
+
+### 20.3 代码复用策略
+
+#### 20.3.1 组件复用
+
+- **UI组件**: 使用Tailwind CSS实现响应式设计
+- **业务组件**: 根据平台特性进行条件渲染
+- **布局组件**: 根据设备类型调整布局
+
+#### 20.3.2 样式复用
+
+- **Tailwind CSS**: 使用响应式工具类
+- **CSS变量**: 定义平台特定的CSS变量
+- **媒体查询**: 使用CSS媒体查询适配不同设备
+
+#### 20.3.3 逻辑复用
+
+- **自定义Hook**: 封装平台特定的逻辑
+- **API客户端**: 统一的API调用方式
+- **状态管理**: 统一的状态管理方案
+
+### 20.4 平台特定功能
+
+#### 20.4.1 App平台功能
+
+- **推送通知**: Capacitor Notifications API
+- **离线缓存**: Capacitor Storage API
+- **设备信息**: Capacitor Device API
+- **文件操作**: Capacitor Filesystem API
+
+#### 20.4.2 Web平台功能
+
+- **PWA**: 支持PWA功能
+- **Service Worker**: 离线缓存和后台同步
+- **浏览器API**: 使用标准的浏览器API
+
+#### 20.4.3 PC平台功能
+
+- **桌面通知**: 桌面通知API
+- **文件拖拽**: 文件拖拽API
+- **剪贴板**: 剪贴板API
+
+### 20.5 路由策略
+
+#### 20.5.1 统一路由
+
+```typescript
+// 路由常量
+export const ROUTES = {
+  // 博客展示
+  BLOG_HOME: "/blog",
+  BLOG_ARTICLES: "/blog/articles",
+  BLOG_ARTICLE_DETAIL: "/blog/articles/[slug]",
+  BLOG_CATEGORIES: "/blog/categories",
+  BLOG_TAGS: "/blog/tags",
+  BLOG_SEARCH: "/blog/search",
+
+  // 管理后台
+  ADMIN_DASHBOARD: "/dashboard",
+  ADMIN_BLOG: "/dashboard/blog",
+  ADMIN_ARTICLES: "/dashboard/blog/articles",
+  ADMIN_ARTICLE_CREATE: "/dashboard/blog/articles/create",
+  ADMIN_ARTICLE_EDIT: "/dashboard/blog/articles/[id]/edit",
+  ADMIN_CATEGORIES: "/dashboard/blog/categories",
+  ADMIN_TAGS: "/dashboard/blog/tags",
+  ADMIN_COMMENTS: "/dashboard/blog/comments",
+};
+```
+
+#### 20.5.2 平台特定路由
+
+```typescript
+// 平台特定路由处理
+export const usePlatformRoutes = () => {
+  const { isCapacitor, isWeb, isMobileApp } = usePlatformDetect();
+
+  const getBlogUrl = (slug: string) => {
+    if (isCapacitor && isMobileApp) {
+      return `blog://${slug}`; // 自定义URL scheme
+    }
+    return `/blog/articles/${slug}`;
+  };
+
+  const getAdminUrl = (path: string) => {
+    if (isCapacitor && isMobileApp) {
+      return `admin://${path}`; // 自定义URL scheme
+    }
+    return `/dashboard/blog/${path}`;
+  };
+
+  return { getBlogUrl, getAdminUrl };
+};
+```
+
+### 20.6 状态管理
+
+#### 20.6.1 统一状态管理
+
+```typescript
+// 博客状态
+export const useBlogStore = create((set, get) => ({
+  articles: [],
+  categories: [],
+  tags: [],
+  currentArticle: null,
+  isLoading: false,
+  error: null,
+
+  // 加载文章
+  loadArticles: async (params) => {
+    try {
+      set({ isLoading: true });
+      const response = await api.blog.getArticles(params);
+      set({ articles: response.data, isLoading: false });
+    } catch (error) {
+      set({ error, isLoading: false });
+    }
+  },
+
+  // 其他状态管理方法...
+}));
+```
+
+#### 20.6.2 平台特定状态
+
+```typescript
+// 平台特定状态
+export const usePlatformState = create((set, get) => ({
+  isOnline: true,
+  networkType: "wifi",
+  batteryLevel: 100,
+
+  // 更新网络状态
+  updateNetworkStatus: (online: boolean, type: string) => {
+    set({ isOnline: online, networkType: type });
+  },
+
+  // 更新电池状态
+  updateBatteryStatus: (level: number) => {
+    set({ batteryLevel: level });
+  },
+}));
+```
+
+### 20.7 API适配
+
+#### 20.7.1 统一API客户端
+
+```typescript
+// API客户端
+class ApiClient {
+  private baseURL: string;
+  private headers: any;
+
+  constructor() {
+    this.baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    this.headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    };
+  }
+
+  async get<T>(endpoint: string, params?: any): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: "GET",
+      headers: this.headers,
+      params,
+    });
+    return response.json();
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  }
+
+  // 其他HTTP方法...
+}
+
+export const api = new ApiClient();
+```
+
+#### 20.7.2 平台特定API
+
+```typescript
+// 平台特定API
+export const usePlatformApi = () => {
+  const { isCapacitor, isMobileApp } = usePlatformDetect();
+
+  const uploadFile = async (file: File) => {
+    if (isCapacitor && isMobileApp) {
+      // 使用Capacitor的文件上传API
+      const result = await Capacitor.Plugins.Filesystem.uploadFile(file);
+      return result.url;
+    } else {
+      // 使用标准的Fetch API
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post("/upload", formData);
+      return response.url;
+    }
+  };
+
+  return { uploadFile };
+};
+```
+
+### 20.8 构建和部署
+
+#### 20.8.1 构建配置
+
+```javascript
+// next.config.js
+const { withCapacitor } = require("@capacitor/next");
+
+module.exports = withCapacitor({
+  // Next.js配置
+  images: {
+    domains: ["localhost", "your-domain.com"],
+  },
+
+  // Capacitor配置
+  capacitor: {
+    appId: "com.yourdomain.blog",
+    webDir: "../www",
+    includedWebRuntime: true,
+  },
+
+  // 其他配置...
+});
+```
+
+#### 20.8.2 部署策略
+
+- **Web部署**: Vercel/Netlify部署Next.js应用
+- **App部署**: Capacitor构建原生应用并发布到应用商店
+- **PC部署**: Electron打包桌面应用
+
+### 20.9 优势分析
+
+#### 20.9.1 代码复用优势
+
+- **单一代码库**: 维护一套代码
+- **统一体验**: 跨平台一致的用户体验
+- **快速迭代**: 一次开发，多平台部署
+
+#### 20.9.2 性能优势
+
+- **原生性能**: Capacitor提供接近原生的性能
+- **Web标准**: 使用现代Web技术栈
+- **优化渲染**: Next.js的SSR/SSG优化
+
+#### 20.9.3 开发效率
+
+- **熟悉技术栈**: 使用Web开发者熟悉的技术
+- **热重载**: 快速开发和调试
+- **生态系统**: 丰富的Web生态系统
+
+### 20.10 挑战和解决方案
+
+#### 20.10.1 挑战
+
+- **平台差异**: 不同平台的API和行为差异
+- **性能优化**: 移动端的性能优化需求
+- **原生功能**: 访问原生设备功能的复杂性
+
+#### 20.10.2 解决方案
+
+- **统一抽象**: 创建统一的API抽象层
+- **条件渲染**: 根据平台特性进行条件渲染
+- **性能监控**: 集成性能监控和优化工具
+
+### 20.11 实施计划
+
+#### 20.11.1 第1周: 基础架构搭建
+
+- [ ] 创建Capacitor项目结构
+- [ ] 配置Next.js和Capacitor集成
+- [ ] 设置统一的路由和状态管理
+- [ ] 实现基础的响应式设计
+
+#### 20.11.2 第2周: 核心功能开发
+
+- [ ] 实现博客展示功能
+- [ ] 实现管理后台功能
+- [ ] 集成API客户端
+- [ ] 实现平台特定功能
+
+#### 20.11.3 第3周: 优化和测试
+
+- [ ] 性能优化
+- [ ] 跨平台测试
+- [ ] 安全测试
+- [ ] 部署准备
+
+### 20.12 技术栈版本
+
+#### 20.12.1 核心技术栈
+
+- **Next.js**: ^15.0.0
+- **React**: ^18.0.0
+- **TypeScript**: ^5.0.0
+- **Tailwind CSS**: ^3.0.0
+- **Capacitor**: ^5.0.0
+- **Zustand**: ^4.0.0
+- **TanStack Query**: ^5.0.0
+
+#### 20.12.2 平台特定依赖
+
+- **Capacitor CLI**: ^5.0.0
+- **Capacitor Core**: ^5.0.0
+- **Capacitor Notifications**: ^5.0.0
+- **Capacitor Storage**: ^5.0.0
+- **Capacitor Filesystem**: ^5.0.0
+
+### 20.13 参考文档
+
+#### 20.13.1 Capacitor.js 文档
+
+- [Capacitor官方文档](https://capacitorjs.com/docs)
+- [Capacitor Next.js集成](https://capacitorjs.com/docs/guides/nextjs)
+
+#### 20.13.2 Next.js 文档
+
+- [Next.js文档](https://nextjs.org/docs)
+- [Next.js App Router](https://nextjs.org/docs/app)
+
+#### 20.13.3 其他参考
+
+- [Tailwind CSS文档](https://tailwindcss.com/docs)
+- [React文档](https://react.dev/)
+
+### 20.14 后续规划
+
+#### 20.14.1 近期规划
+
+- **PWA增强**: 增强PWA功能
+- **离线支持**: 完善离线支持
+- **推送通知**: 实现推送通知系统
+
+#### 20.14.2 长期规划
+
+- **原生功能**: 集成更多原生功能
+- **性能优化**: 持续的性能优化
+- **生态系统**: 扩展插件生态系统
+
+---
+
+**文档版本**: 1.0.0  
 **最后更新**: 2026-04-04  
 **作者**: Lucky Nest Team

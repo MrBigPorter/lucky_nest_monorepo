@@ -52,6 +52,79 @@
 
 ---
 
+## 📝 博客系统开发清单 (新任务)
+
+**阶段**: Phase 7 博客系统开发  
+**文档参考**: `docs/blog-system-architecture.md`  
+**预计周期**: 3周
+
+### 🎯 开发任务清单
+
+#### ✅ 第一周: 后端开发 (API + 数据库)
+
+- [ ] **数据库模型**: 在 `schema.prisma` 中添加 Article/Category/Tag/Comment 模型
+- [ ] **数据库迁移**: 生成并执行 Prisma 迁移文件
+- [ ] **博客模块**: 创建 `apps/api/src/blog/` 模块
+  - [ ] BlogModule 配置
+  - [ ] BlogService 业务逻辑
+  - [ ] BlogController API 接口
+  - [ ] DTO 数据验证
+- [ ] **权限集成**: 集成现有 AdminJwtAuthGuard 和 RolesGuard
+- [ ] **API文档**: 生成 Swagger API 文档
+- [ ] **单元测试**: 博客模块单元测试覆盖
+
+#### ✅ 第二周: 前端开发 (管理后台 + 博客展示)
+
+- [ ] **管理后台路由**: 在 `admin-next` 中新增博客管理路由
+  - [ ] `/dashboard/blog` - 博客管理首页
+  - [ ] `/dashboard/blog/articles` - 文章列表
+  - [ ] `/dashboard/blog/articles/create` - 创建文章
+  - [ ] `/dashboard/blog/articles/[id]/edit` - 编辑文章
+  - [ ] `/dashboard/blog/categories` - 分类管理
+  - [ ] `/dashboard/blog/tags` - 标签管理
+  - [ ] `/dashboard/blog/comments` - 评论管理
+- [ ] **博客展示路由**: 博客前台页面
+  - [ ] `/blog` - 博客首页
+  - [ ] `/blog/articles` - 文章列表
+  - [ ] `/blog/articles/[slug]` - 文章详情
+- [ ] **组件开发**:
+  - [ ] ArticleList 文章列表组件
+  - [ ] ArticleForm 文章编辑表单
+  - [ ] CategoryList 分类管理组件
+  - [ ] TagList 标签管理组件
+  - [ ] CommentList 评论管理组件
+- [ ] **状态管理**: 集成 TanStack Query 数据请求
+- [ ] **富文本编辑器**: 集成文章富文本编辑器
+- [ ] **响应式适配**: 页面适配移动端
+
+#### ✅ 第三周: 优化和测试
+
+- [ ] **性能优化**: 文章列表分页 + 缓存
+- [ ] **SEO优化**: SSR渲染 + 元标签 + 结构化数据
+- [ ] **图片上传**: 文章图片上传功能
+- [ ] **评论功能**: 评论提交和审核
+- [ ] **搜索功能**: 文章搜索功能
+- [ ] **集成测试**: API 接口测试
+- [ ] **E2E测试**: 端到端用户流程测试
+- [ ] **部署准备**: 生产环境配置
+
+### 📋 技术栈要求
+
+- **后端**: NestJS + Prisma + PostgreSQL
+- **前端**: Next.js 15 + App Router + Tailwind CSS v4
+- **编辑器**: TipTap / Plate 富文本编辑器
+- **图片**: Cloudflare R2 / 本地存储
+
+### ⚠️ 注意事项
+
+- 遵循现有项目代码规范
+- 复用现有认证和权限系统
+- API 接口路径统一 `/admin/blog/*`
+- 新增表必须有索引优化
+- 所有用户输入必须有验证
+
+---
+
 ## 📋 下一阶段候选方向（Phase 7）
 
 根据 RUNBOOK.md 与优先级评估，可选：

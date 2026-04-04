@@ -161,6 +161,7 @@ model AdminUser {
   lastLoginIp   String?             @map("last_login_ip") @db.VarChar(50)
   operationLogs AdminOperationLog[]
   pushLogs      AdminPushLog[]
+  blogArticles  BlogArticle[]
 
   @@index([status], map: "idx_admin_status")
   @@map("admin_users")
@@ -1471,4 +1472,115 @@ model LuckyDrawResult {
   @@index([userId])
   @@index([prizeId])
   @@map("lucky_draw_results")
+}
+
+// ==============================================
+// 博客系统模型 Blog System Models
+// ==============================================
+
+/// 文章状态
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// 评论状态
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// 博客文章
+model BlogArticle {
+  id            String        @id @default(cuid()) @db.VarChar(32)
+  title         String        @db.VarChar(255)
+  slug          String        @unique @db.VarChar(255)
+  content       String        @db.Text
+  excerpt       String?       @db.Text
+  coverImage    String?       @db.VarChar(255)
+  status        ArticleStatus @default(DRAFT)
+  publishedAt   DateTime?
+  viewCount     Int           @default(0)
+  likeCount     Int           @default(0)
+  commentCount  Int           @default(0)
+  featured      Boolean       @default(false)
+  meta          Json?
+  
+  authorId      String        @db.VarChar(32)
+  author        AdminUser     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  
+  categoryId    String?       @db.VarChar(32)
+  category      BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  tags          BlogTag[]     @relation("BlogArticleTags")
+  comments      BlogComment[]
+  
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  
+  @@index([slug], map: "idx_blog_article_slug")
+  @@index([status], map: "idx_blog_article_status")
+  @@index([createdAt], map: "idx_blog_article_created_at")
+  @@index([authorId], map: "idx_blog_article_author_id")
+  @@index([categoryId], map: "idx_blog_article_category_id")
+  @@map("blog_articles")
+}
+
+/// 博客分类
+model BlogCategory {
+  id          String        @id @default(cuid()) @db.VarChar(32)
+  name        String        @db.VarChar(100)
+  slug        String        @unique @db.VarChar(100)
+  description String?       @db.Text
+  parentId    String?       @db.VarChar(32)
+  parent      BlogCategory? @relation("BlogCategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    BlogCategory[] @relation("BlogCategoryHierarchy")
+  articles    BlogArticle[]
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  
+  @@index([slug], map: "idx_blog_category_slug")
+  @@index([parentId], map: "idx_blog_category_parent_id")
+  @@map("blog_categories")
+}
+
+/// 博客标签
+model BlogTag {
+  id        String        @id @default(cuid()) @db.VarChar(32)
+  name      String        @db.VarChar(50)
+  slug      String        @unique @db.VarChar(50)
+  articles  BlogArticle[] @relation("BlogArticleTags")
+  createdAt DateTime      @default(now()) @map("created_at")
+  
+  @@index([slug], map: "idx_blog_tag_slug")
+  @@map("blog_tags")
+}
+
+/// 博客评论
+model BlogComment {
+  id        String         @id @default(cuid()) @db.VarChar(32)
+  articleId String         @db.VarChar(32)
+  article   BlogArticle    @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author    String         @db.VarChar(100)
+  email     String         @db.VarChar(100)
+  website   String?        @db.VarChar(255)
+  content   String         @db.Text
+  status    CommentStatus  @default(PENDING)
+  ipAddress String?        @db.VarChar(45)
+  userAgent String?        @db.Text
+  
+  parentId  String?        @db.VarChar(32)
+  parent    BlogComment?   @relation("BlogCommentHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  BlogComment[]  @relation("BlogCommentHierarchy")
+  
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  
+  @@index([articleId], map: "idx_blog_comment_article_id")
+  @@index([status], map: "idx_blog_comment_status")
+  @@index([createdAt], map: "idx_blog_comment_created_at")
+  @@index([parentId], map: "idx_blog_comment_parent_id")
+  @@map("blog_comments")
 }
