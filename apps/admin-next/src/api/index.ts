@@ -1119,242 +1119,237 @@ export const luckyDrawApi = {
       ),
     };
   },
+};
 
-  // Blog API
-  blog: {
-    // Articles
-    getArticles: async (params?: {
-      page?: number;
-      pageSize?: number;
-      status?: string;
-      categoryId?: string;
-      tagId?: string;
-      search?: string;
-    }) => {
-      const data = await http.get<{
-        list: any[];
-        total: number;
-        page: number;
-        pageSize: number;
-      }>('/v1/admin/blog/articles', params);
-      return {
-        list: data.list,
-        total: data.total,
-        page: data.page,
-        pageSize: data.pageSize,
-        totalPages: Math.max(
-          1,
-          Math.ceil(data.total / Math.max(data.pageSize, 1)),
-        ),
-      };
-    },
+export const blogApi = {
+  // Articles
+  getArticles: async (params?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    categoryId?: string;
+    tagId?: string;
+    search?: string;
+  }) => {
+    const data = await http.get<{
+      list: any[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>('/v1/admin/blog/articles', params);
+    return {
+      list: data.list,
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(
+        1,
+        Math.ceil(data.total / Math.max(data.pageSize, 1)),
+      ),
+    };
+  },
 
-    getArticle: async (id: string) => {
-      return await http.get<any>(`/v1/admin/blog/articles/${id}`);
-    },
+  getArticle: async (id: string) => {
+    return await http.get<any>(`/v1/admin/blog/articles/${id}`);
+  },
 
-    createArticle: async (payload: {
-      title: string;
-      content: string;
+  createArticle: async (payload: {
+    title: string;
+    content: string;
+    excerpt?: string;
+    categoryId?: string;
+    tagIds?: string[];
+    status?: string;
+    featuredImage?: string;
+  }) => {
+    return await http.post<any>('/v1/admin/blog/articles', payload);
+  },
+
+  updateArticle: async (
+    id: string,
+    payload: {
+      title?: string;
+      content?: string;
       excerpt?: string;
-      categoryId: string;
-      tagIds: string[];
-      status: string;
+      categoryId?: string;
+      tagIds?: string[];
+      status?: string;
       featuredImage?: string;
-      metaTitle?: string;
-      metaDescription?: string;
-    }) => {
-      return await http.post<any>('/v1/admin/blog/articles', payload);
     },
+  ) => {
+    return await http.put<any>(`/v1/admin/blog/articles/${id}`, payload);
+  },
 
-    updateArticle: async (
-      id: string,
-      payload: {
-        title?: string;
-        content?: string;
-        excerpt?: string;
-        categoryId?: string;
-        tagIds?: string[];
-        status?: string;
-        featuredImage?: string;
-        metaTitle?: string;
-        metaDescription?: string;
-      },
-    ) => {
-      return await http.put<any>(`/v1/admin/blog/articles/${id}`, payload);
-    },
+  deleteArticle: async (id: string) => {
+    return await http.delete<any>(`/v1/admin/blog/articles/${id}`);
+  },
 
-    deleteArticle: async (id: string) => {
-      return await http.delete<any>(`/v1/admin/blog/articles/${id}`);
-    },
+  publishArticle: async (id: string) => {
+    return await http.post<any>(`/v1/admin/blog/articles/${id}/publish`);
+  },
 
-    publishArticle: async (id: string) => {
-      return await http.post<any>(`/v1/admin/blog/articles/${id}/publish`);
-    },
+  unpublishArticle: async (id: string) => {
+    return await http.post<any>(`/v1/admin/blog/articles/${id}/unpublish`);
+  },
 
-    unpublishArticle: async (id: string) => {
-      return await http.post<any>(`/v1/admin/blog/articles/${id}/unpublish`);
-    },
+  // Categories
+  getCategories: async (params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }) => {
+    const data = await http.get<{
+      list: any[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>('/v1/admin/blog/categories', params);
+    return {
+      list: data.list,
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(
+        1,
+        Math.ceil(data.total / Math.max(data.pageSize, 1)),
+      ),
+    };
+  },
 
-    // Categories
-    getCategories: async (params?: {
-      page?: number;
-      pageSize?: number;
-      search?: string;
-    }) => {
-      const data = await http.get<{
-        list: any[];
-        total: number;
-        page: number;
-        pageSize: number;
-      }>('/v1/admin/blog/categories', params);
-      return {
-        list: data.list,
-        total: data.total,
-        page: data.page,
-        pageSize: data.pageSize,
-        totalPages: Math.max(
-          1,
-          Math.ceil(data.total / Math.max(data.pageSize, 1)),
-        ),
-      };
-    },
+  getCategory: async (id: string) => {
+    return await http.get<any>(`/v1/admin/blog/categories/${id}`);
+  },
 
-    getCategory: async (id: string) => {
-      return await http.get<any>(`/v1/admin/blog/categories/${id}`);
-    },
+  createCategory: async (payload: {
+    name: string;
+    slug?: string;
+    description?: string;
+    parentId?: string;
+  }) => {
+    return await http.post<any>('/v1/admin/blog/categories', payload);
+  },
 
-    createCategory: async (payload: {
-      name: string;
+  updateCategory: async (
+    id: string,
+    payload: {
+      name?: string;
       slug?: string;
       description?: string;
       parentId?: string;
-    }) => {
-      return await http.post<any>('/v1/admin/blog/categories', payload);
     },
+  ) => {
+    return await http.put<any>(`/v1/admin/blog/categories/${id}`, payload);
+  },
 
-    updateCategory: async (
-      id: string,
-      payload: {
-        name?: string;
-        slug?: string;
-        description?: string;
-        parentId?: string;
-      },
-    ) => {
-      return await http.put<any>(`/v1/admin/blog/categories/${id}`, payload);
-    },
+  deleteCategory: async (id: string) => {
+    return await http.delete<any>(`/v1/admin/blog/categories/${id}`);
+  },
 
-    deleteCategory: async (id: string) => {
-      return await http.delete<any>(`/v1/admin/blog/categories/${id}`);
-    },
+  // Tags
+  getTags: async (params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }) => {
+    const data = await http.get<{
+      list: any[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>('/v1/admin/blog/tags', params);
+    return {
+      list: data.list,
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(
+        1,
+        Math.ceil(data.total / Math.max(data.pageSize, 1)),
+      ),
+    };
+  },
 
-    // Tags
-    getTags: async (params?: {
-      page?: number;
-      pageSize?: number;
-      search?: string;
-    }) => {
-      const data = await http.get<{
-        list: any[];
-        total: number;
-        page: number;
-        pageSize: number;
-      }>('/v1/admin/blog/tags', params);
-      return {
-        list: data.list,
-        total: data.total,
-        page: data.page,
-        pageSize: data.pageSize,
-        totalPages: Math.max(
-          1,
-          Math.ceil(data.total / Math.max(data.pageSize, 1)),
-        ),
-      };
-    },
+  getTag: async (id: string) => {
+    return await http.get<any>(`/v1/admin/blog/tags/${id}`);
+  },
 
-    getTag: async (id: string) => {
-      return await http.get<any>(`/v1/admin/blog/tags/${id}`);
-    },
+  createTag: async (payload: {
+    name: string;
+    slug?: string;
+    description?: string;
+  }) => {
+    return await http.post<any>('/v1/admin/blog/tags', payload);
+  },
 
-    createTag: async (payload: {
-      name: string;
+  updateTag: async (
+    id: string,
+    payload: {
+      name?: string;
       slug?: string;
       description?: string;
-    }) => {
-      return await http.post<any>('/v1/admin/blog/tags', payload);
     },
+  ) => {
+    return await http.put<any>(`/v1/admin/blog/tags/${id}`, payload);
+  },
 
-    updateTag: async (
-      id: string,
-      payload: {
-        name?: string;
-        slug?: string;
-        description?: string;
-      },
-    ) => {
-      return await http.put<any>(`/v1/admin/blog/tags/${id}`, payload);
-    },
+  deleteTag: async (id: string) => {
+    return await http.delete<any>(`/v1/admin/blog/tags/${id}`);
+  },
 
-    deleteTag: async (id: string) => {
-      return await http.delete<any>(`/v1/admin/blog/tags/${id}`);
-    },
+  // Comments
+  getComments: async (params?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+    articleId?: string;
+    search?: string;
+  }) => {
+    const data = await http.get<{
+      list: any[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>('/v1/admin/blog/comments', params);
+    return {
+      list: data.list,
+      total: data.total,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(
+        1,
+        Math.ceil(data.total / Math.max(data.pageSize, 1)),
+      ),
+    };
+  },
 
-    // Comments
-    getComments: async (params?: {
-      page?: number;
-      pageSize?: number;
+  getComment: async (id: string) => {
+    return await http.get<any>(`/v1/admin/blog/comments/${id}`);
+  },
+
+  updateComment: async (
+    id: string,
+    payload: {
       status?: string;
-      articleId?: string;
-      search?: string;
-    }) => {
-      const data = await http.get<{
-        list: any[];
-        total: number;
-        page: number;
-        pageSize: number;
-      }>('/v1/admin/blog/comments', params);
-      return {
-        list: data.list,
-        total: data.total,
-        page: data.page,
-        pageSize: data.pageSize,
-        totalPages: Math.max(
-          1,
-          Math.ceil(data.total / Math.max(data.pageSize, 1)),
-        ),
-      };
+      content?: string;
     },
+  ) => {
+    return await http.put<any>(`/v1/admin/blog/comments/${id}`, payload);
+  },
 
-    getComment: async (id: string) => {
-      return await http.get<any>(`/v1/admin/blog/comments/${id}`);
-    },
+  deleteComment: async (id: string) => {
+    return await http.delete<any>(`/v1/admin/blog/comments/${id}`);
+  },
 
-    updateComment: async (
-      id: string,
-      payload: {
-        status?: string;
-        content?: string;
-      },
-    ) => {
-      return await http.put<any>(`/v1/admin/blog/comments/${id}`, payload);
-    },
+  approveComment: async (id: string) => {
+    return await http.post<any>(`/v1/admin/blog/comments/${id}/approve`);
+  },
 
-    deleteComment: async (id: string) => {
-      return await http.delete<any>(`/v1/admin/blog/comments/${id}`);
-    },
+  rejectComment: async (id: string) => {
+    return await http.post<any>(`/v1/admin/blog/comments/${id}/reject`);
+  },
 
-    approveComment: async (id: string) => {
-      return await http.post<any>(`/v1/admin/blog/comments/${id}/approve`);
-    },
-
-    rejectComment: async (id: string) => {
-      return await http.post<any>(`/v1/admin/blog/comments/${id}/reject`);
-    },
-
-    // Statistics
-    getBlogStatistics: async () => {
-      return await http.get<any>('/v1/admin/blog/statistics');
-    },
+  // Statistics
+  getBlogStatistics: async () => {
+    return await http.get<any>('/v1/admin/blog/statistics');
   },
 };

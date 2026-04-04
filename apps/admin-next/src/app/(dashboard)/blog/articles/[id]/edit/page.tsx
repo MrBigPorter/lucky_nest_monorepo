@@ -6,9 +6,8 @@ import { ArrowLeft, Save, Eye, Send, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRequest } from 'ahooks';
 import { useToastStore } from '@/store/useToastStore';
-import { uploadApi } from '@/api';
+import { uploadApi, blogApi } from '@/api';
 import { RichTextEditor } from '@/components/blog/RichTextEditor';
-import { api } from '@/api';
 
 export default function EditArticlePage() {
   const router = useRouter();
@@ -77,8 +76,9 @@ export default function EditArticlePage() {
     // Fetch article data from API
     const fetchArticle = async () => {
       setIsLoading(true);
+
       try {
-        const article = await api.blog.getArticle(articleId);
+        const article = await blogApi.getArticle(articleId);
         setTitle(article.title);
         setContent(article.content);
         setExcerpt(article.excerpt || '');
@@ -108,7 +108,7 @@ export default function EditArticlePage() {
     setIsSubmitting(true);
 
     try {
-      await api.blog.updateArticle(articleId, {
+      await blogApi.updateArticle(articleId, {
         title,
         content,
         excerpt,
