@@ -50,6 +50,34 @@ Redis 容器  lucky-redis-prod
 | VPS 内存告急                                   | [→ 资源检查](#资源检查)                              |
 | 本地 `admin-next` 报 `command not found: next` | [→ admin-next 卷缓存坏了](#本地-admin-next-启动失败) |
 | 代码明明在 main，但线上行为还是旧的            | [→ 后端镜像未更新](#后端镜像未更新)                  |
+| `/auth/google/login` 返回 404                  | [→ Nginx 配置未同步](#nginx-配置未同步到-vps)        |
+
+---
+
+### Nginx 配置未同步到 VPS
+
+**症状**：`https://api.joyminis.com/auth/google/login` 或 OAuth 回调返回 404。
+
+**根因**：`nginx/nginx.prod.conf` 在本地/git 已更新，但 VPS 上还是旧版本。CI 只重启 backend 容器，不自动同步 nginx 配置。
+
+**立即修复（无需等 CI）**：
+
+```bash
+# 在本地项目根目录执行，VPS_IP 替换为实际 IP
+VPS_IP=<VPS_IP> ./deploy/deploy.sh --sync
+
+# 同步后热重载 nginx（不停服）
+ssh root@<VPS_IP> 'docker exec lucky-nginx-prod nginx -t && docker exec lucky-nginx-prod nginx -s reload && echo "✅ nginx reloaded"'
+```
+
+**验证**：
+
+```bash
+curl -v "https://api.joyminis.com/auth/google/login?state=test&redirect_uri=https://app.joyminis.com/oauth/callback"
+# 预期: 302 重定向到 Google OAuth，而非 404
+```
+
+**后续**：CI 已更新（`deploy-backend.yml`），后续推送 `nginx/**` 变更会自动同步并 reload。
 
 ---
 

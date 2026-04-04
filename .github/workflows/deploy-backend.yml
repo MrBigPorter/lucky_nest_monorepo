@@ -12,6 +12,8 @@ on:
       - "packages/config/**"
       - "Dockerfile.prod"
       - "compose.prod.yml"
+      - "nginx/nginx.prod.conf"
+      - "nginx/whitelist.conf"
       - ".github/workflows/deploy-backend.yml"
   workflow_dispatch:
     inputs:
@@ -168,6 +170,21 @@ jobs:
           command_timeout: 15m
           debug: true
 
+      # Step 2.2 / 步骤 2.2: Sync nginx config to VPS
+      - name: Sync nginx config to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT != '' && secrets.SSH_PORT || 22 }}
+          source: "nginx/nginx.prod.conf,nginx/whitelist.conf"
+          target: /opt/lucky/nginx
+          strip_components: 1
+          overwrite: true
+          timeout: 120s
+          command_timeout: 15m
+
       # Step 3 / 步骤 3: Pull image, migrate DB, restart service, health-check, and rollback via SSH
       - name: Deploy via SSH (登录服务器执行脚本)
         uses: appleboy/ssh-action@v1.2.0
@@ -277,6 +294,16 @@ jobs:
 
             # 9. 清理旧镜像
             docker image prune -f
+
+            # 10. 热重载 nginx 配置（如有变更，无需重启容器）
+            echo "→ 校验并重载 nginx 配置..."
+            if docker exec lucky-nginx-prod nginx -t 2>&1; then
+              docker exec lucky-nginx-prod nginx -s reload
+              echo "✅ nginx 配置重载成功"
+            else
+              echo "❌ nginx 配置语法错误！保留旧配置，请检查 nginx/nginx.prod.conf"
+              exit 1
+            fi
 
       # =========================================
       # 阶段三: Telegram 战报通知
