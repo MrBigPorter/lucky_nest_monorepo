@@ -170,7 +170,15 @@ export class OAuthDeepLinkController {
     @Res() res: Response,
     @Query('code') code: string,
     @Query('state') state: string,
+    @Query('error') error?: string,
   ) {
+    // 用户取消授权：Google 返回 error=access_denied
+    if (error) {
+      this.logger.log(`Google OAuth cancelled/error: ${error}`);
+      const stateData = state ? this.decodeState(state) : null;
+      return this.handleCancelledOAuth(res, stateData, 'google');
+    }
+
     try {
       this.logger.log('Received Google OAuth callback');
 
@@ -225,7 +233,18 @@ export class OAuthDeepLinkController {
     @Res() res: Response,
     @Query('code') code: string,
     @Query('state') state: string,
+    @Query('error') error?: string,
+    @Query('error_reason') errorReason?: string,
   ) {
+    // 用户取消授权：Facebook 返回 error=access_denied, error_reason=user_denied
+    if (error || errorReason === 'user_denied') {
+      this.logger.log(
+        `Facebook OAuth cancelled/error: ${error}, reason: ${errorReason}`,
+      );
+      const stateData = state ? this.decodeState(state) : null;
+      return this.handleCancelledOAuth(res, stateData, 'facebook');
+    }
+
     try {
       this.logger.log('Received Facebook OAuth callback');
 
@@ -424,11 +443,15 @@ export class OAuthDeepLinkController {
 
       // 用户取消登录，静默处理
       if (error instanceof OAuthUserCancelledError) {
-        return res.redirect(HttpStatus.FOUND, '/login?cancelled=true');
+        return this.handleCancelledOAuth(res, null, provider);
       }
 
-      // 其他错误，重定向到错误页面
-      const errorUrl = `/oauth-error?code=${error.code}&provider=${provider}&message=${encodeURIComponent(userMessage)}`;
+      // 其他错误，重定向到前端错误页面
+      const frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
+        'http://localhost:5173',
+      );
+      const errorUrl = `${frontendUrl}/oauth-error?code=${error.code}&provider=${provider}&message=${encodeURIComponent(userMessage)}`;
       return res.redirect(HttpStatus.FOUND, errorUrl);
     }
 
@@ -440,6 +463,62 @@ export class OAuthDeepLinkController {
       success: false,
       message: 'An unexpected error occurred',
     });
+  }
+
+  /**
+   * 处理用户主动取消 OAuth 授权的重定向逻辑
+   * 优先级：移动端 Deep Link > Web redirectUri > 前端首页
+   */
+  private handleCancelledOAuth(
+    res: Response,
+    stateData: OAuthStateData | null,
+    provider: string,
+  ) {
+    this.logger.log(`User cancelled ${provider} OAuth, redirecting back`);
+
+    // 移动端 Deep Link 回调
+    if (stateData?.callback) {
+      try {
+        const deepLink = new URL(stateData.callback);
+        deepLink.searchParams.set('error', 'cancelled');
+        deepLink.searchParams.set('provider', provider);
+        this.logger.log(
+          `Cancelled: redirecting to deep link ${deepLink.toString()}`,
+        );
+        return res.redirect(HttpStatus.FOUND, deepLink.toString());
+      } catch (_e) {
+        this.logger.warn(
+          `Invalid callback URL for cancelled OAuth: ${stateData.callback}`,
+        );
+      }
+    }
+
+    // Web 端 redirectUri 回调
+    if (stateData?.redirectUri) {
+      try {
+        const webUrl = new URL(stateData.redirectUri);
+        webUrl.searchParams.set('error', 'cancelled');
+        webUrl.searchParams.set('provider', provider);
+        this.logger.log(
+          `Cancelled: redirecting to web URL ${webUrl.toString()}`,
+        );
+        return res.redirect(HttpStatus.FOUND, webUrl.toString());
+      } catch (_e) {
+        this.logger.warn(
+          `Invalid redirectUri for cancelled OAuth: ${stateData.redirectUri}`,
+        );
+      }
+    }
+
+    // Fallback：前端登录页
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:5173',
+    );
+    return res.redirect(
+      HttpStatus.FOUND,
+      `${frontendUrl}/login?cancelled=true&provider=${provider}`,
+    );
   }
 
   // ==========================================
@@ -610,7 +689,7 @@ export class OAuthDeepLinkController {
     return randomBytes.toString('hex');
   }
 
-  private isValidWebState(state: string, provider: string): boolean {
+  private isValidWebState(_state: string, _provider: string): boolean {
     // TODO: 在实际项目中，这里需要：
     // 1. 验证state格式
     // 2. 从sessionStorage或Redis中查找对应的state
